@@ -113,8 +113,8 @@ namespace Raven.Server.Documents.Handlers
                                             throw new InvalidDataException(
                                                 "The blittable size specified is more than the available data, aborting...");
 
-                                        //TODO: Paranoid mode, has to validate the data is safe
                                         var reader = new BlittableJsonReaderObject(docPtr, size, context);
+                                        reader.BlittableValidation(size);
                                         docPtr += size;
 
                                         string docKey;

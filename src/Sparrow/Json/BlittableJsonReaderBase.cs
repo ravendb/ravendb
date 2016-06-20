@@ -189,7 +189,7 @@ namespace Sparrow.Json
             byte b;
             do
             {
-                if (shift == 69)
+                if (shift == 70)
                     throw new FormatException("Bad variable size int");
                 b = _mem[pos++];
                 count |= (ulong)(b & 0x7F) << shift;

@@ -495,15 +495,21 @@ namespace Sparrow.Json
             int rootPropOffsetSize;
             int rootPropIdSize;
 
+            if (currentSize < 1)
+                throw new InvalidDataException("Illegal data");
             var rootToken = TokenValidation(*(_mem + currentSize), out rootPropOffsetSize, out rootPropIdSize);
             if (rootToken != BlittableJsonToken.StartObject)
                 throw new InvalidDataException("Illegal root object");
             currentSize--;
 
             var propsOffsetList = ReadVariableSizeIntInReverse(_mem, currentSize, out offset);
+            if (offset > currentSize)
+                throw new InvalidDataException("Properties names offset not valid");
             currentSize -= offset;
 
             var rootMetadataOffset = ReadVariableSizeIntInReverse(_mem, currentSize, out offset);
+            if (offset > currentSize)
+                throw new InvalidDataException("Root metadata offset not valid");
             currentSize -= offset;
 
             if ((propsOffsetList > currentSize) || (propsOffsetList <= 0))
@@ -512,6 +518,7 @@ namespace Sparrow.Json
             int propNamesOffsetSize;
             var token = (BlittableJsonToken)(*(_mem + propsOffsetList));
             propNamesOffsetSize = ProcessTokenOffsetFlags(token);
+
             if (((token & (BlittableJsonToken)0xC0) != 0) || ((TypesMask & token) != 0x00))
                 throw new InvalidDataException("Properties names token not valid");
 
@@ -521,7 +528,6 @@ namespace Sparrow.Json
 
             if ((rootMetadataOffset > currentSize) || (rootMetadataOffset < 0))
                 throw new InvalidDataException("Root metadata offset not valid");
-
             var current = PropertiesValidation(rootToken, rootPropOffsetSize, rootPropIdSize,
                 rootMetadataOffset, numberOfProps);
 
@@ -533,43 +539,44 @@ namespace Sparrow.Json
             int currentSize)
         {
             var offsetCounter = 0;
-            for (var i = numberOfProps; i > 0; i--)
+            for (var i = numberOfProps - 1; i >= 0; i--)
             {
                 int stringLength;
                 var nameOffset = 0;
-                nameOffset = ReadNumber((_mem + propsOffsetList + i * propsNamesOffsetSize),
+                nameOffset = ReadNumber((_mem + propsOffsetList + 1 + i * propsNamesOffsetSize),
                     propsNamesOffsetSize);
                 if ((nameOffset > currentSize) || (nameOffset < 0))
                     throw new InvalidDataException("Properties names offset not valid");
                 stringLength = StringValidation(propsOffsetList - nameOffset);
-                if (offsetCounter + stringLength + 1 != nameOffset)
+                if (offsetCounter + stringLength != nameOffset)
                     throw new InvalidDataException("Properties names offset not valid");
                 offsetCounter = nameOffset;
-                currentSize -= (stringLength + 1);
+                currentSize -= (stringLength);
             }
             return currentSize;
         }
 
         private int StringValidation(int stringOffset)
         {
-            byte offset;
+            byte lenOffset;
+            byte escOffset;
             int stringLength;
-            stringLength = ReadVariableSizeInt(stringOffset, out offset);
+            stringLength = ReadVariableSizeInt(stringOffset, out lenOffset);
             if (stringLength < 0)
                 throw new InvalidDataException("String not valid");
-            var str = stringOffset + offset;
-            var stringEnd = ReadVariableSizeInt(stringOffset + offset + stringLength, out offset);
-            if (stringEnd != 0)
+            var str = stringOffset + lenOffset;
+            var escCount = ReadVariableSizeInt(stringOffset + lenOffset + stringLength, out escOffset);
+            if (escCount != 0)
             {
-                for (var i = 0; i < stringEnd; i++)
+                for (var i = 0; i < escCount; i++)
                 {
-                    var escCharOffset = ReadNumber(_mem + str + stringLength + offset + i, 1);
+                    var escCharOffset = ReadNumber(_mem + str + stringLength + escOffset + i, 1);
                     var escChar = (char)ReadNumber(_mem + str + escCharOffset, 1);
                     if (!(EscapeChars.Contains(escChar)))
                         throw new InvalidDataException("String not valid");
                 }
             }
-            return stringLength + offset + stringEnd;
+            return stringLength + escOffset + escCount + lenOffset;
         }
 
         private BlittableJsonToken TokenValidation(byte tokenStart, out int propOffsetSize,
@@ -578,7 +585,7 @@ namespace Sparrow.Json
             var token = (BlittableJsonToken)tokenStart;
             var tokenType = ProcessTokenTypeFlags(token);
             propOffsetSize = ((tokenType == BlittableJsonToken.StartObject) ||
-                               (tokenType == BlittableJsonToken.StartArray))
+                              (tokenType == BlittableJsonToken.StartArray))
                 ? ProcessTokenOffsetFlags(token)
                 : 0;
 
@@ -601,7 +608,7 @@ namespace Sparrow.Json
             for (var i = 1; i <= numberOfProperties; i++)
             {
                 var propOffset = ReadNumber(_mem + current, mainPropOffsetSize);
-                if ((propOffset > objStartOffset) || (propOffset < 1))
+                if ((propOffset > objStartOffset) || (propOffset < 0))
                     throw new InvalidDataException("Properties offset not valid");
                 current += mainPropOffsetSize;
 
@@ -619,6 +626,7 @@ namespace Sparrow.Json
                 current++;
 
                 var propValueOffset = objStartOffset - propOffset;
+
                 switch (tokenType)
                 {
                     case BlittableJsonToken.StartObject:
@@ -628,15 +636,19 @@ namespace Sparrow.Json
                         PropertiesValidation(tokenType, propOffsetSize, propIdSize, propValueOffset, numberOfPropsNames);
                         break;
                     case BlittableJsonToken.Integer:
-                        ReadVariableSizeIntInReverse(_mem, propValueOffset, out offset);
+                        ReadVariableSizeLong(propValueOffset);
                         break;
                     case BlittableJsonToken.Float:
                         var floatLen = ReadNumber(_mem + objStartOffset - propOffset, 1);
+                        var pointFlag = true;
                         for (var j = 0; j < floatLen; j++)
                         {
-                            var floatDigit = ReadNumber((_mem + objStartOffset - propOffset + i), sizeof(byte));
-                            if (floatDigit == '.')
+                            var floatDigit = ReadNumber((_mem + objStartOffset - propOffset + 1 + j), sizeof(byte));
+                            if ((floatDigit == '.') && (pointFlag))
+                            {
+                                pointFlag = false;
                                 continue;
+                            }
                             if (!(char.IsDigit((char)floatDigit)))
                                 throw new InvalidDataException("Float not valid");
                         }
@@ -645,16 +657,20 @@ namespace Sparrow.Json
                         StringValidation(propValueOffset);
                         break;
                     case BlittableJsonToken.CompressedString:
-                        var lazyString = ReadCompressStringLazily(propValueOffset);
-                        lazyString.DecompressToTempBuffer();
+                        var stringLength = ReadVariableSizeInt(propValueOffset, out offset);
+                        var compressedStringLength = ReadVariableSizeInt(propValueOffset + offset, out offset);
+                        if ((compressedStringLength > stringLength) ||
+                            (compressedStringLength < 0) ||
+                            (stringLength < 0))
+                            throw new InvalidDataException("Compressed string not valid");
                         break;
                     case BlittableJsonToken.Boolean:
-                        var boolProp = ReadNumber(_mem + propValueOffset, sizeof(byte));
-                        if ((boolProp != Convert.ToInt32(false)) && (boolProp != Convert.ToInt32(true)))
+                        var boolProp = ReadNumber(_mem + propValueOffset, 1);
+                        if ((boolProp != 0) && (boolProp != 1))
                             throw new InvalidDataException("Bool not valid");
                         break;
                     case BlittableJsonToken.Null:
-                        if (ReadNumber(_mem + propValueOffset, sizeof(byte)) != Convert.ToInt32(null))
+                        if (ReadNumber(_mem + propValueOffset, 1) != 0)
                             throw new InvalidDataException("Null not valid");
                         break;
                     default:
