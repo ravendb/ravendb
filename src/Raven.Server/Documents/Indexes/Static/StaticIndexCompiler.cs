@@ -17,6 +17,7 @@ using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -151,11 +152,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce);
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInReduce(new QuerySyntaxMapRewriter(), queryExpression);
+                    return HandleSyntaxInReduce(new QuerySyntaxReduceRewriter(), queryExpression);
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInReduce(new MethodSyntaxMapRewriter(), invocationExpression);
+                    return HandleSyntaxInReduce(new MethodSyntaxReduceRewriter(), invocationExpression);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -182,11 +183,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 .Invoke(collection, indexingFunction).AsExpressionStatement();
         }
 
-        private static StatementSyntax HandleSyntaxInReduce(CSharpSyntaxRewriter reduceRewriter, ExpressionSyntax expression)
+        private static StatementSyntax HandleSyntaxInReduce(ReduceRewriterBase reduceRewriter, ExpressionSyntax expression)
         {
             var rewrittenExpression = (CSharpSyntaxNode)reduceRewriter.Visit(expression);
 
-            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("results")), rewrittenExpression);
+            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(reduceRewriter.ResultsVariableName)), rewrittenExpression);
 
             return RoslynHelper.This("SetReduce")
                 .Invoke(indexingFunction).AsExpressionStatement();
