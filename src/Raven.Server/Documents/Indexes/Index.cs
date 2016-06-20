@@ -379,10 +379,19 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (lastDocEtag > lastProcessedDocEtag)
                         return true;
+
+                    var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection);
+                    var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection);
+
+                    if (lastTombstoneEtag > lastProcessedTombstoneEtag)
+                        return true;
                 }
                 else
                 {
                     if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedDocEtag)
+                        return true;
+
+                    if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection, cutoff.Value) > 0)
                         return true;
                 }
             }
@@ -589,6 +598,9 @@ namespace Raven.Server.Documents.Indexes
 
         private void UpdateReferences(CurrentIndexingScope current)
         {
+            if (current.ReferencedCollections == null)
+                return;
+
             foreach (var referencedCollection in current.ReferencedCollections)
                 ReferencedCollections.Add(referencedCollection);
         }

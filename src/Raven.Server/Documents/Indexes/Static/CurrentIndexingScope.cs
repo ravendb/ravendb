@@ -62,11 +62,11 @@ namespace Raven.Server.Documents.Indexes.Static
             var document = _documentsStorage.Get(_documentsContext, key);
             if (document == null)
             {
-                referenceEtags.Add(key, 0);
+                referenceEtags[key] = 0;
                 return Null();
             }
 
-            referenceEtags.Add(key, document.Etag);
+            referenceEtags[key] = document.Etag;
 
             if (_document == null)
                 _document = new DynamicDocumentObject();

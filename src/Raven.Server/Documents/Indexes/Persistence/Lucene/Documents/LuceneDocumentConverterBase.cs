@@ -9,6 +9,7 @@ using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -158,7 +159,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static ValueType GetValueType(object value)
         {
-            if (value == null) return ValueType.Null;
+            if (value == null || value is DynamicNullObject) return ValueType.Null;
 
             if (Equals(value, string.Empty)) return ValueType.EmptyString;
 

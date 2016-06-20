@@ -55,26 +55,19 @@ namespace Raven.Server.Documents.Indexes
                 Name = "ErrorTimestamps"
             });
 
-            _referencesSchema.DefineIndex("CollectionAndRefKey", new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 1,
-                Count = 2,
-                IsGlobal = true,
-                Name = "Collection"
-            });
-
-            _referencesSchema.DefineIndex("Key", new TableSchema.SchemaIndexDef
+            _referencesSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 IsGlobal = true,
-                Name = "Key"
+                Name = "PK" // Key,Collection,ReferenceKey
             });
 
-            _referencesSchema.DefineIndex("RefKey", new TableSchema.SchemaIndexDef
+            _referencesSchema.DefineIndex("CollectionAndRefKey", new TableSchema.SchemaIndexDef
             {
                 StartIndex = 2,
+                Count = 2,
                 IsGlobal = true,
-                Name = "RefKey"
+                Name = "Collection"
             });
 
             TransactionOperationContext context;
@@ -232,9 +225,19 @@ namespace Raven.Server.Documents.Indexes
             return ReadLastEtag(tx, Schema.EtagsReferenceTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
+        public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection)
+        {
+            return ReadLastEtag(tx, Schema.EtagsReferenceTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection));
+        }
+
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
             return ReadLastEtag(tx, Schema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection));
+        }
+
+        public void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, long etag)
+        {
+            WriteLastEtag(tx, Schema.EtagsReferenceTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
         }
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
@@ -386,7 +389,7 @@ namespace Raven.Server.Documents.Indexes
         private static unsafe Slice GetKeyFromReferenceTableValueReader(TableValueReader tvr, RavenTransaction tx)
         {
             int size;
-            return Slice.External(tx.InnerTransaction.Allocator, tvr.Read(0, out size), size);
+            return Slice.External(tx.InnerTransaction.Allocator, tvr.Read(1, out size), size);
         }
 
         public long ReadLastSeenEtagForReference(string collection, LazyStringValue key, RavenTransaction tx)
@@ -426,9 +429,15 @@ namespace Raven.Server.Documents.Indexes
                         foreach (var references in keys.Value)
                         {
                             var referenceKey = Slice.From(tx.InnerTransaction.Allocator, references, ByteStringType.Immutable);
+                            var pk = GetReferencePrimaryKey(key, collection, referenceKey, tx.InnerTransaction.Allocator);
+
+                            var read = table.ReadByKey(pk);
+                            if (read != null)
+                                continue;
 
                             var tvb = new TableValueBuilder
                             {
+                                { pk.Content.Ptr, pk.Size },
                                 { key.Content.Ptr, key.Size },
                                 { collection.Content.Ptr, collection.Size },
                                 { referenceKey.Content.Ptr, referenceKey.Size }
@@ -458,17 +467,29 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private static unsafe Slice GetReferencePrimaryKey(Slice key, Slice collection, Slice referenceKey, ByteStringContext context)
+        {
+            var result = context.Allocate(key.Size + collection.Size + referenceKey.Size);
+            key.CopyTo(0, result.Ptr, 0, key.Size);
+            collection.CopyTo(0, result.Ptr, key.Size, collection.Size);
+            referenceKey.CopyTo(0, result.Ptr, key.Size + collection.Size, referenceKey.Size);
+
+            return new Slice(result);
+        }
+
         private class Schema
         {
-            public static readonly string StatsTree = "Stats";
+            public const string StatsTree = "Stats";
 
-            public static readonly string EtagsTree = "Etags";
+            public const string EtagsTree = "Etags";
 
-            public static readonly string EtagsTombstoneTree = "Etags.Tombstone";
+            public const string EtagsTombstoneTree = "Etags.Tombstone";
 
-            public static readonly string EtagsReferenceTree = "Etags.Reference";
+            public const string EtagsReferenceTree = "Etags.Reference";
 
-            public static readonly string ReferencedCollections = "Referenced.Collections";
+            public const string EtagsReferenceTombstoneTree = "Etags.Reference.Tombstone";
+
+            public const string ReferencedCollections = "Referenced.Collections";
 
             public static readonly Slice TypeSlice = Slice.From(StorageEnvironment.LabelsContext, "Type", ByteStringType.Immutable);
 
