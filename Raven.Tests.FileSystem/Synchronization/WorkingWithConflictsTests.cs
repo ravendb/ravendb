@@ -123,16 +123,20 @@ namespace Raven.Tests.FileSystem.Synchronization
             }
 
             pages = await destination.Synchronization.GetConflictsAsync();
+            Assert.Equal(25, pages.Items.Count);
             Assert.Equal(25, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(start: 1, pageSize: 10);
-            Assert.Equal(10, pages.TotalCount);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 10, pageSize: 10);
+            Assert.Equal(10, pages.Items.Count);
+            Assert.Equal(25, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(start: 2, pageSize: 10);
-            Assert.Equal(5, pages.TotalCount);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 20, pageSize: 10);
+            Assert.Equal(5, pages.Items.Count);
+            Assert.Equal(25, pages.TotalCount);
 
-            pages = await destination.Synchronization.GetConflictsAsync(start: 10);
-            Assert.Equal(0, pages.TotalCount);
+            pages = await destination.Synchronization.GetConflictsAsync(start: 30);
+            Assert.Equal(0, pages.Items.Count);
+            Assert.Equal(25, pages.TotalCount);
         }
 
         [Fact]

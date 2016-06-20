@@ -214,6 +214,10 @@ namespace Raven.Tests.FileSystem.Storage
                 storage.Batch(accessor => accessor.SetConfig("a-config2", new RavenJObject()));
                 storage.Batch(accessor => accessor.SetConfig("a-config3", new RavenJObject()));
 
+                storage.Batch(accessor => accessor.SetConfig("d-config", new RavenJObject()));
+                storage.Batch(accessor => accessor.SetConfig("e-config", new RavenJObject()));
+                storage.Batch(accessor => accessor.SetConfig("f-config", new RavenJObject()));
+
                 storage.Batch(accessor =>
                 {
                     var names = accessor
@@ -265,7 +269,7 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.Contains("config6", names);
 
                     names = accessor
-                        .GetConfigNamesStartingWithPrefix("config", 6, 2, out total)
+                        .GetConfigNamesStartingWithPrefix("config", 7, 2, out total)
                         .ToList();
 
                     Assert.Equal(0, names.Count);
@@ -284,6 +288,20 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.Equal(0, names.Count);
                     Assert.Equal(0, total);
+
+                    names = accessor
+                        .GetConfigNamesStartingWithPrefix("config", 10, 5, out total)
+                        .ToList();
+
+                    Assert.Equal(0, names.Count);
+                    Assert.Equal(6, total);
+
+                    names = accessor
+                        .GetConfigNamesStartingWithPrefix("f-config", 12, 2, out total)
+                        .ToList();
+
+                    Assert.Equal(0, names.Count);
+                    Assert.Equal(1, total);
                 });
             }
         }
@@ -331,7 +349,11 @@ namespace Raven.Tests.FileSystem.Storage
                 storage.Batch(accessor => accessor.SetConfig("a-config1", new RavenJObject { { "option1", "value1" } }));
                 storage.Batch(accessor => accessor.SetConfig("a-config2", new RavenJObject { { "option2", "value1" } }));
                 storage.Batch(accessor => accessor.SetConfig("a-config3", new RavenJObject { { "option3", "value1" } }));
-                                                                             
+
+                storage.Batch(accessor => accessor.SetConfig("d-config", new RavenJObject { { "option1", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("e-config", new RavenJObject { { "option2", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("f-config", new RavenJObject { { "option3", "value1" } }));
+
                 storage.Batch(accessor =>
                 {
                     var configs = accessor
@@ -388,6 +410,20 @@ namespace Raven.Tests.FileSystem.Storage
 
                     Assert.Equal(6, totalCount);
                     Assert.Equal(0, configs.Count);
+
+                    configs = accessor
+                        .GetConfigsStartWithPrefix("config", 6, 2, out totalCount)
+                        .ToList();
+
+                    Assert.Equal(0, configs.Count);
+                    Assert.Equal(6, totalCount);
+
+                    configs = accessor
+                        .GetConfigsStartWithPrefix("f-config", 12, 2, out totalCount)
+                        .ToList();
+
+                    Assert.Equal(0, configs.Count);
+                    Assert.Equal(1, totalCount);
                 });
             }
         }

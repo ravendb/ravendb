@@ -785,79 +785,56 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take, out int total)
         {
-            total = 0;
+
             var results = new List<RavenJObject>();
 
-            var key = (Slice)CreateKey(prefix);
+            var totalRef = new Reference<int>();
 
-            using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
+            foreach (var config in GetConfigsWithPrefix(prefix, start, take, totalRef))
             {
-                if (!iterator.Seek(key))
-                    return results;
-
-                var skippedCount = 0;
-                for (var i = 0; i < start; i++)
-                {
-                    skippedCount++;
-
-                    if (iterator.MoveNext() == false)
-                    {
-                        total = skippedCount;
-                        return results;
-                    }
-                }
-
-                var count = 0;
-
-                do
-                {
-                    var config = iterator
-                            .CreateReaderForCurrent()
-                            .AsStream()
-                            .ToJObject();
-
-                    
-                    var configName = config.Value<string>("name");
-
-                    if (configName == null || configName.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase) == false)
-                        break;
-
-                    if (count < take)
-                    {
-                        var metadata = config.Value<RavenJObject>("metadata");
-                        results.Add(metadata);
-                    }
-
-                    count++;
-                } while (iterator.MoveNext());
-
-                total = skippedCount + count;
+                var metadata = config.Value<RavenJObject>("metadata");
+                results.Add(metadata);;
             }
+
+            total = totalRef.Value;
 
             return results;
         }
 
         public IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total)
         {
-            total = 0;
             var results = new List<string>();
+            var totalRef = new Reference<int>();
 
-            var key = (Slice)CreateKey(prefix);
+            foreach (var config in GetConfigsWithPrefix(prefix, start, take, totalRef))
+            {
+                var configName = config.Value<string>("name");
+                results.Add(configName);
+            }
+
+            total = totalRef.Value;
+
+            return results;
+        }
+
+        private IEnumerable<RavenJObject> GetConfigsWithPrefix(string prefix, int start, int take, Reference<int> totalCount)
+        {
+            var key = (Slice) CreateKey(prefix);
 
             using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
             {
                 if (!iterator.Seek(key))
-                    return results;
+                    yield break;
 
                 var skippedCount = 0;
                 for (var i = 0; i < start; i++)
                 {
                     skippedCount++;
 
-                    if (iterator.MoveNext() == false)
+                    if (iterator.MoveNext() == false || iterator.CurrentKey.StartsWith(key) == false)
                     {
-                        total = skippedCount;
-                        return results;
+                        totalCount.Value = skippedCount;
+                        yield break;
                     }
                 }
 
@@ -877,16 +854,14 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                     if (count < take)
                     {
-                        results.Add(configName);
+                        yield return config;
                     }
 
                     count++;
                 } while (iterator.MoveNext());
 
-                total = skippedCount + count;
+                totalCount.Value = skippedCount + count;
             }
-
-            return results;
         }
 
         private void RemoveSignature(string id, string name)
