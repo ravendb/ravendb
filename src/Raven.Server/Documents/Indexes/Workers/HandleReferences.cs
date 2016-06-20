@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -7,6 +8,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -37,18 +39,18 @@ namespace Raven.Server.Documents.Indexes.Workers
             var pageSize = _configuration.MaxNumberOfDocumentsToFetchForMap;
             var timeoutProcessing = Debugger.IsAttached == false ? _configuration.DocumentProcessingTimeout.AsTimeSpan : TimeSpan.FromMinutes(15);
 
-            var lastIndexedEtagsByCollection = _index.Collections
-                .ToDictionary(collection => collection, collection => _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
+            Dictionary<string, long> lastIndexedEtagsByCollection = null;
 
             var moreWorkFound = false;
 
-            foreach (var referencedCollection in _indexStorage.GetReferencedCollections(indexContext.Transaction))
+            foreach (var referencedCollection in _index.ReferencedCollections)
             {
                 var lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection);
                 var lastEtag = lastReferenceEtag;
                 var count = 0;
 
                 var sw = Stopwatch.StartNew();
+                IndexWriteOperation indexWriter = null;
 
                 using (databaseContext.OpenReadTransaction())
                 {
@@ -57,34 +59,47 @@ namespace Raven.Server.Documents.Indexes.Workers
                         lastEtag = referencedDocument.Etag;
                         count++;
 
-                        // probably we will need to split this per collection
-                        // because indexingFunc needs enumerator that only returns
-                        // documents from one collection
-                        foreach (var key in _indexStorage.GetDocumentKeysThatReference(referencedDocument.Key, indexContext.Transaction))
+                        foreach (var collection in _index.Collections)
                         {
-                            token.ThrowIfCancellationRequested();
-
-                            var document = _documentsStorage.Get(databaseContext, key);
-                            if (document == null)
-                                continue;
-
-                            bool isSystemDocument;
-                            var collection = Document.GetCollectionName(key, document.Data, out isSystemDocument);
-
-                            var lastIndexedEtag = lastIndexedEtagsByCollection[collection];
-                            if (document.Etag > lastIndexedEtag)
-                                continue; // it will be indexed
-
                             var lastSeenEtag = _indexStorage.ReadLastSeenEtagForReference(collection, referencedDocument.Key, indexContext.Transaction);
                             if (referencedDocument.Etag == lastSeenEtag)
                                 continue;
 
-                            Debug.Assert(referencedDocument.Etag >= lastIndexedEtag);
+                            if (lastIndexedEtagsByCollection == null)
+                                lastIndexedEtagsByCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
-                            // index here
+                            long lastIndexedEtag;
+                            if (lastIndexedEtagsByCollection.TryGetValue(collection, out lastIndexedEtag) == false)
+                                lastIndexedEtagsByCollection[collection] = lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
-                            if (sw.Elapsed > timeoutProcessing)
-                                break;
+                            var documents = _indexStorage
+                                .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction)
+                                .Select(key => _documentsStorage.Get(databaseContext, key))
+                                .Where(doc => doc != null)
+                                .Where(doc => doc.Etag <= lastIndexedEtag);
+
+                            var stateful = new StatefulEnumerator<Document>(documents);
+                            foreach (var document in _index.EnumerateMap(stateful, collection, indexContext))
+                            {
+                                token.ThrowIfCancellationRequested();
+
+                                var current = stateful.Current;
+
+                                if (indexWriter == null)
+                                    indexWriter = writeOperation.Value;
+
+                                try
+                                {
+                                    _index.HandleMap(current.Key, document, indexWriter, indexContext, stats);
+                                }
+                                catch (Exception e)
+                                {
+                                    // TODO
+                                }
+
+                                if (sw.Elapsed > timeoutProcessing)
+                                    break;
+                            }
                         }
                     }
                 }

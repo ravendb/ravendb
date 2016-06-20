@@ -136,6 +136,34 @@ namespace SlowTests.Core.Indexing
 
                     Assert.Equal(2, count);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    var address = session.Load<Address>("addresses/1");
+                    address.City = "Barcelona";
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "New York")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(0, users.Count);
+
+                    users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "Barcelona")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Doe", users[0].LastName);
+                }
             }
         }
 

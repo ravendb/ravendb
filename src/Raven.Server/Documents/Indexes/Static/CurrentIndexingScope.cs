@@ -18,9 +18,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public HashSet<string> ReferencedCollections;
 
-        public Dictionary<string, HashSet<string>> References;
+        public Dictionary<string, Dictionary<string, HashSet<string>>> ReferencesByCollection;
 
-        public Dictionary<string, Dictionary<string, long>> ReferenceEtags;
+        public Dictionary<string, Dictionary<string, long>> ReferenceEtagsByCollection;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -52,24 +52,11 @@ namespace Raven.Server.Documents.Indexes.Static
             if (id.Equals(key))
                 return source;
 
-            if (ReferencedCollections == null)
-                ReferencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var referencedCollections = GetReferencedCollections();
+            var references = GetReferencesForDocument(id);
+            var referenceEtags = GetReferenceEtags();
 
-            if (References == null)
-                References = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-
-            HashSet<string> references;
-            if (References.TryGetValue(id, out references) == false)
-                References.Add(id, references = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-            if (ReferenceEtags == null)
-                ReferenceEtags = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
-
-            Dictionary<string, long> referenceEtags;
-            if (ReferenceEtags.TryGetValue(SourceCollection, out referenceEtags) == false)
-                ReferenceEtags.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
-
-            ReferencedCollections.Add(collectionName);
+            referencedCollections.Add(collectionName);
             references.Add(key);
 
             var document = _documentsStorage.Get(_documentsContext, key);
@@ -97,6 +84,39 @@ namespace Raven.Server.Documents.Indexes.Static
         private DynamicNullObject Null()
         {
             return _null ?? (_null = new DynamicNullObject());
+        }
+
+        private HashSet<string> GetReferencedCollections()
+        {
+            return ReferencedCollections ?? (ReferencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        }
+
+        private Dictionary<string, long> GetReferenceEtags()
+        {
+            if (ReferenceEtagsByCollection == null)
+                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+
+            Dictionary<string, long> referenceEtags;
+            if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out referenceEtags) == false)
+                ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
+
+            return referenceEtags;
+        }
+
+        private HashSet<string> GetReferencesForDocument(string key)
+        {
+            if (ReferencesByCollection == null)
+                ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<string>>>();
+
+            Dictionary<string, HashSet<string>> referencesByCollection;
+            if (ReferencesByCollection.TryGetValue(SourceCollection, out referencesByCollection) == false)
+                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<string, HashSet<string>>());
+
+            HashSet<string> references;
+            if (referencesByCollection.TryGetValue(key, out references) == false)
+                referencesByCollection.Add(key, references = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+            return references;
         }
     }
 }

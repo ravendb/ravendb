@@ -86,6 +86,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (stats.For("Lucene_ConvertTo"))
                 luceneDoc = _converter.ConvertToCachedDocument(key, document);
 
+            Delete(key, stats);
+
             using (stats.For("Lucene_AddDocument"))
                 _writer.AddDocument(luceneDoc, _analyzer);
 
@@ -95,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _log.Debug($"Indexed document for '{_name}'. Key: {key}. Output: {luceneDoc}.");
         }
 
-        public void Delete(string key, IndexingStatsScope stats)
+        public void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
             using (stats.For("Lucene_Delete"))
                 _writer.DeleteDocuments(_documentId.CreateTerm(key));

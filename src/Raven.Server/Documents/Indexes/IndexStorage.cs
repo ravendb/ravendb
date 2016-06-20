@@ -12,10 +12,8 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
-using Voron.Data;
 using Voron.Data.Tables;
 using Sparrow;
-using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -28,6 +26,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly TransactionContextPool _contextPool;
 
         private readonly TableSchema _errorsSchema = new TableSchema();
+
+        private readonly TableSchema _referencesSchema = new TableSchema();
 
         private StorageEnvironment _environment;
 
@@ -55,11 +55,34 @@ namespace Raven.Server.Documents.Indexes
                 Name = "ErrorTimestamps"
             });
 
+            _referencesSchema.DefineIndex("CollectionAndRefKey", new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 1,
+                Count = 2,
+                IsGlobal = true,
+                Name = "Collection"
+            });
+
+            _referencesSchema.DefineIndex("Key", new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                IsGlobal = true,
+                Name = "Key"
+            });
+
+            _referencesSchema.DefineIndex("RefKey", new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 2,
+                IsGlobal = true,
+                Name = "RefKey"
+            });
+
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
                 _errorsSchema.Create(tx.InnerTransaction, "Errors");
+                _referencesSchema.Create(tx.InnerTransaction, "References");
 
                 var typeInt = (int)_index.Type;
 
@@ -74,9 +97,8 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.InnerTransaction.CreateTree(Schema.EtagsTree);
                 tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
-                tx.InnerTransaction.CreateTree(Schema.References);
+                tx.InnerTransaction.CreateTree(Schema.EtagsReferenceTree);
                 tx.InnerTransaction.CreateTree(Schema.ReferencedCollections);
-                tx.InnerTransaction.CreateTree(Schema.ReverseReferences);
 
                 _index.Definition.Persist(context, _environment.Options);
 
@@ -344,19 +366,27 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IEnumerable<string> GetDocumentKeysThatReference(LazyStringValue key, RavenTransaction tx)
+        public IEnumerable<string> GetDocumentKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
         {
-            var reverseTree = tx.InnerTransaction.ReadTree(Schema.ReverseReferences);
-            using (var it = reverseTree.MultiRead(key))
+            var table = new Table(_referencesSchema, tx.InnerTransaction);
+
+            var seekKey = Slice.From(tx.InnerTransaction.Allocator, collection + referenceKey, ByteStringType.Immutable);
+            foreach (var result in table.SeekForwardFrom(_referencesSchema.Indexes["CollectionAndRefKey"], seekKey))
             {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
+                if (SliceComparer.Equals(seekKey, result.Key) == false)
                     yield break;
 
-                do
+                foreach (var tvr in result.Results)
                 {
-                    yield return it.CurrentKey.ToString(); // TODO [ppekrol] ?
-                } while (it.MoveNext());
+                    yield return GetKeyFromReferenceTableValueReader(tvr, tx).ToString(); // TODO [ppekrol] ?
+                }
             }
+        }
+
+        private static unsafe Slice GetKeyFromReferenceTableValueReader(TableValueReader tvr, RavenTransaction tx)
+        {
+            int size;
+            return Slice.External(tx.InnerTransaction.Allocator, tvr.Read(0, out size), size);
         }
 
         public long ReadLastSeenEtagForReference(string collection, LazyStringValue key, RavenTransaction tx)
@@ -382,29 +412,39 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (indexingScope.References != null)
+            if (indexingScope.ReferencesByCollection != null)
             {
-                var tree = tx.InnerTransaction.ReadTree(Schema.References);
-                var reverseTree = tx.InnerTransaction.ReadTree(Schema.ReverseReferences);
-                foreach (var kvp in indexingScope.References)
+                var table = new Table(_referencesSchema, "References", tx.InnerTransaction);
+                foreach (var collections in indexingScope.ReferencesByCollection)
                 {
-                    var key = Slice.From(tx.InnerTransaction.Allocator, kvp.Key, Sparrow.ByteStringType.Immutable);
+                    var collection = Slice.From(tx.InnerTransaction.Allocator, collections.Key, ByteStringType.Immutable);
 
-                    foreach (var references in kvp.Value)
+                    foreach (var keys in collections.Value)
                     {
-                        var referenceKey = Slice.From(tx.InnerTransaction.Allocator, references, Sparrow.ByteStringType.Immutable);
+                        var key = Slice.From(tx.InnerTransaction.Allocator, keys.Key, ByteStringType.Immutable);
 
-                        tree.MultiAdd(key, referenceKey);
-                        reverseTree.MultiAdd(referenceKey, key);
+                        foreach (var references in keys.Value)
+                        {
+                            var referenceKey = Slice.From(tx.InnerTransaction.Allocator, references, ByteStringType.Immutable);
+
+                            var tvb = new TableValueBuilder
+                            {
+                                { key.Content.Ptr, key.Size },
+                                { collection.Content.Ptr, collection.Size },
+                                { referenceKey.Content.Ptr, referenceKey.Size }
+                            };
+
+                            table.Insert(tvb); // duplicates?
+                        }
                     }
                 }
             }
 
-            if (indexingScope.ReferenceEtags != null)
+            if (indexingScope.ReferenceEtagsByCollection != null)
             {
-                foreach (var kvp in indexingScope.ReferenceEtags)
+                foreach (var kvp in indexingScope.ReferenceEtagsByCollection)
                 {
-                    var tree = tx.InnerTransaction.CreateTree("$" + kvp.Key);
+                    var tree = tx.InnerTransaction.CreateTree("$" + kvp.Key); // $collection
                     foreach (var etags in kvp.Value)
                     {
                         var key = etags.Key;
@@ -427,10 +467,6 @@ namespace Raven.Server.Documents.Indexes
             public static readonly string EtagsTombstoneTree = "Etags.Tombstone";
 
             public static readonly string EtagsReferenceTree = "Etags.Reference";
-
-            public static readonly string References = "References";
-
-            public static readonly string ReverseReferences = "ReverseReferences";
 
             public static readonly string ReferencedCollections = "Referenced.Collections";
 
