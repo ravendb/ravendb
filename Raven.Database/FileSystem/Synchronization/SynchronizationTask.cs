@@ -10,6 +10,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Config;
@@ -402,7 +403,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
             var destinationUrl = destinationSyncClient.BaseUrl;
 
-            bool enqueued = true;
+            bool enqueued = false;
+            Etag incrementedEtag = Etag.Empty;
 
             foreach (var fileHeader in filteredFilesToSynchronization)
             {
@@ -428,17 +430,31 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 NoSyncReason reason;
                 var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
+
                 if (work == null)
                 {
                     Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, destinationUrl, reason.GetDescription());
 
                     if (reason == NoSyncReason.ContainedInDestinationHistory)
                     {
-                        var etag = localMetadata.Value<Guid>(Constants.MetadataEtagField);
+                        var etag = Etag.Parse(localMetadata.Value<string>(Constants.MetadataEtagField));
+
                         await destinationSyncClient.IncrementLastETagAsync(storage.Id, FileSystemUrl, etag).ConfigureAwait(false);
                         RemoveSyncingConfiguration(file, destinationUrl);
 
-                        enqueued = false;
+                        if (EtagUtil.IsGreaterThan(etag, incrementedEtag))
+                            incrementedEtag = etag;
+                    }
+                    else if (reason == NoSyncReason.DestinationFileConflicted)
+                    {
+                        if (needSyncingAgain.Contains(fileHeader, FileHeaderNameEqualityComparer.Instance) == false)
+                            CreateSyncingConfiguration(fileHeader.Name, fileHeader.Etag, destinationUrl, SynchronizationType.Unknown);
+
+                        var etag = Etag.Parse(localMetadata.Value<string>(Constants.MetadataEtagField));
+                        await destinationSyncClient.IncrementLastETagAsync(storage.Id, FileSystemUrl, etag).ConfigureAwait(false);
+
+                        if (EtagUtil.IsGreaterThan(etag, incrementedEtag))
+                            incrementedEtag = etag;
                     }
 
                     continue;
@@ -461,7 +477,10 @@ namespace Raven.Database.FileSystem.Synchronization
                 enqueued = true;
             }
 
-            return enqueued;
+            if (enqueued == false && EtagUtil.IsGreaterThan(incrementedEtag, synchronizationInfo.LastSourceFileEtag))
+                return false; // we bumped the last synced etag on a destination server, let it know it need to repeat the operation
+
+            return true;
         }
 
         private IEnumerable<Task<SynchronizationReport>> SynchronizePendingFilesAsync(ISynchronizationServerClient destinationCommands, bool forceSyncingAll)
