@@ -8,7 +8,7 @@ class statusDebugDataSubscriptions extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchStatusDebugDataSubscriptions());
 
         return this.fetchStatusDebugDataSubscriptions();

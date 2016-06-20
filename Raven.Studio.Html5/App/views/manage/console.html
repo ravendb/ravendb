@@ -5,6 +5,7 @@
     <form class="form-horizontal" role="form" data-bind="submit: executeJs, visible: settingsAccess.canWrite()">
         <div class="panel panel-default">
             <div class="panel-heading">
+                <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                 <div class="btn-group">
                     <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
                         <i class="fa fa-gears"></i>

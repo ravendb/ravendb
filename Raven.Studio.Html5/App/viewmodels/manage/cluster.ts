@@ -61,6 +61,12 @@ class cluster extends viewModelBase {
         return deferred;
     }
 
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("11HBHO");
+    }
+
     refresh() {
         return this.fetchClusterTopology(appUrl.getSystemDatabase())
             .done(() => this.fetchStatus(appUrl.getSystemDatabase()));

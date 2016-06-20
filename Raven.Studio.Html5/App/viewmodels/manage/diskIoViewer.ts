@@ -107,6 +107,12 @@ class diskIoViewer extends viewModelBase {
         return deffered;
     }
 
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("K6J4EE");
+    }
+
     detached() {
         super.detached();
         window.onresize = null; // FIX nvd3 event attached globally

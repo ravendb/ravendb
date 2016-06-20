@@ -62,6 +62,12 @@ class consoleJs extends viewModelBase {
         });
     }
 
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("6BJCAJ");
+    }
+
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress",(e) => e.which != 13);

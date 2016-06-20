@@ -7,8 +7,9 @@
         <div data-bind="if: !clusterMode()">
             <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
                 <div class="panel-heading">
-                    <div class="pull-right text-warning" data-bind="visible: developerLicense">Enterprise feature</div>
-                    Cluster configuration
+                    <a target="_blank" style="margin-left: 15px" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+                    <div class="pull-right text-warning text-height-fix" data-bind="visible: developerLicense">Enterprise feature</div>
+                    <span class="text-height-fix">Cluster configuration</span>
                 </div>
                 <div class="panel-body">
                     <div class="text-center">

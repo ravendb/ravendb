@@ -13,6 +13,7 @@ class hotSpare extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
+        this.updateHelpLink("SV6IMV");
         this.fetchHotSpareInformation();
     }
 
