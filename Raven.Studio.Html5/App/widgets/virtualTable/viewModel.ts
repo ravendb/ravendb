@@ -260,7 +260,7 @@ class ctor {
                     // Select any right-clicked row.
 
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
-                        this.toggleRowChecked(rightClickedElement);
+                        this.toggleRowChecked(rightClickedElement, false);
                     }
                 } else {
                     if (rightClickedElement) {
@@ -634,7 +634,7 @@ class ctor {
         return undefined;
     }
 
-    toggleRowChecked(row: row) {
+    toggleRowChecked(row: row, eventFromCheckbox: boolean) {
         var isShiftSelect = this.shiftPressed();
         if (this.settings.isAllAutoSelected()) {
             var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
@@ -648,7 +648,16 @@ class ctor {
         var isChecked = row.isChecked();
         var firstIndex = this.settings.selectedIndices.first();
         var toggledIndices: Array<number> = isShiftSelect && this.settings.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
+
+        if (eventFromCheckbox) {
+            // since checkbox generates event after check we have to invert condition
+            isChecked = !isChecked;
+        }
+
         if (isChecked) {
+            // Going from checked to unchecked.
+            this.settings.selectedIndices.removeAll(toggledIndices);
+        } else {
             // Going from unchecked to checked.
             if (this.settings.selectedIndices.indexOf(rowIndex) === -1) {
                 toggledIndices
@@ -656,9 +665,6 @@ class ctor {
                     .reverse()
                     .forEach(i => this.settings.selectedIndices.unshift(i));
             }
-        } else {
-            // Going from checked to unchecked.
-            this.settings.selectedIndices.removeAll(toggledIndices);
         }
 
         this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
