@@ -121,6 +121,9 @@
         <div class="btn-group">
             <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: indexGroups().length > 0" title="Search for an index (Alt+/)">
         </div>
+        <div id="summary" class="btn-group">
+            <span data-bind="text: summary"></span>
+        </div>
     </div>
 
     <div class="text-center" data-bind="visible: sortedGroups().length == 0">
@@ -148,7 +151,7 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#indexCollapse' + $index() }">
                             <span data-bind="text: entityName"></span>
-                            <span class="text-muted" data-bind="text: '(' + indexes().length + ')'"></span>
+                            <span class="text-muted" data-bind="text: '(' + indexes().length + ' index' + (indexes().length > 1 ? 'es' : '') + (indexes().filter(x => x.isMapReduce()).length > 0 ? (', ' + indexes().filter(x => x.isMapReduce()).length + ' MapReduce') : '') + ')'"></span>
                         </a>
                     </h4>
 

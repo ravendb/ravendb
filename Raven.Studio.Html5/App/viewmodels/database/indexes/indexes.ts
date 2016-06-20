@@ -27,7 +27,11 @@ class indexes extends viewModelBase {
 
     resetsInProgress = d3.set();
 
-    indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index>; groupHidden: KnockoutObservable<boolean> }>();
+    indexGroups = ko.observableArray<{ 
+        entityName: string; 
+        indexes: KnockoutObservableArray<index>; 
+        groupHidden: KnockoutObservable<boolean>;
+    }>();
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
@@ -40,6 +44,7 @@ class indexes extends viewModelBase {
     corruptedIndexes: KnockoutComputed<index[]>;
     lockModeCommon: KnockoutComputed<string>;
     searchText = ko.observable<string>();
+    summary: KnockoutComputed<string>;
 
     constructor() {
         super();
@@ -74,6 +79,42 @@ class indexes extends viewModelBase {
                 }
             }
             return firstLockMode;
+        });
+
+        
+        this.summary = ko.computed(() => {
+            var indexesCount = 0;
+            var mapReduceCount = 0;
+            this.indexGroups().forEach(g => {
+                g.indexes().forEach(index => {
+                    indexesCount += 1;
+                    if (index.isMapReduce()) {
+                        mapReduceCount++;
+                    }
+                });
+            });
+
+            var summary = "";
+            if (indexesCount === 0) {
+                return summary;
+            }
+
+            summary += indexesCount + " index";
+            if (indexesCount > 1) {
+                summary += "es";
+            }
+
+            var groupsCount = this.indexGroups().length;
+            summary += " for " + groupsCount + " collection";
+            if (groupsCount > 1) {
+                summary += "s";
+            }
+
+            if (mapReduceCount > 0) {
+                summary += " (" + mapReduceCount + " MapReduce)";
+            }
+
+            return summary;
         });
     }
 
@@ -246,7 +287,10 @@ class indexes extends viewModelBase {
                 group.indexes.push(i);
             }
         } else {
-            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]), groupHidden: ko.observable<boolean>(false) });
+            this.indexGroups.push({ 
+                entityName: groupName, 
+                indexes: ko.observableArray([i]), 
+                groupHidden: ko.observable<boolean>(false) });
         }
     }
 

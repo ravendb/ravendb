@@ -93,10 +93,10 @@
         <div class="btn-group">
             <select data-bind="options: visibleOptions, optionsText: 'name', optionsValue: 'value', value: visibleResource" class="form-control"></select>
         </div>
-        <div class="btn-group" style="margin-top: 7px">
-            <span data-bind="text: databasesSummary" style="color: #f36523"></span>
+        <div id="summary" class="btn-group">
+            <span class="databases-summary" data-bind="text: databasesSummary"></span>
             <span data-bind="visible: isCommaNeeded">|</span>
-            <span data-bind="text: fileSystemsSummary" style="color: #7109AA"></span>
+            <span class="file-systems-summary" data-bind="text: fileSystemsSummary"></span>
         </div>
         <div class="btn-group pull-right">
             <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: canNavigateToAdminSettings">Manage Your Server</button>

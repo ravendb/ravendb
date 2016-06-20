@@ -406,6 +406,18 @@ html, body {
 }
 
 #resources-page {
+    #summary{
+        margin-top: 7px;
+
+        .databases-summary{
+            color: #af282e;
+        }
+
+        .file-systems-summary{
+            color: @fs-color;
+        }
+    }
+
     .btn-toolbar {
         margin-bottom: 20px;
     }
@@ -2315,21 +2327,23 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     overflow-x: hidden;
 }
 
+@fs-color: #7109AA;
+
 #resources-page .resources-container .resource.fs {
     a.resource-name {
-        color: #7109AA;
+        color: @fs-color;
     }
 
     &:hover {
-        box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
-        -webkit-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
-        -moz-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
+        box-shadow: 0 0 5px 0 lighten(@fs-color, 20%);
+        -webkit-box-shadow: 0 0 5px 0 lighten(@fs-color, 20%);
+        -moz-box-shadow: 0 0 5px 0 lighten(@fs-color, 20%);
     }
 
     &.selected {
-        box-shadow: 0 0 20px 0 #7109AA;
-        -webkit-box-shadow: 0 0 20px 0 #7109AA;
-        -moz-box-shadow: 0 0 20px 0 #7109AA;
+        box-shadow: 0 0 20px 0 @fs-color;
+        -webkit-box-shadow: 0 0 20px 0 @fs-color;
+        -moz-box-shadow: 0 0 20px 0 @fs-color;
     }
 }
 

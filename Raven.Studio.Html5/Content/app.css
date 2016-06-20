@@ -6910,6 +6910,15 @@ body {
 .btn-group-vertical button {
   text-align: left;
 }
+#resources-page #summary {
+  margin-top: 7px;
+}
+#resources-page #summary .databases-summary {
+  color: #af282e;
+}
+#resources-page #summary .file-systems-summary {
+  color: #7109AA;
+}
 #resources-page .btn-toolbar {
   margin-bottom: 20px;
 }
