@@ -86,7 +86,7 @@ task Compile -depends Init, CompileHtml5 {
         exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
     }
     
-    exec { &"$tools_dir\Assembly.Validator.exe" "$lib_dir" "$lib_dir\Sources\" }
+    exec { &"$tools_dir\Assembly.Validator.exe" "$lib_dir" "$lib_dir\Sources" }
 }
 
 task CompileHtml5 {
