@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using Raven.Client.Linq;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -17,9 +19,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public HashSet<string> ReferencedCollections;
 
-        public Dictionary<string, Dictionary<string, HashSet<string>>> ReferencesByCollection;
+        /// [collection: [key: [referenceKeys]]]
+        public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
 
-        public Dictionary<string, Dictionary<string, long>> ReferenceEtagsByCollection;
+        /// [collection: [referenceKey: etag]]
+        public Dictionary<string, Dictionary<Slice, long>> ReferenceEtagsByCollection;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -34,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _documentsContext = documentsContext;
         }
 
-        public dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)
+        public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)
         {
             if (keyLazy == null && keyString == null)
                 return Null();
@@ -47,25 +51,33 @@ namespace Raven.Server.Documents.Indexes.Static
             if (id == null)
                 throw new ArgumentException("Cannot execute LoadDocument. Source does not have a key.");
 
-            var key = keyLazy ?? keyString;
-            if (id.Equals(key))
+            if (keyLazy != null && id.Equals(keyLazy))
                 return source;
+
+            if (keyString != null && id.Equals(keyString))
+                return source;
+
+            Slice keySlice;
+            if (keyLazy != null)
+                keySlice = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size);
+            else
+                keySlice = Slice.From(_documentsContext.Allocator, keyString, ByteStringType.Immutable);
 
             var referencedCollections = GetReferencedCollections();
             var references = GetReferencesForDocument(id);
             var referenceEtags = GetReferenceEtags();
 
             referencedCollections.Add(collectionName);
-            references.Add(key);
+            references.Add(keySlice);
 
-            var document = _documentsStorage.Get(_documentsContext, key);
+            var document = _documentsStorage.Get(_documentsContext, keyString ?? keySlice.ToString()); // TODO [ppekrol] fix me
             if (document == null)
             {
-                referenceEtags[key] = 0;
+                referenceEtags[keySlice] = 0;
                 return Null();
             }
 
-            referenceEtags[key] = document.Etag;
+            referenceEtags[keySlice] = document.Etag;
 
             if (_document == null)
                 _document = new DynamicDocumentObject();
@@ -90,30 +102,30 @@ namespace Raven.Server.Documents.Indexes.Static
             return ReferencedCollections ?? (ReferencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         }
 
-        private Dictionary<string, long> GetReferenceEtags()
+        private Dictionary<Slice, long> GetReferenceEtags()
         {
             if (ReferenceEtagsByCollection == null)
-                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<Slice, long>>(StringComparer.OrdinalIgnoreCase);
 
-            Dictionary<string, long> referenceEtags;
+            Dictionary<Slice, long> referenceEtags;
             if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out referenceEtags) == false)
-                ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
+                ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<Slice, long>(SliceComparer.Instance));
 
             return referenceEtags;
         }
 
-        private HashSet<string> GetReferencesForDocument(string key)
+        private HashSet<Slice> GetReferencesForDocument(string key)
         {
             if (ReferencesByCollection == null)
-                ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<string>>>();
+                ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<Slice>>>();
 
-            Dictionary<string, HashSet<string>> referencesByCollection;
+            Dictionary<string, HashSet<Slice>> referencesByCollection;
             if (ReferencesByCollection.TryGetValue(SourceCollection, out referencesByCollection) == false)
-                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<string, HashSet<string>>());
+                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<string, HashSet<Slice>>());
 
-            HashSet<string> references;
+            HashSet<Slice> references;
             if (referencesByCollection.TryGetValue(key, out references) == false)
-                referencesByCollection.Add(key, references = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));
 
             return references;
         }

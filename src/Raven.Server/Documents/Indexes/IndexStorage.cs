@@ -406,13 +406,13 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var key = Slice.From(tx.InnerTransaction.Allocator, keys.Key, ByteStringType.Immutable);
 
-                        foreach (var references in keys.Value)
+                        foreach (var referenceKey in keys.Value)
                         {
-                            var referenceKey = Slice.From(tx.InnerTransaction.Allocator, references, ByteStringType.Immutable);
-
                             collectionTree.MultiAdd(referenceKey, key);
                             referencesTree.MultiAdd(key, referenceKey);
                         }
+
+                        RemoveReferences(key, collections.Key, keys.Value, tx);
                     }
                 }
             }
@@ -426,22 +426,20 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var referenceKey = etags.Key;
                         var etag = etags.Value;
-                        var referenceKeySlice = Slice.From(tx.InnerTransaction.Allocator, referenceKey, ByteStringType.Immutable);
                         var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
 
-                        collectionEtagTree.Add(referenceKeySlice, etagSlice);
+                        collectionEtagTree.Add(referenceKey, etagSlice);
                     }
                 }
             }
         }
 
-        public void RemoveReferences(LazyStringValue key, string collection, RavenTransaction tx)
+        public void RemoveReferences(Slice key, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
         {
             var referencesTree = tx.InnerTransaction.ReadTree(Schema.References);
 
-            var keyAsSlice = CreateKey(tx, key);
             List<Slice> referenceKeys;
-            using (var it = referencesTree.MultiRead(keyAsSlice))
+            using (var it = referencesTree.MultiRead(key))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                     return;
@@ -450,7 +448,8 @@ namespace Raven.Server.Documents.Indexes
 
                 do
                 {
-                    referenceKeys.Add(it.CurrentKey);
+                    if (referenceKeysToSkip != null && referenceKeysToSkip.Contains(it.CurrentKey) == false)
+                        referenceKeys.Add(it.CurrentKey);
                 } while (it.MoveNext());
             }
 
@@ -461,12 +460,12 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var referenceKey in referenceKeys)
             {
-                referencesTree.MultiDelete(keyAsSlice, referenceKey);
+                referencesTree.MultiDelete(key, referenceKey);
 
                 if (collectionTree == null)
                     continue;
 
-                collectionTree.MultiDelete(referenceKey, keyAsSlice);
+                collectionTree.MultiDelete(referenceKey, key);
                 if (collectionTree.MultiCount(referenceKey) > 0)
                     continue;
 

@@ -9,6 +9,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -177,9 +178,10 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
-        public void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            _indexStorage.RemoveReferences(tombstone.Key, collection, indexContext.Transaction);
+            var tombstoneKeySlice = Slice.External(indexContext.Transaction.InnerTransaction.Allocator, tombstone.Key.Buffer, tombstone.Key.Size);
+            _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 
         private enum ActionType
