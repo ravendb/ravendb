@@ -606,7 +606,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
 
-		public abstract IIndexedDocumentsEnumerator EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
+        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
 
         public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 

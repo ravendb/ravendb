@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return instance;
         }
 
-        public override IIndexedDocumentsEnumerator EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
         }

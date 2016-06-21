@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -128,27 +129,31 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 .Where(doc => doc != null)
                                 .Where(doc => doc.Etag <= lastIndexedEtag);
 
-                            var stateful = new StatefulEnumerator<Document>(documents);
-                            foreach (var document in _index.EnumerateMap(stateful, collection, indexContext))
+                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                             {
-                                token.ThrowIfCancellationRequested();
-
-                                var current = stateful.Current;
-
-                                if (indexWriter == null)
-                                    indexWriter = writeOperation.Value;
-
-                                try
+                                IEnumerable mapResults;
+                                
+                                while (docsEnumerator.MoveNext(out mapResults))
                                 {
-                                    _index.HandleMap(current.Key, document, indexWriter, indexContext, stats);
-                                }
-                                catch (Exception e)
-                                {
-                                    // TODO
-                                }
+                                    token.ThrowIfCancellationRequested();
 
-                                if (sw.Elapsed > timeoutProcessing)
-                                    break;
+                                    var current = docsEnumerator.Current;
+
+                                    if (indexWriter == null)
+                                        indexWriter = writeOperation.Value;
+
+                                    try
+                                    {
+                                        _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, stats);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        // TODO
+                                    }
+
+                                    if (sw.Elapsed > timeoutProcessing)
+                                        break;
+                                }
                             }
                         }
                     }

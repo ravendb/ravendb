@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static
             base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
-        public override IIndexedDocumentsEnumerator EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
         }
