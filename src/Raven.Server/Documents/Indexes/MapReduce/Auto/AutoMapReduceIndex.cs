@@ -1,21 +1,19 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Workers;
-using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
-using Voron.Data.BTrees;
-using Voron.Data.Fixed;
-using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
@@ -23,7 +21,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
     {
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
         
-        private readonly MapResult[] _singleOutputList = new MapResult[1];
+        private readonly MapResult[] _singleOutputList = new MapResult[1]
+        {
+            new MapResult()
+        };
 
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
@@ -49,14 +50,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return instance;
         }
 
-        public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IIndexedDocumentsEnumerator EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
-            return documents;
+            return new AutoIndexDocsEnumerator(documents);
         }
 
-        public override unsafe void HandleMap(LazyStringValue key, object doc, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
+        public override unsafe void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
-            var document = (Document)doc;
+            var document = (Document)((IEnumerable<object>)mapResults).First();
             Debug.Assert(key == document.Key);
 
             var mappedResult = new DynamicJsonValue();
@@ -148,12 +149,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
             {
-                _singleOutputList[0] = new MapResult
-                {
-                    Data = mappedresult,
-                    ReduceKeyHash = reduceHashKey,
-                    State = state
-                };
+                var mapResult = _singleOutputList[0];
+
+                mapResult.Data = mappedresult;
+                mapResult.ReduceKeyHash = reduceHashKey;
+                mapResult.State = state;
 
                 PutMapResults(document.Key, _singleOutputList, indexContext);
             }

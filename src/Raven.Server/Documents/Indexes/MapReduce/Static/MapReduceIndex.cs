@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -29,22 +30,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return instance;
         }
 
-        public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IIndexedDocumentsEnumerator EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
-            var indexingEnumerator = new IndexedDocumentsEnumerator(documents, collection);
-
-            foreach (var indexingFunc in _compiled.Maps[collection])
-            {
-                foreach (var doc in indexingFunc(indexingEnumerator))
-                {
-                    yield return doc;
-                }
-            }
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
         }
 
-        public override void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            throw new System.NotImplementedException();
+            //throw new System.NotImplementedException();
         }
     }
 }

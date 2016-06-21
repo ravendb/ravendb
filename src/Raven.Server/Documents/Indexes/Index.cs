@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -604,11 +605,12 @@ namespace Raven.Server.Documents.Indexes
                 ReferencedCollections.Add(referencedCollection);
         }
 
-        public abstract IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
+
+		public abstract IIndexedDocumentsEnumerator EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
 
         public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChangeNotification notification)
         {
@@ -757,7 +759,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
-                        documentsContext.OpenReadTransaction(); // we have to open read tx for documents _after_ we open index tx
+                        documentsContext.OpenReadTransaction(); // we have to open read tx for mapResults _after_ we open index tx
 
                         if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
                             query.CutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
@@ -781,7 +783,7 @@ namespace Raven.Server.Documents.Indexes
                         FillQueryResult(result, isStale, documentsContext, indexContext);
 
                         if (Type.IsMapReduce())
-                            documentsContext.Reset(); // map reduce don't need to access documents storage
+                            documentsContext.Reset(); // map reduce don't need to access mapResults storage
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {

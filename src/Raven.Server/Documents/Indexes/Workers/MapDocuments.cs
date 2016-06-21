@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Logging;
@@ -63,8 +65,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                     using (databaseContext.OpenReadTransaction())
                     {
                         var documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize);
-                        var stateful = new StatefulEnumerator<Document>(documents);
-                        foreach (var document in _index.EnumerateMap(stateful, collection, indexContext))
+
+                        var docsEnumerator = _index.EnumerateMap(documents, collection, indexContext);
+                        IEnumerable mapResults;
+
+                        while (docsEnumerator.MoveNext(out mapResults))
                         {
                             //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
                             //TODO: we flush the index
@@ -73,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (indexWriter == null)
                                 indexWriter = writeOperation.Value;
 
-                            var current = stateful.Current;
+                            var current = docsEnumerator.Current;
 
                             if (Log.IsDebugEnabled)
                                 Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
@@ -85,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             try
                             {
-                                _index.HandleMap(current.Key, document, indexWriter, indexContext, collectionStats);
+                                _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, collectionStats);
 
                                 collectionStats.RecordMapSuccess();
                             }

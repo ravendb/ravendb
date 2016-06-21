@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -26,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
-        public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IIndexedDocumentsEnumerator EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
@@ -36,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
-        public override void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
