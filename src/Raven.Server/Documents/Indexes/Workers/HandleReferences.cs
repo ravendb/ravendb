@@ -8,7 +8,6 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
 
@@ -54,130 +53,148 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var referencedCollection in _index.ReferencedCollections)
             {
-                long lastReferenceEtag;
-
-                switch (actionType)
+                using (var collectionStats = stats.For("Collection_" + referencedCollection))
                 {
-                    case ActionType.Document:
-                        lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection);
-                        break;
-                    case ActionType.Tombstone:
-                        lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection);
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Collection: {referencedCollection}. Type: {actionType}.");
 
-                var lastEtag = lastReferenceEtag;
-                var count = 0;
+                    long lastReferenceEtag;
 
-                var sw = Stopwatch.StartNew();
-                IndexWriteOperation indexWriter = null;
-
-                using (databaseContext.OpenReadTransaction())
-                {
-                    IEnumerable<Reference> references;
                     switch (actionType)
                     {
                         case ActionType.Document:
-                            references = _documentsStorage
-                                .GetDocumentsAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
-                                .Select(document =>
-                                {
-                                    _reference.Key = document.Key;
-                                    _reference.Etag = document.Etag;
-
-                                    return _reference;
-                                });
+                            lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection);
                             break;
                         case ActionType.Tombstone:
-                            references = _documentsStorage
-                                .GetTombstonesAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
-                                .Select(tombstone =>
-                                {
-                                    _reference.Key = tombstone.Key;
-                                    _reference.Etag = tombstone.Etag;
-
-                                    return _reference;
-                                });
+                            lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection);
                             break;
                         default:
                             throw new NotSupportedException();
                     }
 
-                    foreach (var referencedDocument in references)
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. LastReferenceEtag: {lastReferenceEtag}.");
+
+                    var lastEtag = lastReferenceEtag;
+                    var count = 0;
+
+                    var sw = Stopwatch.StartNew();
+                    IndexWriteOperation indexWriter = null;
+
+                    using (databaseContext.OpenReadTransaction())
                     {
-                        lastEtag = referencedDocument.Etag;
-                        count++;
-
-                        foreach (var collection in _index.Collections)
+                        IEnumerable<Reference> references;
+                        switch (actionType)
                         {
-                            var lastSeenEtag = _indexStorage.ReadLastSeenEtagForReference(collection, referencedDocument.Key, indexContext.Transaction);
-                            if (referencedDocument.Etag == lastSeenEtag)
-                                continue;
+                            case ActionType.Document:
+                                references = _documentsStorage
+                                    .GetDocumentsAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
+                                    .Select(document =>
+                                    {
+                                        _reference.Key = document.Key;
+                                        _reference.Etag = document.Etag;
 
-                            if (lastIndexedEtagsByCollection == null)
-                                lastIndexedEtagsByCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                                        return _reference;
+                                    });
+                                break;
+                            case ActionType.Tombstone:
+                                references = _documentsStorage
+                                    .GetTombstonesAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
+                                    .Select(tombstone =>
+                                    {
+                                        _reference.Key = tombstone.Key;
+                                        _reference.Etag = tombstone.Etag;
 
-                            long lastIndexedEtag;
-                            if (lastIndexedEtagsByCollection.TryGetValue(collection, out lastIndexedEtag) == false)
-                                lastIndexedEtagsByCollection[collection] = lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                                        return _reference;
+                                    });
+                                break;
+                            default:
+                                throw new NotSupportedException();
+                        }
 
-                            var documents = _indexStorage
-                                .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction)
-                                .Select(key => _documentsStorage.Get(databaseContext, key))
-                                .Where(doc => doc != null)
-                                .Where(doc => doc.Etag <= lastIndexedEtag);
+                        foreach (var referencedDocument in references)
+                        {
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing reference: {referencedDocument.Key}.");
 
-                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
+                            lastEtag = referencedDocument.Etag;
+                            count++;
+
+                            foreach (var collection in _index.Collections)
                             {
-                                IEnumerable mapResults;
-                                
-                                while (docsEnumerator.MoveNext(out mapResults))
+                                var lastSeenEtag = _indexStorage.ReadLastSeenEtagForReference(collection, referencedDocument.Key, indexContext.Transaction);
+                                if (referencedDocument.Etag == lastSeenEtag)
+                                    continue;
+
+                                if (lastIndexedEtagsByCollection == null)
+                                    lastIndexedEtagsByCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+                                long lastIndexedEtag;
+                                if (lastIndexedEtagsByCollection.TryGetValue(collection, out lastIndexedEtag) == false)
+                                    lastIndexedEtagsByCollection[collection] = lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+
+                                var documents = _indexStorage
+                                    .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction)
+                                    .Select(key => _documentsStorage.Get(databaseContext, key))
+                                    .Where(doc => doc != null)
+                                    .Where(doc => doc.Etag <= lastIndexedEtag);
+
+                                using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                                 {
-                                    token.ThrowIfCancellationRequested();
+                                    IEnumerable mapResults;
 
-                                    var current = docsEnumerator.Current;
-
-                                    if (indexWriter == null)
-                                        indexWriter = writeOperation.Value;
-
-                                    try
+                                    while (docsEnumerator.MoveNext(out mapResults))
                                     {
-                                        _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, stats);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        // TODO
-                                    }
+                                        token.ThrowIfCancellationRequested();
 
-                                    if (sw.Elapsed > timeoutProcessing)
-                                        break;
+                                        var current = docsEnumerator.Current;
+
+                                        if (indexWriter == null)
+                                            indexWriter = writeOperation.Value;
+
+                                        if (Log.IsDebugEnabled)
+                                            Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
+
+                                        try
+                                        {
+                                            _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, collectionStats);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            if (Log.IsWarnEnabled)
+                                                Log.WarnException(
+                                                    $"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.",
+                                                    e);
+                                        }
+
+                                        if (sw.Elapsed > timeoutProcessing)
+                                            break;
+                                    }
                                 }
                             }
                         }
                     }
+
+                    if (count == 0)
+                        continue;
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+
+                    switch (actionType)
+                    {
+                        case ActionType.Document:
+                            _indexStorage.WriteLastReferenceEtag(indexContext.Transaction, referencedCollection, lastEtag);
+                            break;
+                        case ActionType.Tombstone:
+                            _indexStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, referencedCollection, lastEtag);
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    }
+
+                    moreWorkFound = true;
                 }
-
-                if (count == 0)
-                    continue;
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
-
-                switch (actionType)
-                {
-                    case ActionType.Document:
-                        _indexStorage.WriteLastReferenceEtag(indexContext.Transaction, referencedCollection, lastEtag);
-                        break;
-                    case ActionType.Tombstone:
-                        _indexStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, referencedCollection, lastEtag);
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
-
-                moreWorkFound = true;
             }
 
             return moreWorkFound;
