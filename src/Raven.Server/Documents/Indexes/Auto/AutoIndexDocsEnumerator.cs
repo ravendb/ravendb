@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoIndexDocsEnumerator : IIndexedDocumentsEnumerator
     {
         private readonly IEnumerator<Document> _docsEnumerator;
-        private readonly object[] _results = new object[1];
+        private readonly Document[] _results = new Document[1];
 
         public AutoIndexDocsEnumerator(IEnumerable<Document> documents)
         {

@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override unsafe void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
-            var document = (Document)((object[])mapResults)[0];
+            var document = ((Document[])mapResults)[0];
             Debug.Assert(key == document.Key);
 
             var mappedResult = new DynamicJsonValue();
