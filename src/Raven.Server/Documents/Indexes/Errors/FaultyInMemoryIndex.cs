@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }

@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
                 tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
                 tx.InnerTransaction.CreateTree(Schema.EtagsReferenceTree);
                 tx.InnerTransaction.CreateTree(Schema.ReferencedCollections);
-                tx.InnerTransaction.CreateTree(Schema.ReverseReferences);
+                tx.InnerTransaction.CreateTree(Schema.References);
 
                 _index.Definition.Persist(context, _environment.Options);
 
@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (indexingScope.ReferencesByCollection != null)
             {
-                var reverseReferencesTree = tx.InnerTransaction.ReadTree(Schema.ReverseReferences);
+                var referencesTree = tx.InnerTransaction.ReadTree(Schema.References);
 
                 foreach (var collections in indexingScope.ReferencesByCollection)
                 {
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Indexes
                             var referenceKey = Slice.From(tx.InnerTransaction.Allocator, references, ByteStringType.Immutable);
 
                             collectionTree.MultiAdd(referenceKey, key);
-                            reverseReferencesTree.MultiAdd(key, referenceKey);
+                            referencesTree.MultiAdd(key, referenceKey);
                         }
                     }
                 }
@@ -421,17 +421,57 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var kvp in indexingScope.ReferenceEtagsByCollection)
                 {
-                    var tree = tx.InnerTransaction.CreateTree("$" + kvp.Key); // $collection
+                    var collectionEtagTree = tx.InnerTransaction.CreateTree("$" + kvp.Key); // $collection
                     foreach (var etags in kvp.Value)
                     {
-                        var key = etags.Key;
+                        var referenceKey = etags.Key;
                         var etag = etags.Value;
-                        var keySlice = Slice.From(tx.InnerTransaction.Allocator, key, ByteStringType.Immutable);
+                        var referenceKeySlice = Slice.From(tx.InnerTransaction.Allocator, referenceKey, ByteStringType.Immutable);
                         var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
 
-                        tree.Add(keySlice, etagSlice);
+                        collectionEtagTree.Add(referenceKeySlice, etagSlice);
                     }
                 }
+            }
+        }
+
+        public void RemoveReferences(LazyStringValue key, string collection, RavenTransaction tx)
+        {
+            var referencesTree = tx.InnerTransaction.ReadTree(Schema.References);
+
+            var keyAsSlice = CreateKey(tx, key);
+            List<Slice> referenceKeys;
+            using (var it = referencesTree.MultiRead(keyAsSlice))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    return;
+
+                referenceKeys = new List<Slice>();
+
+                do
+                {
+                    referenceKeys.Add(it.CurrentKey);
+                } while (it.MoveNext());
+            }
+
+            if (referenceKeys.Count == 0)
+                return;
+
+            var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
+
+            foreach (var referenceKey in referenceKeys)
+            {
+                referencesTree.MultiDelete(keyAsSlice, referenceKey);
+
+                if (collectionTree == null)
+                    continue;
+
+                collectionTree.MultiDelete(referenceKey, keyAsSlice);
+                if (collectionTree.MultiCount(referenceKey) > 0)
+                    continue;
+
+                var collectionEtagTree = tx.InnerTransaction.ReadTree("$" + collection);
+                collectionEtagTree?.Delete(referenceKey);
             }
         }
 
@@ -454,7 +494,7 @@ namespace Raven.Server.Documents.Indexes
 
             public const string ReferencedCollections = "Referenced.Collections";
 
-            public const string ReverseReferences = "Reverse.References";
+            public const string References = "References";
 
             public static readonly Slice TypeSlice = Slice.From(StorageEnvironment.LabelsContext, "Type", ByteStringType.Immutable);
 

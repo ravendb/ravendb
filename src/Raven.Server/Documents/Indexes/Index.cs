@@ -17,7 +17,6 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
@@ -607,7 +606,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
 
-        public abstract void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         public abstract void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes
             };
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             writer.Delete(tombstone.Key, stats);
         }

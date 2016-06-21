@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -11,6 +12,8 @@ namespace Raven.Server.Documents.Indexes.Static
     public class StaticMapIndex : MapIndexBase<StaticMapIndexDefinition>
     {
         private readonly StaticIndexBase _compiled;
+
+        private HandleReferences _handleReferences;
 
         private StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.Map, definition)
@@ -23,9 +26,15 @@ namespace Raven.Server.Documents.Indexes.Static
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
-                new HandleReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
+                _handleReferences = new HandleReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
                 new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
             };
+        }
+
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+            base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
         public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)

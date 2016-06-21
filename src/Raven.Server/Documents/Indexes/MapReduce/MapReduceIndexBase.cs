@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             };
         }
 
-        public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(tombstone.Key, sizeof(ulong));
 
