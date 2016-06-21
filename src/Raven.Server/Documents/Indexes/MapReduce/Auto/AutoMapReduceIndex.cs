@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -57,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override unsafe void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
-            var document = (Document)((IEnumerable<object>)mapResults).First();
+            var document = (Document)((object[])mapResults)[0];
             Debug.Assert(key == document.Key);
 
             var mappedResult = new DynamicJsonValue();
