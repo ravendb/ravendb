@@ -33,7 +33,7 @@ namespace Voron.Impl.Journal
 
         private bool _disposed;
 
-        private readonly LZ4Reference _lz4 = new LZ4Reference();
+        private readonly LZ4 _lz4 = new LZ4();
         private readonly JournalApplicator _journalApplicator;
         private readonly ModifyHeaderAction _updateLogInfo;
 
@@ -903,7 +903,7 @@ namespace Voron.Impl.Journal
             var sizeInBytes = dataPagesCount * pageSize;
 
             // We want to include the Transaction Header straight into the compression buffer.
-            var outputBufferSize = LZ4Reference.MaximumOutputLength(sizeInBytes) + sizeof(TransactionHeader);
+            var outputBufferSize = LZ4.MaximumOutputLength(sizeInBytes) + sizeof(TransactionHeader);
             var outputBufferInPages = outputBufferSize / pageSize +
                                       (outputBufferSize % pageSize == 0 ? 0 : 1);
 
