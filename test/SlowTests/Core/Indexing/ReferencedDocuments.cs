@@ -6,12 +6,9 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 using FastTests;
-using Microsoft.CodeAnalysis;
-using Microsoft.CSharp.RuntimeBinder;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
@@ -207,7 +204,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task ShouldReindexOnReferencedDocumentChange()
         {
             using (var store = await GetDocumentStore())

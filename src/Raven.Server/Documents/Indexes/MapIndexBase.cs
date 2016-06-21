@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Indexes
 
         public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
+            writer.Delete(key, stats);
+
             foreach (var mapResult in mapResults)
             {
                 writer.IndexDocument(key, mapResult, stats);
