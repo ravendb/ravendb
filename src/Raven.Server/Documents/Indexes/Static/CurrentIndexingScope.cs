@@ -10,7 +10,6 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _documentsContext;
-        private readonly string _collection;
 
         private DynamicDocumentObject _document;
 
