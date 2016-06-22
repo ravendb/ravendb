@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Errors
 {
     public class FaultyIndexDefinition : IndexDefinitionBase
     {
-        public FaultyIndexDefinition(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields) 
+        public FaultyIndexDefinition(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
             : base(name, collections, lockMode, mapFields)
         {
         }
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
 
-        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
+        protected override IndexDefinition CreateIndexDefinition()
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }

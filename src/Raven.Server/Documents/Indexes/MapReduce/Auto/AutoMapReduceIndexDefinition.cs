@@ -4,11 +4,10 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
-
 using Sparrow.Json;
 using Voron;
 
-namespace Raven.Server.Documents.Indexes.MapReduce
+namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {
@@ -41,6 +40,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             PersistGroupByFields(context, writer);
         }
 
+        protected override IndexDefinition CreateIndexDefinition()
+        {
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
+            var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted},Operation:{x.Value.MapReduceOperation}>"))}]";
+
+            var indexDefinition = new IndexDefinition();
+            indexDefinition.Maps.Add(map);
+            indexDefinition.Reduce = reduce;
+
+            foreach (var kvp in ConvertFields(MapFields))
+                indexDefinition.Fields[kvp.Key] = kvp.Value;
+
+            foreach (var kvp in ConvertFields(GroupByFields))
+                indexDefinition.Fields[kvp.Key] = kvp.Value;
+
+            return indexDefinition;
+        }
+
         protected void PersistGroupByFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             writer.WritePropertyName(context.GetLazyString(nameof(GroupByFields)));
@@ -69,10 +86,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 first = false;
             }
             writer.WriteEndArray();
-        }
-
-        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
-        {
         }
 
         public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)

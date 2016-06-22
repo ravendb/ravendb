@@ -197,10 +197,5 @@ namespace FastTests.Server.Documents.Tombstones
                 }
             }
         }
-
-        private static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)
-        {
-            return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Raven.Client.Data.Indexes;
+﻿using System.Collections;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -24,15 +25,20 @@ namespace Raven.Server.Documents.Indexes
             };
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             writer.Delete(tombstone.Key, stats);
         }
 
-        public override void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.IndexDocument(key, document, stats);
+            writer.Delete(key, stats);
 
+            foreach (var mapResult in mapResults)
+            {
+                writer.IndexDocument(key, mapResult, stats);
+            }
+            
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }
 

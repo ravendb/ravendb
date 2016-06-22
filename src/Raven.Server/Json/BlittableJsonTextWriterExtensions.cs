@@ -59,7 +59,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDocumentQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result)
+        public static void WriteDocumentQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly)
         {
             writer.WriteStartObject();
 
@@ -71,12 +71,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
 
-            writer.WriteQueryResult(context, result, partial: true);
+            writer.WriteQueryResult(context, result, metadataOnly, partial: true);
 
             writer.WriteEndObject();
         }
 
-        public static void WriteQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<Document> result, bool partial = false)
+        public static void WriteQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<Document> result, bool metadataOnly, bool partial = false)
         {
             if (partial == false)
                 writer.WriteStartObject();
@@ -86,11 +86,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Results)));
-            writer.WriteDocuments(context, result.Results, metadataOnly: false);
+            writer.WriteDocuments(context, result.Results, metadataOnly);
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Includes)));
-            writer.WriteDocuments(context, result.Includes, metadataOnly: false);
+            writer.WriteDocuments(context, result.Includes, metadataOnly);
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyString(nameof(result.IndexTimestamp)));

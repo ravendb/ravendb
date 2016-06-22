@@ -15,29 +15,21 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (CollectionName != null)
                 return node;
 
-            var docsExpression = node.Expression as MemberAccessExpressionSyntax; // docs.Users.Select
-            if (docsExpression == null)
+            var nodeAsString = node.Expression.ToString();
+            if (nodeAsString.StartsWith("docs") == false)
                 return node;
 
-            var docsAndCollectionExpression = docsExpression.Expression as MemberAccessExpressionSyntax; // docs.Users
-            if (docsAndCollectionExpression == null)
+            var nodeParts = nodeAsString.Split(new[] {"."}, StringSplitOptions.RemoveEmptyEntries);
+            if (nodeParts.Length <= 2)
                 return node;
 
-            var identifiers = docsAndCollectionExpression.ChildNodes()
-                .Where(x => x.IsKind(SyntaxKind.IdentifierName))
-                .Select(x => (IdentifierNameSyntax)x)
-                .ToArray();
+            CollectionName = nodeParts[1];
 
-            if (identifiers.Length != 2) // docs, Users
-                return node;
+            var collectionIndex = nodeAsString.IndexOf(CollectionName, StringComparison.OrdinalIgnoreCase);
+            nodeAsString = nodeAsString.Remove(collectionIndex - 1, CollectionName.Length + 1); // removing .Users
 
-            var docsIdentifier = identifiers[0];
-            if (string.Equals(docsIdentifier?.Identifier.Text, "docs", StringComparison.OrdinalIgnoreCase) == false)
-                return node;
-
-            CollectionName = identifiers[1].Identifier.Text; // Users
-
-            return node.WithExpression(docsExpression.WithExpression(identifiers[0])); // remove Users from docs.Users.Select
+            var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
+            return node.WithExpression(newExpression);
         }
     }
 }

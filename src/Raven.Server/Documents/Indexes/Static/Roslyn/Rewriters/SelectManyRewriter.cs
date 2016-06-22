@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -7,21 +8,27 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     internal class SelectManyRewriter : CSharpSyntaxRewriter
     {
+        public static SelectManyRewriter Instance = new SelectManyRewriter();
+
+        private SelectManyRewriter()
+        {
+        }
+
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var docsAndSelectManyExpression = node.Expression as MemberAccessExpressionSyntax; // docs.SelectMany
             if (docsAndSelectManyExpression == null)
-                return node;
+                return base.VisitInvocationExpression(node);
 
             var identifiers = docsAndSelectManyExpression.ChildNodes()
                 .Where(x => x.IsKind(SyntaxKind.IdentifierName))
                 .Select(x => (IdentifierNameSyntax)x)
                 .ToArray();
 
-            if (identifiers.Length != 2) // docs, SelectMany
-                return node;
+            if (identifiers.Length == 0)
+                return base.VisitInvocationExpression(node);
 
-            var selectMany = identifiers[1].Identifier.Text;
+            var selectMany = identifiers[identifiers.Length - 1].Identifier.Text; // check if last if SelectMany
             if (string.Equals(selectMany, "SelectMany") == false)
                 return node;
 
@@ -38,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (toCast.IsKind(SyntaxKind.SimpleMemberAccessExpression) == false)
                 return node;
 
-            var castExpression = SyntaxFactory.ParseExpression($"((IEnumerable<dynamic>){toCast})");
+            var castExpression = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(IEnumerable<dynamic>){toCast}");
 
             return node.ReplaceNode(toCast, castExpression);
         }

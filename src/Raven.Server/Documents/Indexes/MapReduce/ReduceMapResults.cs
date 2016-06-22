@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Json;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         protected readonly ILog Log = LogManager.GetLogger(typeof(ReduceMapResults));
 
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
-        private readonly AutoMapReduceIndexDefinition _indexDefinition;
+        private readonly IndexDefinitionBase _indexDefinition;
         private readonly IndexStorage _indexStorage;
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _mapReduceContext;
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
+        public ReduceMapResults(IndexDefinitionBase indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
         {
             _indexDefinition = indexDefinition;
             _indexStorage = indexStorage;

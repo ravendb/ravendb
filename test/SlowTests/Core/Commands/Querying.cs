@@ -102,7 +102,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Boosting, Streaming")]
+        [Fact(Skip = "Missing feature: Streaming")]
         public async Task CanStreamQueryResult()
         {
             using (var store = await GetDocumentStore())

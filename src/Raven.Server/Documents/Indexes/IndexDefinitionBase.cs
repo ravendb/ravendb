@@ -135,34 +135,18 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexDefinition ConvertToIndexDefinition(Index index)
         {
-            var indexDefinition = new IndexDefinition();
-            indexDefinition.IndexId = index.IndexId;
+            var indexDefinition = CreateIndexDefinition() ?? new IndexDefinition();
             indexDefinition.Name = index.Name;
-            indexDefinition.Fields = MapFields.ToDictionary(
-                x => x.Key,
-                x => new IndexFieldOptions
-                {
-                    Sort = x.Value.SortOption,
-                    TermVector = x.Value.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null,
-                    Analyzer = x.Value.Analyzer,
-                    Indexing = x.Value.Indexing,
-                    Storage = x.Value.Storage
-                });
-
+            indexDefinition.IndexId = index.IndexId;
             indexDefinition.Type = index.Type;
             indexDefinition.LockMode = LockMode;
 
-            indexDefinition.IndexVersion = -1; // TODO [ppekrol]      
-            indexDefinition.IsSideBySideIndex = false; // TODO [ppekrol]
-            indexDefinition.IsTestIndex = false; // TODO [ppekrol]       
-            indexDefinition.MaxIndexOutputsPerDocument = null; // TODO [ppekrol]
-
-            FillIndexDefinition(indexDefinition);
+            indexDefinition.IndexVersion = -1; // TODO [ppekrol]
 
             return indexDefinition;
         }
 
-        protected abstract void FillIndexDefinition(IndexDefinition indexDefinition);
+        protected abstract IndexDefinition CreateIndexDefinition();
 
         public bool ContainsField(string field)
         {
@@ -286,6 +270,20 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return fields;
+        }
+
+        protected Dictionary<string, IndexFieldOptions> ConvertFields(Dictionary<string, IndexField> fields)
+        {
+            return fields.ToDictionary(
+                x => x.Key,
+                x => new IndexFieldOptions
+                {
+                    Sort = x.Value.SortOption,
+                    TermVector = x.Value.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null,
+                    Analyzer = x.Value.Analyzer,
+                    Indexing = x.Value.Indexing,
+                    Storage = x.Value.Storage
+                });
         }
     }
 }

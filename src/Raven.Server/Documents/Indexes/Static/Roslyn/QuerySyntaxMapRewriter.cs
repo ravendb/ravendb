@@ -1,30 +1,35 @@
 using System;
 
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.CSharp;
+
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn
 {
-    internal class QuerySyntaxMapRewriter : MapRewriter
+    internal class QuerySyntaxMapRewriter : MapRewriterBase
     {
-        public override string CollectionName { get; protected set; }
+        private readonly QuerySyntaxCollectionRewriter _collectionRewriter = new QuerySyntaxCollectionRewriter();
 
-        public override SyntaxNode VisitFromClause(FromClauseSyntax node)
+        public QuerySyntaxMapRewriter()
         {
-            if (CollectionName != null)
-                return node;
+            Rewriters = new CSharpSyntaxRewriter[]
+            {
+                _collectionRewriter,
+                DynamicExtensionMethodsRewriter.Instance
+            };
+        }
 
-            var docsExpression = node.Expression as MemberAccessExpressionSyntax;
-            if (docsExpression == null)
-                return node;
+        public override string CollectionName
+        {
+            get
+            {
+                return _collectionRewriter.CollectionName;
+            }
 
-            var docsIdentifier = docsExpression.Expression as IdentifierNameSyntax;
-            if (string.Equals(docsIdentifier?.Identifier.Text, "docs", StringComparison.OrdinalIgnoreCase) == false)
-                return node;
-
-            CollectionName = docsExpression.Name.Identifier.Text;
-
-            return node.WithExpression(docsExpression.Expression);
+            protected set
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 }

@@ -324,7 +324,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Highlighting")]
         public async Task ExecutesQueryWithHighlightingsAgainstSimpleIndex()
         {
             using (var documentStore = await GetDocumentStore())
@@ -395,7 +395,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Highlighting")]
         public async Task ExecutesQueryWithHighlightingsAndProjections()
         {
             using (var documentStore = await GetDocumentStore())
@@ -449,7 +449,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Highlighting")]
         public async Task ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
         {
             using (var documentStore = await GetDocumentStore())

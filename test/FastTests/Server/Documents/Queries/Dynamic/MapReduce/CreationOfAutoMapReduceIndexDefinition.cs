@@ -5,6 +5,7 @@ using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 

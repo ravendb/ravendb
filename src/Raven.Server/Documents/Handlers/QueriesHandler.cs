@@ -57,6 +57,7 @@ namespace Raven.Server.Documents.Handlers
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var includes = GetStringValuesQueryString("include", required: false);
+            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             var runner = new QueryRunner(Database, context);
 
@@ -72,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteDocumentQueryResult(context, result);
+                writer.WriteDocumentQueryResult(context, result, metadataOnly);
             }
         }
 
@@ -95,7 +96,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteQueryResult(context, result);
+                writer.WriteQueryResult(context, result, metadataOnly: false);
             }
         }
 

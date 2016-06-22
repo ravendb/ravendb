@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
-
+using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
 
@@ -24,7 +24,7 @@ namespace SlowTests.Core.Indexing
 {
     public class ReferencedDocuments : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Transformers")]
         public async Task CanUseLoadDocumentToIndexReferencedDocs()
         {
             using (var store = await GetDocumentStore())
@@ -83,7 +83,128 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
+        public async Task BasicLoadDocuments()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                new Users_ByCity().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var address1 = new Address { City = "New York" };
+                    var address2 = new Address { City = "Warsaw" };
+
+                    session.Store(address1);
+                    session.Store(address2);
+
+                    var user1 = new User
+                    {
+                        LastName = "Doe",
+                        AddressId = address1.Id
+                    };
+
+                    var user2 = new User
+                    {
+                        LastName = "Nowak",
+                        AddressId = address2.Id
+                    };
+
+                    session.Store(user1);
+                    session.Store(user2);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "New York")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Doe", users[0].LastName);
+
+                    var count = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Count();
+
+                    Assert.Equal(2, count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var address = session.Load<Address>("addresses/1");
+                    address.City = "Barcelona";
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "New York")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(0, users.Count);
+
+                    users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "Barcelona")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Doe", users[0].LastName);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("addresses/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == null)
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Doe", users[0].LastName);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    user1.AddressId = "addresses/2";
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "Warsaw")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(2, users.Count);
+                }
+            }
+        }
+
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task ShouldReindexOnReferencedDocumentChange()
         {
             using (var store = await GetDocumentStore())
@@ -135,7 +256,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task CanProceedWhenReferencedDocumentsAreMissing()
         {
             using (var store = await GetDocumentStore())

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,6 +17,7 @@ using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -26,16 +28,16 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections.Generic")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Linq")),
-            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static"))
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static")),
         };
 
         private static readonly MetadataReference[] References =
         {
-            MetadataReference.CreateFromFile(typeof (object).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (Enumerable).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (StaticIndexCompiler).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (DynamicAttribute).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (BoostedValue).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(StaticIndexCompiler).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(DynamicAttribute).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
         };
@@ -57,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace());
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: cSharpSafeName  + "." + Guid.NewGuid() + ".index.dll",
+                assemblyName: cSharpSafeName + "." + Guid.NewGuid() + ".index.dll",
                 syntaxTrees: new[] { SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString()) }, // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
                 references: References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
@@ -105,10 +107,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
         {
             var statements = new List<StatementSyntax>();
-            statements.AddRange(definition.Maps.Select(map => HandleMap(map, definition)));
+            statements.AddRange(definition.Maps.Select(HandleMap));
 
-            //if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
-            //    statements.Add(HandleReduceFunction(definition));
+            if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
+                statements.Add(HandleReduce(definition.Reduce));
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
@@ -118,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        private static StatementSyntax HandleMap(string map, IndexDefinition definition)
+        private static StatementSyntax HandleMap(string map)
         {
             try
             {
@@ -143,7 +145,32 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleSyntaxInMap(MapRewriter mapRewriter, ExpressionSyntax expression)
+        private static StatementSyntax HandleReduce(string reduce)
+        {
+            try
+            {
+                var expression = SyntaxFactory.ParseExpression(reduce);
+                var queryExpression = expression as QueryExpressionSyntax;
+                if (queryExpression != null)
+                    return HandleSyntaxInReduce(new QuerySyntaxReduceRewriter(), queryExpression);
+
+                var invocationExpression = expression as InvocationExpressionSyntax;
+                if (invocationExpression != null)
+                    return HandleSyntaxInReduce(new MethodSyntaxReduceRewriter(), invocationExpression);
+
+                throw new InvalidOperationException("Not supported expression type.");
+            }
+            catch (Exception ex)
+            {
+                throw new IndexCompilationException(ex.Message, ex)
+                {
+                    IndexDefinitionProperty = "Reduce",
+                    ProblematicText = reduce
+                };
+            }
+        }
+
+        private static StatementSyntax HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
             if (string.IsNullOrWhiteSpace(mapRewriter.CollectionName))
@@ -154,6 +181,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return RoslynHelper.This("AddMap") // this.AddMap("Users", docs => from doc in docs ... )
                 .Invoke(collection, indexingFunction).AsExpressionStatement();
+        }
+
+        private static StatementSyntax HandleSyntaxInReduce(ReduceRewriterBase reduceRewriter, ExpressionSyntax expression)
+        {
+            var rewrittenExpression = (CSharpSyntaxNode)reduceRewriter.Visit(expression);
+
+            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(reduceRewriter.ResultsVariableName)), rewrittenExpression);
+
+            return RoslynHelper.This("SetReduce")
+                .Invoke(indexingFunction).AsExpressionStatement();
         }
 
         private static string GetCSharpSafeName(IndexDefinition definition)

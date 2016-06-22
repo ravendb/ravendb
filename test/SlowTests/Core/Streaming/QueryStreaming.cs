@@ -18,7 +18,7 @@ namespace SlowTests.Core.Streaming
 {
     public class QueryStreaming : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Query streaming")]
         public async Task CanStreamQueryResults()
         {
             using (var store = await GetDocumentStore())

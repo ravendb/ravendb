@@ -29,7 +29,7 @@ namespace SlowTests.Core.Querying
 {
     public class Searching : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanSearchByMultipleTerms()
         {
             using (var store = await GetDocumentStore())
@@ -83,7 +83,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanSearchByMultipleFields()
         {
             using (var store = await GetDocumentStore())
@@ -153,7 +153,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Spatial")]
         public async Task CanDoSpatialSearch()
         {
             using (var store = await GetDocumentStore())
@@ -240,7 +240,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanDoSearchBoosting()
         {
             using (var store = await GetDocumentStore())
@@ -278,7 +278,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public async Task CanProvideSuggestionsAndLazySuggestions()
         {
             using (var store = await GetDocumentStore())
@@ -330,7 +330,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Facets")]
         public async Task CanPerformFacetedSearchAndLazyFacatedSearch()
         {
             using (var store = await GetDocumentStore())

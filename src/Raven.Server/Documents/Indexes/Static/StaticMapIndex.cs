@@ -2,6 +2,8 @@
 using System.Linq;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -11,23 +13,33 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly StaticIndexBase _compiled;
 
-        public StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
+        private HandleReferences _handleReferences;
+
+        private StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.Map, definition)
         {
             _compiled = compiled;
         }
 
-        public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            var indexingEnumerator = new IndexedDocumentsEnumerator(documents);
-
-            foreach (var indexingFunc in _compiled.Maps[collection])
+            return new IIndexingWork[]
             {
-                foreach (var doc in indexingFunc(indexingEnumerator))
-                {
-                    yield return doc;
-                }
-            }
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
+                _handleReferences = new HandleReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
+            };
+        }
+
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+            base.HandleDelete(tombstone, collection, writer, indexContext, stats);
+        }
+
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        {
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
         }
 
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
