@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
+using Raven.Server.Extensions;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
-
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -39,30 +38,17 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
-            PersistMapFields(context, writer);
-            writer.WriteComma();
-
-            writer.WritePropertyName(context.GetLazyString(nameof(Client.Indexing.IndexDefinition.Maps)));
-            writer.WriteStartArray();
-            var isFirst = true;
-            foreach (var map in IndexDefinition.Maps)
+            var builder = IndexDefinition.ToJson();
+            using (var json = context.ReadObject(builder, nameof(IndexDefinition), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
-                if (isFirst == false)
-                    writer.WriteComma();
-
-                isFirst = false;
-                writer.WriteString(context.GetLazyString(map));
+                writer.WritePropertyName(context.GetLazyString(nameof(IndexDefinition)));
+                writer.WriteObject(json);
             }
-            writer.WriteEndArray();
-
-            // TODO [ppekrol] persist more from _definition
         }
 
-        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
+        protected override IndexDefinition CreateIndexDefinition()
         {
-            indexDefinition.Maps = IndexDefinition.Maps;
-
-            // TODO [ppekrol] fill more from _definition
+            return IndexDefinition;
         }
 
         public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
@@ -90,21 +76,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     var lockMode = ReadLockMode(reader);
                     var collections = ReadCollections(reader);
-                    var fields = ReadMapFields(reader).ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
 
-                    var definition = new IndexDefinition();
+                    var definition = ReadIndexDefinition(reader);
                     definition.Name = ReadName(reader);
-                    definition.Maps = ReadMaps(reader);
-                    definition.Fields = fields.ToDictionary(
-                        x => x.Key,
-                        x => new IndexFieldOptions
-                        {
-                            Sort = x.Value.SortOption,
-                            TermVector = x.Value.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null,
-                            Analyzer = x.Value.Analyzer,
-                            Indexing = x.Value.Indexing,
-                            Storage = x.Value.Storage
-                        });
 
                     return new StaticMapIndexDefinition(definition, collections)
                     {
@@ -114,17 +88,13 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static HashSet<string> ReadMaps(BlittableJsonReaderObject reader)
+        private static IndexDefinition ReadIndexDefinition(BlittableJsonReaderObject reader)
         {
-            BlittableJsonReaderArray jsonArray;
-            if (reader.TryGet(nameof(Client.Indexing.IndexDefinition.Maps), out jsonArray) == false || jsonArray.Length == 0)
-                throw new InvalidOperationException("No persisted maps");
+            BlittableJsonReaderObject jsonObject;
+            if (reader.TryGet(nameof(IndexDefinition), out jsonObject) == false || jsonObject == null)
+                throw new InvalidOperationException("No persisted definition");
 
-            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < jsonArray.Length; i++)
-                result.Add(jsonArray.GetStringByIndex(i));
-
-            return result;
+            return JsonDeserialization.IndexDefinition(jsonObject);
         }
     }
 }

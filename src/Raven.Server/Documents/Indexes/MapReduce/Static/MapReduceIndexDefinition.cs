@@ -19,11 +19,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             // TODO arek - groupby fields, definitions etc
         }
 
-        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
-        {
-            throw new System.NotImplementedException();
-        }
-
         public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
         {
             throw new System.NotImplementedException();

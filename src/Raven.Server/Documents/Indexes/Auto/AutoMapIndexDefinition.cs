@@ -25,10 +25,15 @@ namespace Raven.Server.Documents.Indexes.Auto
             PersistMapFields(context, writer);
         }
 
-        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
+        protected override IndexDefinition CreateIndexDefinition()
         {
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
+
+            var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
+            indexDefinition.Fields = ConvertMapFields();
+
+            return indexDefinition;
         }
 
         public override bool Equals(IndexDefinitionBase other, bool ignoreFormatting, bool ignoreMaxIndexOutputs)

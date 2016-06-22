@@ -40,6 +40,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             PersistGroupByFields(context, writer);
         }
 
+        protected override IndexDefinition CreateIndexDefinition()
+        {
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
+
+            var indexDefinition = new IndexDefinition();
+            indexDefinition.Maps.Add(map);
+            indexDefinition.Reduce = null; // TODO
+            indexDefinition.Fields = null; // TODO
+
+            return indexDefinition;
+        }
+
         protected void PersistGroupByFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             writer.WritePropertyName(context.GetLazyString(nameof(GroupByFields)));
@@ -68,10 +80,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 first = false;
             }
             writer.WriteEndArray();
-        }
-
-        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
-        {
         }
 
         public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
