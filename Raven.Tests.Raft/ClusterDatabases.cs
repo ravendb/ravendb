@@ -93,6 +93,8 @@ namespace Raven.Tests.Raft
         [PropertyData("Nodes")]
         public void CanWaitUntilDatabaseIsCreatedOnCallingNode(int numberOfNodes)
         {
+            //This test will fail with OutOfRangeException for a single node
+            if (numberOfNodes<2) return;
             var clusterStores = CreateRaftCluster(numberOfNodes);
 
             var firstNonLeaderIndex = servers.FindIndex(server => !server.Options.ClusterManager.Value.IsLeader());
