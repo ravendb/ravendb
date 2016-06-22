@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
+using Voron.Global;
 using Voron.Data.BTrees;
 using Voron.Platform.Win32;
 
@@ -56,7 +56,7 @@ namespace Voron.Impl.Paging
 
         public static void TryPrefetchingWholeFile(this AbstractPager pager)
         {
-            if (Sparrow.Platform.Platform.CanPrefetch == false)
+            if (Sparrow.Platform.CanPrefetch == false)
                 return; // not supported
 
             var pagerState = pager.PagerState;
@@ -78,7 +78,7 @@ namespace Voron.Impl.Paging
 
         public static void MaybePrefetchMemory(this AbstractPager pager, List<TreePage> sortedPages)
         {
-            if (Sparrow.Platform.Platform.CanPrefetch == false)
+            if (Sparrow.Platform.CanPrefetch == false)
                 return; // not supported
 
             if (sortedPages.Count == 0)

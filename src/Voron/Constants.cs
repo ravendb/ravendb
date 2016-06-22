@@ -1,7 +1,7 @@
 ﻿using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 
-namespace Voron.Impl
+namespace Voron.Global
 {
     public unsafe class Constants
     {

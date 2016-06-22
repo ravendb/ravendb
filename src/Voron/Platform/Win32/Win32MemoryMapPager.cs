@@ -151,7 +151,7 @@ namespace Voron.Platform.Win32
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
 
-            if (Sparrow.Platform.Platform.CanPrefetch)
+            if (Sparrow.Platform.CanPrefetch)
             {
                 // We are asking to allocate pages. It is a good idea that they should be already in memory to only cause a single page fault (as they are continuous).
                 Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;

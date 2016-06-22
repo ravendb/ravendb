@@ -1,5 +1,5 @@
 ﻿using Voron.Platform.Posix;
-using Platform = Sparrow.Platform.Platform;
+using Sparrow;
 
 namespace FastTests
 {

@@ -6,11 +6,9 @@
 
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Sparrow.Compression;
@@ -18,9 +16,8 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
-using Voron.Platform.Posix;
-using Voron.Platform.Win32;
 using Voron.Util;
+using Voron.Global;
 
 namespace Voron.Impl.Journal
 {

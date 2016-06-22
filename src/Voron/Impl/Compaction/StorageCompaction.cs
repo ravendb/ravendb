@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Global;
 using Voron.Impl.FreeSpace;
 
 namespace Voron.Impl.Compaction

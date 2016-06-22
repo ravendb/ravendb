@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Sparrow.Platform
+namespace Sparrow
 {
     public unsafe static class UnmanagedMemory
     {

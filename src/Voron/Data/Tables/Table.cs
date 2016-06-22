@@ -6,6 +6,7 @@ using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util.Conversion;

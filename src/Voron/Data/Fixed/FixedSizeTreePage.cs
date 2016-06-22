@@ -1,5 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
-using Voron.Impl;
+using Voron.Global;
 
 namespace Voron.Data.Fixed
 {

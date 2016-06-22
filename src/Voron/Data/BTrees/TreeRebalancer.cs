@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Paging;

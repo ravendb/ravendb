@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Global;
 
 namespace Voron.Impl
 {

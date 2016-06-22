@@ -12,6 +12,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow;
 
 namespace Raven.Server.ReplicationUtil
 {
@@ -82,7 +83,7 @@ namespace Raven.Server.ReplicationUtil
                         .EscapeLongDataString(_srcDbName)}");
             try
             {
-                if (Sparrow.Platform.Platform.RunningOnPosix)
+                if (Platform.RunningOnPosix)
                 {
                     var webSocketUnix = new RavenUnixClientWebSocket();
                     await webSocketUnix.ConnectAsync(uri, _cancellationToken);

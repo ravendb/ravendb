@@ -139,7 +139,7 @@ namespace Voron.Data.BTrees
 
         private void MaybePrefetchOverflowPages(TreePage page)
         {
-            if (Sparrow.Platform.Platform.CanPrefetch)
+            if (Sparrow.Platform.CanPrefetch)
             {
                 _tx.DataPager.MaybePrefetchMemory(page.GetAllOverflowPages());
             }

@@ -19,7 +19,7 @@ using Raven.Database.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Tests.Core;
-using Sparrow.Platform;
+using Sparrow;
 using Xunit;
 using Xunit.Sdk;
 

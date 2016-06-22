@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees

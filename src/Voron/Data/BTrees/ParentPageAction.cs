@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 #endif
 using System.Runtime.CompilerServices;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees

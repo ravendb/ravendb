@@ -2,14 +2,10 @@
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Sparrow.Binary;
-// -----------------------------------------------------------------------
-//  <copyright file="Tree.MultiTree.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
 
 namespace Voron.Data.BTrees
 {

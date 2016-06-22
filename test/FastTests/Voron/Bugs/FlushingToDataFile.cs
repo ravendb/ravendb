@@ -8,10 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Sparrow.Platform;
+using Sparrow;
 using Xunit;
 using Voron;
-using Voron.Data;
 using Voron.Impl;
 
 namespace FastTests.Voron.Bugs

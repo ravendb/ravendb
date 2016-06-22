@@ -6,6 +6,7 @@ using Sparrow;
 using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Exceptions;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 

@@ -3,9 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
-using Voron.Util;
 using Sparrow.Binary;
-using Sparrow.Platform;
 
 namespace Voron
 {

@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Security;
 
-namespace Sparrow.Platform
+namespace Sparrow
 {
     public static unsafe class PosixUnmanagedMemory
     {

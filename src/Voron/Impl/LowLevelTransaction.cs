@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Sparrow;
-using Sparrow.Platform;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FreeSpace;
@@ -12,6 +11,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Data;
+using Voron.Global;
 using System.Runtime.InteropServices;
 
 namespace Voron.Impl

@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Xunit;
-using Voron;
+using Voron.Global;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Impl;

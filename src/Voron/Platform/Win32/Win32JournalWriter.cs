@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Voron.Exceptions;
-using Voron.Impl;
+using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Util;

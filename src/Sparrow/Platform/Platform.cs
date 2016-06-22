@@ -2,10 +2,13 @@
 using System;
 
 
-namespace Sparrow.Platform
+namespace Sparrow
 {
     public static class Platform
     {
+        public static readonly bool Is64Bits = IntPtr.Size == 8;
+
+
         public static readonly bool RunningOnPosix = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                                                      RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 

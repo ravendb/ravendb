@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
 using Voron.Platform.Win32;
-using System.Runtime.InteropServices;
+using Voron.Global;
 
 namespace Voron.Impl.Paging
 {
@@ -263,7 +263,7 @@ namespace Voron.Impl.Paging
 
         public void MaybePrefetchMemory(List<long> pagesToPrefetch)
         {
-            if (Sparrow.Platform.Platform.CanPrefetch == false)
+            if (Sparrow.Platform.CanPrefetch == false)
                 return; // not supported
 
             if (pagesToPrefetch.Count == 0)

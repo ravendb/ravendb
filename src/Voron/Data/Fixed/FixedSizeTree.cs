@@ -9,9 +9,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Platform;
 using Voron.Data.BTrees;
 using Voron.Debugging;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 

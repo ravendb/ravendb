@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
 

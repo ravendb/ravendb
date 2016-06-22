@@ -6,7 +6,7 @@
 
 using Xunit;
 using Voron;
-using Voron.Impl;
+using Voron.Global;
 
 namespace FastTests.Voron.ScratchBuffer
 {

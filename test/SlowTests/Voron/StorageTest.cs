@@ -7,6 +7,7 @@ using FastTests;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
+using Voron.Global;
 using Sparrow;
 
 namespace SlowTests.Voron

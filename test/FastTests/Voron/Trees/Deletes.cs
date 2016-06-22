@@ -6,6 +6,7 @@ using Xunit;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
+using Voron.Global;
 
 namespace FastTests.Voron.Trees
 {

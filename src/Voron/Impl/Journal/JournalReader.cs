@@ -1,12 +1,11 @@
 ﻿using Sparrow;
-using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow.Compression;
+using Voron.Global;
 using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Impl.Journal
 {

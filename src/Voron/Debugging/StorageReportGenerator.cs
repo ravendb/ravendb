@@ -13,8 +13,8 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Exceptions;
+using Voron.Global;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 

@@ -5,8 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
 using Voron.Debugging;
+using Voron.Global;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees

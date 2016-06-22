@@ -64,7 +64,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using System;
 using System.Runtime.InteropServices;
-using Sparrow.Platform;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable TooWideLocalVariableScope

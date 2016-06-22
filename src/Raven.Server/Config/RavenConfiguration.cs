@@ -6,8 +6,8 @@ using Microsoft.Extensions.Configuration;
 
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-using Sparrow.Platform;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
+using Sparrow;
 
 namespace Raven.Server.Config
 {
