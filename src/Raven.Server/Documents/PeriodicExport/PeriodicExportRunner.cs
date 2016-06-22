@@ -37,15 +37,15 @@ namespace Raven.Server.Documents.PeriodicExport
         private TimeSpan _incrementalIntermediateInterval;
         private TimeSpan _fullExportIntermediateInterval;
 
-        private readonly TimeSpan _fullExportInterval;
-        private readonly TimeSpan _incrementalInterval;
+        public readonly TimeSpan FullExportInterval;
+        public readonly TimeSpan IncrementalInterval;
 
         private readonly object _locker = new object();
         private int? _exportLimit;
 
         //interval can be 2^32-2 milliseconds at most
         //this is the maximum interval acceptable in .Net's threading timer
-        private readonly TimeSpan _maxTimerTimeout = TimeSpan.FromMilliseconds(Math.Pow(2, 32) - 2);
+        public readonly TimeSpan MaxTimerTimeout = TimeSpan.FromMilliseconds(Math.Pow(2, 32) - 2);
 
         /* TODO: How should we set this value, in the configuration document? If so, how do we encrypt them? */
         private string _awsAccessKey, _awsSecretKey;
@@ -63,19 +63,19 @@ namespace Raven.Server.Documents.PeriodicExport
 
             if (configuration.IntervalMilliseconds.HasValue && configuration.IntervalMilliseconds.Value > 0)
             {
-                _incrementalIntermediateInterval = _incrementalInterval = TimeSpan.FromMilliseconds(configuration.IntervalMilliseconds.Value);
-                Log.Info($"Incremental periodic export started, will export every {_incrementalInterval.TotalMinutes} minutes");
+                _incrementalIntermediateInterval = IncrementalInterval = TimeSpan.FromMilliseconds(configuration.IntervalMilliseconds.Value);
+                Log.Info($"Incremental periodic export started, will export every {IncrementalInterval.TotalMinutes} minutes");
 
-                if (IsValidTimespanForTimer(_incrementalInterval))
+                if (IsValidTimespanForTimer(IncrementalInterval))
                 {
                     var timeSinceLastExport = SystemTime.UtcNow - _status.LastExportAt;
-                    var nextExport = timeSinceLastExport >= _incrementalInterval ? TimeSpan.Zero : _incrementalInterval - timeSinceLastExport;
+                    var nextExport = timeSinceLastExport >= IncrementalInterval ? TimeSpan.Zero : IncrementalInterval - timeSinceLastExport;
 
-                    _incrementalExportTimer = new Timer(TimerCallback, false, nextExport, _incrementalInterval);
+                    _incrementalExportTimer = new Timer(TimerCallback, false, nextExport, IncrementalInterval);
                 }
                 else
                 {
-                    _incrementalExportTimer = new Timer(LongPeriodTimerCallback, false, _maxTimerTimeout, Timeout.InfiniteTimeSpan);
+                    _incrementalExportTimer = new Timer(LongPeriodTimerCallback, false, MaxTimerTimeout, Timeout.InfiniteTimeSpan);
                 }
             }
             else
@@ -85,19 +85,19 @@ namespace Raven.Server.Documents.PeriodicExport
 
             if (configuration.FullExportIntervalMilliseconds.HasValue && configuration.FullExportIntervalMilliseconds.Value > 0)
             {
-                _fullExportIntermediateInterval = _fullExportInterval = TimeSpan.FromMilliseconds(configuration.FullExportIntervalMilliseconds.Value);
-                Log.Info("Full periodic export started, will export every" + _fullExportInterval.TotalMinutes + "minutes");
+                _fullExportIntermediateInterval = FullExportInterval = TimeSpan.FromMilliseconds(configuration.FullExportIntervalMilliseconds.Value);
+                Log.Info("Full periodic export started, will export every" + FullExportInterval.TotalMinutes + "minutes");
 
-                if (IsValidTimespanForTimer(_fullExportInterval))
+                if (IsValidTimespanForTimer(FullExportInterval))
                 {
                     var timeSinceLastExport = SystemTime.UtcNow - _status.LastFullExportAt;
-                    var nextExport = timeSinceLastExport >= _fullExportInterval ? TimeSpan.Zero : _fullExportInterval - timeSinceLastExport;
+                    var nextExport = timeSinceLastExport >= FullExportInterval ? TimeSpan.Zero : FullExportInterval - timeSinceLastExport;
 
-                    _fullExportTimer = new Timer(TimerCallback, true, nextExport, _fullExportInterval);
+                    _fullExportTimer = new Timer(TimerCallback, true, nextExport, FullExportInterval);
                 }
                 else
                 {
-                    _fullExportTimer = new Timer(LongPeriodTimerCallback, true, _maxTimerTimeout, Timeout.InfiniteTimeSpan);
+                    _fullExportTimer = new Timer(LongPeriodTimerCallback, true, MaxTimerTimeout, Timeout.InfiniteTimeSpan);
                 }
             }
             else
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.PeriodicExport
         private Timer ScheduleNextLongTimer(bool isFullbackup)
         {
             var intermediateTimespan = isFullbackup ? _fullExportIntermediateInterval : _incrementalIntermediateInterval;
-            var remainingInterval = intermediateTimespan - _maxTimerTimeout;
+            var remainingInterval = intermediateTimespan - MaxTimerTimeout;
             var shouldExecuteTimer = remainingInterval.TotalMilliseconds <= 0;
             if (shouldExecuteTimer)
             {
@@ -137,17 +137,17 @@ namespace Raven.Server.Documents.PeriodicExport
             }
 
             if (isFullbackup)
-                _fullExportIntermediateInterval = shouldExecuteTimer ? _fullExportInterval : remainingInterval;
+                _fullExportIntermediateInterval = shouldExecuteTimer ? FullExportInterval : remainingInterval;
             else
-                _incrementalIntermediateInterval = shouldExecuteTimer ? _incrementalInterval : remainingInterval;
+                _incrementalIntermediateInterval = shouldExecuteTimer ? IncrementalInterval : remainingInterval;
 
-            return new Timer(LongPeriodTimerCallback, isFullbackup, shouldExecuteTimer ? _maxTimerTimeout : remainingInterval, Timeout.InfiniteTimeSpan);
+            return new Timer(LongPeriodTimerCallback, isFullbackup, shouldExecuteTimer ? MaxTimerTimeout : remainingInterval, Timeout.InfiniteTimeSpan);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsValidTimespanForTimer(TimeSpan timespan)
         {
-            return timespan < _maxTimerTimeout;
+            return timespan < MaxTimerTimeout;
         }
 
         private void TimerCallback(object fullExport)
