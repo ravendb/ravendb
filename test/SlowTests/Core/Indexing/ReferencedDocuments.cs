@@ -24,7 +24,7 @@ namespace SlowTests.Core.Indexing
 {
     public class ReferencedDocuments : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Transformers")]
         public async Task CanUseLoadDocumentToIndexReferencedDocs()
         {
             using (var store = await GetDocumentStore())
@@ -256,7 +256,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task CanProceedWhenReferencedDocumentsAreMissing()
         {
             using (var store = await GetDocumentStore())
