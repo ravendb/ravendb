@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  TAL-PC
-//  DateTime: 6/19/2016 4:05:53 PM
+//  DateTime: 6/21/2016 1:57:57 PM
 //  UserName: Tal
-//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 6/19/2016 4:05:37 PM>
+//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 6/21/2016 1:57:52 PM>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: verbose, parser, stack, minimize
@@ -1777,14 +1777,7 @@ return (int)Token.ALL_DOC;
 return (int)Token.AND;
             break;
         case 109: // Recognized '{QuotedTerm}',	Shortest string "\"\""
-if(InMethod)
-                                    {
-                                        yylval.s = DiscardEscapeChar(yytext,true); 
-                                    }
-                                    else
-                                    {
-                                        yylval.s = yytext; 
-                                    }
+yylval.s = DiscardEscapeChar(yytext); 
                                     return (int)Token.QUOTED_TERM;
             break;
         case 110: // Recognized '{QuotedWildcardTerm}',	Shortest string "\"*\""
