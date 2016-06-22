@@ -103,6 +103,7 @@ interface filesystemHistoryItemDto {
 interface filesystemConflictItemDto {
     FileName: string;
     RemoteServerUrl: string;
+    ResolveUsingRemote: boolean;
 
     RemoteHistory: filesystemHistoryItemDto[];
     CurrentHistory: filesystemHistoryItemDto[];

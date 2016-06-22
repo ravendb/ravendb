@@ -351,6 +351,7 @@ namespace Raven.Database.FileSystem.Controllers
                         ConflictResolver.ApplyRemoteStrategy(canonicalFilename, conflict, localMetadata);
 
                         accessor.UpdateFileMetadata(canonicalFilename, localMetadata, null);
+                        accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(canonicalFilename), JsonExtensions.ToJObject(conflict));
 
                         // ConflictArtifactManager.Delete(canonicalFilename, accessor); - intentionally not deleting, conflict item will be removed when a remote file is put
                     });

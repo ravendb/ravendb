@@ -528,5 +528,26 @@ namespace Raven.Tests.FileSystem.Synchronization
             pages = destination.Synchronization.GetConflictsAsync().Result;
             Assert.Equal(0, pages.TotalCount);
         }
+
+        [Fact]
+        public async Task Resolve_with_local_should_create_marker_in_conflict_item()
+        {
+            var server1 = NewAsyncClient(0);
+            var server2 = NewAsyncClient(1);
+
+            await server1.UploadAsync("test", new MemoryStream(new byte[] { 1, 2, 3 }));
+            await server2.UploadAsync("test", new MemoryStream(new byte[] { 1, 2 }));
+
+            var shouldBeConflict = await server1.Synchronization.StartAsync("test", server2);
+
+            Assert.Equal(string.Format("File {0} is conflicted", FileHeader.Canonize("test")), shouldBeConflict.Exception.Message);
+
+            await server2.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion);
+
+            var conflicts = await server2.Synchronization.GetConflictsAsync(0, 5);
+
+            Assert.Equal(1, conflicts.Items.Count);
+            Assert.True(conflicts.Items.First().ResolveUsingRemote);
+        }
     }
 }

@@ -2,16 +2,24 @@ import conflictHistory = require("models/filesystem/conflictHistory");
 
 class conflictItem {
 
+    fileName: string;
+    remoteServerUrl: string;
+    resolveUsingRemote = false;
+    status: string;
     remoteHistory: conflictHistory[];
     currentHistory: conflictHistory[];
 
-    constructor(public fileName: string, public remoteServerUrl: string) {
+    constructor(fileName: string, remoteServerUrl: string, resolveUsingRemote: boolean) {
+        this.fileName = fileName;
+        this.remoteServerUrl = remoteServerUrl;
         this.remoteHistory = [];
         this.currentHistory = [];
+        this.resolveUsingRemote = resolveUsingRemote;
+        this.status = this.resolveUsingRemote ? "Scheduled resolution using remote version" : "Not resolved";
     }
 
     getDocumentPropertyNames(): Array<string> {
-        return ["id", "fileName", "remoteServerUrl"];
+        return ["id", "fileName", "remoteServerUrl", "status"];
     }
 
     getId() {
@@ -23,7 +31,7 @@ class conflictItem {
     }
 
     static fromConflictItemDto(dto: filesystemConflictItemDto) : conflictItem {
-        var item = new conflictItem(dto.FileName, dto.RemoteServerUrl);
+        var item = new conflictItem(dto.FileName, dto.RemoteServerUrl, dto.ResolveUsingRemote);
         if (dto.RemoteHistory != null) {
             item.remoteHistory.pushAll(dto.RemoteHistory.map(x => new conflictHistory(x.Version, x.ServerId)));
         }
@@ -33,11 +41,6 @@ class conflictItem {
         return item;
     }
 
-    static fromConflictNotificationDto(dto: synchronizationConflictNotification): conflictItem {
-        var item = new conflictItem(dto.FileName, dto.SourceServerUrl);
-
-        return item;
-    }
 }
 
 export = conflictItem;

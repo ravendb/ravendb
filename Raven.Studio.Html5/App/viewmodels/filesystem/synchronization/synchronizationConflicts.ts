@@ -4,7 +4,6 @@ import changesContext = require("common/changesContext");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
 import customColumns = require("models/database/documents/customColumns");
 import customColumnParams = require('models/database/documents/customColumnParams');
-import conflictItem = require("models/filesystem/conflictItem");
 import virtualTable = require("widgets/virtualTable/viewModel");
 
 import filesystem = require("models/filesystem/filesystem");
@@ -81,7 +80,8 @@ class synchronizationConflicts extends viewModelBase {
 
         this.currentColumns().columns([
             new customColumnParams({ Header: "File Name", Binding: "fileName", DefaultWidth: 400 }),
-            new customColumnParams({ Header: "Remote Server Url", Binding: "remoteServerUrl", DefaultWidth: 400 })
+            new customColumnParams({ Header: "Remote Server Url", Binding: "remoteServerUrl", DefaultWidth: 400 }),
+            new customColumnParams({ Header: "Status", Binding: "status", DefaultWidth: 320 })
         ]);
         this.currentColumns().customMode(true);
 
@@ -185,7 +185,10 @@ class synchronizationConflicts extends viewModelBase {
                 } else {
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 1, fs).execute();
+                        new resolveConflictCommand(conflict, 1, fs).execute()
+                            .done(() => {
+                                this.fetchConflicts(this.activeFilesystem());
+                            });
                     }
                 }
 

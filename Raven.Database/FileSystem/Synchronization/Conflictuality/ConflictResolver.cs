@@ -113,6 +113,8 @@ namespace Raven.Database.FileSystem.Synchronization.Conflictuality
                 Version = conflict.RemoteHistory.Last().Version,
             };
 
+            conflict.ResolveUsingRemote = true;
+
             localMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] = JsonExtensions.ToJObject(conflictResolution);
         }
     }
