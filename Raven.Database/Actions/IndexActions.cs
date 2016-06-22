@@ -238,10 +238,12 @@ namespace Raven.Database.Actions
             return PutIndexInternal(name, definition, out opId);
         }
 
-        private string PutIndexInternal(string name, IndexDefinition definition, out long opId,bool disableIndexBeforePut = false, bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
+        private string PutIndexInternal(string name, IndexDefinition definition, out long opId, bool disableIndexBeforePut = false,
+            bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null, Action afterAddToIndexStorage = null)
         {
             if (name == null)
                 throw new ArgumentNullException("name");
+
             opId = -1;
             name = name.Trim();
             IsIndexNameValid(name);
@@ -257,6 +259,10 @@ namespace Raven.Database.Actions
                             Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
                             throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
                         }
+
+                        //keep the SideBySide lock mode from the replaced index
+                        definition.LockMode = IndexLockMode.SideBySide;
+
                         break;
                     case IndexLockMode.LockedIgnore:
                         Log.Info("Index {0} not saved because it was lock (with ignore)", name);
@@ -285,7 +291,7 @@ namespace Raven.Database.Actions
                     break;
             }
 
-            opId = PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
+            opId = PutNewIndexIntoStorage(name, definition, disableIndexBeforePut, afterAddToIndexStorage);
 
             WorkContext.ClearErrorsFor(name);
 
@@ -342,13 +348,13 @@ namespace Raven.Database.Actions
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public SideBySideIndexInfo[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd)
+        public List<IndexInfo> PutSideBySideIndexes(SideBySideIndexes sideBySideIndexes)
         {
-            var createdIndexes = new List<SideBySideIndexInfo>();
+            var createdIndexes = new List<IndexInfo>();
             var prioritiesList = new List<IndexingPriority>();
             try
             {
-                foreach (var indexToAdd in indexesToAdd)
+                foreach (var indexToAdd in sideBySideIndexes.IndexesToAdd)
                 {
                     var originalIndexName = indexToAdd.Name.Trim();
                     var indexName = Constants.SideBySideIndexNamePrefix + originalIndexName;
@@ -373,17 +379,39 @@ namespace Raven.Database.Actions
                                 creationOptions = originalIndexCreationOptions;
                                 break;
                         }
+
+                        //keep the SideBySide lock mode from the replaced index
+                        indexToAdd.Definition.LockMode = GetCurrentLockMode(originalIndexName) ?? indexToAdd.Definition.LockMode;
                     }
 
                     long _;
-                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,out _, disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
+                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,
+                        out _, disableIndexBeforePut: true, isUpdateBySideSide: true,
+                        creationOptions: creationOptions, afterAddToIndexStorage: () =>
+                        {
+                            if (isSideBySide == false)
+                                return;
+
+                            //add the replace index document
+                            Database.Documents.Put(
+                                Constants.IndexReplacePrefix + indexName,
+                                null,
+                                RavenJObject.FromObject(new IndexReplaceDocument
+                                {
+                                    IndexToReplace = originalIndexName,
+                                    MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace,
+                                    ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc
+                                }),
+                                new RavenJObject(),
+                                null);
+                        });
+
                     if (nameToAdd == null)
                         continue;
 
-                    createdIndexes.Add(new SideBySideIndexInfo
+                    createdIndexes.Add(new IndexInfo
                     {
-                        OriginalName = originalIndexName,
-                        Name = nameToAdd,
+                        Name = indexName,
                         IsSideBySide = isSideBySide
                     });
                     prioritiesList.Add(indexToAdd.Priority);
@@ -394,14 +422,14 @@ namespace Raven.Database.Actions
 
                 for (var i = 0; i < createdIndexes.Count; i++)
                 {
-                    var index = createdIndexes[i].Name;
+                    var indexName = createdIndexes[i].Name;
                     var priority = prioritiesList[i];
 
-                    var instance = Database.IndexStorage.GetIndexInstance(index);
+                    var instance = Database.IndexStorage.GetIndexInstance(indexName);
                     instance.Priority = priority;
                 }
 
-                return createdIndexes.ToArray();
+                return createdIndexes;
             }
             catch (Exception e)
             {
@@ -409,15 +437,26 @@ namespace Raven.Database.Actions
                 foreach (var index in createdIndexes)
                 {
                     DeleteIndex(index.Name);
+                    if (index.IsSideBySide)
+                        Database.Documents.Delete(index.Name, null, null);
                 }
                 throw;
             }
         }
 
-        public class SideBySideIndexInfo
+        private IndexLockMode? GetCurrentLockMode(string indexName)
         {
-            public string OriginalName { get; set; }
+            var currentIndexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexName);
+            if (currentIndexDefinition != null)
+            {
+                return currentIndexDefinition.LockMode;
+            }
 
+            return null;
+        }
+
+        public class IndexInfo
+        {
             public string Name { get; set; }
 
             public bool IsSideBySide { get; set; }
@@ -432,7 +471,8 @@ namespace Raven.Database.Actions
             }
         }
 
-        internal long PutNewIndexIntoStorage(string name, IndexDefinition definition, bool disableIndex = false)
+        internal long PutNewIndexIntoStorage(string name, IndexDefinition definition,
+            bool disableIndex = false, Action afterAddToIndexStorage = null)
         {
             Debug.Assert(Database.IndexStorage != null);
             Debug.Assert(TransactionalStorage != null);
@@ -497,6 +537,9 @@ namespace Raven.Database.Actions
             // we have to do it in this way so first we prepare all the elements of the 
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
+
+            if (afterAddToIndexStorage != null)
+                afterAddToIndexStorage();
 
             // we start the precomuteTask _after_ we finished adding the index
             long operationId = -1;
@@ -876,7 +919,8 @@ namespace Raven.Database.Actions
             return true;
         }
 
-        internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true, bool isSideBySideReplacement = false)
+        internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true,
+            bool clearErrors = true, bool removeIndexReplaceDocument = true, bool isSideBySideReplacement = false)
         {
             using (IndexDefinitionStorage.TryRemoveIndexContext())
             {

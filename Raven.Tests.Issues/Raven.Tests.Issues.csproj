@@ -229,7 +229,7 @@
     <Compile Include="IndexResestWithReplication.cs" />
     <Compile Include="LongIndexAndTransformerNames.cs" />
     <Compile Include="NestedPropertiesIndex_1182.cs" />
-    <Compile Include="RavenDB-1279.cs" />
+    <Compile Include="RavenDB-4705.cs" />
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
     <Compile Include="RavenDB-2036.cs" />

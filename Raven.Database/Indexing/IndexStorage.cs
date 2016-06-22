@@ -1580,22 +1580,39 @@ namespace Raven.Database.Indexing
 
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
         {
-            var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
-            switch (indexToReplace.LockMode)
+            var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
+            if (indexDefinition == null)
             {
-                case IndexLockMode.LockedIgnore:
-                    return false;
-                case IndexLockMode.LockedError:
-                    throw new InvalidOperationException("An attempt to replace an index, locked with LockedError, by a side by side index was detected.");
+                //the replacing index doesn't exist
+                return true;
             }
+
+            var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
+            if (indexToReplace != null)
+            {
+                switch (indexToReplace.LockMode)
+                {
+                    case IndexLockMode.SideBySide:
+                        //keep the SideBySide lock mode from the replaced index
+                        indexDefinition.LockMode = IndexLockMode.SideBySide;
+                        break;
+                    case IndexLockMode.LockedIgnore:
+                        //we ignore this and need to delete the replacing index
+                        documentDatabase.IndexStorage.DeleteIndex(indexName);
+                        log.Info("An attempt to replace an index with lock mode: LockedIgnore by a side by side index was detected");
+                        return true;
+                    case IndexLockMode.LockedError:
+                        log.Info("An attempt to replace an index with lock mode: LockedError by a side by side index was detected");
+                        throw new InvalidOperationException("An attempt to replace an index, locked with LockedError, by a side by side index was detected.");
+                }
+            }
+
             var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
             if (success == false)
                 return false;
 
-            if (indexToReplace == null)
-                return true;
-
             documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false, isSideBySideReplacement: true);
+
             return true;
         }
     }

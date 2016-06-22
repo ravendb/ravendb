@@ -140,10 +140,10 @@ namespace Raven.Database.Server.Controllers
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
             }
 
-            IndexActions.SideBySideIndexInfo[] createdIndexes;
+            List<IndexActions.IndexInfo> createdIndexes;
             try
             {
-                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes.IndexesToAdd);
+                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes);
             }
             catch (Exception ex)
             {
@@ -157,19 +157,6 @@ namespace Raven.Database.Server.Controllers
                     Error = ex.ToString()
                 }, HttpStatusCode.BadRequest);
             }
-
-            Database.TransactionalStorage.Batch(accessor =>
-            {
-                foreach (var createdIndex in createdIndexes.Where(x => x.IsSideBySide))
-                {
-                    Database.Documents.Put(
-                        Constants.IndexReplacePrefix + createdIndex.Name,
-                        null,
-                        RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = createdIndex.OriginalName, MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace, ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc}),
-                        new RavenJObject(),
-                        null);
-                }
-            });
 
             return GetMessageWithObject(new { Indexes = createdIndexes.Select(x => x.Name).ToArray() }, HttpStatusCode.Created);
         }
