@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
             var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
-            indexDefinition.Fields = ConvertMapFields();
+            indexDefinition.Fields = ConvertFields(MapFields);
 
             return indexDefinition;
         }

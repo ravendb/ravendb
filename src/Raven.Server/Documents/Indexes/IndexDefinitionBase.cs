@@ -272,9 +272,9 @@ namespace Raven.Server.Documents.Indexes
             return fields;
         }
 
-        protected Dictionary<string, IndexFieldOptions> ConvertMapFields()
+        protected Dictionary<string, IndexFieldOptions> ConvertFields(Dictionary<string, IndexField> fields)
         {
-            return MapFields.ToDictionary(
+            return fields.ToDictionary(
                 x => x.Key,
                 x => new IndexFieldOptions
                 {

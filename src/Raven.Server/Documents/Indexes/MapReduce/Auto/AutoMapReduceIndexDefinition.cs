@@ -43,11 +43,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         protected override IndexDefinition CreateIndexDefinition()
         {
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
+            var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted},Operation:{x.Value.MapReduceOperation}>"))}]";
 
             var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
-            indexDefinition.Reduce = null; // TODO
-            indexDefinition.Fields = null; // TODO
+            indexDefinition.Reduce = reduce;
+
+            foreach (var kvp in ConvertFields(MapFields))
+                indexDefinition.Fields[kvp.Key] = kvp.Value;
+
+            foreach (var kvp in ConvertFields(GroupByFields))
+                indexDefinition.Fields[kvp.Key] = kvp.Value;
 
             return indexDefinition;
         }
