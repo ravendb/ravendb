@@ -248,14 +248,14 @@ namespace Voron.Impl.Paging
             return true;
         }
 
-        protected List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY> SortedPagesToList(
-            List<TreePage> sortedPages)
+        protected List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY> SortedPagesToList(List<TreePage> sortedPages)
         {
             var rangesList = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>();
 
             long lastPage = -1;
-            const int numberOfPagesInBatch = 8;
-            var sizeInPages = numberOfPagesInBatch; // OS uses 32K when you touch a page, let us reuse this
+            int numberOfPagesInBatch = Sparrow.Platform.RunningOnPosix ? 32 : 8; // 128k in linux, 32k in windows - when you touch a page, let us reuse this
+
+            var sizeInPages = numberOfPagesInBatch;
             foreach (var page in sortedPages)
             {
                 if (lastPage == -1)
@@ -285,7 +285,7 @@ namespace Voron.Impl.Paging
                 rangesList.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
                 {
                     VirtualAddress = AcquirePagePointer(null, lastPage),
-                    NumberOfBytes = (IntPtr)(sizeInPages*PageSize)
+                    NumberOfBytes = (IntPtr)(sizeInPages * PageSize)
                 });
 
                 lastPage = page.PageNumber;
@@ -299,7 +299,7 @@ namespace Voron.Impl.Paging
             rangesList.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
             {
                 VirtualAddress = AcquirePagePointer(null, lastPage),
-                NumberOfBytes = (IntPtr)(sizeInPages*PageSize)
+                NumberOfBytes = (IntPtr)(sizeInPages * PageSize)
             });
 
             return rangesList;
