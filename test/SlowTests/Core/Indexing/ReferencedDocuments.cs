@@ -201,6 +201,15 @@ namespace SlowTests.Core.Indexing
 
                     Assert.Equal(2, users.Count);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("users/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
             }
         }
 

@@ -72,8 +72,6 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.InnerTransaction.CreateTree(Schema.EtagsTree);
                 tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
-                tx.InnerTransaction.CreateTree(Schema.EtagsReferenceTree);
-                tx.InnerTransaction.CreateTree(Schema.ReferencedCollections);
                 tx.InnerTransaction.CreateTree(Schema.References);
 
                 _index.Definition.Persist(context, _environment.Options);
@@ -203,14 +201,26 @@ namespace Raven.Server.Documents.Indexes
             return ReadLastEtag(tx, Schema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
-        public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection)
+        public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, string referencedCollection)
         {
-            return ReadLastEtag(tx, Schema.EtagsReferenceTree, Slice.From(tx.InnerTransaction.Allocator, collection));
+            var tree = tx.InnerTransaction.ReadTree("$" + collection);
+
+            var result = tree?.Read(referencedCollection);
+            if (result == null)
+                return 0;
+
+            return result.Reader.ReadLittleEndianInt64();
         }
 
-        public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection)
+        public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, string referencedCollection)
         {
-            return ReadLastEtag(tx, Schema.EtagsReferenceTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection));
+            var tree = tx.InnerTransaction.ReadTree("%" + collection);
+
+            var result = tree?.Read(referencedCollection);
+            if (result == null)
+                return 0;
+
+            return result.Reader.ReadLittleEndianInt64();
         }
 
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
@@ -218,9 +228,12 @@ namespace Raven.Server.Documents.Indexes
             return ReadLastEtag(tx, Schema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
-        public void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, long etag)
+        public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, string referencedCollection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsReferenceTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
+            var tree = tx.InnerTransaction.CreateTree("%" + collection);
+            var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection, ByteStringType.Immutable);
+            var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
+            tree.Add(collectionSlice, etagSlice);
         }
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
@@ -228,9 +241,12 @@ namespace Raven.Server.Documents.Indexes
             WriteLastEtag(tx, Schema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
         }
 
-        public void WriteLastReferenceEtag(RavenTransaction tx, string collection, long etag)
+        public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, string referencedCollection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsReferenceTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
+            var tree = tx.InnerTransaction.CreateTree("$" + collection);
+            var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection, ByteStringType.Immutable);
+            var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
+            tree.Add(collectionSlice, etagSlice);
         }
 
         public void WriteLastIndexedEtag(RavenTransaction tx, string collection, long etag)
@@ -337,21 +353,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IEnumerable<string> GetReferencedCollections(RavenTransaction tx)
-        {
-            var tree = tx.InnerTransaction.ReadTree(Schema.ReferencedCollections);
-            using (var it = tree.Iterate(prefetch: true))
-            {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    yield break;
-
-                do
-                {
-                    yield return it.CurrentKey.ToString(); // TODO [ppekrol] ?
-                } while (it.MoveNext());
-            }
-        }
-
         public IEnumerable<string> GetDocumentKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
         {
             var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
@@ -371,29 +372,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public long ReadLastSeenEtagForReference(string collection, LazyStringValue key, RavenTransaction tx)
-        {
-            var tree = tx.InnerTransaction.ReadTree("$" + collection);
-
-            var value = tree?.Read(key);
-            if (value == null)
-                return 0;
-
-            return value.Reader.ReadLittleEndianInt64();
-        }
-
         public unsafe void WriteReferences(CurrentIndexingScope indexingScope, RavenTransaction tx)
         {
-            if (indexingScope.ReferencedCollections != null)
-            {
-                var tree = tx.InnerTransaction.ReadTree(Schema.ReferencedCollections);
-                foreach (var collection in indexingScope.ReferencedCollections)
-                {
-                    var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, collection, ByteStringType.Immutable);
-                    tree.Add(collectionSlice, Slices.Empty);
-                }
-            }
-
             if (indexingScope.ReferencesByCollection != null)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(Schema.References);
@@ -422,13 +402,22 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var kvp in indexingScope.ReferenceEtagsByCollection)
                 {
                     var collectionEtagTree = tx.InnerTransaction.CreateTree("$" + kvp.Key); // $collection
-                    foreach (var etags in kvp.Value)
+                    foreach (var collections in kvp.Value)
                     {
-                        var referenceKey = etags.Key;
-                        var etag = etags.Value;
+                        var collectionKey = collections.Key;
+                        var etag = collections.Value;
+
+                        var result = collectionEtagTree.Read(collectionKey);
+                        if (result != null)
+                        {
+                            var oldEtag = result.Reader.ReadLittleEndianInt64();
+                            if (oldEtag >= etag)
+                                continue;
+                        }
+
                         var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
 
-                        collectionEtagTree.Add(referenceKey, etagSlice);
+                        collectionEtagTree.Add(collectionKey, etagSlice);
                     }
                 }
             }
@@ -448,8 +437,8 @@ namespace Raven.Server.Documents.Indexes
 
                 do
                 {
-                    if (referenceKeysToSkip != null && referenceKeysToSkip.Contains(it.CurrentKey) == false)
-                        referenceKeys.Add(it.CurrentKey);
+                    if (referenceKeysToSkip == null || referenceKeysToSkip.Contains(it.CurrentKey) == false)
+                        referenceKeys.Add(it.CurrentKey.Clone(tx.InnerTransaction.Allocator, ByteStringType.Immutable));
                 } while (it.MoveNext());
             }
 
@@ -461,16 +450,7 @@ namespace Raven.Server.Documents.Indexes
             foreach (var referenceKey in referenceKeys)
             {
                 referencesTree.MultiDelete(key, referenceKey);
-
-                if (collectionTree == null)
-                    continue;
-
-                collectionTree.MultiDelete(referenceKey, key);
-                if (collectionTree.MultiCount(referenceKey) > 0)
-                    continue;
-
-                var collectionEtagTree = tx.InnerTransaction.ReadTree("$" + collection);
-                collectionEtagTree?.Delete(referenceKey);
+                collectionTree?.MultiDelete(referenceKey, key);
             }
         }
 
@@ -486,12 +466,6 @@ namespace Raven.Server.Documents.Indexes
             public const string EtagsTree = "Etags";
 
             public const string EtagsTombstoneTree = "Etags.Tombstone";
-
-            public const string EtagsReferenceTree = "Etags.Reference";
-
-            public const string EtagsReferenceTombstoneTree = "Etags.Reference.Tombstone";
-
-            public const string ReferencedCollections = "Referenced.Collections";
 
             public const string References = "References";
 

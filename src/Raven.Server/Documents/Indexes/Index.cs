@@ -84,8 +84,6 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly HashSet<string> Collections;
 
-        public readonly HashSet<string> ReferencedCollections;
-
         internal IndexStorage _indexStorage;
 
         private IIndexingWork[] _indexWorkers;
@@ -106,7 +104,6 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             IndexPersistence = new LuceneIndexPersistence(indexId, definition, type);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
-            ReferencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public static Index Open(int indexId, DocumentDatabase documentDatabase)
@@ -228,10 +225,6 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = context.OpenReadTransaction())
             {
                 Priority = _indexStorage.ReadPriority(tx);
-
-                foreach (var referencedCollection in _indexStorage.GetReferencedCollections(tx))
-                    ReferencedCollections.Add(referencedCollection);
-
                 _lastQueryingTime = SystemTime.UtcNow;
             }
         }
@@ -368,32 +361,8 @@ namespace Raven.Server.Documents.Indexes
                     if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, collection, cutoff.Value) > 0)
                         return true;
                 }
-            }
 
-            foreach (var referencedCollection in ReferencedCollections)
-            {
-                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection);
-                var lastProcessedDocEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection);
 
-                if (cutoff == null)
-                {
-                    if (lastDocEtag > lastProcessedDocEtag)
-                        return true;
-
-                    var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection);
-                    var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection);
-
-                    if (lastTombstoneEtag > lastProcessedTombstoneEtag)
-                        return true;
-                }
-                else
-                {
-                    if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedDocEtag)
-                        return true;
-
-                    if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection, cutoff.Value) > 0)
-                        return true;
-                }
             }
 
             return false;
@@ -578,15 +547,12 @@ namespace Raven.Server.Documents.Indexes
                         using (stats.For("Lucene_Write"))
                             writeOperation.Value.Dispose();
                     }
-
                 }
 
                 _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
 
                 using (stats.For("Storage_Commit"))
                     tx.Commit();
-
-                UpdateReferences(CurrentIndexingScope.Current);
 
                 if (writeOperation.IsValueCreated)
                 {
@@ -595,16 +561,6 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
-
-        private void UpdateReferences(CurrentIndexingScope current)
-        {
-            if (current.ReferencedCollections == null)
-                return;
-
-            foreach (var referencedCollection in current.ReferencedCollections)
-                ReferencedCollections.Add(referencedCollection);
-        }
-
 
         public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
 
@@ -621,9 +577,9 @@ namespace Raven.Server.Documents.Indexes
                 Stop();
         }
 
-        private void HandleDocumentChange(DocumentChangeNotification notification)
+        protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
         {
-            if (Collections.Contains(notification.CollectionName) == false && ReferencedCollections.Contains(notification.CollectionName) == false)
+            if (Collections.Contains(notification.CollectionName) == false)
                 return;
 
             _mre.Set();
@@ -917,15 +873,27 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        private unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        protected virtual unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             var indexEtagBytes = new long[
                 1 + // definition hash
                 1 + // isStale
-                2 * Collections.Count + // last document etags and last mapped etags per collection
-                2 * ReferencedCollections.Count // last referenced collection etags and last processed reference collection etags
-                ]; 
+                2 * Collections.Count // last document etags and last mapped etags per collection
+                ];
 
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
+
+            unchecked
+            {
+                fixed (long* buffer = indexEtagBytes)
+                {
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
+                }
+            }
+        }
+
+        protected int CalculateIndexEtagInternal(long[] indexEtagBytes, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
             var index = 0;
 
             indexEtagBytes[index++] = Definition.GetHashCode();
@@ -940,22 +908,7 @@ namespace Raven.Server.Documents.Indexes
                 indexEtagBytes[index++] = lastMappedEtag;
             }
 
-            foreach (var referencedCollection in ReferencedCollections)
-            {
-                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection);
-                var lastProcessedEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection);
-
-                indexEtagBytes[index++] = lastDocEtag;
-                indexEtagBytes[index++] = lastProcessedEtag;
-            }
-
-            unchecked
-            {
-                fixed (long* buffer = indexEtagBytes)
-                {
-                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
-                }
-            }
+            return index;
         }
 
         public long GetIndexEtag()

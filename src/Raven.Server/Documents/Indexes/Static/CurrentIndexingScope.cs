@@ -17,12 +17,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private DynamicNullObject _null;
 
-        public HashSet<string> ReferencedCollections;
-
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
 
-        /// [collection: [referenceKey: etag]]
+        /// [collection: [collectionKey: etag]]
         public Dictionary<string, Dictionary<Slice, long>> ReferenceEtagsByCollection;
 
         [ThreadStatic]
@@ -63,21 +61,21 @@ namespace Raven.Server.Documents.Indexes.Static
             else
                 keySlice = Slice.From(_documentsContext.Allocator, keyString, ByteStringType.Immutable);
 
-            var referencedCollections = GetReferencedCollections();
+            var collectionSlice = Slice.From(_documentsContext.Allocator, collectionName, ByteStringType.Immutable);
+
             var references = GetReferencesForDocument(id);
             var referenceEtags = GetReferenceEtags();
 
-            referencedCollections.Add(collectionName);
             references.Add(keySlice);
 
             var document = _documentsStorage.Get(_documentsContext, keyString ?? keySlice.ToString()); // TODO [ppekrol] fix me
             if (document == null)
             {
-                referenceEtags[keySlice] = 0;
+                MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, 0);
                 return Null();
             }
 
-            referenceEtags[keySlice] = document.Etag;
+            MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, document.Etag);
 
             if (_document == null)
                 _document = new DynamicDocumentObject();
@@ -97,9 +95,19 @@ namespace Raven.Server.Documents.Indexes.Static
             return _null ?? (_null = new DynamicNullObject());
         }
 
-        private HashSet<string> GetReferencedCollections()
+        private static void MaybeUpdateReferenceEtags(Dictionary<Slice, long> referenceEtags, Slice collection, long etag)
         {
-            return ReferencedCollections ?? (ReferencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            long oldEtag;
+            if (referenceEtags.TryGetValue(collection, out oldEtag) == false)
+            {
+                referenceEtags[collection] = etag;
+                return;
+            }
+
+            if (oldEtag >= etag)
+                return;
+
+            referenceEtags[collection] = etag;
         }
 
         private Dictionary<Slice, long> GetReferenceEtags()

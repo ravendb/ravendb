@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
         {
             var statements = new List<StatementSyntax>();
-            statements.AddRange(definition.Maps.Select(HandleMap));
+            statements.AddRange(definition.Maps.SelectMany(HandleMap));
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
                 statements.Add(HandleReduce(definition.Reduce));
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        private static StatementSyntax HandleMap(string map)
+        private static List<StatementSyntax> HandleMap(string map)
         {
             try
             {
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
+        private static List<StatementSyntax> HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
             if (string.IsNullOrWhiteSpace(mapRewriter.CollectionName))
@@ -179,8 +179,19 @@ namespace Raven.Server.Documents.Indexes.Static
             var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(mapRewriter.CollectionName));
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
 
-            return RoslynHelper.This("AddMap") // this.AddMap("Users", docs => from doc in docs ... )
-                .Invoke(collection, indexingFunction).AsExpressionStatement();
+            var results = new List<StatementSyntax>();
+            results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, indexingFunction).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+
+            if (mapRewriter.ReferencedCollections != null)
+            {
+                foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                {
+                    var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
+                    results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
+                }
+            }
+
+            return results;
         }
 
         private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, ExpressionSyntax expression)

@@ -11,11 +11,22 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         public readonly Dictionary<string, IndexingFunc> Maps = new Dictionary<string, IndexingFunc>(StringComparer.OrdinalIgnoreCase);
 
+        public readonly Dictionary<string, HashSet<string>> ReferencedCollections = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
         public string Source;
 
         public void AddMap(string collection, IndexingFunc map)
         {
             Maps[collection] = map;
+        }
+
+        public void AddReferencedCollection(string collection, string referencedCollection)
+        {
+            HashSet<string> set;
+            if (ReferencedCollections.TryGetValue(collection, out set) == false)
+                ReferencedCollections[collection] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            set.Add(referencedCollection);
         }
 
         public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
