@@ -13,7 +13,8 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using System.Xml;
+using System.Xml.Linq;
+using Microsoft.AspNetCore.WebUtilities;
 using Raven.Abstractions.Util;
 
 namespace Raven.Server.Documents.PeriodicExport.Aws
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
                 var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
                 var signature = RavenAwsHelper.ConvertToHex(hashedString);
 
-                var credentials = string.Format("{0}/{1}/{2}/{3}/aws4_request", _awsAccessKey, date.ToString("yyyyMMdd"), AwsRegion, ServiceName);
+                var credentials = $"{_awsAccessKey}/{date.ToString("yyyyMMdd")}/{AwsRegion}/{ServiceName}/aws4_request";
 
                 return new AuthenticationHeaderValue("AWS4-HMAC-SHA256", string.Format("Credential={0},SignedHeaders={1},Signature={2}", credentials, signedHeaders, signature));
             }
@@ -80,26 +81,21 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
         private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
         {
             var isGet = httpMethod == HttpMethods.Get;
-            throw new NotImplementedException("Fitzchak: please fix");
-            /*var uri = new Uri(url);
-            var queryStringCollection = uri.ParseQueryString();
 
+            var uri = new Uri(url);
             var canonicalUri = uri.AbsolutePath;
 
-            var queryString = (
-                from string parameter in queryStringCollection
-                select new KeyValuePair<string, string>(parameter, queryStringCollection.Get(parameter))
-                );
-
-            var canonicalQueryString = queryString
-                .OrderBy(x => x.Key)
-                .Aggregate(string.Empty, (current, parameter) => current + string.Format("{0}={1}&", parameter.Key.ToLower(), parameter.Value.Trim()));
+            var query = QueryHelpers.ParseQuery(uri.Query);
+            var canonicalQueryString = query
+                .OrderBy(parameter => parameter.Key)
+                .Select(parameter => parameter.Value.Aggregate((current, value) => current + $"{parameter.Key}={value.Trim()}&"))
+                .Aggregate(string.Empty, (current, parameter) => current + parameter);
 
             if (canonicalQueryString.EndsWith("&"))
                 canonicalQueryString = canonicalQueryString.Substring(0, canonicalQueryString.Length - 1);
 
             var headers = httpHeaders
-                .Where(x => isGet == false || x.Key.StartsWith("Date", StringComparison.InvariantCultureIgnoreCase) == false)
+                .Where(x => isGet == false || x.Key.StartsWith("Date", StringComparison.OrdinalIgnoreCase) == false)
                 .OrderBy(x => x.Key);
 
             var canonicalHeaders = headers
@@ -114,10 +110,10 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             using (var hash = SHA256.Create())
             {
                 var hashedPayload = httpHeaders["x-amz-content-sha256"];
-                var canonicalRequest = string.Format("{0}\n{1}\n{2}\n{3}\n{4}\n{5}", httpMethod, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, hashedPayload);
+                var canonicalRequest = $"{httpMethod}\n{canonicalUri}\n{canonicalQueryString}\n{canonicalHeaders}\n{signedHeaders}\n{hashedPayload}";
 
                 return RavenAwsHelper.ConvertToHex(hash.ComputeHash(Encoding.UTF8.GetBytes(canonicalRequest)));
-            }*/
+            }
         }
 
         private byte[] CalculateSigningKey(DateTime date, string service)
@@ -174,17 +170,16 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
 
         private static void LoadEndpointsFromReader(TextReader reader)
         {
-            throw new NotImplementedException();
-           /* var document = new XmlDocument();
-            document.Load(reader);
+            var xDocument = XDocument.Load(reader);
+            xDocument.DescendantNodes();
 
-            foreach (XmlElement node in document.SelectNodes("//Regions/Region"))
+            foreach (var node in xDocument.Descendants("Region"))
             {
-                var nodeName = node["Name"].InnerText.ToLower();
+                var nodeName = node.Element("Name").Value.ToLower();
                 Endpoints.Add(nodeName, nodeName);
             }
 
-            _endpointsLoaded = true;*/
+            _endpointsLoaded = true;
         }
     }
 }

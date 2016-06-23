@@ -33,8 +33,8 @@ namespace FastTests.Server.Documents.PeriodicExport
                 await client.PutContainer();
                 await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                 {
-                    { "property1", "value1" }, 
-                    { "property2", "value2" }
+                    {"property1", "value1"},
+                    {"property2", "value2"}
                 });
                 var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
@@ -61,8 +61,8 @@ namespace FastTests.Server.Documents.PeriodicExport
                 await client.PutContainer();
                 await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                 {
-                    { "property1", "value1" }, 
-                    { "property2", "value2" }
+                    {"property1", "value1"},
+                    {"property2", "value2"}
                 });
 
                 var blob = await client.GetBlob(blobKey);
@@ -88,10 +88,10 @@ namespace FastTests.Server.Documents.PeriodicExport
             using (var client = new RavenAwsS3Client("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
             {
                 client.PutObject(bucketName, key, new MemoryStream(Encoding.UTF8.GetBytes("321")), new Dictionary<string, string>
-                                                                                                        {
-                                                                                                            { "property1", "value1" }, 
-                                                                                                            { "property2", "value2" }
-                                                                                                        }, 60 * 60);
+                {
+                    {"property1", "value1"},
+                    {"property2", "value2"}
+                }, 60*60);
                 var @object = client.GetObject(bucketName, key);
                 Assert.NotNull(@object);
 
@@ -113,7 +113,7 @@ namespace FastTests.Server.Documents.PeriodicExport
 
             using (var client = new RavenAwsGlacierClient("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
             {
-                var archiveId = client.UploadArchive(glacierVaultName, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60 * 60);
+                var archiveId = client.UploadArchive(glacierVaultName, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60*60);
 
                 Assert.NotNull(archiveId);
             }
@@ -133,13 +133,13 @@ namespace FastTests.Server.Documents.PeriodicExport
 
                 var url = client.GetUrl("examplebucket") + "/" + "test%24file.text";
                 var headers = new Dictionary<string, string>
-                              {
-                                  { "x-amz-date", RavenAwsHelper.ConvertToString(date) }, 
-                                  { "x-amz-content-sha256", payloadHash }, 
-                                  { "x-amz-storage-class", "REDUCED_REDUNDANCY" },
-                                  { "Date", date.ToString("R") },
-                                  { "Host", "examplebucket.s3.amazonaws.com" }
-                              };
+                {
+                    {"x-amz-date", RavenAwsHelper.ConvertToString(date)},
+                    {"x-amz-content-sha256", payloadHash},
+                    {"x-amz-storage-class", "REDUCED_REDUNDANCY"},
+                    {"Date", date.ToString("R")},
+                    {"Host", "examplebucket.s3.amazonaws.com"}
+                };
 
                 var auth = client.CalculateAuthorizationHeaderValue(HttpMethods.Put, url, date, headers);
 
@@ -160,13 +160,13 @@ namespace FastTests.Server.Documents.PeriodicExport
 
                 var url = client.GetUrl("examplebucket") + "/" + "test.txt";
                 var headers = new Dictionary<string, string>
-                              {
-                                  { "x-amz-date", RavenAwsHelper.ConvertToString(date) }, 
-                                  { "x-amz-content-sha256", payloadHash }, 
-                                  { "Date", date.ToString("R") },
-                                  { "Host", "examplebucket.s3.amazonaws.com" },
-                                  { "Range", "bytes=0-9"}
-                              };
+                {
+                    {"x-amz-date", RavenAwsHelper.ConvertToString(date)},
+                    {"x-amz-content-sha256", payloadHash},
+                    {"Date", date.ToString("R")},
+                    {"Host", "examplebucket.s3.amazonaws.com"},
+                    {"Range", "bytes=0-9"}
+                };
 
                 var auth = client.CalculateAuthorizationHeaderValue(HttpMethods.Get, url, date, headers);
 
