@@ -31,7 +31,7 @@ namespace Voron.Impl.Journal
 
         private long _journalIndex = -1;
 
-        private bool disposed;
+        private bool _disposed;
 
         private readonly LZ4 _lz4 = new LZ4();
         private readonly JournalApplicator _journalApplicator;
@@ -313,9 +313,9 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
-            if (disposed)
+            if (_disposed)
                 return;
-            disposed = true;
+            _disposed = true;
 
             // we cannot dispose the journal until we are done with all of the pending writes
             if (_lazyTransactionBuffer != null)

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
@@ -23,7 +24,6 @@ namespace Voron.Platform.Win32
         private readonly SafeFileHandle _handle;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
-        private static readonly IntPtr _currentProcess = Win32NativeMethods.GetCurrentProcess();
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -158,7 +158,7 @@ namespace Voron.Platform.Win32
                 entry.VirtualAddress = allocationInfo.BaseAddress;
                 entry.NumberOfBytes = (IntPtr)allocationInfo.Size;
 
-                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(_currentProcess, (UIntPtr)1, &entry, 0);
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)1, &entry, 0);
             }
             return true;
         }
@@ -251,10 +251,8 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            long sizeToWrite = 0;
             foreach (var allocationInfo in PagerState.AllocationInfos)
             {
-                sizeToWrite += allocationInfo.Size;
                 if (Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false)
                     throw new Win32Exception();
             }
@@ -290,5 +288,64 @@ namespace Voron.Platform.Win32
                 throw new Win32Exception();
         }
 
+        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        {
+            if (Sparrow.Platform.CanPrefetch == false)
+                return; // not supported
+
+            if (pagesToPrefetch.Count == 0)
+                return;
+
+            var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
+            for (int i = 0; i < entries.Length; i++)
+            {
+                entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
+                entries[i].VirtualAddress = AcquirePagePointer(null, pagesToPrefetch[i]);
+            }
+
+            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entriesPtr = entries)
+            {
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
+                    (UIntPtr)PagerState.AllocationInfos.Length, entriesPtr, 0);
+            }
+        }
+
+        public override void TryPrefetchingWholeFile()
+        {
+            if (Sparrow.Platform.CanPrefetch == false)
+                return; // not supported
+
+            var pagerState = PagerState;
+            var entries =
+                stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
+
+            for (var i = 0; i < pagerState.AllocationInfos.Length; i++)
+            {
+                entries[i].VirtualAddress = pagerState.AllocationInfos[i].BaseAddress;
+                entries[i].NumberOfBytes = (IntPtr)pagerState.AllocationInfos[i].Size;
+            }
+
+            if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
+                (UIntPtr)pagerState.AllocationInfos.Length, entries, 0) == false)
+                throw new Win32Exception();
+        }
+
+
+        public override void MaybePrefetchMemory(List<TreePage> sortedPages)
+        {
+            if (Sparrow.Platform.CanPrefetch == false)
+                return; // not supported
+
+            if (sortedPages.Count == 0)
+                return;
+
+            var ranges = SortedPagesToList(sortedPages);
+            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = ranges.ToArray())
+            {
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
+                    (UIntPtr)ranges.Count,
+                    entries, 0);
+            }
+        }
     }
 }

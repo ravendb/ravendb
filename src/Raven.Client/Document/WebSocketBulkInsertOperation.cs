@@ -82,7 +82,7 @@ namespace Raven.Client.Document
                 _buffers.Add(new MemoryStream());
             }
 
-            _socketConnectionTask = _connection.ConnectAsync(uriBuilder.Uri, this._cts.Token);
+            _socketConnectionTask = _connection.ConnectAsync(uriBuilder.Uri, _cts.Token);
             _sentAccumulator = 0;
             _getServerResponseTask = GetServerResponse();
             _writeToServerTask = Task.Run(async () => await WriteToServer().ConfigureAwait(false));
@@ -336,8 +336,6 @@ namespace Raven.Client.Document
             jsonBuffer.Position = 0;
             _documents.Add(jsonBuffer);
         }
-
-        private int verify;
 
         private async Task FlushBufferAsync()
         {
