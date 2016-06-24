@@ -100,12 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void HandleDocumentChange(DocumentChangeNotification notification)
         {
-            base.HandleDocumentChange(notification);
-
-            if (_referencedCollections.Count == 0 || _mre.IsSet)
-                return;
-
-            if (_referencedCollections.Contains(notification.CollectionName) == false)
+            if (Collections.Contains(notification.CollectionName) == false && _referencedCollections.Contains(notification.CollectionName) == false)
                 return;
 
             _mre.Set();

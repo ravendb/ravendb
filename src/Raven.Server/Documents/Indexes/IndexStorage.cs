@@ -374,6 +374,20 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe void WriteReferences(CurrentIndexingScope indexingScope, RavenTransaction tx)
         {
+            // Schema:
+            // having 'Users' and 'Addresses' we will end up with
+            //
+            // #Users (tree) - splitted by collection so we can easily return all items of same collection to the indexing function
+            // |- addresses/1 (key) -> [ users/1, users/2 ]
+            // |- addresses/2 (key) -> [ users/3 ]
+            //
+            // References (tree) - used in delete operations
+            // |- users/1 -> [ addresses/1 ]
+            // |- users/2 -> [ addresses/1 ]
+            // |- users/3 -> [ addresses/2 ]
+            //
+            // $Users (tree) - holding highest visible etag of 'referenced collection' per collection, so we will have a starting point for references processing
+            // |- Addresses (key) -> 5
             if (indexingScope.ReferencesByCollection != null)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(Schema.References);
