@@ -25,6 +25,8 @@ namespace Raven.Database.Actions
         private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
             new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
+        private readonly ConcurrentSet<long> deletedSubscriptions = new ConcurrentSet<long>();
+
         private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
 
         public readonly ConcurrentDictionary<long, OneTimeAcknowledgement> allowedOneTimeAcknowledgements = new ConcurrentDictionary<long, OneTimeAcknowledgement>();
@@ -69,6 +71,7 @@ namespace Raven.Database.Actions
         {
             using (LockSubscription(id))
             {
+                deletedSubscriptions.Add(id);
                 Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenSubscriptionsPrefix, id.ToString("D19")));
             }
         }
@@ -204,6 +207,11 @@ namespace Raven.Database.Actions
 
         public void AssertOpenSubscriptionConnection(long id, string connection, bool ackRequest = false)
         {
+            if (deletedSubscriptions.Contains(id))
+            {
+                throw new SubscriptionDoesNotExistException("There is no subscription configuration for specified identifier (id: " + id + ")");
+            }
+
             SubscriptionConnectionOptions options;
             if (openSubscriptions.TryGetValue(id, out options) == false)
                 throw new SubscriptionClosedException("There is no subscription with id: " + id + " being opened");
