@@ -42,12 +42,31 @@ namespace Sparrow.Compression
         private const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
         private const int HASH_SIZE_U32 = 1 << LZ4_HASHLOG;
 
-        private enum LimitedOutput {  NotLimited = 0, LimitedOutput = 1 };
-        private enum TableType { ByU32, ByU16 };
-        private enum DictionaryType {  NoDict = 0, WithPrefix64K, UsingExtDict };
-        private enum DictionaryIssue {  NoDictIssue = 0, DictSmall };
-        private enum EndCondition { EndOnOutputSize = 0, EndOnInputSize = 1 };
-        private enum EarlyEnd {  Full = 0, Partial = 1 };
+
+        private interface ILimitedOutputDirective { };
+        private sealed class NotLimited : ILimitedOutputDirective { };
+        private sealed class LimitedOutput : ILimitedOutputDirective { };
+
+        private interface IDictionaryTypeDirective { };
+        private sealed class NoDict : IDictionaryTypeDirective { };
+        private sealed class WithPrefix64K : IDictionaryTypeDirective { };
+        private sealed class UsingExtDict : IDictionaryTypeDirective { };
+
+        private interface IDictionaryIssueDirective { };
+        private sealed class NoDictIssue : IDictionaryIssueDirective { };
+        private sealed class DictSmall : IDictionaryIssueDirective { };
+
+        private interface ITableTypeDirective { };
+        private sealed class ByU32 : ITableTypeDirective { };
+        private sealed class ByU16 : ITableTypeDirective { };
+
+        private interface IEndConditionDirective { };
+        private sealed class EndOnOutputSize : IEndConditionDirective { };
+        private sealed class EndOnInputSize : IEndConditionDirective { };
+
+        private interface IEarlyEndDirective { };
+        private sealed class Full : IEarlyEndDirective { };
+        private sealed class Partial : IEarlyEndDirective { };
 
         [StructLayout(LayoutKind.Sequential)]
         protected struct LZ4_stream_t_internal
@@ -75,16 +94,16 @@ namespace Sparrow.Compression
             if (outputLength >= MaximumOutputLength(inputLength))
             {
                 if (inputLength < LZ4_64Klimit)
-                    return LZ4_compress_generic(&ctx, input, output, inputLength, 0, LimitedOutput.NotLimited, TableType.ByU16, DictionaryType.NoDict, DictionaryIssue.NoDictIssue, acceleration);
+                    return LZ4_compress_generic<NotLimited, ByU16, NoDict, NoDictIssue>(&ctx, input, output, inputLength, 0, acceleration);
                 else
-                    return LZ4_compress_generic(&ctx, input, output, inputLength, 0, LimitedOutput.NotLimited, TableType.ByU32, DictionaryType.NoDict, DictionaryIssue.NoDictIssue, acceleration);
+                    return LZ4_compress_generic<NotLimited, ByU32, NoDict, NoDictIssue>(&ctx, input, output, inputLength, 0, acceleration);
             }
             else
             {
                 if (inputLength < LZ4_64Klimit)
-                    return LZ4_compress_generic(&ctx, input, output, inputLength, outputLength, LimitedOutput.LimitedOutput, TableType.ByU16, DictionaryType.NoDict, DictionaryIssue.NoDictIssue, acceleration);
+                    return LZ4_compress_generic<LimitedOutput, ByU16, NoDict, NoDictIssue>(&ctx, input, output, inputLength, outputLength, acceleration);
                 else
-                    return LZ4_compress_generic(&ctx, input, output, inputLength, outputLength, LimitedOutput.LimitedOutput, TableType.ByU32, DictionaryType.NoDict, DictionaryIssue.NoDictIssue, acceleration);
+                    return LZ4_compress_generic< LimitedOutput, ByU32, NoDict, NoDictIssue>(&ctx, input, output, inputLength, outputLength, acceleration);
             }
         }
 
@@ -96,7 +115,11 @@ namespace Sparrow.Compression
             return size > LZ4_MAX_INPUT_SIZE ? 0 : size + (size / 255) + 16;
         }
 
-        private int LZ4_compress_generic(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, LimitedOutput outputLimited, TableType tableType, DictionaryType dict, DictionaryIssue dictIssue, int acceleration)
+        private int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
+            where TLimited : ILimitedOutputDirective
+            where TTableType : ITableTypeDirective
+            where TDictionaryType : IDictionaryTypeDirective
+            where TDictionaryIssue : IDictionaryIssueDirective
         {
             byte* ip = source;
             byte* lowRefLimit = ip - dictPtr->dictSize;
@@ -113,44 +136,44 @@ namespace Sparrow.Compression
             byte* op = (byte*)dest;
             byte* olimit = op + maxOutputSize;
 
-            uint forwardH;
-            long refDelta = 0;
+            uint forwardH;            
 
             // Init conditions
             if (inputSize > LZ4_MAX_INPUT_SIZE) return 0;   // Unsupported input size, too large (or negative)
 
             byte* @base;
             byte* lowLimit;
-            switch ( dict )
-            {
-                default:
-                case DictionaryType.NoDict:
-                    @base = source;
-                    lowLimit = source;
-                    break;
-                case DictionaryType.WithPrefix64K:
-                    @base = source - dictPtr->currentOffset;
-                    lowLimit = source - dictPtr->dictSize;
-                    break;
-                case DictionaryType.UsingExtDict:
-                    @base = source - dictPtr->currentOffset;
-                    lowLimit = source;
-                    break;
-            }
 
-            if ((tableType == TableType.ByU16) && (inputSize >= LZ4_64Klimit)) // Size too large (not within 64K limit)
+            if (typeof(TDictionaryType) == typeof(NoDict))
+            {
+                @base = source;
+                lowLimit = source;
+            }
+            else if (typeof(TDictionaryType) == typeof(WithPrefix64K))
+            {
+                @base = source - dictPtr->currentOffset;
+                lowLimit = source - dictPtr->dictSize;
+            }
+            else if (typeof(TDictionaryType) == typeof(UsingExtDict))
+            {
+                @base = source - dictPtr->currentOffset;
+                lowLimit = source;
+            }
+            else throw new NotSupportedException("Unsupported IDictionaryTypeDirective.");
+
+            if ((typeof(TTableType) == typeof(ByU16)) && (inputSize >= LZ4_64Klimit)) // Size too large (not within 64K limit)
                 return 0;   
 
             if (inputSize < LZ4_minLength) // Input too small, no compression (all literals)
                 goto _last_literals;
 
             // First Byte
-            LZ4_putPosition(ip, dictPtr, tableType, @base);
+            LZ4_putPosition<TTableType>(ip, dictPtr, @base);
             ip++;
-            forwardH = LZ4_hashPosition(ip, tableType);
+            forwardH = LZ4_hashPosition<TTableType>(ip);
 
             // Main Loop
-
+            long refDelta = 0;
             for (;;)
             {
                 byte* match;
@@ -170,8 +193,8 @@ namespace Sparrow.Compression
                         if (forwardIp > mflimit)
                             goto _last_literals;
                         
-                        match = LZ4_getPositionOnHash(h, dictPtr, tableType, @base);
-                        if ( dict == DictionaryType.UsingExtDict)
+                        match = LZ4_getPositionOnHash<TTableType>(h, dictPtr, @base);
+                        if (typeof(TDictionaryType) == typeof(UsingExtDict))
                         {
                             if ( match < source )
                             {
@@ -185,11 +208,11 @@ namespace Sparrow.Compression
                             }
                         }
 
-                        forwardH = LZ4_hashPosition(forwardIp, tableType);
-                        LZ4_putPositionOnHash(ip, h, dictPtr, tableType, @base);
+                        forwardH = LZ4_hashPosition<TTableType>(forwardIp);
+                        LZ4_putPositionOnHash<TTableType>(ip, h, dictPtr, @base);
                     }
-                    while (((dictIssue == DictionaryIssue.DictSmall) ? (match < lowRefLimit) : false) || 
-                           ((tableType == TableType.ByU16) ? false : (match + MAX_DISTANCE < ip)) || 
+                    while (((typeof(TDictionaryType) == typeof(DictSmall)) ? (match < lowRefLimit) : false) || 
+                           ((typeof(TTableType) == typeof(ByU16)) ? false : (match + MAX_DISTANCE < ip)) || 
                            (*(uint*)(match + refDelta) != *((uint*)ip)));
                 }
                                 
@@ -207,7 +230,7 @@ namespace Sparrow.Compression
                     int litLength = (int)(ip - anchor);
                     token = op++;
 
-                    if ((outputLimited == LimitedOutput.LimitedOutput) && (op + litLength + (2 + 1 + LASTLITERALS) + (litLength / 255) > olimit))
+                    if ((typeof(TLimited) == typeof(LimitedOutput)) && (op + litLength + (2 + 1 + LASTLITERALS) + (litLength / 255) > olimit))
                         return 0;   /* Check output limit */
 
                     if (litLength >= RUN_MASK)
@@ -240,7 +263,7 @@ namespace Sparrow.Compression
                 {
                     int matchLength;
 
-                    if ((dict == DictionaryType.UsingExtDict) && (lowLimit == dictionary))
+                    if ((typeof(TDictionaryType) == typeof(UsingExtDict)) && (lowLimit == dictionary))
                     {
                         match += refDelta;
 
@@ -261,7 +284,7 @@ namespace Sparrow.Compression
                         ip += MINMATCH + matchLength;
                     }
 
-                    if ((outputLimited == LimitedOutput.LimitedOutput) && ((op + (1 + LASTLITERALS) + (matchLength>>8)) > olimit))
+                    if ((typeof(TLimited) == typeof(LimitedOutput)) && ((op + (1 + LASTLITERALS) + (matchLength>>8)) > olimit))
                         return 0;    /* Check output limit */
 
                     if (matchLength >= ML_MASK)
@@ -296,11 +319,11 @@ namespace Sparrow.Compression
                 if (ip > mflimit) break;
 
                 // Fill table
-                LZ4_putPosition(ip - 2, dictPtr, tableType, @base);
+                LZ4_putPosition<TTableType>(ip - 2, dictPtr, @base);
 
                 /* Test next position */
-                match = LZ4_getPosition(ip, dictPtr, tableType, @base);
-                if (dict == DictionaryType.UsingExtDict)
+                match = LZ4_getPosition<TTableType>(ip, dictPtr, @base);
+                if (typeof(TDictionaryType) == typeof(UsingExtDict))
                 {
                     if (match < source)
                     {
@@ -314,15 +337,15 @@ namespace Sparrow.Compression
                     }
                 }
 
-                LZ4_putPosition(ip, dictPtr, tableType, @base);
-                if (((dictIssue == DictionaryIssue.DictSmall) ? (match >= lowRefLimit) : true) && (match + MAX_DISTANCE >= ip) && (*(uint*)(match + refDelta) == *(uint*)(ip)))
+                LZ4_putPosition<TTableType>(ip, dictPtr, @base);
+                if (((typeof(TDictionaryType) == typeof(DictSmall)) ? (match >= lowRefLimit) : true) && (match + MAX_DISTANCE >= ip) && (*(uint*)(match + refDelta) == *(uint*)(ip)))
                 {
                     token = op++; *token = 0;
                     goto _next_match;
                 }
 
                 /* Prepare next loop */                
-                forwardH = LZ4_hashPosition(++ip, tableType);
+                forwardH = LZ4_hashPosition<TTableType>(++ip);
             }
 
             _last_literals:
@@ -330,7 +353,7 @@ namespace Sparrow.Compression
             /* Encode Last Literals */
             {
                 int lastRun = (int)(iend - anchor);
-                if ((outputLimited == LimitedOutput.LimitedOutput) && ((op - dest) + lastRun + 1 + ((lastRun + 255 - RUN_MASK) / 255) > maxOutputSize))
+                if ((typeof(TLimited) == typeof(LimitedOutput)) && ((op - dest) + lastRun + 1 + ((lastRun + 255 - RUN_MASK) / 255) > maxOutputSize))
                     return 0;   // Check output limit;
 
                 if (lastRun >= RUN_MASK)
@@ -384,63 +407,84 @@ namespace Sparrow.Compression
             return (int)(pIn - pStart);
         }
 
-        private static void LZ4_putPosition(byte* p, LZ4_stream_t_internal* ctx, TableType tableType, byte* srcBase)
+        private static void LZ4_putPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
         {
-            uint h = LZ4_hashPosition(p, tableType);
-            LZ4_putPositionOnHash(p, h, ctx, tableType, srcBase);
+            uint h = LZ4_hashPosition<TTableType>(p);
+            LZ4_putPositionOnHash<TTableType>(p, h, ctx, srcBase);
         }
 
-        private byte* LZ4_getPosition(byte* p, LZ4_stream_t_internal* ctx, TableType tableType, byte* srcBase)
+        private byte* LZ4_getPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
         {
-            uint h = LZ4_hashPosition(p, tableType);
-            return LZ4_getPositionOnHash(h, ctx, tableType, srcBase);
+            uint h = LZ4_hashPosition<TTableType>(p);
+            return LZ4_getPositionOnHash<TTableType>(h, ctx, srcBase);
         }
 
-        private static void LZ4_putPositionOnHash(byte* p, uint h, LZ4_stream_t_internal* ctx, TableType tableType, byte* srcBase)
+        private static void LZ4_putPositionOnHash<TTableType>(byte* p, uint h, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
         {
-            if (tableType == TableType.ByU32)
+            if (typeof(TTableType) == typeof(ByU32))
                 ctx->hashTable[h] = (uint)(p - srcBase);
-            else
+            else if (typeof(TTableType) == typeof(ByU16))
                 ((ushort*)ctx->hashTable)[h] = (ushort)(p - srcBase);
+            else throw new NotSupportedException("TTableType directive is not supported.");
         }
 
-        private byte* LZ4_getPositionOnHash(uint h, LZ4_stream_t_internal* ctx, TableType tableType, byte* srcBase)
+        private byte* LZ4_getPositionOnHash<TTableType>(uint h, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
         {
-            if (tableType == TableType.ByU32)
+            if (typeof(TTableType) == typeof(ByU32))
                 return srcBase + ctx->hashTable[h];
-            else
+            else if(typeof(TTableType) == typeof(ByU16))
                 return srcBase + ((ushort*)ctx->hashTable)[h];
+            
+            throw new NotSupportedException("TTableType directive is not supported.");
         }
 
-        private static uint LZ4_hashPosition(byte* sequence, TableType tableType)
+        private static uint LZ4_hashPosition<TTableType>(byte* sequence)
+            where TTableType : ITableTypeDirective
         {
-            ulong value = *((ulong*)sequence);
-            return LZ4_hashSequence64(value, tableType);
+            return LZ4_hashSequence64<TTableType>(*((ulong*)sequence));
         }
 
-        //private static uint LZ4_hashPosition(byte* sequence, TableType tableType)
+        //private static uint LZ4_hashPosition32(byte* sequence, TableType tableType)
         //{
         //    uint value = *((uint*)sequence);
         //    return LZ4_hashSequence32(value, tableType);
         //}
 
+        //private static uint LZ4_hashSequence32<TTableType>(uint sequence, TableType tableType)
+        //{
+        //    if (tableType == TableType.ByU16)
+        //        return (((sequence) * 2654435761U) >> ((MINMATCH * 8) - (LZ4_HASHLOG + 1)));
+        //    else
+        //        return (((sequence) * 2654435761U) >> ((MINMATCH * 8) - LZ4_HASHLOG));
+        //}
+
+        private const int ByU16HashLog = LZ4_HASHLOG + 1;
+        private const int ByU16HashMask = (1 << ByU16HashLog) - 1;
+
+        private const int ByU32HashLog = LZ4_HASHLOG;
+        private const int ByU32HashMask = (1 << ByU32HashLog) - 1;
+
         private const ulong prime5bytes = 889523592379UL;
-        private static uint LZ4_hashSequence64(ulong sequence, TableType tableType)
+        private static uint LZ4_hashSequence64<TTableType>(ulong sequence)
         {
-            int hashLog = (tableType == TableType.ByU16) ? LZ4_HASHLOG + 1 : LZ4_HASHLOG;
-            int hashMask = (1 << hashLog) - 1;
+            if (typeof(TTableType) == typeof(ByU16))
+            {
+                int value = (int)(sequence * prime5bytes >> (40 - ByU16HashLog));
+                return (uint)(value & ByU16HashMask);
+            }
+            else if (typeof(TTableType) == typeof(ByU32))
+            {
+                int value = (int)(sequence * prime5bytes >> (40 - ByU32HashLog));
+                return (uint)(value & ByU32HashMask);
+            }
 
-            int value = (int) (sequence * prime5bytes >> (40 - hashLog) );
-            return (uint) (value & hashMask);
+            throw new NotSupportedException("TTableType directive is not supported.");
         }
 
-        private static uint LZ4_hashSequence32(uint sequence, TableType tableType)
-        {
-            if (tableType == TableType.ByU16)
-                return (((sequence) * 2654435761U) >> ((MINMATCH * 8) - (LZ4_HASHLOG + 1)));
-            else
-                return (((sequence) * 2654435761U) >> ((MINMATCH * 8) - LZ4_HASHLOG));
-        }
 
         public static int Decode64(
             byte* input,
@@ -451,14 +495,14 @@ namespace Sparrow.Compression
         {
             if (knownOutputLength)
             {
-                var length = LZ4_decompress_generic(input, output, inputLength, outputLength, EndCondition.EndOnInputSize, EarlyEnd.Full, 0, DictionaryType.NoDict, output, null, 0);
+                var length = LZ4_decompress_generic<EndOnInputSize, Full, NoDict> (input, output, inputLength, outputLength, 0, output, null, 0);
                 if (length != outputLength)
                     throw new ArgumentException("LZ4 block is corrupted, or invalid length has been given.");
                 return outputLength;
             }
             else
             {
-                var length = LZ4_decompress_generic(input, output, inputLength, outputLength, EndCondition.EndOnOutputSize, EarlyEnd.Full, 0, DictionaryType.WithPrefix64K, output - (64 * Constants.Size.Kilobyte), null, 64 * Constants.Size.Kilobyte);
+                var length = LZ4_decompress_generic<EndOnOutputSize, Full, WithPrefix64K>(input, output, inputLength, outputLength, 0, output - (64 * Constants.Size.Kilobyte), null, 64 * Constants.Size.Kilobyte);
                 if (length < 0)
                     throw new ArgumentException("LZ4 block is corrupted, or invalid length has been given.");
                 return length;
@@ -468,7 +512,10 @@ namespace Sparrow.Compression
         private readonly static int[] dec32table = new int[] { 4, 1, 2, 1, 4, 4, 4, 4 };
         private readonly static int[] dec64table = new int[] { 0, 0, 0, -1, 0, 1, 2, 3 };
 
-        private static int LZ4_decompress_generic(byte* source, byte* dest, int inputSize, int outputSize, EndCondition endOnInput, EarlyEnd partialDecoding, int targetOutputSize, DictionaryType dict, byte* lowPrefix, byte* dictStart, int dictSize)
+        private static int LZ4_decompress_generic<TEndCondition, TEarlyEnd, TDictionaryType>(byte* source, byte* dest, int inputSize, int outputSize, int targetOutputSize, byte* lowPrefix, byte* dictStart, int dictSize)
+            where TEndCondition : IEndConditionDirective
+            where TEarlyEnd : IEarlyEndDirective
+            where TDictionaryType : IDictionaryTypeDirective
         {
             /* Local Variables */
             byte* ip = source;
@@ -482,14 +529,14 @@ namespace Sparrow.Compression
 
             byte* dictEnd = dictStart + dictSize;
 
-            bool safeDecode = (endOnInput == EndCondition.EndOnInputSize);
+            bool safeDecode = (typeof(TEndCondition) == typeof(EndOnInputSize));
             bool checkOffset = ((safeDecode) && (dictSize < 64 * Constants.Size.Kilobyte));
 
             // Special Cases
-            if ((partialDecoding == EarlyEnd.Partial) && (oexit > oend - MFLIMIT)) oexit = oend - MFLIMIT;                          // targetOutputSize too high => decode everything
-            if ((endOnInput == EndCondition.EndOnInputSize) && (outputSize == 0))
+            if ((typeof(TEarlyEnd) == typeof(Partial)) && (oexit > oend - MFLIMIT)) oexit = oend - MFLIMIT;                          // targetOutputSize too high => decode everything
+            if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (outputSize == 0))
                 return ((inputSize == 1) && (*ip == 0)) ? 0 : -1;  // Empty output buffer
-            if ((endOnInput == EndCondition.EndOnOutputSize) && (outputSize == 0))
+            if ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (outputSize == 0))
                 return (*ip == 0 ? 1 : -1);
 
             // Main Loop
@@ -507,7 +554,7 @@ namespace Sparrow.Compression
                         s = *ip++;
                         length += s;
                     }
-                    while (((endOnInput == EndCondition.EndOnInputSize) ? ip < iend - RUN_MASK : true) && (s == 255));
+                    while (((typeof(TEndCondition) == typeof(EndOnInputSize)) ? ip < iend - RUN_MASK : true) && (s == 255));
 
                     if ((safeDecode) && (op + length) < op) goto _output_error;   /* overflow detection */
                     if ((safeDecode) && (ip + length) < ip) goto _output_error;   /* overflow detection */
@@ -515,23 +562,23 @@ namespace Sparrow.Compression
 
                 // copy literals
                 byte* cpy = op + length;
-                if (((endOnInput == EndCondition.EndOnInputSize) && ((cpy > (partialDecoding == EarlyEnd.Partial ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS))))
-                    || ((endOnInput == EndCondition.EndOnOutputSize) && (cpy > oend - COPYLENGTH)))
+                if (((typeof(TEndCondition) == typeof(EndOnInputSize)) && ((cpy > (typeof(TEarlyEnd) == typeof(Partial) ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS))))
+                    || ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (cpy > oend - COPYLENGTH)))
                 {
-                    if (partialDecoding == EarlyEnd.Partial)
+                    if (typeof(TEarlyEnd) == typeof(Partial))
                     {
                         if (cpy > oend)
                             goto _output_error;                           /* Error : write attempt beyond end of output buffer */
 
-                        if ((endOnInput == EndCondition.EndOnInputSize) && (ip + length > iend))
+                        if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip + length > iend))
                             goto _output_error;   /* Error : read attempt beyond end of input buffer */
                     }
                     else
                     {
-                        if ((endOnInput == EndCondition.EndOnOutputSize) && (cpy != oend))
+                        if ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (cpy != oend))
                             goto _output_error;       /* Error : block decoding must stop exactly there */
 
-                        if ((endOnInput == EndCondition.EndOnInputSize) && ((ip + length != iend) || (cpy > oend)))
+                        if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && ((ip + length != iend) || (cpy > oend)))
                             goto _output_error;   /* Error : input must be consumed */
                     }
 
@@ -555,7 +602,7 @@ namespace Sparrow.Compression
                     byte s;
                     do
                     {
-                        if ((endOnInput == EndCondition.EndOnInputSize) && (ip > iend - LASTLITERALS))
+                        if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip > iend - LASTLITERALS))
                             goto _output_error;
 
                         s = *ip++;
@@ -570,7 +617,7 @@ namespace Sparrow.Compression
                 length += MINMATCH;
 
                 /* check external dictionary */
-                if ((dict == DictionaryType.UsingExtDict) && (match < lowPrefix))
+                if ((typeof(TDictionaryType) == typeof(UsingExtDict)) && (match < lowPrefix))
                 {
                     if (op + length > oend - LASTLITERALS)
                         goto _output_error;   /* doesn't respect parsing restriction */
@@ -652,7 +699,7 @@ namespace Sparrow.Compression
             }
 
             /* end of decoding */
-            if (endOnInput == EndCondition.EndOnInputSize)
+            if (typeof(TEndCondition) == typeof(EndOnInputSize))
                 return (int)(op - dest);     /* Nb of output bytes decoded */
             else
                 return (int)(ip - source);   /* Nb of input bytes read */
