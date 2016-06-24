@@ -543,7 +543,6 @@
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <ItemGroup>
-    <Analyzer Include="..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
 </Project>

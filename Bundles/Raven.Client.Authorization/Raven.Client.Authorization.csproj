@@ -111,7 +111,6 @@
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>
-    <Analyzer Include="..\..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
     <Analyzer Include="..\..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />

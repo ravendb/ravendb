@@ -104,7 +104,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Analyzer Include="..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
   <PropertyGroup>

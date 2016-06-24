@@ -80,9 +80,6 @@
     <None Include="RavenDB.snk" />
     <None Include="readme.md" />
   </ItemGroup>
-  <ItemGroup>
-    <Analyzer Include="..\..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

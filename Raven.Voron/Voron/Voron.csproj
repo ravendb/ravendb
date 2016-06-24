@@ -207,7 +207,4 @@
       <Name>Sparrow</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Analyzer Include="..\..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
-  </ItemGroup>
 </Project>
