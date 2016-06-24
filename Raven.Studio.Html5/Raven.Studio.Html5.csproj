@@ -139,6 +139,7 @@
     <TypeScriptCompile Include="App\viewmodels\counter\editCounter.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\indexes\indexLockAllConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\indexes\renameOrDuplicateIndexDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\settings\etl.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebug.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugChanges.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugConfig.ts" />
@@ -212,6 +213,7 @@
     <Content Include="App\views\counter\counters.html" />
     <Content Include="App\views\database\indexes\indexLockAllConfirm.html" />
     <Content Include="App\views\database\indexes\renameOrDuplicateIndexDialog.html" />
+    <Content Include="App\views\database\settings\etl.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\filteredOutIndexInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\prefetchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\deletionBatchInfo.html" />

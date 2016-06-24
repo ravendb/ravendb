@@ -7,6 +7,7 @@ class replicationsSetup {
     clientFailoverBehaviour = ko.observable<string>(null);
     showRequestTimeSlaThreshold: KnockoutObservable<boolean>;
     requestTimeSlaThreshold = ko.observable<number>(null);
+    hasAnyReplicationDestination: KnockoutComputed<boolean>;
 
     constructor(dto: configurationDocumentDto<replicationsDto>) {
         this.source(dto.MergedDocument.Source);
@@ -41,7 +42,7 @@ class replicationsSetup {
                 this.requestTimeSlaThreshold(100);
             }
         });
-
+        this.hasAnyReplicationDestination = ko.computed(() => this.destinations().filter(x => !x.enableReplicateOnlyFromCollections()).length > 0);
     }
 
     toDto(filterLocal = true): replicationsDto {
