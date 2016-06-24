@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Compression
 {
@@ -115,28 +116,28 @@ namespace Sparrow.Compression
             return size > LZ4_MAX_INPUT_SIZE ? 0 : size + (size / 255) + 16;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
             where TLimited : ILimitedOutputDirective
             where TTableType : ITableTypeDirective
             where TDictionaryType : IDictionaryTypeDirective
             where TDictionaryIssue : IDictionaryIssueDirective
         {
+            byte* op = dest;
             byte* ip = source;
-            byte* lowRefLimit = ip - dictPtr->dictSize;
+            byte* anchor = source;
+
             byte* dictionary = dictPtr->dictionary;
             byte* dictEnd = dictionary + dictPtr->dictSize;
+            byte* lowRefLimit = ip - dictPtr->dictSize;
 
             long dictDelta = (long)dictEnd - (long)source;
-
-            byte* anchor = source;
+            
             byte* iend = ip + inputSize;
             byte* mflimit = iend - MFLIMIT;
             byte* matchlimit = iend - LASTLITERALS;
 
-            byte* op = (byte*)dest;
             byte* olimit = op + maxOutputSize;
-
-            uint forwardH;            
 
             // Init conditions
             if (inputSize > LZ4_MAX_INPUT_SIZE) return 0;   // Unsupported input size, too large (or negative)
@@ -170,7 +171,7 @@ namespace Sparrow.Compression
             // First Byte
             LZ4_putPosition<TTableType>(ip, dictPtr, @base);
             ip++;
-            forwardH = LZ4_hashPosition<TTableType>(ip);
+            uint forwardH = LZ4_hashPosition<TTableType>(ip);
 
             // Main Loop
             long refDelta = 0;
@@ -407,6 +408,8 @@ namespace Sparrow.Compression
             return (int)(pIn - pStart);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void LZ4_putPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
             where TTableType : ITableTypeDirective
         {
@@ -414,6 +417,7 @@ namespace Sparrow.Compression
             LZ4_putPositionOnHash<TTableType>(p, h, ctx, srcBase);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte* LZ4_getPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
             where TTableType : ITableTypeDirective
         {
@@ -421,6 +425,7 @@ namespace Sparrow.Compression
             return LZ4_getPositionOnHash<TTableType>(h, ctx, srcBase);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void LZ4_putPositionOnHash<TTableType>(byte* p, uint h, LZ4_stream_t_internal* ctx, byte* srcBase)
             where TTableType : ITableTypeDirective
         {
@@ -431,6 +436,7 @@ namespace Sparrow.Compression
             else throw new NotSupportedException("TTableType directive is not supported.");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte* LZ4_getPositionOnHash<TTableType>(uint h, LZ4_stream_t_internal* ctx, byte* srcBase)
             where TTableType : ITableTypeDirective
         {
@@ -442,10 +448,23 @@ namespace Sparrow.Compression
             throw new NotSupportedException("TTableType directive is not supported.");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static uint LZ4_hashPosition<TTableType>(byte* sequence)
             where TTableType : ITableTypeDirective
         {
-            return LZ4_hashSequence64<TTableType>(*((ulong*)sequence));
+            ulong element = *((ulong*)sequence);
+            if (typeof(TTableType) == typeof(ByU16))
+            {
+                int value = (int)(element * prime5bytes >> (40 - ByU16HashLog));
+                return (uint)(value & ByU16HashMask);
+            }
+            else if (typeof(TTableType) == typeof(ByU32))
+            {
+                int value = (int)(element * prime5bytes >> (40 - ByU32HashLog));
+                return (uint)(value & ByU32HashMask);
+            }
+
+            throw new NotSupportedException("TTableType directive is not supported.");
         }
 
         //private static uint LZ4_hashPosition32(byte* sequence, TableType tableType)
@@ -469,22 +488,6 @@ namespace Sparrow.Compression
         private const int ByU32HashMask = (1 << ByU32HashLog) - 1;
 
         private const ulong prime5bytes = 889523592379UL;
-        private static uint LZ4_hashSequence64<TTableType>(ulong sequence)
-        {
-            if (typeof(TTableType) == typeof(ByU16))
-            {
-                int value = (int)(sequence * prime5bytes >> (40 - ByU16HashLog));
-                return (uint)(value & ByU16HashMask);
-            }
-            else if (typeof(TTableType) == typeof(ByU32))
-            {
-                int value = (int)(sequence * prime5bytes >> (40 - ByU32HashLog));
-                return (uint)(value & ByU32HashMask);
-            }
-
-            throw new NotSupportedException("TTableType directive is not supported.");
-        }
-
 
         public static int Decode64(
             byte* input,
@@ -709,6 +712,7 @@ _output_error:
             return (int)( -(ip - source) )-1;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WildCopy(byte* dest, byte* src, byte* destEnd)
         {
             // This copy will use the same data that has already being copied as source
