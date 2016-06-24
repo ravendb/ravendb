@@ -118,11 +118,6 @@ namespace Raven.Client.Document
             return documentQuery;
         }
 
-        protected override void ExecuteActualQuery()
-        {
-            throw new NotSupportedException("Async queries don't support synchronous execution");
-        }
-
         protected override Task<QueryOperation> ExecuteActualQueryAsync()
         {
             var results = CompletedTask.With(new bool[ShardDatabaseCommands.Count]).Task;
@@ -184,14 +179,15 @@ namespace Raven.Client.Document
             });
         }
 
-        public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+        
+        public override Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
         {
-            throw new NotSupportedException("Lazy in not supported with the async API");
+            throw new NotSupportedException("Async lazy requests are not supported for sharded store");
         }
-
-        public override Lazy<int> CountLazily()
-        {
-            throw new NotSupportedException("Lazy in not supported with the async API");
+        
+        public override Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken))
+        { 
+            throw new NotSupportedException("Async lazy requests are not supported for sharded store");
         }
 
         public override IDatabaseCommands DatabaseCommands

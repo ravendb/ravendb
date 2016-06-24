@@ -255,7 +255,7 @@ namespace Raven.Client.Linq
                 var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null,null,indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, 
                     provider.ResultTransformer, provider.TransformerParameters, OriginalQueryType);
                 var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
-                return ((IRavenQueryInspector)documentQuery).IndexQueried;
+                return documentQuery.IndexQueried;
             }
         }
 
@@ -269,7 +269,7 @@ namespace Raven.Client.Linq
                 var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null,null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                     provider.ResultTransformer, provider.TransformerParameters, OriginalQueryType);
                 var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
-                return ((IRavenQueryInspector)documentQuery).IndexQueried;
+                return documentQuery.AsyncIndexQueried;
             }
         }
 
@@ -317,11 +317,11 @@ namespace Raven.Client.Linq
             if (isAsync)
             {
                 var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
-                return ((IRavenQueryInspector)asyncDocumentQuery).GetLastEqualityTerm(true);
+                return asyncDocumentQuery.GetLastEqualityTerm(true);
             }
 
             var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
-            return ((IRavenQueryInspector) documentQuery).GetLastEqualityTerm();
+            return documentQuery.GetLastEqualityTerm();
         }
 
         /// <summary>

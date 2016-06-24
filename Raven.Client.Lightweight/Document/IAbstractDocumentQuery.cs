@@ -10,11 +10,6 @@ namespace Raven.Client.Document
     public interface IAbstractDocumentQuery<T>
     {
         /// <summary>
-        ///   Get the name of the index being queried
-        /// </summary>
-        string IndexQueried { get; }
-
-        /// <summary>
         /// Gets the document convention from the query session
         /// </summary>
         DocumentConvention DocumentConvention { get; }
