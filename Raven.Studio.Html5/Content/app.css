@@ -9073,7 +9073,7 @@ a.global_help_link:focus {
   background-color: #f36523;
   border-color: #f36523;
 }
-.checkbo input[type="checkbox"]:indeterminate + label::after,
+.checkbox input[type="checkbox"]:indeterminate + label::after,
 .checkbox input[type="radio"]:indeterminate + label::after {
   background-color: #fff;
 }
@@ -9089,6 +9089,16 @@ a.global_help_link:focus {
 }
 .checkbox label::before {
   pointer-events: auto;
+}
+.form-horizontal .radio,
+.form-horizontal .checkbox {
+  min-height: 20px;
+}
+.form-horizontal .radio,
+.form-horizontal .checkbox,
+.form-horizontal .radio-inline,
+.form-horizontal .checkbox-inline {
+  padding-top: 0;
 }
 /* Override default awesome bootstrap checkbox style - end */
 /**
