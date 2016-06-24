@@ -16,21 +16,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            var docsAndSelectManyExpression = node.Expression as MemberAccessExpressionSyntax; // docs.SelectMany
-            if (docsAndSelectManyExpression == null)
+            var selectMany = node.Expression.ToString();
+            if (selectMany != "docs.SelectMany")
                 return base.VisitInvocationExpression(node);
-
-            var identifiers = docsAndSelectManyExpression.ChildNodes()
-                .Where(x => x.IsKind(SyntaxKind.IdentifierName))
-                .Select(x => (IdentifierNameSyntax)x)
-                .ToArray();
-
-            if (identifiers.Length == 0)
-                return base.VisitInvocationExpression(node);
-
-            var selectMany = identifiers[identifiers.Length - 1].Identifier.Text; // check if last if SelectMany
-            if (string.Equals(selectMany, "SelectMany") == false)
-                return node;
 
             var arguments = node.ArgumentList.Arguments;
             if (arguments.Count < 2)
@@ -41,10 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 return node;
 
             var lambda = (SimpleLambdaExpressionSyntax)firstArgument;
-            var toCast = lambda.ChildNodes().LastOrDefault(); // order.Lines
-            if (toCast.IsKind(SyntaxKind.SimpleMemberAccessExpression) == false)
-                return node;
-
+            var toCast = lambda.ChildNodes().LastOrDefault();
             var castExpression = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(IEnumerable<dynamic>){toCast}");
 
             return node.ReplaceNode(toCast, castExpression);

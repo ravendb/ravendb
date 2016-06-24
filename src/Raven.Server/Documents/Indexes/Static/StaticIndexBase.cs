@@ -29,6 +29,11 @@ namespace Raven.Server.Documents.Indexes.Static
             set.Add(referencedCollection);
         }
 
+        public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
+        {
+            return new RecursiveFunction(item, func).Execute();
+        }
+
         public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
         {
             if (CurrentIndexingScope.Current == null)
@@ -54,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Static
             //        {
             //            items.Add(LoadDocument(enumerator.Current, collectionName));
             //        }
-            //        return null;
+            //        return new DynamicList(items);
             //    }
             //}
 
