@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -48,20 +49,20 @@ namespace Raven.Server.Documents.Indexes.Static
             if (keyString != null)
                 return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
 
-            //var enumerable = keyOrEnumerable as IEnumerable;
-            //if (enumerable != null)
-            //{
-            //    var enumerator = enumerable.GetEnumerator();
-            //    using (enumerable as IDisposable)
-            //    {
-            //        var items = new List<dynamic>();
-            //        while (enumerator.MoveNext())
-            //        {
-            //            items.Add(LoadDocument(enumerator.Current, collectionName));
-            //        }
-            //        return new DynamicList(items);
-            //    }
-            //}
+            var enumerable = keyOrEnumerable as IEnumerable;
+            if (enumerable != null)
+            {
+                var enumerator = enumerable.GetEnumerator();
+                using (enumerable as IDisposable)
+                {
+                    var items = new List<dynamic>();
+                    while (enumerator.MoveNext())
+                    {
+                        items.Add(LoadDocument(enumerator.Current, collectionName));
+                    }
+                    return new DynamicJsonArray(items);
+                }
+            }
 
             throw new InvalidOperationException(
                 "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
