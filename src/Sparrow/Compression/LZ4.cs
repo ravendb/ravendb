@@ -45,29 +45,29 @@ namespace Sparrow.Compression
 
 
         private interface ILimitedOutputDirective { };
-        private sealed class NotLimited : ILimitedOutputDirective { };
-        private sealed class LimitedOutput : ILimitedOutputDirective { };
+        private struct NotLimited : ILimitedOutputDirective { };
+        private struct LimitedOutput : ILimitedOutputDirective { };
 
         private interface IDictionaryTypeDirective { };
-        private sealed class NoDict : IDictionaryTypeDirective { };
-        private sealed class WithPrefix64K : IDictionaryTypeDirective { };
-        private sealed class UsingExtDict : IDictionaryTypeDirective { };
+        private struct NoDict : IDictionaryTypeDirective { };
+        private struct WithPrefix64K : IDictionaryTypeDirective { };
+        private struct UsingExtDict : IDictionaryTypeDirective { };
 
         private interface IDictionaryIssueDirective { };
-        private sealed class NoDictIssue : IDictionaryIssueDirective { };
-        private sealed class DictSmall : IDictionaryIssueDirective { };
+        private struct NoDictIssue : IDictionaryIssueDirective { };
+        private struct DictSmall : IDictionaryIssueDirective { };
 
         private interface ITableTypeDirective { };
-        private sealed class ByU32 : ITableTypeDirective { };
-        private sealed class ByU16 : ITableTypeDirective { };
+        private struct ByU32 : ITableTypeDirective { };
+        private struct ByU16 : ITableTypeDirective { };
 
         private interface IEndConditionDirective { };
-        private sealed class EndOnOutputSize : IEndConditionDirective { };
-        private sealed class EndOnInputSize : IEndConditionDirective { };
+        private struct EndOnOutputSize : IEndConditionDirective { };
+        private struct EndOnInputSize : IEndConditionDirective { };
 
         private interface IEarlyEndDirective { };
-        private sealed class Full : IEarlyEndDirective { };
-        private sealed class Partial : IEarlyEndDirective { };
+        private struct Full : IEarlyEndDirective { };
+        private struct Partial : IEarlyEndDirective { };
 
         [StructLayout(LayoutKind.Sequential)]
         protected struct LZ4_stream_t_internal
@@ -380,7 +380,7 @@ namespace Sparrow.Compression
         }
 
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int LZ4_count(byte* pIn, byte* pMatch, byte* pInLimit)
         {
             byte* pStart = pIn;
@@ -433,7 +433,8 @@ namespace Sparrow.Compression
                 ctx->hashTable[h] = (uint)(p - srcBase);
             else if (typeof(TTableType) == typeof(ByU16))
                 ((ushort*)ctx->hashTable)[h] = (ushort)(p - srcBase);
-            else throw new NotSupportedException("TTableType directive is not supported.");
+            else
+                ThrowException(new NotSupportedException("TTableType directive is not supported."));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -444,8 +445,9 @@ namespace Sparrow.Compression
                 return srcBase + ctx->hashTable[h];
             else if(typeof(TTableType) == typeof(ByU16))
                 return srcBase + ((ushort*)ctx->hashTable)[h];
-            
-            throw new NotSupportedException("TTableType directive is not supported.");
+
+            ThrowException(new NotSupportedException("TTableType directive is not supported."));
+            return default(byte*);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -464,7 +466,19 @@ namespace Sparrow.Compression
                 return (uint)(value & ByU32HashMask);
             }
 
-            throw new NotSupportedException("TTableType directive is not supported.");
+            return ThrowException<uint>(new NotSupportedException("TTableType directive is not supported."));            
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ThrowException(Exception e)
+        {
+            throw e;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static TResult ThrowException<TResult>(Exception e)
+        {
+            throw e;
         }
 
         //private static uint LZ4_hashPosition32(byte* sequence, TableType tableType)
@@ -500,14 +514,15 @@ namespace Sparrow.Compression
             {
                 var length = LZ4_decompress_generic<EndOnInputSize, Full, NoDict> (input, output, inputLength, outputLength, 0, output, null, 0);
                 if (length != outputLength)
-                    throw new ArgumentException("LZ4 block is corrupted, or invalid length has been given.");
+                    ThrowException(new ArgumentException("LZ4 block is corrupted, or invalid length has been given."));
                 return outputLength;
             }
             else
             {
                 var length = LZ4_decompress_generic<EndOnOutputSize, Full, WithPrefix64K>(input, output, inputLength, outputLength, 0, output - (64 * Constants.Size.Kilobyte), null, 64 * Constants.Size.Kilobyte);
                 if (length < 0)
-                    throw new ArgumentException("LZ4 block is corrupted, or invalid length has been given.");
+                    ThrowException(new ArgumentException("LZ4 block is corrupted, or invalid length has been given."));
+
                 return length;
             }
         }
@@ -717,6 +732,7 @@ _output_error:
         {
             // This copy will use the same data that has already being copied as source
             // It is more of a repeater than a copy per-se. 
+
             do
             {
                 *((ulong*)dest) = *((ulong*)src);
