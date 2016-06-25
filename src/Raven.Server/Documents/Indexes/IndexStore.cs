@@ -298,9 +298,9 @@ namespace Raven.Server.Documents.Indexes
                 {
                     index.Dispose();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    //TODO [ppekrol] log
+                    Log.ErrorException($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
 
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
