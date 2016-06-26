@@ -5,11 +5,11 @@ using System.Dynamic;
 
 namespace Sparrow.Json
 {
-    public unsafe class DynamicBlittableJson : DynamicObject
+    public class DynamicBlittableJson : DynamicObject
     {
         protected BlittableJsonReaderObject BlittableJsonReaderObject;
 
-        public class DynamicBlittableArray : DynamicObject, IEnumerable<DynamicObject>
+        public class DynamicBlittableArray : DynamicObject, IEnumerable<object>
         {
             protected BlittableJsonReaderArray BlittableJsonReaderArray;
 
@@ -41,8 +41,7 @@ namespace Sparrow.Json
             public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
             {
                 var i = (int)(indexes[0]);
-                result = null;
-                object resultObject = BlittableJsonReaderArray[i];
+                var resultObject = BlittableJsonReaderArray[i];
 
                 if (resultObject is BlittableJsonReaderObject)
                 {
@@ -59,7 +58,7 @@ namespace Sparrow.Json
                 return true;
             }
 
-            public IEnumerator<DynamicObject> GetEnumerator()
+            public IEnumerator<object> GetEnumerator()
             {
                 return new DynamicBlittableArrayIterator(BlittableJsonReaderArray.Items);
             }
@@ -69,7 +68,7 @@ namespace Sparrow.Json
                 return GetEnumerator();
             }
 
-            private class DynamicBlittableArrayIterator : IEnumerator<DynamicObject>
+            private class DynamicBlittableArrayIterator : IEnumerator<object>
             {
                 private readonly IEnumerator<object> _inner;
 
@@ -95,6 +94,12 @@ namespace Sparrow.Json
                         return true;
                     }
 
+                    if (_inner.Current is LazyStringValue)
+                    {
+                        Current = _inner.Current;
+                        return true;
+                    }
+
                     throw new NotSupportedException("Unknown blittable object");
                 }
 
@@ -103,7 +108,7 @@ namespace Sparrow.Json
                     throw new NotImplementedException();
                 }
 
-                public DynamicObject Current { get; set; }
+                public object Current { get; private set; }
 
                 object IEnumerator.Current => Current;
 

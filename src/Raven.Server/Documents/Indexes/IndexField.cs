@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 
@@ -8,8 +6,6 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexField
     {
-        private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
-
         public string Name { get; set; }
 
         public string Analyzer { get; set; }
@@ -28,8 +24,45 @@ namespace Raven.Server.Documents.Indexes
 
         public static string ReplaceInvalidCharactersInFieldName(string field)
         {
-            //TODO: This is probably expensive, we can do better
-            return ReplaceInvalidCharacterForFields.Replace(field, "_");
+            // we allow only \w which is equivalent to [a-zA-Z_0-9]
+            const int a = 'a';
+            const int z = 'z';
+            const int A = 'A';
+            const int Z = 'Z';
+            const int Zero = '0';
+            const int Nine = '9';
+            const int Underscore = '_';
+
+            if (string.IsNullOrEmpty(field))
+                return field;
+
+            char[] input = null;
+            
+            for (var i = 0; i < field.Length; i++)
+            {
+                var ch = field[i];
+                if (ch >= a && ch <= z)
+                    continue;
+
+                if (ch >= A && ch <= Z)
+                    continue;
+
+                if (ch >= Zero && ch <= Nine)
+                    continue;
+
+                if (ch == Underscore)
+                    continue;
+
+                if (input == null)
+                {
+                    input = new char[field.Length];
+                    field.CopyTo(0, input, 0, field.Length);
+                }
+
+                input[i] = '_';
+            }
+
+            return input == null ? field : new string(input);
         }
 
         public IndexField()

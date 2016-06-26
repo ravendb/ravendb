@@ -99,7 +99,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CreateAndQuerySimpleIndexWithRecurse()
         {
             using (var store = await GetDocumentStore())

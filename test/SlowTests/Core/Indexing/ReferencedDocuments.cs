@@ -84,6 +84,51 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
+        public async Task BasicLoadDocumentsWithEnumerable()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                new Companies_ByEmployeeLastName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var employee1 = new Employee { LastName = "Doe" };
+                    var employee2 = new Employee { LastName = "Gates" };
+
+                    session.Store(employee1);
+                    session.Store(employee2);
+
+                    var company = new Company
+                    {
+                        Name = "HR",
+                        EmployeesIds = new List<string>
+                        {
+                            employee1.Id,
+                            employee2.Id
+                        }
+                    };
+
+                    session.Store(company);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var companies = session.Query<Companies_ByEmployeeLastName.Result, Companies_ByEmployeeLastName>()
+                        .Where(x => x.LastName == "Gates")
+                        .OfType<Company>()
+                        .ToList();
+
+                    Assert.Equal(1, companies.Count);
+                    Assert.Equal("HR", companies[0].Name);
+                }
+            }
+        }
+
+        [Fact]
         public async Task BasicLoadDocuments()
         {
             using (var store = await GetDocumentStore())
@@ -201,6 +246,15 @@ namespace SlowTests.Core.Indexing
 
                     Assert.Equal(2, users.Count);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("users/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
             }
         }
 

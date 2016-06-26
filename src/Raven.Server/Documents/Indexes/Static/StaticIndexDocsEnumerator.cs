@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public void Dispose()
         {
             _docsEnumerator.Dispose();
+            Current?.Data?.Dispose();
         }
 
         private class DynamicIteratonOfCurrentDocumentWrapper : IEnumerable<DynamicDocumentObject>

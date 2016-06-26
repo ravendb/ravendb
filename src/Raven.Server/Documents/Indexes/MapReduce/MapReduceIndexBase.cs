@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return entries;
         }
 
-        protected ReduceKeyState GetReduceKeyState(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)
+        public ReduceKeyState GetReduceKeyState(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)
         {
             ReduceKeyState state;
             if (_mapReduceWorkContext.StateByReduceKeyHash.TryGetValue(reduceKeyHash, out state) == false)
