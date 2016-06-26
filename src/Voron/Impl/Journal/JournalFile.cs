@@ -94,7 +94,7 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             DisposeWithoutClosingPager();
-            _journalWriter.Dispose();
+            _journalWriter?.Dispose();
         }
 
         public JournalSnapshot GetSnapshot()
