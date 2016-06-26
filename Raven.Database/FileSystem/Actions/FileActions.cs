@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -25,6 +26,7 @@ using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
+using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.FileSystem.Actions
 {
@@ -134,7 +136,11 @@ namespace Raven.Database.FileSystem.Actions
 
                     if (size != null && readFileToDatabase.TotalSizeRead != size)
                     {
-                        throw new HttpResponseException(HttpStatusCode.BadRequest);
+
+                        throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.ExpectationFailed)
+                        {
+                            Content = new MultiGetSafeStringContent($"There is a mismatch between the size reported in the RavenFS-Size header and the data read server side. Declared {size} bytes, but got {readFileToDatabase.TotalSizeRead}")
+                        });
                     }
 
                     if (options.PreserveTimestamps == false)
