@@ -79,6 +79,7 @@ namespace Sparrow.Compression
             public uint dictSize;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Encode64(
                 byte* input,
                 byte* output,
@@ -90,8 +91,6 @@ namespace Sparrow.Compression
                 acceleration = ACCELERATION_DEFAULT;
 
             LZ4_stream_t_internal ctx;
-            UnmanagedMemory.Set((byte*)&ctx, 0, HASH_SIZE_U32 * sizeof(uint));
-
             if (outputLength >= MaximumOutputLength(inputLength))
             {
                 if (inputLength < LZ4_64Klimit)
@@ -116,7 +115,6 @@ namespace Sparrow.Compression
             return size > LZ4_MAX_INPUT_SIZE ? 0 : size + (size / 255) + 16;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
             where TLimited : ILimitedOutputDirective
             where TTableType : ITableTypeDirective
@@ -250,7 +248,7 @@ namespace Sparrow.Compression
                     }                        
 
                     /* Copy Literals */
-                    WildCopy(op, anchor, op + litLength);
+                    WildCopy(op, anchor, (op + litLength));
                     op += litLength;
                 }
 
@@ -281,7 +279,7 @@ namespace Sparrow.Compression
                     }
                     else
                     {
-                        matchLength = LZ4_count(ip+MINMATCH, match+MINMATCH, matchlimit);
+                        matchLength = LZ4_count(ip +MINMATCH, match +MINMATCH, matchlimit);
                         ip += MINMATCH + matchLength;
                     }
 
@@ -381,11 +379,17 @@ namespace Sparrow.Compression
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int LZ4_count(byte* pIn, byte* pMatch, byte* pInLimit)
+        private int LZ4_count(byte* pInPtr, byte* pMatchPtr, byte* pInLimitPtr)
         {
+            // JIT: We make local copies of the parameters because the JIT will not be able to figure out yet that it can safely inline
+            //      the method cloning the parameters. As the arguments are modified the JIT will not be able to inline it.
+            //      This wont be needed anymore when https://github.com/dotnet/coreclr/issues/6014 is resolved.
+            byte* pIn = pInPtr;
+            byte* pMatch = pMatchPtr;
+            byte* pInLimit = pInLimitPtr;
+
             byte* pStart = pIn;
 
-            int i = 0;
             while (pIn < pInLimit - (sizeof(ulong) - 1))
             {
                 ulong diff = *((ulong*)pMatch) ^ *((ulong*)pIn);
@@ -393,10 +397,9 @@ namespace Sparrow.Compression
                 {
                     pIn += sizeof(ulong);
                     pMatch += sizeof(ulong);
-                    i++;
                     continue;
                 }
-                 
+
                 pIn += Bits.TrailingZeroes(diff);
                 return (int)(pIn - pStart);
             }
@@ -481,20 +484,6 @@ namespace Sparrow.Compression
             throw e;
         }
 
-        //private static uint LZ4_hashPosition32(byte* sequence, TableType tableType)
-        //{
-        //    uint value = *((uint*)sequence);
-        //    return LZ4_hashSequence32(value, tableType);
-        //}
-
-        //private static uint LZ4_hashSequence32<TTableType>(uint sequence, TableType tableType)
-        //{
-        //    if (tableType == TableType.ByU16)
-        //        return (((sequence) * 2654435761U) >> ((MINMATCH * 8) - (LZ4_HASHLOG + 1)));
-        //    else
-        //        return (((sequence) * 2654435761U) >> ((MINMATCH * 8) - LZ4_HASHLOG));
-        //}
-
         private const int ByU16HashLog = LZ4_HASHLOG + 1;
         private const int ByU16HashMask = (1 << ByU16HashLog) - 1;
 
@@ -503,6 +492,7 @@ namespace Sparrow.Compression
 
         private const ulong prime5bytes = 889523592379UL;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Decode64(
             byte* input,
             int inputLength,
@@ -547,8 +537,7 @@ namespace Sparrow.Compression
 
             byte* dictEnd = dictStart + dictSize;
 
-            bool safeDecode = (typeof(TEndCondition) == typeof(EndOnInputSize));
-            bool checkOffset = ((safeDecode) && (dictSize < 64 * Constants.Size.Kilobyte));
+            bool checkOffset = ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (dictSize < 64 * Constants.Size.Kilobyte));
 
             // Special Cases
             if ((typeof(TEarlyEnd) == typeof(Partial)) && (oexit > oend - MFLIMIT)) oexit = oend - MFLIMIT;                          // targetOutputSize too high => decode everything
@@ -574,8 +563,8 @@ namespace Sparrow.Compression
                     }
                     while (((typeof(TEndCondition) == typeof(EndOnInputSize)) ? ip < iend - RUN_MASK : true) && (s == 255));
 
-                    if ((safeDecode) && (op + length) < op) goto _output_error;   /* overflow detection */
-                    if ((safeDecode) && (ip + length) < ip) goto _output_error;   /* overflow detection */
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (op + length) < op) goto _output_error;   /* overflow detection */
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip + length) < ip) goto _output_error;   /* overflow detection */
                 }
 
                 // copy literals
@@ -628,7 +617,7 @@ namespace Sparrow.Compression
                     }
                     while (s == 255);
 
-                    if ((safeDecode) && (op + length) < op)
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (op + length) < op)
                         goto _output_error;   /* overflow detection */
                 }
 
@@ -651,7 +640,7 @@ namespace Sparrow.Compression
                     {
                         /* match encompass external dictionary and current segment */
                         int copySize = (int)(lowPrefix - match);
-                        Memory.CopyInline(op, dictEnd - copySize, copySize);
+                        Memory.Copy(op, dictEnd - copySize, copySize);
                         op += copySize;
 
                         copySize = length - copySize;
@@ -664,7 +653,7 @@ namespace Sparrow.Compression
                         }
                         else
                         {
-                            Memory.CopyInline(op, lowPrefix, copySize);
+                            Memory.Copy(op, lowPrefix, copySize);
                             op += copySize;
                         }
                     }
@@ -700,7 +689,7 @@ namespace Sparrow.Compression
 
                     if (op < oend - 8)
                     {
-                        WildCopy(op, match, oend - 8);
+                        WildCopy(op, match, (oend - 8));
                         match += (oend - 8) - op;
                         op = oend - 8;
                     }
@@ -728,8 +717,16 @@ _output_error:
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WildCopy(byte* dest, byte* src, byte* destEnd)
+        private static void WildCopy(byte* destPtr, byte* srcPtr, byte* destEndPtr)
         {
+            // JIT: We make local copies of the parameters because the JIT will not be able to figure out yet that it can safely inline
+            //      the method cloning the parameters. As the arguments are modified the JIT will not be able to inline it.
+            //      This wont be needed anymore when https://github.com/dotnet/coreclr/issues/6014 is resolved.
+
+            byte* dest = destPtr;
+            byte* src = srcPtr;
+            byte* destEnd = destEndPtr;
+
             // This copy will use the same data that has already being copied as source
             // It is more of a repeater than a copy per-se. 
 
