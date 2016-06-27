@@ -79,6 +79,8 @@ namespace Sparrow.Logging
                                nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
                 if (File.Exists(fileName))
                     continue;
+                // TODO: If avialable file size is too small, emit a warning, and return a Null Stream, instead
+                // TODO: We don't want to have the debug log kill us
                 return new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024, false);
             }
         }
@@ -89,6 +91,8 @@ namespace Sparrow.Logging
             _newThreadStates.Enqueue(new WeakReference<LocalThreadWriterState>(state));
             return state;
         }
+
+        private readonly ThreadLocal<int> _numberOfTimesWaited = new ThreadLocal<int>();
 
         public void Log(ref LogEntry entry)
         {
@@ -110,14 +114,32 @@ namespace Sparrow.Logging
                 state.ForwardingStream.Destination = new MemoryStream();
             }
             WriteEntryToWriter(state.Writer, entry);
-            for (int i = 0; i < 128; i++)
+            EnqueueLogEntry(state);
+            _hasEntries.Set();
+        }
+
+        private void EnqueueLogEntry(LocalThreadWriterState state)
+        {
+            int i = 0;
+            for (; i < 128; i++)
             {
                 if (state.Full.Enqueue(state.ForwardingStream.Destination))
                     break;
+                _numberOfTimesWaited.Value++;
+                if (_numberOfTimesWaited.Value > 1024)
+                {
+                    // we skipped quite a lot, let us reset the wait and see 
+                    // if we can get it into the queue for fast enough processing
+                    _numberOfTimesWaited.Value = 120;
+                }
+                else if (_numberOfTimesWaited.Value > 128)
+                    return;// we'll discard this immediately, nothing to do here
                 Thread.Sleep(2);
             }
-            state.ForwardingStream.Destination = null;
-            _hasEntries.Set();
+            if (i < 5 && _numberOfTimesWaited.Value > 0)
+            {
+                _numberOfTimesWaited.Value = 0;
+            }
         }
 
         [ThreadStatic]
