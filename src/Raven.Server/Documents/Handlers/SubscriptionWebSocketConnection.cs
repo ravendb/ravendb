@@ -289,9 +289,8 @@ namespace Raven.Server.Documents.Handlers
         private async Task<WebSocketReceiveResult> ReadFromWebSocketWithKeepAlives()
         {
             var receiveAckTask = _webSocket.ReceiveAsync(_clientAckBuffer, _database.DatabaseShutdown);
-            while (Task.WhenAny(receiveAckTask, Task.Delay(5000)) != null &&
-                (receiveAckTask.IsCompleted || receiveAckTask.IsFaulted ||
-                    receiveAckTask.IsCanceled) == false)
+            
+            while (await Task.WhenAny(receiveAckTask, Task.Delay(5000)) != receiveAckTask)
             {
                 _ms.WriteByte((byte)'\r');
                 _ms.WriteByte((byte)'\n');
