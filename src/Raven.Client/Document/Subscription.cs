@@ -53,7 +53,7 @@ namespace Raven.Client.Document
         private readonly bool isStronglyTyped;
         private readonly SubscriptionConnectionOptions _options;
         private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
-        private readonly RavenClientWebSocket webSocket;
+        private RavenClientWebSocket webSocket;
         private bool completed;
         private IDisposable dataSubscriptionReleasedObserver;
         private bool disposed;
@@ -162,6 +162,20 @@ namespace Raven.Client.Document
                     }
                 }
 
+                foreach (var subscriber in subscribers)
+                {
+                    try
+                    {
+                        subscriber.OnCompleted();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.WarnException(
+                            string.Format(
+                                "Subscription #{0}. Subscriber threw an exception during completion event", id), ex);
+                    }
+                }
+
                 if (IsConnectionClosed)
                     return;
 
@@ -181,12 +195,23 @@ namespace Raven.Client.Document
                         await
                             webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
                                 "{'Type': 'Closure', 'Message':'Subscription disposed on client side'}",
-                                cancellationTokenSource.Token);
+                                cancellationTokenSource.Token).ConfigureAwait(false);
                     }
                 }
                 catch
                 {
                     // ignored
+                }
+                finally
+                {
+                    try
+                    {
+                        webSocket?.Dispose();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
         }
@@ -287,7 +312,7 @@ namespace Raven.Client.Document
 
                     using (var ms = new MemoryStream())
                     {
-                        ms.SetLength(1024 * 4);
+                        ms.SetLength(1024*4);
                         await webSocket.ConnectAsync(uri, cts.Token).ConfigureAwait(false);
                         cts.Token.ThrowIfCancellationRequested();
 
@@ -328,9 +353,10 @@ namespace Raven.Client.Document
 #pragma warning disable 4014
                                         Task.Factory.StartNew(async () =>
 #pragma warning restore 4014
-                                        {
-                                            await ProcessDocs(queue, webSocket, linkedCts.Token).ConfigureAwait(false);
-                                        }, TaskCreationOptions.LongRunning | TaskCreationOptions.AttachedToParent);
+                                            {
+                                                await
+                                                    ProcessDocs(queue, webSocket, linkedCts.Token).ConfigureAwait(false);
+                                            }, TaskCreationOptions.LongRunning | TaskCreationOptions.AttachedToParent);
 
                                         firstRun = false;
                                     }
@@ -370,6 +396,7 @@ namespace Raven.Client.Document
                         // ignored
                     }
 
+                    InformSubscribersOnError(cancelled);
                     throw;
                 }
                 catch (ArgumentException argument)
@@ -381,14 +408,23 @@ namespace Raven.Client.Document
                             using (var timedCancellationToken = new CancellationTokenSource(1000))
                                 await
                                     webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
-                                    //TODO: send json here
-                                        "Connection terminated by client, illegal argument: " + argument.Message, timedCancellationToken.Token);
+                                        //TODO: send json here
+                                        "Connection terminated by client, illegal argument: " + argument.Message,
+                                        timedCancellationToken.Token);
                         }
+                        
                     }
                     catch
                     {
                         // ignored
                     }
+
+                    InformSubscribersOnError(argument);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    InformSubscribersOnError(ex);
                     throw;
                 }
                 finally
@@ -398,6 +434,23 @@ namespace Raven.Client.Document
                     cts.Token.ThrowIfCancellationRequested();
                 }
             });
+        }
+
+        private void InformSubscribersOnError(Exception ex)
+        {
+            foreach (var subscriber in subscribers)
+            {
+                try
+                {
+                    subscriber.OnError(ex);
+                }
+                catch (Exception e)
+                {
+                    logger.WarnException(
+                        string.Format(
+                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError", id), ex);
+                }
+            }
         }
 
         private void AssertConnectionState(RavenJObject connectionStatus)
@@ -589,6 +642,30 @@ namespace Raven.Client.Document
 
         private async Task RestartPullingTask()
         {
+            var cancellationTokenSource = new CancellationTokenSource(1000);
+            try
+            {
+                await
+                    this.webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Restarting",
+                        cancellationTokenSource.Token).ConfigureAwait(false);
+            }
+            catch
+            {
+                // ignored
+            }
+            finally
+            {
+                try
+                {
+                    this.webSocket.Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
+                cancellationTokenSource.Dispose();
+                this.webSocket = new RavenClientWebSocket();
+            }
             await Time.Delay(_options.TimeToWaitBeforeConnectionRetryTimespan).ConfigureAwait(false);
             startPullingTask = StartPullingDocs().ObserveException();
         }
@@ -625,15 +702,7 @@ namespace Raven.Client.Document
                     $"&strategy={_options.Strategy}&maxDocsPerBatch={_options.MaxDocsPerBatch}" +
                     (_options.MaxBatchSize.HasValue ? "&maxBatchSize" + _options.MaxBatchSize.Value : ""),
                     HttpMethod.Get);
-        }
-
-        private HttpJsonRequest CreateCloseRequest()
-        {
-            return
-                commands.CreateRequest(
-                    string.Format("/subscriptions/close?id={0}&connection={1}", id, _options.ConnectionId),
-                    HttpMethods.Post);
-        }
+        }        
 
         private void OnCompletedNotification()
         {
@@ -650,10 +719,36 @@ namespace Raven.Client.Document
 
         private async Task CloseSubscription()
         {
-            using (var closeRequest = CreateCloseRequest())
+            if (webSocket != null && webSocket.State == WebSocketState.Open)
             {
-                await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
-                IsConnectionClosed = true;
+                var timedCts = new CancellationTokenSource(5000);
+                try
+                {
+                    using (var ms = new MemoryStream())
+                    {
+                        var ackJson = new RavenJObject
+                        {
+                            ["Type"] = "ConnectionTermination",
+                            ["Data"] = "Subscription Closed By Client"
+                        };
+
+                        ackJson.WriteTo(ms);
+
+                        ArraySegment<byte> buffer;
+
+                        ms.TryGetBuffer(out buffer);
+                        await webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, timedCts.Token).ConfigureAwait(false);
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
+                finally
+                {
+                    timedCts.Dispose();
+                    IsConnectionClosed = true;
+                }
             }
         }
     }
