@@ -116,10 +116,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
         private async Task PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
         {
             if (stream.Length > TotalBlocksSizeLimitInBytes)
-            {
-                throw new InvalidOperationException(string.Format("Can't upload more than 195GB to Azure, current upload size: {0}GB",
-                    stream.Length/1024/1024/1024));
-            }
+                throw new InvalidOperationException($"Can't upload more than 195GB to Azure, current upload size: {stream.Length/1024/1024/1024}GB");
 
             var threads = Environment.ProcessorCount/2 + 1;
             //max size of in memory queue is: 100MB
@@ -427,7 +424,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
                 var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
                 var base64String = Convert.ToBase64String(hashedString);
 
-                return new AuthenticationHeaderValue("SharedKey", string.Format("{0}:{1}", _accountName, base64String));
+                return new AuthenticationHeaderValue("SharedKey", $"{_accountName}:{base64String}");
             }
         }
 
@@ -448,20 +445,19 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (httpHeaders.TryGetValues("Content-Type", out values))
                 contentType = values.First();
 
-            var stringToHash = string.Format("{0}\n\n\n{1}\n\n{2}\n\n\n\n\n\n\n", httpMethodToUpper, contentLength, contentType);
+            var stringToHash = $"{httpMethodToUpper}\n\n\n{contentLength}\n\n{contentType}\n\n\n\n\n\n\n";
 
-            return headers.Aggregate(stringToHash, (current, header) => current + string.Format("{0}:{1}\n", header.Key.ToLower(), header.Value.First()));
+            return headers.Aggregate(stringToHash, (current, header) => current + $"{header.Key.ToLower()}:{header.Value.First()}\n");
         }
 
         private string ComputeCanonicalizedResource(string url)
         {
             var uri = new Uri(url, UriKind.Absolute);
 
-            var stringToHash = string.Format("/{0}{1}\n", _accountName, uri.AbsolutePath);
-            throw new NotImplementedException("Fitzchak: fix implementation");
+            var stringToHash = $"/{_accountName}{uri.AbsolutePath}\n";
             return QueryHelpers.ParseQuery(uri.Query)
                 .OrderBy(x => x.Key)
-                .Aggregate(stringToHash, (current, parameter) => current + string.Format("{0}:{1}\n", parameter.Key.ToLower(), parameter.Value));
+                .Aggregate(stringToHash, (current, parameter) => current + $"{parameter.Key.ToLower()}:{parameter.Value}\n");
         }
 
         private class EmptyContent : HttpContent
