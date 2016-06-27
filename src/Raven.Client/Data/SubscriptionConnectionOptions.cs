@@ -64,20 +64,5 @@ namespace Raven.Abstractions.Data
         public int? MaxBatchSize { get; set; }
 
         public int MaxDocsPerBatch { get; set; }
-    }
-
-    public class SubscriptionBatchOptions
-    {
-        public SubscriptionBatchOptions()
-        {
-            MaxDocCount = 4096;
-            AcknowledgmentTimeout = TimeSpan.FromMinutes(1).Ticks;
-        }
-
-        public int? MaxSize { get; set; }
-
-        public int MaxDocCount { get; set; }
-
-        public long AcknowledgmentTimeout { get; set; }
-    }
+    }        
 }
