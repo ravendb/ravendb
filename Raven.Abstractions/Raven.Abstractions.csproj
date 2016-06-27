@@ -197,6 +197,7 @@
     <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\IndexingStatus.cs" />
     <Compile Include="Data\OperationStateBase.cs" />
+    <Compile Include="Data\InternalStorageBreakdownState.cs" />
     <Compile Include="Data\ResourceBackupState.cs" />
     <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\ListsInfo.cs" />

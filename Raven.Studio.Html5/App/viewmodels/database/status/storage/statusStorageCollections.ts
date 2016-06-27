@@ -1,14 +1,24 @@
 import getSlowDocCountsCommand = require("commands/database/debug/getSlowDocCountsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import debugDocumentStats = require("models/database/debug/debugDocumentStats");
+import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import genUtils = require("common/generalUtils");
 
 class statusStorageCollections extends viewModelBase {
     data = ko.observable<debugDocumentStats>();
     canSearch = ko.observable(true);
+    progress = ko.observable<string>();
+    operationId = ko.observable<number>();
 
     formatTimeSpan = genUtils.formatTimeSpan;
     formatBytesToSize = genUtils.formatBytesToSize;
+
+    cancelOperation() {
+        if (this.operationId()) {
+            new killRunningTaskCommand(this.activeDatabase(), this.operationId())
+                .execute();
+        }
+    }
 
     activate(args) {
         super.activate(args);
@@ -26,12 +36,22 @@ class statusStorageCollections extends viewModelBase {
         var db = this.activeDatabase();
         if (db) {
             this.canSearch(false);
-            return new getSlowDocCountsCommand(db)
+            var command = new getSlowDocCountsCommand(db, msg => this.progress(msg));
+            command
                 .execute()
-                .done((results: debugDocumentStats) => {
-                    this.data(results);
+                .done((scheduleTaskResult: operationIdDto) => {
+                    this.operationId(scheduleTaskResult.OperationId);
+                    command.getCalculationCompletedTask()
+                        .done(result => {
+                            this.data(result);
+                        })
+                        .always(() => {
+                            this.operationId(null);
+                            this.progress(null);
+                            this.canSearch(true);
+                        });
                 })
-                .always(() => this.canSearch(true));
+                .fail(() => this.canSearch(true));
         }
 
         return null;

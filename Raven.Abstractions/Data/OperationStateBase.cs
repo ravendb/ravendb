@@ -5,9 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data

@@ -694,11 +694,11 @@ namespace Raven.Storage.Voron
             return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
         }
 
-        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
+        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes, Action<string> progress, CancellationToken token)
         {
             var seperator = new String('#', 80);
             var padding = new String('\t', 1);
-            var report = tableStorage.GenerateReportOnStorage(computeExactSizes);
+            var report = tableStorage.GenerateReportOnStorage(computeExactSizes, progress, token);
             var reportAsList = new List<string>();
             reportAsList.Add(string.Format("Total allocated db size: {0}", SizeHelper.Humane(report.DataFile.AllocatedSpaceInBytes)));
             reportAsList.Add(string.Format("Total used db size: {0}", SizeHelper.Humane(report.DataFile.SpaceInUseInBytes)));

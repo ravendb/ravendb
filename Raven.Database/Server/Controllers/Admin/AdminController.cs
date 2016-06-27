@@ -866,9 +866,37 @@ namespace Raven.Database.Server.Controllers.Admin
         {
             var detailedReport = GetQueryStringValue("DetailedReport");
             bool isDetailedReport;
-            if (detailedReport != null && bool.TryParse(detailedReport, out isDetailedReport) && isDetailedReport)
-                return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation(true));
-            return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation());
+
+            var cts = new CancellationTokenSource();
+            var state = new InternalStorageBreakdownState();
+
+            var computeExactSizes = detailedReport != null && bool.TryParse(detailedReport, out isDetailedReport) && isDetailedReport;
+
+            var computeTask = Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    var reportResults = Database.TransactionalStorage.ComputeDetailedStorageInformation(computeExactSizes, msg => state.MarkProgress(msg), cts.Token);
+                    state.ReportResults = reportResults;
+                    state.MarkCompleted();
+                }
+                catch (Exception e)
+                {
+                    state.MarkFaulted(e.Message, e);
+                }
+            });
+            long taskId;
+            Database.Tasks.AddTask(computeTask, state, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.StorageBreakdown,
+                Description = "Detailed Storage Breakdown"
+            }, out taskId, cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = taskId
+            }, HttpStatusCode.Accepted);
         }
 
         [HttpPost]

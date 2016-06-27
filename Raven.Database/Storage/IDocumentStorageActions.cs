@@ -52,7 +52,7 @@ namespace Raven.Database.Storage
 
         void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
         Etag GetBestNextDocumentEtag(Etag etag);
-        DebugDocumentStats GetDocumentStatsVerySlowly();
+        DebugDocumentStats GetDocumentStatsVerySlowly(Action<string> progress, CancellationToken token);
     }
 
     public class CollectionDetails
@@ -107,6 +107,11 @@ namespace Raven.Database.Storage
     {
         public string DocId { get; set; }
         public int Size { get; set; }
+    }
+
+    public class DebugDocumentStatsState : OperationStateBase
+    {
+        public DebugDocumentStats Stats { get; set; }
     }
 
     public class DebugDocumentStats

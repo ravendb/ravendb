@@ -468,9 +468,9 @@ namespace Raven.Storage.Esent
             });
         }
 
-        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
+        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes, Action<string> progress, CancellationToken token)
         {
-            return StorageSizes.ReportOn(this);
+            return StorageSizes.ReportOn(this, progress, token);
         }
 
         [CLSCompliant(false)]

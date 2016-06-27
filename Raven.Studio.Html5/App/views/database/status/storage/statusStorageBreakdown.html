@@ -3,16 +3,31 @@
         <h4 class="page-header text-info">You are not authorized to view this section!</h4>
     </div>
 
-    <div data-bind="visible: isGlobalAdmin" class="panel-group">
-        <div class="panel panel-default">
+    <div data-bind="visible: isGlobalAdmin">
+        <div class="panel panel-danger">
             <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" href="#storageBreakdown">Detailed storage breakdown</a>
-                </h4>
+                <h3 class="panel-title">This operation is resource intensive!</h3>
             </div>
-            <div class="panel-collapse collapse in" id="storageBreakdown" data-bind="with: data">
-                <div class="panel-body">
-                    <pre><!-- ko foreach: $parent --><span data-bind="html: $data"></span><br /><!-- /ko --></pre>
+            <div class="panel-body">
+                <p class="text-center">
+                    <button class="btn btn-danger" data-bind="click: fetchData, enable: canSearch"><i class="fa fa-spin fa-spinner" data-bind="visible: operationId"></i> Compute detailed storage breakdown</button>
+                    <button class="btn btn-danger" data-bind="click: cancelOperation, visible: operationId"><i class="fa fa-bolt"></i> Cancel</button>
+                </p>
+                
+                <p class="text-center" data-bind="text: progress"></p>
+            </div>
+        </div>
+        <div data-bind="if: data">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#storageBreakdown">Detailed storage breakdown</a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse in" id="storageBreakdown" data-bind="with: data">
+                    <div class="panel-body">
+                        <pre><!-- ko foreach: $parent --><span data-bind="html: $data"></span><br /><!-- /ko --></pre>
+                    </div>
                 </div>
             </div>
         </div>

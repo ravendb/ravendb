@@ -779,10 +779,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public DebugDocumentStats GetDocumentStatsVerySlowly()
+        public DebugDocumentStats GetDocumentStatsVerySlowly(Action<string> progress, CancellationToken token)
         {
             var sp = Stopwatch.StartNew();
             var stat = new DebugDocumentStats { Total = GetDocumentsCount() };
+
+            var processedDocuments = 0;
 
             var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
             using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch.Value))
@@ -795,6 +797,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 do
                 {
+                    if (processedDocuments%64 == 0)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        progress($"Scanned {processedDocuments} documents");
+                    }
+
+                    
                     var key = GetKeyFromCurrent(iterator);
                     var doc = DocumentByKey(key);
                     if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
@@ -815,6 +824,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     if (doc.Metadata.ContainsKey(Constants.RavenDeleteMarker))
                         stat.Tombstones++;
 
+                    processedDocuments++;
                 }
                 while (iterator.MoveNext());
                 stat.TimeToGenerate = sp.Elapsed;

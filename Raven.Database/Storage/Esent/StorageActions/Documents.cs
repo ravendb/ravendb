@@ -359,15 +359,23 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return Etag.Parse(val);
         }
 
-        public DebugDocumentStats GetDocumentStatsVerySlowly()
+        public DebugDocumentStats GetDocumentStatsVerySlowly(Action<string> progress, CancellationToken token)
         {
             var sp = Stopwatch.StartNew();
             var stat = new DebugDocumentStats { Total = GetDocumentsCount() };
+
+            var processedDocuments = 0;
 
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MoveBeforeFirst(Session, Documents);
             while (Api.TryMoveNext(Session, Documents))
             {
+                if (processedDocuments % 64 == 0)
+                {
+                    token.ThrowIfCancellationRequested();
+                    progress($"Scanned {processedDocuments} documents");
+                }
+
                 var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
                                                      Encoding.Unicode);
                
@@ -392,6 +400,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 if (metadata.ContainsKey("Raven-Delete-Marker"))
                     stat.Tombstones++;
+
+                processedDocuments++;
             }
             stat.TimeToGenerate = sp.Elapsed;
            

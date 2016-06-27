@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -23,7 +24,7 @@ namespace Voron.Tests.Storage
         {
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx);
+                var report = Env.GenerateReport(tx, false, msg => { }, CancellationToken.None);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
             }
@@ -57,7 +58,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx, computeExactSizes:true);
+                var report = Env.GenerateReport(tx, true, msg => { }, CancellationToken.None);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees, report.Trees.Count);
@@ -118,7 +119,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateReport(tx, true, msg => { }, CancellationToken.None);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees, report.Trees.Count);
@@ -166,7 +167,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx);
+                var report = Env.GenerateReport(tx, false, msg => { }, CancellationToken.None);
 
                 Assert.NotEmpty(report.Journals);
 
@@ -209,7 +210,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateReport(tx, true, msg => { }, CancellationToken.None);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(1, report.Trees.Count);
@@ -249,7 +250,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateReport(tx, true, msg => { }, CancellationToken.None);
 
                 Assert.Equal(keys.Length, report.Trees[0].EntriesCount);
 
@@ -274,7 +275,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateReport(tx, true, msg => { }, CancellationToken.None);
 
                 Assert.True(report.Trees[0].MultiValues.PageCount > 0);
                 Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
@@ -294,7 +295,7 @@ namespace Voron.Tests.Storage
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateReport(tx, true, msg => { }, CancellationToken.None);
 
                 Assert.True(report.Trees[0].MultiValues.PageCount == 0);
                 Assert.Equal(report.Trees[0].MultiValues.PageCount, report.Trees[0].MultiValues.LeafPages + report.Trees[0].MultiValues.BranchPages + report.Trees[0].MultiValues.OverflowPages);
