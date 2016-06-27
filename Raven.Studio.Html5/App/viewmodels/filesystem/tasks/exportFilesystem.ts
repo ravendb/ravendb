@@ -18,7 +18,7 @@ class exportDatabase extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
-        this.updateHelpLink('YD9M1R');
+        this.updateHelpLink('N822WN');
         this.exportActionUrl = ko.computed(() => {
             var token = this.authToken();
             return appUrl.forResourceQuery(this.activeFilesystem()) + "/studio-tasks/exportFilesystem" + (token ? '?singleUseAuthToken=' + token : '');

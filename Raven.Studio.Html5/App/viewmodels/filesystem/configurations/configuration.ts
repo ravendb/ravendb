@@ -57,6 +57,8 @@ class configuration extends viewModelBase {
     activate(navigationArgs) {
         super.activate(navigationArgs);
 
+        this.updateHelpLink("J3KIEN");
+
         this.appUrls = appUrl.forCurrentFilesystem();
 
         this.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);

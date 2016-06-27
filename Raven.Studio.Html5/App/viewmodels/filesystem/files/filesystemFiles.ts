@@ -155,6 +155,8 @@ class filesystemFiles extends viewModelBase {
     activate(args) {
         super.activate(args);
 
+        this.updateHelpLink("Y1TNKH");
+
         this.appUrls = appUrl.forCurrentFilesystem();
         this.hasAnyFilesSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 

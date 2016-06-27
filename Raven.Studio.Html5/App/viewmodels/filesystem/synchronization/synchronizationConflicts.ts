@@ -77,6 +77,7 @@ class synchronizationConflicts extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink("NMDELS");
 
         this.currentColumns().columns([
             new customColumnParams({ Header: "File Name", Binding: "fileName", DefaultWidth: 400 }),

@@ -28,6 +28,7 @@ class synchronizationConfiguration extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink("1K9SAA");
         this.dirtyFlag = new ko.DirtyFlag([this.config]);
         this.isSaveEnabled = ko.computed(() => {
             return this.dirtyFlag().isDirty();

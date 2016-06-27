@@ -24,6 +24,7 @@ class status extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink("T6FI4K");
 
         this.appUrls = appUrl.forCurrentFilesystem();
 

@@ -37,6 +37,7 @@ class filesystemEditFile extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink("RJBNGR");
         this.metadata = ko.computed(() => this.file() ? this.file().__metadata : null);
         this.filesystemForEditedFile = appUrl.getFileSystem();
         if (args.id != null) {

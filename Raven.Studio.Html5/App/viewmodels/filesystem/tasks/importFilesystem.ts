@@ -16,7 +16,7 @@ class importDatabase extends viewModelBase {
 
     attached() {
         super.attached();
-        this.updateHelpLink("YD9M1R");
+        this.updateHelpLink("N822WN");
 
         var fs: filesystem = this.activeFilesystem();
         var importStatus = fs.importStatus();

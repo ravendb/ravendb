@@ -35,6 +35,7 @@ class search extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink("SRTQ8C");
         this.appUrls = appUrl.forCurrentFilesystem();
         this.loadFiles();
     }
