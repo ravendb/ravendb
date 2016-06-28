@@ -156,6 +156,7 @@
     <None Include="Migration\Backups\northwind.esent.2952.zip" />
     <None Include="Migration\Backups\northwind.esent.3528.zip" />
     <None Include="Migration\Backups\northwind.voron.3528.zip" />
+    <None Include="Migration\Backups\Northwind.Voron.3690.zip" />
     <None Include="Migration\Data\productSales.csv" />
     <None Include="Migration\Data\ordersByCompany.csv" />
     <None Include="packages.config" />

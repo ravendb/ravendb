@@ -72,7 +72,7 @@ namespace Voron.Trees
             }
 
             if (item->Flags == NodeFlags.PageRef)
-                throw new InvalidOperationException("Multi trees don't use overflows");
+                throw new InvalidOperationException($"Multi trees don't use overflows. Tree name: {Name}");
 
             var nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
 
@@ -261,7 +261,7 @@ namespace Voron.Trees
                     return;
 
                 if (item->Flags == NodeFlags.PageRef)
-                    throw new InvalidOperationException("Multi trees don't use overflows");
+                    throw new InvalidOperationException($"Multi trees don't use overflows. Tree name: {Name}" );
 
                 var nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
 
