@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Threading;
 
 namespace Sparrow.Logging
 {
@@ -17,7 +19,7 @@ namespace Sparrow.Logging
 
         private int PositionToArrayIndex(uint pos)
         {
-            return (int)(pos%_queueSize);
+            return (int)(pos % _queueSize);
         }
 
         public bool Enqueue(MemoryStream entry)
@@ -31,6 +33,33 @@ namespace Sparrow.Logging
             _data[PositionToArrayIndex(_writePos)] = entry;
             _writePos++;
             return true;
+        }
+
+        private int _numberOfTimeWaitedForEnqueue;
+
+        public bool Enqueue(MemoryStream entry, int timeout)
+        {
+            if (Enqueue(entry))
+            {
+                _numberOfTimeWaitedForEnqueue = 0;
+                return true;
+            }
+            while (timeout > 0)
+            {
+                _numberOfTimeWaitedForEnqueue++;
+                var timeToWait = _numberOfTimeWaitedForEnqueue/2;
+                if (timeToWait < 2)
+                    timeToWait = 2;
+                else if (timeToWait > timeout)
+                    timeToWait = timeout;
+                timeout -= timeToWait;
+                Thread.Sleep(timeToWait);
+                if (Enqueue(entry))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool Dequeue(out MemoryStream entry)

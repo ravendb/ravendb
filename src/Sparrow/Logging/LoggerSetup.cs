@@ -15,6 +15,8 @@ namespace Sparrow.Logging
     /// </summary>
     public class LoggerSetup : IDisposable
     {
+        [ThreadStatic] private static string CurrentThreadId;
+
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ThreadLocal<LocalThreadWriterState> _localState;
         private readonly Thread _loggingThread;
@@ -27,8 +29,8 @@ namespace Sparrow.Logging
         private volatile bool _keepLogging = true;
         private int _logNumber;
         private DateTime _today;
-        public bool IsOperationsEnabled;
         public bool IsInfoEnabled;
+        public bool IsOperationsEnabled;
 
         public LoggerSetup(string path, LogMode logMode = LogMode.Information)
         {
@@ -44,12 +46,6 @@ namespace Sparrow.Logging
             _loggingThread.Start();
         }
 
-        public void SetupLogMode(LogMode logMode)
-        {
-            IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
-            IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
-        }
-
         public void Dispose()
         {
             _keepLogging = false;
@@ -57,12 +53,18 @@ namespace Sparrow.Logging
             _loggingThread.Join();
         }
 
+        public void SetupLogMode(LogMode logMode)
+        {
+            IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
+            IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
+        }
+
 
         private Stream GetNewStream()
         {
             if (DateTime.Today != _today)
             {
-                lock (typeof(LoggerSetup))
+                lock (typeof (LoggerSetup))
                 {
                     if (DateTime.Today != _today)
                     {
@@ -81,7 +83,7 @@ namespace Sparrow.Logging
                     continue;
                 // TODO: If avialable file size is too small, emit a warning, and return a Null Stream, instead
                 // TODO: We don't want to have the debug log kill us
-                return new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024, false);
+                return new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32*1024, false);
             }
         }
 
@@ -91,8 +93,6 @@ namespace Sparrow.Logging
             _newThreadStates.Enqueue(new WeakReference<LocalThreadWriterState>(state));
             return state;
         }
-
-        private readonly ThreadLocal<int> _numberOfTimesWaited = new ThreadLocal<int>();
 
         public void Log(ref LogEntry entry)
         {
@@ -114,45 +114,19 @@ namespace Sparrow.Logging
                 state.ForwardingStream.Destination = new MemoryStream();
             }
             WriteEntryToWriter(state.Writer, entry);
-            EnqueueLogEntry(state);
+            state.Full.Enqueue(state.ForwardingStream.Destination, timeout: 128);
             _hasEntries.Set();
         }
-
-        private void EnqueueLogEntry(LocalThreadWriterState state)
-        {
-            int i = 0;
-            for (; i < 128; i++)
-            {
-                if (state.Full.Enqueue(state.ForwardingStream.Destination))
-                    break;
-                _numberOfTimesWaited.Value++;
-                if (_numberOfTimesWaited.Value > 1024)
-                {
-                    // we skipped quite a lot, let us reset the wait and see 
-                    // if we can get it into the queue for fast enough processing
-                    _numberOfTimesWaited.Value = 120;
-                }
-                else if (_numberOfTimesWaited.Value > 128)
-                    return;// we'll discard this immediately, nothing to do here
-                Thread.Sleep(2);
-            }
-            if (i < 5 && _numberOfTimesWaited.Value > 0)
-            {
-                _numberOfTimesWaited.Value = 0;
-            }
-        }
-
-        [ThreadStatic]
-        private static string CurrentThreadId;
 
         private void WriteEntryToWriter(StreamWriter writer, LogEntry entry)
         {
             if (CurrentThreadId == null)
             {
-                CurrentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) + ", ";
+                CurrentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) +
+                                  ", ";
             }
 
-            writer.Write(entry.At.GetDefaultRavenFormat(isUtc: true));
+            writer.Write(entry.At.GetDefaultRavenFormat(true));
             writer.Write(CurrentThreadId);
 
             switch (entry.Type)
@@ -181,7 +155,7 @@ namespace Sparrow.Logging
 
         public Logger GetLogger<T>(string source)
         {
-            return GetLogger(source, typeof(T).FullName);
+            return GetLogger(source, typeof (T).FullName);
         }
 
         public Logger GetLogger(string source, string logger)
@@ -198,7 +172,7 @@ namespace Sparrow.Logging
                 {
                     using (var currentFile = GetNewStream())
                     {
-                        const int maxFileSize = 1024 * 1024 * 256;
+                        const int maxFileSize = 1024*1024*256;
                         var sizeWritten = 0;
 
                         var foundEntry = true;
