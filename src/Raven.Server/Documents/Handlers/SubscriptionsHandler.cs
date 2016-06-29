@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Handlers
 
                 var subscriptionCriteriaRaw = await context.ReadForDiskAsync(RequestBodyStream(), null).ConfigureAwait(false);
                 var subscriptionId = Database.SubscriptionStorage.CreateSubscription(subscriptionCriteriaRaw, startEtag);
+                HttpContext.Response.StatusCode = 201; // NoContent
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
@@ -29,8 +31,6 @@ namespace Raven.Server.Documents.Handlers
                         ["Id"] = subscriptionId
                     });
                 }
-
-                HttpContext.Response.StatusCode = 201; // NoContent
             }
         }
 
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
 
             return Task.CompletedTask;
         }
-        
+
 
         [RavenAction("/databases/*/subscriptions/pull", "GET",
             "/databases/{databaseName:string}/subscriptions/pull?id={subscriptionId:long}&connection={connection:string}&strategy={strategy:string}&maxDocsPerBatch={maxDocsPerBatch:int}&maxBatchSize={maxBatchSize:int|optional}")]
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 using (var subscriptionConnection = new SubscriptionWebSocketConnection(ContextPool, webSocket, Database))
                 {
-                    await subscriptionConnection.InitConnection(GetLongQueryString("id"), GetStringQueryString("connection"), GetStringQueryString("Strategy"), GetIntValueQueryString("maxDocsPerBatch"), GetIntValueQueryString("maxBatchSize",false));
+                    await subscriptionConnection.InitConnection(GetLongQueryString("id"), GetStringQueryString("connection"), GetStringQueryString("Strategy"), GetIntValueQueryString("maxDocsPerBatch"), GetIntValueQueryString("maxBatchSize", false));
                     await subscriptionConnection.Proccess();
                 }
             }
@@ -99,12 +99,13 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.OpenReadTransaction();
                 var subscriptionTableValues = Database.SubscriptionStorage.GetSubscriptions(start, take);
+                HttpContext.Response.StatusCode = 200;
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     Database.SubscriptionStorage.WriteSubscriptionTableValues(writer, context, subscriptionTableValues);
                 }
             }
-            HttpContext.Response.StatusCode = 200;
             return Task.CompletedTask;
         }
     }
