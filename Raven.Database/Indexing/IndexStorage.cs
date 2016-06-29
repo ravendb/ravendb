@@ -1085,8 +1085,8 @@ namespace Raven.Database.Indexing
         private Index TryIndexByName(string name)
         {
             return indexes.Where(index => String.Compare(index.Value.PublicName, name, StringComparison.OrdinalIgnoreCase) == 0)
-            .Select(x => x.Value)
-            .FirstOrDefault();
+                .Select(x => x.Value)
+                .FirstOrDefault();
         }
 
         public IEnumerable<IndexQueryResult> Query(string index,
