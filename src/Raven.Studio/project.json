@@ -28,15 +28,12 @@
     }
   },
 
-  "dependencies": { },
+  "dependencies": {
+    "Microsoft.CSharp": "4.0.1"
+  },
   "commands": { },
 
   "frameworks": {
-    "netcoreapp1.0": {
-      "dependencies": {
-        "Microsoft.CSharp": "4.0.1-rc2-*"
-      },
-      "imports": "dnxcore50"
-    }
+    "netstandard1.6": { }
   }
 }

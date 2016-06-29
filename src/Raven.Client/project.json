@@ -27,28 +27,21 @@
   },
 
   "dependencies": {
-    "Sparrow": "4.0.0-*"
+    "Sparrow": "4.0.0-*",
+    "NETStandard.Library": "1.6.0",
+    "System.Net.WebSockets.Client": "4.0.0",
+    "System.Reflection.TypeExtensions": "4.1.0",
+    "System.ServiceModel.Primitives": "4.1.0",
+    "System.Linq.Queryable": "4.0.1",
+    "System.Security.Cryptography.Cng": "4.2.0",
+    "System.Diagnostics.Process": "4.1.0",
+    "System.Net.NameResolution": "4.0.0"
   },
 
   "frameworks": {
-    "netstandard1.5": {
-      "dependencies": {
-        "Microsoft.CSharp": "4.0.1-rc2-*",
-        "Microsoft.Extensions.Configuration": "1.0.0-rc2-*",
-        "NETStandard.Library": "1.5.0-rc2-*",
-        "System.Diagnostics.Process": "4.1.0-rc2-*",
-        "System.Net.NameResolution": "4.0.0-rc2-*",
-        "System.Net.WebSockets.Client": "4.0.0-rc2-*",
-        "System.Reflection.TypeExtensions": "4.1.0-rc2-*",
-        "Microsoft.Win32.Primitives": "4.0.1-rc2-*",
-        "System.Security.Cryptography.Cng": "4.1.0-rc2-*",
-        "System.ServiceModel.Primitives": "4.1.0-rc2-*",
-        "System.Linq.Queryable": "4.0.1-rc2-*"
-      },
-      "imports": [
-        "dnxcore50",
-        "dotnet5.4"
-      ]
+    "netstandard1.6": {},
+    "netcoreapp1.0": {
+      "imports": "dnxcore50"
     }
   }
 }

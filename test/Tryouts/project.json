@@ -24,29 +24,22 @@
   "frameworks": {
     "netcoreapp1.0": {
       "dependencies": {
-        "xunit": "2.1.0",
-
-        "Microsoft.CSharp": "4.0.1-rc2-*",
-        "NETStandard.Library": "1.5.0-rc2-*",
-
         "Microsoft.NETCore.App": {
           "type": "platform",
-          "version": "1.0.0-rc2-*"
+          "version": "1.0.0"
         }
       },
-      "imports": [
-        "dotnet5.4",
-        "portable-net451+win8",
-        "dnxcore50"
-      ]
+      "imports": "dnxcore50"
     }
   },
+
   "dependencies": {
     "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*",
     "Sparrow": "4.0.0-*",
     "Voron": "4.0.0-*",
     "FastTests": "4.0.0-*",
-    "SlowTests": "4.0.0-*"
+    "SlowTests": "4.0.0-*",
+    "Microsoft.CSharp": "4.0.1"
   }
 }

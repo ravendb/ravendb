@@ -6,7 +6,7 @@
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
     }
   },
- 
+
   "configurations": {
     "Release": {
       "buildOptions": {
@@ -17,20 +17,21 @@
 
   "dependencies": {
     "DotNetCross.Memory.Unsafe": "0.2.3.2",
-    "System.Reflection": "4.1.0-rc2-24027"
+    "NETStandard.Library": "1.6.0",
+    "NLog": "4.4.0-*",
+    "Microsoft.AspNetCore.WebSockets.Server": "0.1.0",
+    "Microsoft.CSharp": "4.0.1",
+    "System.Diagnostics.Contracts": "4.0.1",
+    "System.Numerics.Vectors": "4.1.1",
+    "System.Reflection": "4.1.0"
   },
+
   "frameworks": {
-    "netstandard1.5": {
-      "dependencies": {
-        "Microsoft.AspNetCore.WebSockets.Server": "0.1.0-rc2-*",
-        "Microsoft.CSharp": "4.0.1-rc2-*",
-        "NETStandard.Library": "1.5.0-rc2-*",
-        "NLog": "4.4.0-*",
-        "System.Diagnostics.Contracts": "4.0.1-rc2-*",
-        "System.Numerics.Vectors": "4.1.1-rc2-*"
-      },
+    "netstandard1.6": {},
+    "netcoreapp1.0": {
       "imports": "dnxcore50"
     }
   },
+
   "version": "4.0.0-*"
 }

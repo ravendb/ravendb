@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "4.0.0-*",
   "description": "Voron - Low level storage engine",
   "authors": [ "Hibernating Rhinos" ],
@@ -24,19 +24,19 @@
   },
 
   "frameworks": {
-    "netstandard1.5": {
-      "dependencies": {
-        "Microsoft.CSharp": "4.0.1-rc2-*",
-        "NETStandard.Library": "1.5.0-rc2-*",
-        "System.Diagnostics.Process": "4.1.0-rc2-*",
-        "System.IO.FileSystem.DriveInfo": "4.0.0-rc2-*",
-        "System.IO.MemoryMappedFiles": "4.0.0-rc2-*",
-        "System.Threading.Overlapped": "4.0.1-rc2-*"
-      },
+    "netstandard1.6": {},
+    "netcoreapp1.0": {
       "imports": "dnxcore50"
     }
   },
+
   "dependencies": {
-    "Sparrow": "4.0.0-*"
+    "Microsoft.CSharp": "4.0.1",
+    "NETStandard.Library": "1.6.0",
+    "Sparrow": "4.0.0-*",
+    "System.Diagnostics.Process": "4.1.0",
+    "System.IO.FileSystem.DriveInfo": "4.0.0",
+    "System.IO.MemoryMappedFiles": "4.0.0",
+    "System.Threading.Overlapped": "4.0.1"
   }
 }
