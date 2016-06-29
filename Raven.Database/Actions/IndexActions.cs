@@ -238,8 +238,8 @@ namespace Raven.Database.Actions
             return PutIndexInternal(name, definition, out opId);
         }
 
-        private string PutIndexInternal(string name, IndexDefinition definition, out long opId, bool disableIndexBeforePut = false,
-            bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null, Action afterAddToIndexStorage = null)
+        private string PutIndexInternal(string name, IndexDefinition definition, out long opId,
+            bool disableIndexBeforePut = false, bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
         {
             if (name == null)
                 throw new ArgumentNullException("name");
@@ -291,7 +291,7 @@ namespace Raven.Database.Actions
                     break;
             }
 
-            opId = PutNewIndexIntoStorage(name, definition, disableIndexBeforePut, afterAddToIndexStorage);
+            opId = PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
 
             WorkContext.ClearErrorsFor(name);
 
@@ -385,26 +385,8 @@ namespace Raven.Database.Actions
                     }
 
                     long _;
-                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,
-                        out _, disableIndexBeforePut: true, isUpdateBySideSide: true,
-                        creationOptions: creationOptions, afterAddToIndexStorage: () =>
-                        {
-                            if (isSideBySide == false)
-                                return;
-
-                            //add the replace index document
-                            Database.Documents.Put(
-                                Constants.IndexReplacePrefix + indexName,
-                                null,
-                                RavenJObject.FromObject(new IndexReplaceDocument
-                                {
-                                    IndexToReplace = originalIndexName,
-                                    MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace,
-                                    ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc
-                                }),
-                                new RavenJObject(),
-                                null);
-                        });
+                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, out _,
+                        disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
 
                     if (nameToAdd == null)
                         continue;
@@ -412,8 +394,10 @@ namespace Raven.Database.Actions
                     createdIndexes.Add(new IndexInfo
                     {
                         Name = indexName,
+                        OriginalName = originalIndexName,
                         IsSideBySide = isSideBySide
                     });
+
                     prioritiesList.Add(indexToAdd.Priority);
                 }
 
@@ -426,8 +410,16 @@ namespace Raven.Database.Actions
                     var priority = prioritiesList[i];
 
                     var instance = Database.IndexStorage.GetIndexInstance(indexName);
+                    if (instance == null)
+                    {
+                        Log.Warn("Couldn't set index priority because index named: '{0}' doesn't exist", indexName);
+                        continue;
+                    }
+
                     instance.Priority = priority;
                 }
+
+                CreateIndexReplacementDocuments(sideBySideIndexes, createdIndexes);
 
                 return createdIndexes;
             }
@@ -442,6 +434,30 @@ namespace Raven.Database.Actions
                 }
                 throw;
             }
+        }
+
+        private void CreateIndexReplacementDocuments(SideBySideIndexes sideBySideIndexes, List<IndexInfo> createdIndexes)
+        {
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var createdIndex in createdIndexes)
+                {
+                    if (createdIndex.IsSideBySide == false)
+                        continue;
+
+                    Database.Documents.Put(
+                        Constants.IndexReplacePrefix + createdIndex.Name,
+                        null,
+                        RavenJObject.FromObject(new IndexReplaceDocument
+                        {
+                            IndexToReplace = createdIndex.OriginalName,
+                            MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace,
+                            ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc
+                        }),
+                        new RavenJObject(),
+                        null);
+                }
+            });
         }
 
         private IndexLockMode? GetCurrentLockMode(string indexName)
@@ -459,6 +475,8 @@ namespace Raven.Database.Actions
         {
             public string Name { get; set; }
 
+            public string OriginalName { get; set; }
+
             public bool IsSideBySide { get; set; }
         }
 
@@ -471,8 +489,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        internal long PutNewIndexIntoStorage(string name, IndexDefinition definition,
-            bool disableIndex = false, Action afterAddToIndexStorage = null)
+        internal long PutNewIndexIntoStorage(string name, IndexDefinition definition, bool disableIndex = false)
         {
             Debug.Assert(Database.IndexStorage != null);
             Debug.Assert(TransactionalStorage != null);
@@ -537,9 +554,6 @@ namespace Raven.Database.Actions
             // we have to do it in this way so first we prepare all the elements of the 
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
-
-            if (afterAddToIndexStorage != null)
-                afterAddToIndexStorage();
 
             // we start the precomuteTask _after_ we finished adding the index
             long operationId = -1;
