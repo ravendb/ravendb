@@ -25,11 +25,11 @@
                 <label class="col-sm-2 control-label">Document ID:</label>
                 <div class="col-sm-10">
                     <div class="btn-group">
-                        <input id="explainDocId" type="text" class="form-control" placeholder="Document ID" data-bind="value: documentId, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                        <input id="explainDocId" type="text" class="form-control" placeholder="Document ID" data-bind="textInput: documentId" autocomplete="off" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#explainDocId', foreach: documentIdSearchResults">
                             <li role="presentation" data-bind="click: $root.selectDocument.bind($root, $data)">
                                 <a role="menuitem" tabindex="-1" href="#">
-                                    <span data-bind="text: $data['@metadata']['@id']"></span>
+                                    <span class="text" data-bind="text: $data['@metadata']['@id']"></span>
                                 </a>
                             </li>
                         </ul>

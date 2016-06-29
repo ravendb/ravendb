@@ -3,12 +3,18 @@ import composition = require("durandal/composition");
 /*
  * A KnockoutJS binding handler that transforms a div into the auto-complete items container for a text box.
  *
- * Usage: 
+ * Usage for auto complete: 
+ *           <input id="myAutoComplete" type="text" data-bind="textInput: mySearchValue" />
+ *           <div style="display: none" data-bind="autoComplete: '#myAutoComplete', foreach: yourOwnResults">
+ *               <div class="text" data-bind="text: name"></div>
+ *           </div>
+ *
+ * Usage for auto complete without selecting the scrolled down/up field: 
  *           <input id="myAutoComplete" type="text" data-bind="value: mySearchValue, valueUpdate: 'afterkeydown'" />
  *           <div style="display: none" data-bind="autoComplete: '#myAutoComplete', foreach: yourOwnResults">
  *               <div data-bind="text: name"></div>
  *           </div>
- *
+ *           
  * In the above sample, yourOwnResults is an array that you are responsible for populating. And 'name' is the property on the items in that array.
  */
 class autoCompleteBindingHandler {
@@ -50,7 +56,22 @@ class autoCompleteBindingHandler {
         $element.on('click', () => setTimeout(() => element.style.display = "none", 0));
 
         // Leaving the textbox should hide the auto complete list.
-        input.on('blur', (args: JQueryEventObject) => setTimeout(() => element.style.display = "none", 200));
+        input.on('blur', (args: JQueryEventObject) => setTimeout(() => {
+            element.style.display = "none";
+
+            var newValue = $element.find(".active").find("span.text").text();
+            if (newValue.length === 0) {
+                return;
+            }
+
+            var oldValue = input.text();
+            if (oldValue === newValue) {
+                return;
+            }
+
+            input.text(newValue);
+            input.trigger("change");
+        }, 200));
 
         // Putting the focus back on the textbox should show the auto complete list if we have items.
         input.on('focus', (args: JQueryEventObject) => setTimeout(() =>
@@ -98,7 +119,7 @@ class autoCompleteBindingHandler {
             element.style.display = "none";
         }
 
-        var lis: JQuery, curSelected: JQuery;
+        var lis: JQuery, curSelected: JQuery, selected: JQuery;
         if (element.style.display == "none" && args.which === downArrow) {
             if ($element.children("li").length > 0 && $input.is(":focus")) {
                 setTimeout(() => element.style.display = "block", 0);
@@ -117,39 +138,64 @@ class autoCompleteBindingHandler {
                 var nextSelected = curSelected.next();
 
                 if (nextSelected.length) {
+                    selected = nextSelected;
                     nextSelected.addClass("active");
                     $element.scrollTop((nextSelected.index() - 1) * 30);
                 } else {
-                    lis.first().addClass("active");
+                    selected = lis.first();
+                    selected.addClass("active");
                     $element.scrollTop(0);
                 }
 
             } else {
-                curSelected = lis.first().addClass("active");
+                selected = lis.first();
+                curSelected = selected.addClass("active");
             }
-        } else if (args.which === upArrow) {
+
+            this.updateInputElement(selected, $input);
+        }
+        else if (args.which === upArrow) {
+            args.preventDefault();
             if (curSelected.length > 0) {
                 curSelected.removeClass("active");
                 var prevSelected = curSelected.prev();
 
                 if (prevSelected.length) {
+                    selected = prevSelected;
                     prevSelected.addClass("active");
                     $element.scrollTop((prevSelected.index() - 1) * 30);
                 } else {
-                    lis.last().addClass("active");
+                    selected = lis.last();
+                    selected.addClass("active");
                     $element.scrollTop($element.children("li").length * 30);
                 }
 
             } else {
-                curSelected = lis.last().addClass("active");
+                selected = lis.first();
+                curSelected = selected.addClass("active");
             }
+
+            this.updateInputElement(selected, $input);
         }
         else if (args.which === enter) {
+            args.preventDefault();
+            args.stopPropagation();
             var itemToSelect = curSelected.length ? curSelected : $(this.findAutoCompleteItemMatching($element, $input.val()));
             if (itemToSelect.length) {
                 itemToSelect.click();
             }
         }
+    }
+
+    private updateInputElement(selected: JQuery, $input: JQuery) {
+        var selectedValue = selected.find("span.text");
+        if (selectedValue.length === 0) {
+            return;
+        }
+
+        $input.val(selectedValue.text());
+        var htmlElement: HTMLElement = $input[0];
+        htmlElement.scrollLeft = htmlElement.scrollWidth;
     }
 }
 

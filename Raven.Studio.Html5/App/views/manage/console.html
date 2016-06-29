@@ -20,11 +20,11 @@
                 <div class="form-group">
                     <label for="databaseName" class="col-sm-2 control-label">Target database</label>
                     <div class="col-sm-3">
-                        <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name">
+                        <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="textInput: resourceName, customValidity: nameCustomValidityError" placeholder="Database name">
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
                             <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                 <a role="menuitem" tabindex="-1" href="#">
-                                    <span data-bind="text: $data"></span>
+                                    <span class="text" data-bind="text: $data"></span>
                                 </a>
                             </li>
                         </ul>

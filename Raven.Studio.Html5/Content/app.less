@@ -1523,7 +1523,16 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     #goToDocInput {
         width: 9em;
+        -webkit-transition: width 0.5s ease-in-out;
+        -moz-transition:width 0.5s ease-in-out;
+        -o-transition: width 0.5s ease-in-out;
+        transition: width 0.5s ease-in-out;
     }
+
+    #goToDocInput:focus {
+        width: 20em;
+    }
+
     /* When the screen width < 1150, shrink down the padding between the nav bar items. */
     @media (max-width: 1150px) {
         .nav {

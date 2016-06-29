@@ -23,13 +23,13 @@
                 </label>
                 <div class="col-sm-8">
                     <input id="watchedResource" placeholder="Resource name" type="text" class="form-control"
-                           data-bind="enable: watchedResourceMode() === 'SingleResourceView', customValidity: nameCustomValidityError, value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off"/>
+                           data-bind="enable: watchedResourceMode() === 'SingleResourceView', customValidity: nameCustomValidityError, textInput: resourceName" autocomplete="off"/>
                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;"
                         data-bind="autoComplete: '#watchedResource', foreach: searchResults">
                         <li role="presentation" data-bind="click: function(){ $root.resourceName($data); }">
                             <a role="menuitem" tabindex="-1" href="#">
                                 <span role="menuitem" tabindex="-1">
-                                    <span data-bind="text: $data"></span>
+                                    <span class="text" data-bind="text: $data"></span>
                                 </span>
                             </a>
                         </li>

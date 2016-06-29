@@ -19,11 +19,11 @@
                     <tr>
                         <td class="col-md-8">
                             <div style="position: relative">
-                                <input class="form-control" required type="text" data-bind="attr: { 'id': $root.generateBindingInputId($index()) }, value: name, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
+                                <input class="form-control" required type="text" data-bind="attr: { 'id': $root.generateBindingInputId($index()) }, textInput: name, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
                                 <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + $root.generateBindingInputId($index()), foreach: $root.autoCompleteResults">
                                     <li role="presentation" data-bind="click: $root.completeTheWord.bind($root)">
                                         <a href="#" data-bind="click: $root.completeTheWord.bind($root)">
-                                            <span data-bind="text: $data"></span>
+                                            <span class="text" data-bind="text: $data"></span>
                                         </a>
                                     </li>
                                 </ul>

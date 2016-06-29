@@ -88,11 +88,11 @@
                                         <tr>
                                             <td>
                                                 <div class="btn-group">
-                                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'userDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="textInput: tenantId, customValidity: tenantCustomValidityError, attr: { 'id': 'userDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
                                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#userDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                         <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                             <a role="menuitem" tabindex="-1" href="#" class="nounderline">
-                                                                <span data-bind="text: $data"></span>
+                                                                <span class="text" data-bind="text: $data"></span>
                                                             </a>
                                                         </li>
                                                     </ul>
@@ -195,11 +195,11 @@
                                         <tr>
                                             <td>
                                                 <div class="btn-group">
-                                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'groupDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="textInput: tenantId, customValidity: tenantCustomValidityError, attr: { 'id': 'groupDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
                                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#groupDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                         <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                             <a role="menuitem" tabindex="-1" href="#" class="nounderline">
-                                                                <span data-bind="text: $data"></span>
+                                                                <span class="text" data-bind="text: $data"></span>
                                                             </a>
                                                         </li>
                                                     </ul>

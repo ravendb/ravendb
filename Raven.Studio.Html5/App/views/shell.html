@@ -116,12 +116,12 @@
     </ul>
     <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
         <input id="goToDocInput" title="Search for a document (Alt+G)" accesskey="G"
-               type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown', disable: isActiveDatabaseDisabled" autocomplete="off"/>
+               type="text" class="form-control" placeholder="Go to document" data-bind="textInput: goToDocumentSearch, disable: isActiveDatabaseDisabled" autocomplete="off"/>
         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
             <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
                 <a role="menuitem" tabindex="-1" href="#">
                     <span class="collection-color-strip" data-bind="css: $root.getDocCssClass($data)"></span>
-                    <span data-bind="text: $data['@metadata']['@id']"></span>
+                    <span class="text" data-bind="text: $data['@metadata']['@id']"></span>
                 </a>
             </li>
         </ul>

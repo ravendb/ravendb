@@ -93,7 +93,7 @@
         </div>
         <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
-                <input id="docKey" type="text" data-bind="value: docKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Document Id" autocomplete="off">
+                <input id="docKey" type="text" data-bind="textInput: docKey" class="form-control" placeholder="Document Id" autocomplete="off">
                 <span class="input-group-btn" style="width: auto">
                     <button data-bind="click: addDocKey.bind($root, docKey())" class="btn btn-default" type="button">
                         <i class="fa fa-plus"></i>
@@ -103,14 +103,14 @@
             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#docKey', foreach: docKeysSearchResults">
                 <li role="presentation" data-bind="click: $root.selectDocKey.bind($root, $data)">
                     <a role="menuitem" tabindex="-1" href="#">
-                        <span data-bind="text: $data"></span>
+                        <span class="text" data-bind="text: $data"></span>
                     </a>
                 </li>
             </ul>
         </div>
         <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
-                <input id="itemKey" type="text" data-bind="value: reduceKey, valueUpdate: 'afterkeydown'" class="form-control" placeholder="Reduce key" autocomplete="off">
+                <input id="itemKey" type="text" data-bind="textInput: reduceKey" class="form-control" placeholder="Reduce key" autocomplete="off">
                 <span class="input-group-btn" style="width: auto">
                     <button data-bind="click: addReduceKey.bind($root, reduceKey()), visible: hasIndexSelected" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
                 </span>
@@ -118,7 +118,7 @@
             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#itemKey', foreach: reduceKeysSearchResults">
                 <li role="presentation" data-bind="click: $root.selectReduceKey.bind($root, $data)">
                     <a role="menuitem" tabindex="-1" href="#">
-                        <span data-bind="text: $data"></span>
+                        <span class="text" data-bind="text: $data"></span>
                     </a>
                 </li>
             </ul>

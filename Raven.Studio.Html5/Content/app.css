@@ -7805,6 +7805,13 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 #shellHeader #goToDocInput {
   width: 9em;
+  -webkit-transition: width 0.5s ease-in-out;
+  -moz-transition: width 0.5s ease-in-out;
+  -o-transition: width 0.5s ease-in-out;
+  transition: width 0.5s ease-in-out;
+}
+#shellHeader #goToDocInput:focus {
+  width: 20em;
 }
 @media (max-width: 1150px) {
   #shellHeader .nav li a {

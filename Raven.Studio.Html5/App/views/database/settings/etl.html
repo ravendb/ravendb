@@ -128,11 +128,11 @@
                                                         <tbody data-bind="foreach: specifiedCollections">
                                                             <tr>
                                                                 <td style="position: relative">
-                                                                    <input required autocomplete="off"  type="text" class="form-control" data-bind="value: collection, valueUpdate: 'afterkeydown', attr: { id : 'collection_ac_' + $parentContext.$index() + '_' + $index() }"/>
+                                                                    <input required autocomplete="off"  type="text" class="form-control" data-bind="textInput: collection, attr: { id : 'collection_ac_' + $parentContext.$index() + '_' + $index() }"/>
                                                                     <ul class="dropdown-menu  scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#collection_ac_' + $parentContext.$index()  +  '_' + $index(), foreach: createSearchResults($root.collections)">
                                                                         <li role="presentation" data-bind="click: $parent.collection.bind($parent, $data)">
                                                                             <a role="menuitem" tabindex="-1" href="#">
-                                                                                <span data-bind="text: $data"></span>
+                                                                                <span class="text" data-bind="text: $data"></span>
                                                                             </a>
                                                                         </li>
                                                                     </ul>

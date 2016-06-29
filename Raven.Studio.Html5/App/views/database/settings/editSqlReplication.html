@@ -51,11 +51,11 @@
                 <div class="form-group">
                     <label class="col-sm-4 control-label">Source Document Collection</label>
                     <div class="col-sm-8">
-                        <input tabindex="2" required name="ravenEntityName" type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'afterkeydown', attr: { 'id': 'sourceDocumentCollection'}" />
+                        <input tabindex="2" required name="ravenEntityName" type="text" class="form-control" data-bind="textInput: ravenEntityName, attr: { 'id': 'sourceDocumentCollection'}" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#sourceDocumentCollection', foreach: searchResults">
                             <li role="presentation" data-bind="click: $parent.saveNewRavenEntityName.bind($parent, $data)">
                                 <a role="menuitem" tabindex="-1" href="#">
-                                    <span data-bind="text: $data"></span>
+                                    <span class="text" data-bind="text: $data"></span>
                                 </a>
                             </li>
                         </ul>
