@@ -165,6 +165,26 @@ namespace Voron.Impl
 
             _lowLevelTransaction.RootObjects.Delete(name);
 
+            if (_multiValueTrees != null)
+            {
+                var toRemove = new List<Tuple<Tree, Slice>>();
+
+                foreach (var valueTree in _multiValueTrees)
+                {
+                    var multiTree = valueTree.Key.Item1;
+
+                    if (multiTree.Name == name)
+                    {
+                        toRemove.Add(valueTree.Key);
+                    }
+                }
+
+                foreach (var recordToRemove in toRemove)
+                {
+                    _multiValueTrees.Remove(recordToRemove);
+                }
+            }
+
             _trees.Remove(name);
         }
 
