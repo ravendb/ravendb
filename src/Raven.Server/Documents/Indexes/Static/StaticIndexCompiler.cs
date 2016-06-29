@@ -40,6 +40,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
+            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
         };
 
         public static StaticIndexBase Compile(IndexDefinition definition)
