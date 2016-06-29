@@ -161,7 +161,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Racy - need to fix RavenDB-4734")]
         public async Task SubscribtionWithEtag_MultipleOpens()
         {
             using (var store = await GetDocumentStore())
@@ -241,7 +241,10 @@ namespace FastTests.Client.Subscriptions
                     subscription.Subscribe(o => docs.Add(o));
 
                     RavenJObject item;
-                    Assert.False(docs.TryTake(out item, TimeSpan.FromMilliseconds(250)));
+                    var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
+                    if(tryTake)
+                        Console.WriteLine(item.Value<int>("Age"));
+                    Assert.False(tryTake);
 
                 }
             }
