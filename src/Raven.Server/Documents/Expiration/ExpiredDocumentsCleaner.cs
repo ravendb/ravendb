@@ -216,8 +216,9 @@ namespace Raven.Server.Documents.Expiration
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
                 throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {UtcNow().ToString("O")}");
 
-            if (UtcNow() >= date)
-                throw new InvalidOperationException($"Cannot put an expired document. Expired on: {date.ToString("O")}");
+            // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
+            // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
+            // and we'll use the normal cleanup routine to clean things up later.
 
             var ticksBigEndian = IPAddress.HostToNetworkOrder(date.Ticks);
 
