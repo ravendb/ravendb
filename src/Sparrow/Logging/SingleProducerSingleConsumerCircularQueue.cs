@@ -9,6 +9,10 @@ namespace Sparrow.Logging
         private readonly MemoryStream[] _data;
         private readonly int _queueSize;
         private volatile uint _readPos;
+#pragma warning disable 169 // unused field
+        // cache line padding
+        private long _p1, _p2, _p3, _p4, _p5, _p6, _p7; 
+#pragma warning restore 169
         private volatile uint _writePos;
 
         public SingleProducerSingleConsumerCircularQueue(int queueSize)
@@ -25,12 +29,14 @@ namespace Sparrow.Logging
         public bool Enqueue(MemoryStream entry)
         {
             var readIndex = PositionToArrayIndex(_readPos);
-            var writeIndex = PositionToArrayIndex(_writePos + 1);
+            var currentWritePos = _writePos;
+            var writeIndex = PositionToArrayIndex(currentWritePos + 1);
 
             if (readIndex == writeIndex)
                 return false; // queue full
 
-            _data[PositionToArrayIndex(_writePos)] = entry;
+            _data[PositionToArrayIndex(currentWritePos)] = entry;
+
             _writePos++;
             return true;
         }
