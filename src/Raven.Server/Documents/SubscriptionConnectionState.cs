@@ -61,9 +61,14 @@ namespace Raven.Server.Documents
                                                             incomingConnection.Strategy);
                 }
             }
+            Console.WriteLine("Connected");
             _connectionInUse.Reset();
             _currentConnection = incomingConnection;
-            return new DisposableAction(() => _connectionInUse.SetByAsyncCompletion());
+            return new DisposableAction(() =>
+            {
+                _connectionInUse.SetByAsyncCompletion();
+                Console.WriteLine("Disconnected");
+            });
         }
 
 

@@ -70,16 +70,21 @@ namespace Raven.Server.Documents.Handlers
             }
             catch (Exception e)
             {
-                try
-                {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError,
-                        // TODO: Replace this with real error generation
-                        "{'Type':'Error', 'Exception':'" + e.ToString().Replace("'", "\\'") + "'}", Database.DatabaseShutdown).ConfigureAwait(false);
-                }
-                catch
-                {
-                    // ignored
-                }
+                // uncomment this when websockets mutual closure issue fixed in rc4
+                //try
+                //{
+                //    if (webSocket.State == WebSocketState.Open)
+                //    {
+                //        await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError,
+                //            // TODO: Replace this with real error generation
+                //            "{'Type':'Error', 'Exception':'" + e.ToString().Replace("'", "\\'") + "'}",
+                //            Database.DatabaseShutdown).ConfigureAwait(false);
+                //    }
+                //}
+                //catch
+                //{
+                //    // ignored
+                //}
 
                 Log.ErrorException($"Failure in subscription id {GetLongQueryString("id")}", e);
             }

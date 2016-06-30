@@ -39,8 +39,13 @@ namespace Raven.Server.Documents.Handlers
 
             _writer = new BlittableJsonTextWriter(_context, _ms);
             _jsonParser = new UnmanagedJsonParser(_context, _ackParserState, string.Empty);
-            _linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+            _innerCancellationToken = new CancellationTokenSource();
+            
+            _linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown, _innerCancellationToken.Token);
             _clientAckBuffer = new ArraySegment<byte>(new byte [4096]);
+
+            _listeningAMRE = new AsyncManualResetEvent(_database.DatabaseShutdown);
+
         }
 
         public async Task InitConnection(long? id, string connection, string strategy, int? maxDocsPerBatch, int? maxBatchSize)
@@ -93,19 +98,27 @@ namespace Raven.Server.Documents.Handlers
                         ["Type"] = "CoonectionStatus",
                         ["Status"] = "InUse"
                     });
+
+                    // uncomment this when websockets mutual closure problem is resolved in rc4
+                    //await
+                    //    _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "InUse",
+                    //        _linkedCancellationTokenSource.Token);
                     throw;
                 }
             }
         }
 
-        
+
+        private AsyncManualResetEvent _listeningAMRE;
+
+
         public async Task Proccess()
         {
             try
             {
-                var waitForMoreDocuments = new AsyncManualResetEvent();
+                _listenOnWebSocketsTask = ListenOnWebsocket();
+                var waitForMoreDocuments = new AsyncManualResetEvent(_linkedCancellationTokenSource.Token);
                 long lastEtagSentToClient = 0;
-                long lastEtagAcceptedFromClient = 0;
 
                 var id = _options.SubscriptionId;
             
@@ -186,13 +199,17 @@ namespace Raven.Server.Documents.Handlers
                         await FlushStreamToClient();
                         _database.SubscriptionStorage.UpdateSubscriptionTimes(id, updateLastBatch: true, updateClientActivity: false);
                         _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        
                         if (hasDocuments == false)
                         {
-                            while (await waitForMoreDocuments.WaitAsync(TimeSpan.FromSeconds(3)) == false)
+                            Task<bool> waitForMoreTasks;
+                            do
                             {
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                waitForMoreTasks = waitForMoreDocuments.WaitAsync(TimeSpan.FromSeconds(3));
                                 await SendHeartBeat();
                             }
+                            while (await waitForMoreTasks == false);
 
                             waitForMoreDocuments.Reset();
                             continue;
@@ -200,11 +217,17 @@ namespace Raven.Server.Documents.Handlers
 
                         if (documentsSent > 0)
                         {
-                            while (lastEtagAcceptedFromClient < lastEtagSentToClient)
+                            
+                            while (_lastEtagAcceptedFromClient < lastEtagSentToClient)
                             {
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                                lastEtagAcceptedFromClient = await GetLastEtagFromWebsocket();
-                                _database.SubscriptionStorage.AcknowledgeBatchProcessed(id, lastEtagAcceptedFromClient);
+                                var waitForAckTask = _listeningAMRE.WaitAsync();
+                                while (await Task.WhenAny(waitForAckTask, Task.Delay(TimeSpan.FromSeconds(5)))!= waitForAckTask)
+                                {
+                                    _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                    await SendHeartBeat();
+                                }
+                                _database.SubscriptionStorage.AcknowledgeBatchProcessed(id, _lastEtagAcceptedFromClient);
                             }
                         }
                     }
@@ -216,23 +239,89 @@ namespace Raven.Server.Documents.Handlers
             }
             finally
             {
-                _state.Connection.CancellationTokenSource.Cancel();
                 _state.EndConnection();
                 _options.DisposeOnDisconnect.Dispose();
 
-                try
+
+
+                if (_webSocket.State == WebSocketState.Open)
                 {
-                    await WriteDynamicJsonToWebsocket(new DynamicJsonValue
+                    try
                     {
-                        ["Type"] = "ConnectionState",
-                        ["Status"] = "Terminated"
-                    });
-                }
-                catch
-                {
-                    // nothing to do
+
+                        using (_context.OpenReadTransaction())
+                        {
+                            _context.Write(_writer, new DynamicJsonValue
+                            {
+                                ["Type"] = "Data",
+                                ["Status"] = "Terminated"
+                            });
+                              
+                        }
+
+                        _writer.Flush();
+                        await FlushStreamToClient();
+
+                        //await WriteDynamicJsonToWebsocket(new DynamicJsonValue
+                        //{
+                        //    ["Type"] = "ConnectionState",
+                        //    ["Status"] = "Terminated"
+                        //});
+                    }
+                    catch(Exception ex)
+                    {
+                        // nothing to do
+                    }
                 }
 
+            }
+        }
+
+        private long _lastEtagAcceptedFromClient;
+        private string _lastMessageType;
+        private string _lastMessageData;
+        private CancellationTokenSource _innerCancellationToken;
+        private Task _listenOnWebSocketsTask;
+
+        private async Task ListenOnWebsocket()
+        {
+            while (_linkedCancellationTokenSource.IsCancellationRequested == false)
+            {
+                using (
+                    var builder = new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.None,
+                        string.Empty, _jsonParser, _ackParserState))
+                using (var reader = await GetReaderFromWebsocketWOKA(builder))
+                {
+                    string messageType;
+                    if (reader.TryGet("Type", out messageType) == false)
+                    {
+                        // ReSharper disable once NotResolvedInText
+                        throw new ArgumentNullException("Type field expected subscription response message");
+                    }
+                    _lastMessageType = messageType;
+                    switch (messageType)
+                    {
+                        case "ACK":
+                            long lastEtagAcceptedFromClient;
+                            if (reader.TryGet("Data", out lastEtagAcceptedFromClient) == false)
+                                // ReSharper disable once NotResolvedInText
+                                throw new ArgumentNullException("Did not receive Data field in subscription ACK message");
+                            _lastEtagAcceptedFromClient = lastEtagAcceptedFromClient;
+                            _listeningAMRE.SetByAsyncCompletion();
+                            break;
+                        case "ConnectionTermination":
+                            string terminationReason;
+                            reader.TryGet("Data", out terminationReason);
+                            _lastMessageData = terminationReason;
+                            _listeningAMRE.SetByAsyncCompletion();
+                            _linkedCancellationTokenSource.Cancel();
+                            break;
+                        default:
+                            _linkedCancellationTokenSource.Cancel();
+                            break;
+                    }
+                    
+                }
             }
         }
 
@@ -256,40 +345,40 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        private async Task<long> GetLastEtagFromWebsocket()
-        {
-            using (var builder = new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.None, string.Empty, _jsonParser,_ackParserState))
-            using (var reader = await GetReaderFromWebsocket(builder))
-            {
-                string messageType;
-                if (reader.TryGet("Type", out messageType) == false)
-                {
-                    // ReSharper disable once NotResolvedInText
-                    throw new ArgumentNullException("Type field expected subscription response message");
-                }
-                switch (messageType)
-                {
-                    case "ACK":
-                        long lastEtagAcceptedFromClient;
-                        if (reader.TryGet("Data", out lastEtagAcceptedFromClient) == false)
-                            // ReSharper disable once NotResolvedInText
-                            throw new ArgumentNullException("Did not receive Data field in subscription ACK message");
-                        return lastEtagAcceptedFromClient;
-                    case "ConnectionTermination":
-                        string terminationReason;
-                        reader.TryGet("Data", out terminationReason);
+        //private async Task<long> GetLastEtagFromWebsocket()
+        //{
+        //    using (var builder = new BlittableJsonDocumentBuilder(_context, BlittableJsonDocumentBuilder.UsageMode.None, string.Empty, _jsonParser,_ackParserState))
+        //    using (var reader = await GetReaderFromWebsocket(builder))
+        //    {
+        //        string messageType;
+        //        if (reader.TryGet("Type", out messageType) == false)
+        //        {
+        //            // ReSharper disable once NotResolvedInText
+        //            throw new ArgumentNullException("Type field expected subscription response message");
+        //        }
+        //        switch (messageType)
+        //        {
+        //            case "ACK":
+        //                long lastEtagAcceptedFromClient;
+        //                if (reader.TryGet("Data", out lastEtagAcceptedFromClient) == false)
+        //                    // ReSharper disable once NotResolvedInText
+        //                    throw new ArgumentNullException("Did not receive Data field in subscription ACK message");
+        //                return lastEtagAcceptedFromClient;
+        //            case "ConnectionTermination":
+        //                string terminationReason;
+        //                reader.TryGet("Data", out terminationReason);
 
-                        throw new OperationCanceledException(terminationReason);
-                }
-                throw new ArgumentNullException($"Illegal message type {messageType} received in client ack message");
-            }
-            
-        }
+        //                throw new OperationCanceledException(terminationReason);
+        //        }
+        //        throw new ArgumentNullException($"Illegal message type {messageType} received in client ack message");
+        //    }
+
+        //}
 
         private async Task<WebSocketReceiveResult> ReadFromWebSocketWithKeepAlives()
         {
             var receiveAckTask = _webSocket.ReceiveAsync(_clientAckBuffer, _database.DatabaseShutdown);
-            
+
             while (await Task.WhenAny(receiveAckTask, Task.Delay(5000)) != receiveAckTask)
             {
                 _ms.WriteByte((byte)'\r');
@@ -316,11 +405,26 @@ namespace Raven.Server.Documents.Handlers
             return builder.CreateReader();
         }
 
+        private async Task<BlittableJsonReaderObject> GetReaderFromWebsocketWOKA(BlittableJsonDocumentBuilder builder)
+        {
+            builder.ReadObject();
+
+            while (builder.Read() == false)
+            {
+                var result = await _webSocket.ReceiveAsync(_clientAckBuffer, _database.DatabaseShutdown);
+                _jsonParser.SetBuffer(new ArraySegment<byte>(_clientAckBuffer.Array, 0, result.Count));
+            }
+
+            builder.FinalizeDocument();
+
+            return builder.CreateReader();
+        }
+
         private async Task FlushStreamToClient(bool endMessage = false)
         {
             ArraySegment<byte> bytes;
             _ms.TryGetBuffer(out bytes);
-            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, endMessage, _linkedCancellationTokenSource.Token);
+            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, endMessage, _database.DatabaseShutdown);
             _ms.SetLength(0);
         }
 
