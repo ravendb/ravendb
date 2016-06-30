@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Npgsql;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Embedded;
@@ -18,7 +18,6 @@ using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Util;
-using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
 
@@ -37,22 +36,21 @@ namespace Raven.Tests.Bundles.SqlReplication
 
         private const string defaultScript = @"
 var orderData = {
-	Id: documentId,
-	OrderLinesCount: this.OrderLines.length,
-	TotalCost: 0,
-    Quantities: {$ArrayType: 'System.Int32', Values: this.OrderLines.map(function(l) {return l.Quantity;})}
+    Id: documentId,
+    OrderLinesCount: this.OrderLines.length,
+    TotalCost: 0
 };
-replicateToorders(orderData);
+replicateToOrders(orderData);
 
 for (var i = 0; i < this.OrderLines.length; i++) {
-	var line = this.OrderLines[i];
-	orderData.TotalCost += line.Cost;
-	replicateToorderlines({
-		OrderId: documentId,
-		Qty: line.Quantity,
-		Product: line.Product,
-		Cost: line.Cost
-	});
+    var line = this.OrderLines[i];
+    orderData.TotalCost += line.Cost;
+    replicateToOrderLines({
+        OrderId: documentId,
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.Cost
+    });
 }";
 
 
@@ -67,30 +65,31 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                 using (var dbCommand = con.CreateCommand())
                 {
                     dbCommand.CommandText = @"
-
-DROP TABLE If EXISTS orderlines;
-DROP TABLE If EXISTS orders;
+IF OBJECT_ID('Orders') is not null 
+    DROP TABLE [dbo].[Orders]
+IF OBJECT_ID('OrderLines') is not null 
+    DROP TABLE [dbo].[OrderLines]
 ";
                     dbCommand.ExecuteNonQuery();
 
                     dbCommand.CommandText = @"
-CREATE TABLE orderlines
+CREATE TABLE [dbo].[OrderLines]
 (
-	""Id"" serial primary key,
-	""OrderId"" text NOT NULL,
-	""Qty"" int NOT NULL,
-	""Product"" text NOT NULL,
-	""Cost"" int NOT NULL
-);
+    [Id] int identity primary key,
+    [OrderId] [nvarchar](50) NOT NULL,
+    [Qty] [int] NOT NULL,
+    [Product] [nvarchar](255) NOT NULL,
+    [Cost] [int] NOT NULL
+)
 
-CREATE TABLE orders
+CREATE TABLE [dbo].[Orders]
 (
-	""Id"" text NOT NULL,
-	""OrderLinesCount"" int  NULL,
-	""TotalCost"" int NOT NULL,
-    ""City"" text NULL,
-    ""Quantities"" int[] NULL
-);";
+    [Id] [nvarchar](50) NOT NULL,
+    [OrderLinesCount] [int]  NULL,
+    [TotalCost] [int] NOT NULL,
+    [City] [nvarchar](50) NULL
+)
+";
                     dbCommand.ExecuteNonQuery();
                 }
             }
@@ -416,9 +415,8 @@ replicateToOrders(orderData);");
             using (var store = NewDocumentStore())
             {
                 var eventSlim = new ManualResetEventSlim(false);
-                var sqlReplicationTask = store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>().First();
-                sqlReplicationTask
-                     .AfterReplicationCompleted += successCount =>
+                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
+                     .First().AfterReplicationCompleted += successCount =>
                      {
                          if (successCount != 0)
                              eventSlim.Set();
@@ -441,107 +439,7 @@ replicateToOrders(orderData);");
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                Alert lastAlert;
-                if (sqlReplicationTask.Statistics.ContainsKey("OrdersAndLines"))
-                {
-                    lastAlert = sqlReplicationTask.Statistics["OrdersAndLines"].LastAlert;
-                    if (lastAlert != null)
-                        throw new AssertActualExpectedException(null, lastAlert, lastAlert.Message + lastAlert.Exception);
-                }
-
                 AssertCounts(1, 2);
-
-                eventSlim.Reset();
-
-                store.DatabaseCommands.Delete("orders/1", null);
-
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                AssertCounts(0, 0);
-
-            }
-        }
-        [Fact]
-        public void CanRep()
-        {
-            CreateRdbmsSchema();
-            using (var store = NewDocumentStore())
-            {
-                var eventSlim = new ManualResetEventSlim(false);
-                var sqlReplicationTask = store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>().First();
-                sqlReplicationTask
-                     .AfterReplicationCompleted += successCount =>
-                     {
-                         if (successCount != 0)
-                             eventSlim.Set();
-                     };
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Order
-                    {
-                        OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
-                    });
-                    session.SaveChanges();
-                }
-
-                SetupSqlReplication(store, defaultScript);
-
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                Alert lastAlert;
-                if (sqlReplicationTask.Statistics.ContainsKey("OrdersAndLines"))
-                {
-                    lastAlert = sqlReplicationTask.Statistics["OrdersAndLines"].LastAlert;
-                    if (lastAlert != null)
-                        throw new AssertActualExpectedException(null, lastAlert, lastAlert.Message + lastAlert.Exception);
-                }
-
-                AssertCounts(1, 2);
-            }
-        }
-
-        [Fact]
-        public void CanReplicateEmptyList()
-        {
-            CreateRdbmsSchema();
-            using (var store = NewDocumentStore())
-            {
-                var eventSlim = new ManualResetEventSlim(false);
-                var sqlReplicationTask = store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>().First();
-                sqlReplicationTask
-                     .AfterReplicationCompleted += successCount =>
-                     {
-                         if (successCount != 0)
-                             eventSlim.Set();
-                     };
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Order
-                    {
-                        OrderLines = new List<OrderLine>()
-                    });
-                    session.SaveChanges();
-                }
-
-                SetupSqlReplication(store, defaultScript);
-
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                Alert lastAlert;
-                if (sqlReplicationTask.Statistics.ContainsKey("OrdersAndLines"))
-                {
-                    lastAlert = sqlReplicationTask.Statistics["OrdersAndLines"].LastAlert;
-                    if (lastAlert != null)
-                        throw new AssertActualExpectedException(null, lastAlert, lastAlert.Message + lastAlert.Exception);
-                }
-
-                AssertCounts(1, 0);
 
                 eventSlim.Reset();
 
@@ -743,7 +641,7 @@ var nameArr = this.StepName.split('.');");
             throw lastException;
         }
 
-        private static void AssertCounts(long ordersCount, long orderLineCounts)
+        private static void AssertCounts(int ordersCount, int orderLineCounts)
         {
             var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
             using (var con = providerFactory.CreateConnection())
@@ -773,10 +671,10 @@ var nameArr = this.StepName.split('.');");
                     FactoryName = MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
                     RavenEntityName = "Orders",
                     SqlReplicationTables =
-					{
-						new SqlReplicationTable {TableName = "orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-						new SqlReplicationTable {TableName = "orderlines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
-					},
+                    {
+                        new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+                        new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                    },
                     Script = script
                 });
                 session.SaveChanges();
