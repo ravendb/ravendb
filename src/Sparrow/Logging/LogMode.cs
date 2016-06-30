@@ -7,6 +7,6 @@ namespace Sparrow.Logging
     {
         None = 0,
         Operations = 1,
-        Information = 1 & 2
+        Information = 3
     }
 }

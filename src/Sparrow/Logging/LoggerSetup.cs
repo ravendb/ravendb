@@ -67,7 +67,7 @@ namespace Sparrow.Logging
                 return;
 
             Directory.CreateDirectory(_path);
-            if ((_loggingThread.ThreadState & ThreadState.Unstarted) != ThreadState.Unstarted)
+            if ((_loggingThread.ThreadState & ThreadState.Unstarted) == ThreadState.Unstarted)
                 _loggingThread.Start();
         }
 
