@@ -94,7 +94,7 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             DisposeWithoutClosingPager();
-            _journalWriter.Dispose();
+            _journalWriter?.Dispose();
         }
 
         public JournalSnapshot GetSnapshot()
@@ -127,7 +127,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal. returns write page position
         /// </summary>
-        public long Write(LowLevelTransaction tx, IntPtr[] pages, LazyTransactionBuffer lazyTransactionScratch)
+        public long Write(LowLevelTransaction tx, IntPtr[] pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var unused = new HashSet<PagePosition>();
@@ -155,12 +155,13 @@ namespace Voron.Impl.Journal
                 if (lazyTransactionScratch == null)
                     throw new InvalidOperationException("lazyTransactionScratch cannot be null if the transaction is lazy (or a previous one was)");
                 lazyTransactionScratch.EnsureSize(_journalWriter.NumberOfAllocatedPages);
-                lazyTransactionScratch.AddToBuffer(position, pages);
+                lazyTransactionScratch.AddToBuffer(position, pages, uncompressedPageCount);
 
                 // non lazy tx will add itself to the buffer and then flush scratch to journal
-                if (tx.IsLazyTransaction == false)
+                if (tx.IsLazyTransaction == false ||
+                    lazyTransactionScratch.NumberOfPages > tx.Environment.ScratchBufferPool.GetAvailablePagesCount()/2)
                 {
-                    lazyTransactionScratch.WriteBufferToFile(this);
+                    lazyTransactionScratch.WriteBufferToFile(this, tx);
                 }
                 else 
                 {

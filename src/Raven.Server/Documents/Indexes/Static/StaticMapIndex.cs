@@ -1,66 +1,153 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Dynamic;
 using System.Linq;
-using System.Reflection;
+using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
-using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json.Parsing;
+using Sparrow;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class StaticMapIndex : MapIndexBase<StaticMapIndexDefinition>
     {
-        private readonly StaticIndexBase _compiled;
+        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
+        internal readonly StaticIndexBase _compiled;
+
+        private HandleReferences _handleReferences;
+
+        private StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.Map, definition)
         {
             _compiled = compiled;
+
+            if (_compiled.ReferencedCollections == null)
+                return;
+
+            foreach (var collection in _compiled.ReferencedCollections)
+            {
+                foreach (var referencedCollection in collection.Value)
+                    _referencedCollections.Add(referencedCollection);
+            }
         }
 
-        private static dynamic ToDynamic(object value)
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            IDictionary<string, object> expando = new ExpandoObject();
-            
-            
+            var workers = new List<IIndexingWork>();
+            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null));
 
-            return expando as ExpandoObject;
+            if (_referencedCollections.Count > 0)
+                workers.Add(_handleReferences = new HandleReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null));
+
+            return workers.ToArray();
         }
 
-        public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var funcs = _compiled.Maps[collection];
+            if (_referencedCollections.Count > 0)
+                _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
-            if (funcs.Length == 1)
+            base.HandleDelete(tombstone, collection, writer, indexContext, stats);
+        }
+
+        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null)
+        {
+            var isStale = base.IsStale(databaseContext, indexContext, cutoff);
+            if (isStale || _referencedCollections.Count == 0)
+                return isStale;
+
+            foreach (var collection in Collections)
             {
-                foreach (var doc in funcs[0](documents.Select(x => new DynamicDocumentObject(x)))) // TODO [ppekrol] can we reuse DynamicDocumentObject
-                {
-                    yield return doc;
-                }
+                HashSet<string> referencedCollections;
+                if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                    continue;
 
-                yield break;
+                foreach (var referencedCollection in referencedCollections)
+                {
+                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection);
+                    var lastProcessedReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+
+                    if (cutoff == null)
+                    {
+                        if (lastDocEtag > lastProcessedReferenceEtag)
+                            return true;
+
+                        var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection);
+                        var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
+
+                        if (lastTombstoneEtag > lastProcessedTombstoneEtag)
+                            return true;
+                    }
+                    else
+                    {
+                        if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedReferenceEtag)
+                            return true;
+
+                        if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection, cutoff.Value) > 0)
+                            return true;
+                    }
+                }
             }
 
-            throw new NotSupportedException("TODO arek");
+            return false;
+        }
 
-            var iterateJustOnce = new List<DynamicDocumentObject>();
+        protected override void HandleDocumentChange(DocumentChangeNotification notification)
+        {
+            if (Collections.Contains(notification.CollectionName) == false && _referencedCollections.Contains(notification.CollectionName) == false)
+                return;
 
-            foreach (var doc in documents)
-                iterateJustOnce.Add(new DynamicDocumentObject(doc));
+            _mre.Set();
+        }
 
-            foreach (var func in funcs)
+        protected override unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            if (_referencedCollections.Count == 0)
+                return base.CalculateIndexEtag(isStale, documentsContext, indexContext);
+
+            var indexEtagBytes = new long[
+                 1 + // definition hash
+                 1 + // isStale
+                 2 * Collections.Count + // last document etags and last mapped etags per collection
+                 2 * (Collections.Count * _referencedCollections.Count) // last referenced collection etags and last processed reference collection etags
+                 ];
+
+            var index = CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
+
+            foreach (var collection in Collections)
             {
-                foreach (var doc in iterateJustOnce)
+                HashSet<string> referencedCollections;
+                if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                    continue;
+
+                foreach (var referencedCollection in referencedCollections)
                 {
-                    yield return new Document();
+                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection);
+                    var lastMappedEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
+
+                    indexEtagBytes[index++] = lastDocEtag;
+                    indexEtagBytes[index++] = lastMappedEtag;
                 }
             }
+
+            unchecked
+            {
+                fixed (long* buffer = indexEtagBytes)
+                {
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
+                }
+            }
+        }
+
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        {
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
         }
 
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)

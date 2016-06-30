@@ -9,9 +9,9 @@ namespace Voron
     public sealed unsafe class Page
     {
         public readonly byte* Pointer;
-        public readonly IVirtualPager Source;
+        public readonly AbstractPager Source;
 
-        public Page(byte* pointer, IVirtualPager source)
+        public Page(byte* pointer, AbstractPager source)
         {
             Pointer = pointer;
             Source = source;

@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -13,6 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Connection.Async;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -36,6 +36,11 @@ namespace Raven.Client.Document
             new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
         private readonly Task _writeToServerTask;
         private DateTime _lastHeartbeat;
+        private long _sentAccumulator;
+
+        private readonly AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
+        private bool _isThrottling;
+        private readonly long _maxDiffSizeBeforeThrottling = 20L*1024*1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
 
 
         ~WebSocketBulkInsertOperation()
@@ -53,10 +58,11 @@ namespace Raven.Client.Document
 
         public WebSocketBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
+            _throttlingEvent.Set();
             _unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/client");
             _jsonOperationContext = new JsonOperationContext(_unmanagedBuffersPool);
             _networkBufferWriter = new BinaryWriter(_networkBuffer);
-            this._cts = cts ?? new CancellationTokenSource();
+            _cts = cts ?? new CancellationTokenSource();
             _connection = new RavenClientWebSocket();
             _url = asyncServerClient.Url;
 
@@ -68,33 +74,32 @@ namespace Raven.Client.Document
             var uriBuilder = new UriBuilder(serverUri)
             {
                 Scheme = serverUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ? "ws" : "wss",
-                Path = serverUri.AbsolutePath + "/bulkInsert",
+                Path = serverUri.AbsolutePath + "/bulkInsert"
             };
 
             for (int i = 0; i < 64; i++)
             {
                 _buffers.Add(new MemoryStream());
             }
-            
-            _socketConnectionTask = _connection.ConnectAsync(uriBuilder.Uri, this._cts.Token);
+
+            _socketConnectionTask = _connection.ConnectAsync(uriBuilder.Uri, _cts.Token);
+            _sentAccumulator = 0;
             _getServerResponseTask = GetServerResponse();
             _writeToServerTask = Task.Run(async () => await WriteToServer().ConfigureAwait(false));
-            
+
         }
 
         private async Task<int> WriteToServer()
         {
-            
-            const string DebugTag = "bulk/insert/document";
+            const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
             var buffer = _jsonOperationContext.GetManagedBuffer();
-            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, DebugTag))
+            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
             {
-                
                 while (_documents.IsCompleted == false)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    
+
                     MemoryStream jsonBuffer;
 
                     try
@@ -105,9 +110,9 @@ namespace Raven.Client.Document
                     {
                         break;
                     }
-                    
+
                     using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, DebugTag,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
                         jsonParser, jsonParserState))
                     {
 
@@ -128,84 +133,190 @@ namespace Raven.Client.Document
                         builder.CopyTo(_networkBuffer);
 
                     }
-                    
+
                     if (_networkBuffer.Length > 32 * 1024)
                     {
                         await FlushBufferAsync();
+                        // first flush, then throttle (in case first buffer to send is big enough to throttle and we rely continuation on server's response)
+                        await _throttlingEvent.WaitAsync();
                     }
                 }
-                
+
                 await FlushBufferAsync();
             }
             return 0;
         }
 
+
+        public async Task<BlittableJsonReaderObject> TryReadFromWebSocket(
+           JsonOperationContext context,
+            RavenClientWebSocket webSocket,
+           string debugTag,
+           CancellationToken cancellationToken)
+        {
+            var jsonParserState = new JsonParserState();
+            using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
+            {
+                var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
+
+                var writer = new BlittableJsonDocumentBuilder(context,
+                    BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);
+
+                writer.ReadObject();
+
+                var  result = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+
+                parser.SetBuffer(buffer.Array, result.Count);
+                while (writer.Read() == false)
+                {
+                    if (result.CloseStatus != null)
+                    {
+                        // we got incomplete json response.
+                        // This might happen if we close the connection but still server sends something
+                        if (result.CloseStatus != null)
+                            return null;
+                    }
+
+                    result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+
+                    parser.SetBuffer(buffer.Array, result.Count);
+                }
+                writer.FinalizeDocument();
+                return writer.CreateReader();
+            }
+        }
+
         private async Task GetServerResponse()
         {
             await _socketConnectionTask;
-            var closeBuffer = new byte[4096];
-            WebSocketReceiveResult result;
+
             string msg;
-            do
+            bool completed = false;
+            using (var context = new JsonOperationContext(_unmanagedBuffersPool))
             {
-                result = await _connection.ReceiveAsync(new ArraySegment<byte>(closeBuffer), _cts.Token);
-                if (result.MessageType != WebSocketMessageType.Text)
-                    break;
-                msg = Encoding.UTF8.GetString(closeBuffer, 0, result.Count);
-                _lastHeartbeat = SystemTime.UtcNow;
-            }
-            while (msg == "Heartbeat");
+                do
+                {
+                    using (var response =
+                        await TryReadFromWebSocket(context, _connection, "Bulk/Insert/GetServerResponse", _cts.Token))
+                    {
+                        if (response == null)
+                        {
+                            // we've got disconnection without receiving "Completed" message
+                            ReportProgress("Bulk insert aborted because connection with server was disrupted before acknowledging completion");
+                            throw new InvalidOperationException("Connection with server was disrupted before acknowledging completion");
+                        }
 
-            if (result.MessageType != WebSocketMessageType.Close)
-            {
-                msg = $"Received unexpected message from a server (expected only message about closing, and got message of type == {result.MessageType})";
-                ReportProgress(msg);
+                        string responseType;
+                        if (response.TryGet("Type", out responseType))
+                        {
+                            switch (responseType)
+                            {
+                                case "Error":
+                                    {
+                                        string exceptionString;
+                                        if (response.TryGet("Exception", out exceptionString) == false)
+                                            throw new InvalidOperationException("Invalid response from server " +
+                                                                                (response.ToString() ?? "null"));
+                                        msg =
+                                            $"Bulk insert aborted because of server-side exception. Exception information from server : {Environment.NewLine} {exceptionString}";
+                                        ReportProgress(msg);
+                                        await
+                                            SendCloseMessage(WebSocketCloseStatus.InternalServerError,
+                                                "Aborting bulk-insert because of server-side exception");
+                                    }
+                                    throw new BulkInsertAbortedExeption(msg);
 
-                try
-                {
-                    await _connection.CloseOutputAsync(WebSocketCloseStatus.ProtocolError, "Aborting bulk-insert because receiving unexpected response from server -> protocol violation", _cts.Token)
-                        .ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    //ignoring any errors here
-                }
-                throw new BulkInsertProtocolViolationExeption(msg);
+                                case "Processing":
+                                    // do nothing. this is hearbeat while server is really busy
+                                    break;
+
+                                case "Waiting":
+                                    if (_isThrottling)
+                                    {
+                                        _isThrottling = false;
+                                        _throttlingEvent.SetByAsyncCompletion();
+                                    }
+                                    break;
+
+                                case "Processed":
+                                    {
+                                        long processedSize;
+                                        if (response.TryGet("Size", out processedSize) == false)
+                                            throw new InvalidOperationException("Invalid Processed response from server " +
+                                                                                (response.ToString() ?? "null"));
+
+                                        if (_sentAccumulator - processedSize > _maxDiffSizeBeforeThrottling)
+                                        {
+                                            if (_isThrottling == false)
+                                            {
+                                                _throttlingEvent.Reset();
+                                                _isThrottling = true;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (_isThrottling)
+                                            {
+                                                _isThrottling = false;
+                                                _throttlingEvent.SetByAsyncCompletion();
+                                            }
+                                        }
+                                    }
+                                    break;
+
+                                case "Completed":
+                                    {
+                                        var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
+
+                                        var result =
+                                            await _connection.ReceiveAsync(buffer, _cts.Token).ConfigureAwait(false);
+
+                                        if (result.MessageType != WebSocketMessageType.Close)
+                                        {
+                                            msg =
+                                                $"Received unexpected message from a server (expected only message about closing, and got message of type == {result.MessageType})";
+                                            ReportProgress(msg);
+                                            await
+                                                SendCloseMessage(WebSocketCloseStatus.ProtocolError,
+                                                    "Aborting bulk-insert because receiving unexpected response from server -> protocol violation");
+                                            throw new BulkInsertProtocolViolationExeption(msg);
+                                        }
+                                    }
+                                    ReportProgress("Connection closed successfully");
+                                    completed = true;
+                                    break;
+                                default:
+                                    {
+                                        msg = "Received unexpected message from a server : " + responseType;
+                                        ReportProgress(msg);
+                                        await
+                                            SendCloseMessage(WebSocketCloseStatus.ProtocolError,
+                                                "Aborting bulk-insert because receiving unexpected response from server -> protocol violation");
+                                        throw new BulkInsertProtocolViolationExeption(msg);
+                                    }
+                            }
+                        }
+                        _lastHeartbeat = SystemTime.UtcNow;
+                    }
+                } while (completed == false);
             }
-            if (result.CloseStatus == WebSocketCloseStatus.InternalServerError)
-            {
-                var exceptionString = Encoding.UTF8.GetString(closeBuffer);
-                msg = $"Bulk insert aborted because of server-side exception. Exception information from server : {Environment.NewLine} {exceptionString}";
-                ReportProgress(msg);
-                try
-                {
-                    await _connection.CloseOutputAsync(WebSocketCloseStatus.InternalServerError, "Aborting bulk-insert because of server-side exception", _cts.Token)
-                        .ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    //ignoring any errors here
-                }
-                throw new BulkInsertAbortedExeption(msg);
-            }
-            ReportProgress("Connection closed successfully");
         }
 
         public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
         {
             _cts.Token.ThrowIfCancellationRequested();
-            
+
             await _socketConnectionTask.ConfigureAwait(false);
-            
+               
             if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
             {
-                await _getServerResponseTask;
+                await _getServerResponseTask.ConfigureAwait(false);
                 return;// we should never actually get here, the await will throw
             }
 
             if (_writeToServerTask.IsFaulted || _writeToServerTask.IsCanceled)
             {
-                await _getServerResponseTask;
+                await _getServerResponseTask.ConfigureAwait(false);
                 return;// we should never actually get here, the await will throw
             }
 
@@ -214,7 +325,7 @@ namespace Raven.Client.Document
                 // we can only get here if we closed the connection
                 throw new ObjectDisposedException(nameof(WebSocketBulkInsertOperation));
             }
-           
+
             metadata[Constants.MetadataDocId] = id;
             data[Constants.Metadata] = metadata;
 
@@ -233,9 +344,10 @@ namespace Raven.Client.Document
             _networkBuffer.TryGetBuffer(out segment);
 
             await _socketConnectionTask.ConfigureAwait(false);
+            await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token).ConfigureAwait(false);
 
-            await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
-                .ConfigureAwait(false);
+            _sentAccumulator += _networkBuffer.Length;
+
             ReportProgress($"Batch sent to {_url} (bytes count = {segment.Count})");
 
             _networkBuffer.SetLength(0);
@@ -258,14 +370,14 @@ namespace Raven.Client.Document
                     _documents.CompleteAdding();
                     try
                     {
-                        await _writeToServerTask;
+                        await _writeToServerTask.ConfigureAwait(false);
                     }
                     catch
                     {
-                        await SendCloseMessage("Error sending documents").ConfigureAwait(false);
+                        await SendCloseMessage(WebSocketCloseStatus.InternalServerError, "Error sending documents").ConfigureAwait(false);
                         throw;
                     }
-                    await SendCloseMessage("Finished bulk-insert").ConfigureAwait(false);
+                    await SendCloseMessage(WebSocketCloseStatus.InternalServerError, "Finished bulk-insert").ConfigureAwait(false);
 
                     //Make sure that if the server goes down 
                     //in the last moment, we do not get stuck here.
@@ -279,8 +391,9 @@ namespace Raven.Client.Document
                         var res = await Task.WhenAny(timeoutTask, _getServerResponseTask);
                         if (timeoutTask != res)
                             break;
-                        if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(30))
+                        if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(60))
                         {
+                            // TODO: Waited to much for close msg from server in bulk insert.. can happen in huge bulk insert ratios.
                             throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
                         }
                     }
@@ -301,16 +414,14 @@ namespace Raven.Client.Document
             }
         }
 
-        private async Task SendCloseMessage(string closeMessage)
+
+        private async Task SendCloseMessage(WebSocketCloseStatus msgType, string closeMessage)
         {
             if (_connection.State != WebSocketState.Open)
                 return;
             try
             {
-                await _connection.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
-                    closeMessage,
-                    _cts.Token)
-                    .ConfigureAwait(false);
+                await _connection.CloseOutputAsync(msgType, closeMessage, _cts.Token).ConfigureAwait(false);
             }
             catch (Exception)
             {

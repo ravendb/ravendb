@@ -4,16 +4,14 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.Abstractions.Extensions;
 
-namespace Raven.Abstractions.Linq
+namespace Raven.Client.Linq
 {
     public class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
     {
         public override string ToString()
         {
-            return String.Empty;
+            return string.Empty;
         }
 
         public bool IsExplicitNull { get; set; }

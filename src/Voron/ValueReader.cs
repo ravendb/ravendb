@@ -3,7 +3,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
-using Voron.Util;
 using Sparrow.Binary;
 
 namespace Voron
@@ -110,6 +109,7 @@ namespace Voron
             return val;
         }
 
+        //TODO: Move this to Sparrow Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long SwapBitShift(long value)
         {
@@ -212,32 +212,30 @@ namespace Voron
 
         public int CompareTo(ValueReader other)
         {
-            int r = CompareData(other, Math.Min(Length, other.Length));
+            int size = Math.Min(Length, other.Length);
+
+            int r = Memory.CompareInline(_val, other._val, size);
+
             if (r != 0)
                 return r;
 
             return Length - other.Length;
         }
 
-        private int CompareData(ValueReader other, int len)
-        {
-            return Memory.Compare(_val, other._val, len);
-        }
-
-        public Slice AsSlice()
+        public Slice AsSlice(ByteStringContext context)
         {
             if (_len >= ushort.MaxValue)
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
 
-            return new Slice(_val, (ushort)_len);
+            return Slice.From(context, _val, _len);
         }
 
-        public Slice AsPartialSlice(int removeFromEnd)
+        public Slice AsPartialSlice(ByteStringContext context, int removeFromEnd)
         {
             if (_len >= ushort.MaxValue)
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
 
-            return new Slice(_val, (ushort)(_len - removeFromEnd));
+            return Slice.From(context, _val, _len - removeFromEnd);
         }
     }
 }

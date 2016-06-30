@@ -19,7 +19,7 @@ namespace SlowTests.Core.Bundles
 {
     public class MoreLikeThis : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanUseBasicMoreLikeThis()
         {
             using (var store = await GetDocumentStore())
@@ -56,7 +56,7 @@ namespace SlowTests.Core.Bundles
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Transformers")]
         public async Task CanUseMoreLikeThisWithTransformer()
         {
             using (var store = await GetDocumentStore())
@@ -105,7 +105,7 @@ namespace SlowTests.Core.Bundles
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanUseMoreLikeThisWithIncludes()
         {
             using (var store = await GetDocumentStore())

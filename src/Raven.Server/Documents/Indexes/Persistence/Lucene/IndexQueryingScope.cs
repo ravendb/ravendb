@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_indexType.IsMapReduce())
                 return true;
 
-            if (_alreadySeenDocumentKeysInPreviousPage.Contains(document.Key))
+            if (_alreadySeenDocumentKeysInPreviousPage.Add(document.Key) == false)
             {
                 //_hasMultipleIndexOutputs = true;
                 return false;

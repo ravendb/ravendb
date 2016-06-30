@@ -1,9 +1,9 @@
 ﻿using Sparrow;
-using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Util;

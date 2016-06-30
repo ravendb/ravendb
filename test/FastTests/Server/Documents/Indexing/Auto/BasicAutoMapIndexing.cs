@@ -16,15 +16,14 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Constants = Raven.Abstractions.Data.Constants;
 
-namespace FastTests.Server.Documents.Indexing
+namespace FastTests.Server.Documents.Indexing.Auto
 {
-    public class BasicIndexing : RavenLowLevelTestBase
+    public class BasicAutoMapIndexing : RavenLowLevelTestBase
     {
         [Fact]
         public async Task CheckDispose()
@@ -96,7 +95,6 @@ namespace FastTests.Server.Documents.Indexing
         public void CanPersist()
         {
             var path = NewDataPath();
-            IndexDefinition indexDefinition3, indexDefinition4;
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var name1 = new IndexField
@@ -116,22 +114,6 @@ namespace FastTests.Server.Documents.Indexing
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 })));
 
-                indexDefinition3 = new IndexDefinition
-                {
-                    Name = "Users_ByName",
-                    Maps = { "from user in docs.Users select new { user.Name }" },
-                    Type = IndexType.Map
-                };
-                Assert.Equal(3,database.IndexStore.CreateIndex(indexDefinition3));
-
-                indexDefinition4 = new IndexDefinition
-                {
-                    Name = "Users_ByAge",
-                    Maps = { "from user in docs.Users select new { user.Age }" },
-                    Type = IndexType.Unknown
-                };
-                Assert.Equal(4, database.IndexStore.CreateIndex(indexDefinition4));
-
                 var index2 = database.IndexStore.GetIndex(2);
                 index2.SetLock(IndexLockMode.LockedError);
                 index2.SetPriority(IndexingPriority.Disabled);
@@ -145,7 +127,7 @@ namespace FastTests.Server.Documents.Indexing
                     .OrderBy(x => x.IndexId)
                     .ToList();
 
-                Assert.Equal(4, indexes.Count);
+                Assert.Equal(2, indexes.Count);
 
                 Assert.Equal(1, indexes[0].IndexId);
                 Assert.Equal(1, indexes[0].Definition.Collections.Length);
@@ -166,26 +148,6 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.False(indexes[1].Definition.MapFields["Name2"].Highlighted);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
-
-                Assert.Equal(3, indexes[2].IndexId);
-                Assert.Equal(IndexType.Map, indexes[3].Type);
-                Assert.Equal("Users_ByName", indexes[2].Name);
-                Assert.Equal(1, indexes[2].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[2].Definition.Collections[0]);
-                Assert.Equal(0, indexes[2].Definition.MapFields.Count);
-                Assert.Equal(IndexLockMode.Unlock, indexes[2].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Normal, indexes[2].Priority);
-                Assert.True(indexes[2].Definition.Equals(indexDefinition3, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
-
-                Assert.Equal(4, indexes[3].IndexId);
-                Assert.Equal(IndexType.Map, indexes[3].Type);
-                Assert.Equal("Users_ByAge", indexes[3].Name);
-                Assert.Equal(1, indexes[3].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[3].Definition.Collections[0]);
-                Assert.Equal(0, indexes[3].Definition.MapFields.Count);
-                Assert.Equal(IndexLockMode.Unlock, indexes[3].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Normal, indexes[3].Priority);
-                Assert.True(indexes[3].Definition.Equals(indexDefinition4, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
             }
         }
 
@@ -1138,11 +1100,6 @@ namespace FastTests.Server.Documents.Indexing
 
                 // TODO arek: verify that alert was created as well
             }
-        }
-
-        private static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)
-        {
-            return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
     }
 }

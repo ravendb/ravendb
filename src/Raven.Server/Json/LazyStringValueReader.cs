@@ -11,20 +11,20 @@ namespace Raven.Server.Json
     public unsafe class LazyStringReader : IDisposable
     {
         private readonly MmapStream _mmapStream = new MmapStream(null, 0);
-        private readonly StreamReader _reader;
+        private readonly LazyStringStreamReader _reader;
 
         private StringBuilder _sb;
         private char[] _readBuffer;
-        
+
         public LazyStringReader()
         {
-            _reader = new StreamReader(_mmapStream, Encoding.UTF8);
+            _reader = new LazyStringStreamReader(_mmapStream, Encoding.UTF8);
         }
 
         public TextReader GetTextReaderFor(LazyStringValue value)
         {
-            _mmapStream.Set(value.Buffer, value.Size);
             _reader.DiscardBufferedData();
+            _mmapStream.Set(value.Buffer, value.Size);
 
             return _reader;
         }
@@ -34,8 +34,8 @@ namespace Raven.Server.Json
             if (value == null)
                 return null;
 
-            _mmapStream.Set(value.Buffer, value.Size);
             _reader.DiscardBufferedData();
+            _mmapStream.Set(value.Buffer, value.Size);
 
             if (_readBuffer == null)
                 _readBuffer = new char[128];
@@ -59,8 +59,25 @@ namespace Raven.Server.Json
 
         public void Dispose()
         {
-            _reader.Dispose();
+            _reader.ForceDispose();
             _mmapStream.Dispose();
+        }
+
+        private class LazyStringStreamReader : StreamReader
+        {
+            public LazyStringStreamReader(Stream stream, Encoding encoding)
+                : base(stream, encoding)
+            {
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+            }
+
+            public void ForceDispose()
+            {
+                base.Dispose(true);
+            }
         }
     }
 }

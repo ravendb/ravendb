@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Xunit;
-using Voron;
+using Voron.Global;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Impl;
@@ -332,7 +332,7 @@ namespace FastTests.Voron.Storage
 
         private OverflowsAddResult AddOverflows(Transaction tx, Tree tree, int treeNumber, Random r)
         {
-            var minOverflowSize = tx.LowLevelTransaction.DataPager.NodeMaxSize - Constants.TreePageHeaderSize + 1;
+            var minOverflowSize = tx.LowLevelTransaction.DataPager.NodeMaxSize - Constants.NodeHeaderSize + 1;
             var entriesAdded = new List<string>();
             var overflowsAdded = 0;
 

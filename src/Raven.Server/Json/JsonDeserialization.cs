@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
@@ -15,6 +17,8 @@ namespace Raven.Server.Json
 {
     public static class JsonDeserialization
     {	
+        private static readonly Type[] EmptyTypes = new Type[0];
+
         public static readonly Func<BlittableJsonReaderObject, ReplicationClientConfiguration> ReplicationClientConfiguration = GenerateJsonDeserializationRoutine<ReplicationClientConfiguration>();
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
         public static readonly Func<BlittableJsonReaderObject, ReplicationDestination> ReplicationDestination = GenerateJsonDeserializationRoutine<ReplicationDestination>();
@@ -31,7 +35,10 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, SqlReplicationStatus> SqlReplicationStatus = GenerateJsonDeserializationRoutine<SqlReplicationStatus>();
 
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> SubscriptionCriteria = GenerateJsonDeserializationRoutine<SubscriptionCriteria>();
         public static readonly Func<BlittableJsonReaderObject, VersioningConfigurationCollection> VersioningConfigurationCollection = GenerateJsonDeserializationRoutine<VersioningConfigurationCollection>();
+
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionCriteriaOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
         public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
@@ -39,6 +46,10 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, PeriodicExportConfiguration> PeriodicExportConfiguration = GenerateJsonDeserializationRoutine<PeriodicExportConfiguration>();
         public static readonly Func<BlittableJsonReaderObject, PeriodicExportStatus> PeriodicExportStatus = GenerateJsonDeserializationRoutine<PeriodicExportStatus>();
         
+        public static readonly Func<BlittableJsonReaderObject, SpatialOptions> SpatialOptions = GenerateJsonDeserializationRoutine<SpatialOptions>();
+
+        public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
+
         public static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try
@@ -46,7 +57,7 @@ namespace Raven.Server.Json
                 var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
 
                 var vars = new Dictionary<Type, ParameterExpression>();
-                var instance = Expression.New(typeof(T).GetConstructor(new Type[0]));
+                var instance = Expression.New(typeof(T).GetConstructor(EmptyTypes));
                 var propInit = new List<MemberBinding>();
                 foreach (var propertyInfo in typeof(T).GetProperties())
                 {
@@ -77,11 +88,19 @@ namespace Raven.Server.Json
             if (type == typeof(string) ||
                 type == typeof(bool) ||
                 type == typeof(long) ||
+                type == typeof(int) ||
+                type == typeof(double) ||
                 type.GetTypeInfo().IsEnum)
             {
                 var value = GetParameter(propertyInfo.PropertyType, vars);
-                var genericType = propertyInfo.PropertyType != typeof(string) ? new[] { propertyInfo.PropertyType } : new Type[0];
-                var tryGet = Expression.Call(json, "TryGet", genericType, Expression.Constant(propertyInfo.Name), value);
+
+                Type[] genericTypes;
+                if (type == typeof(string) || type == typeof(double)) // we support direct conversion to these types
+                    genericTypes = EmptyTypes;
+                else
+                    genericTypes = new[] { propertyInfo.PropertyType };
+
+                var tryGet = Expression.Call(json, nameof(BlittableJsonReaderObject.TryGet), genericTypes, Expression.Constant(propertyInfo.Name), value);
                 return Expression.Condition(tryGet, value, Expression.Default(propertyInfo.PropertyType));
             }
 
@@ -115,6 +134,11 @@ namespace Raven.Server.Json
                 return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListReplicationDestination)), json, Expression.Constant(propertyInfo.Name));
             }
 
+            if (propertyInfo.PropertyType == typeof(HashSet<string>))
+            {
+                return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToHashSetOfString)), json, Expression.Constant(propertyInfo.Name));
+            }
+
             // TODO: Do not duplicate, use the same as #1
             var converterField = typeof(JsonDeserialization).GetField(propertyInfo.PropertyType.Name, BindingFlags.Static | BindingFlags.Public);
             if (converterField != null)
@@ -127,7 +151,7 @@ namespace Raven.Server.Json
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyInfo.Name), constantExpression);
             }
 
-            throw new InvalidOperationException("We wasn't able to convert the value: ");
+            throw new InvalidOperationException($"We weren't able to convert the property '{propertyInfo.Name}' of type '{type}'.");
         }
 
         private static ParameterExpression GetParameter(Type type, Dictionary<Type, ParameterExpression> vars)
@@ -178,6 +202,20 @@ namespace Raven.Server.Json
                 }
             }
             return dic;
+        }
+
+        public static HashSet<string> ToHashSetOfString(BlittableJsonReaderObject json, string name)
+        {
+            var hashSet = new HashSet<string>();
+
+            BlittableJsonReaderArray jsonArray;
+            if (json.TryGet(name, out jsonArray) == false || jsonArray == null)
+                return hashSet;
+
+            foreach (var value in jsonArray)
+                hashSet.Add(value.ToString());
+
+            return hashSet;
         }
 
         public static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()

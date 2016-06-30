@@ -7,8 +7,8 @@ using Voron;
 namespace FastTests.Voron.Bugs
 {
     public class MultiAdds
-	{
-		readonly Random _random = new Random(1234);
+    {
+        readonly Random _random = new Random(1234);
 
         private string RandomString(int size)
         {
@@ -21,40 +21,40 @@ namespace FastTests.Voron.Bugs
             return builder.ToString();
         }
 
-		[Fact]
-		public void SplitterIssue()
-		{
-			const int DocumentCount = 10;
+        [Fact]
+        public void SplitterIssue()
+        {
+            const int DocumentCount = 10;
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-			{
-				var rand = new Random();
-				var testBuffer = new byte[168];
-				rand.NextBytes(testBuffer);
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            {
+                var rand = new Random();
+                var testBuffer = new byte[168];
+                rand.NextBytes(testBuffer);
 
-				var multiTrees = CreateTrees(env, 1, "multitree");
+                var multiTrees = CreateTrees(env, 1, "multitree");
 
-				for (var i = 0; i < 50; i++)
-				{
-					AddMultiRecords(env, multiTrees, DocumentCount, true);
+                for (var i = 0; i < 50; i++)
+                {
+                    AddMultiRecords(env, multiTrees, DocumentCount, true);
 
-					ValidateMultiRecords(env, multiTrees, DocumentCount, i + 1);
-				}
-			}
-		}
+                    ValidateMultiRecords(env, multiTrees, DocumentCount, i + 1);
+                }
+            }
+        }
 
-		[Fact]
-		public void SplitterIssue2()
-		{
-			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
-			storageEnvironmentOptions.ManualFlushing = true;
-			using (var env = new StorageEnvironment(storageEnvironmentOptions))
-			{
-				using (var tx = env.WriteTransaction())
-				{
-					tx.CreateTree(  "multi");
-					tx.Commit();
-				}
+        [Fact]
+        public void SplitterIssue2()
+        {
+            var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+            storageEnvironmentOptions.ManualFlushing = true;
+            using (var env = new StorageEnvironment(storageEnvironmentOptions))
+            {
+                using (var tx = env.WriteTransaction())
+                {
+                    tx.CreateTree(  "multi");
+                    tx.Commit();
+                }
 
                 using (var tx = env.WriteTransaction())
                 {
@@ -71,22 +71,22 @@ namespace FastTests.Voron.Bugs
                 }
 
 
-				using (var tx = env.ReadTransaction())
-				{
-					var tree = tx.CreateTree("multi");
-					using (var iterator = tree.MultiRead("0"))
-					{
-						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+                using (var tx = env.ReadTransaction())
+                {
+                    var tree = tx.CreateTree("multi");
+                    using (var iterator = tree.MultiRead("0"))
+                    {
+                        Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
-						var count = 0;
-						do
-						{
-							count++;
-						} while (iterator.MoveNext());
+                        var count = 0;
+                        do
+                        {
+                            count++;
+                        } while (iterator.MoveNext());
 
-						Assert.Equal(1, count);
-					}
-				}
+                        Assert.Equal(1, count);
+                    }
+                }
 
                 using (var tx = env.WriteTransaction())
                 {
@@ -104,35 +104,35 @@ namespace FastTests.Voron.Bugs
 
 
 
-				using (var tx = env.ReadTransaction())
-				{
-					var tree = tx.CreateTree("multi");
-					using (var iterator = tree.MultiRead("0"))
-					{
-						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+                using (var tx = env.ReadTransaction())
+                {
+                    var tree = tx.CreateTree("multi");
+                    using (var iterator = tree.MultiRead("0"))
+                    {
+                        Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
-						var count = 0;
-						do
-						{
-							count++;
-						} while (iterator.MoveNext());
+                        var count = 0;
+                        do
+                        {
+                            count++;
+                        } while (iterator.MoveNext());
 
-						Assert.Equal(2, count);
-					}
-				}
-			}
-		}
+                        Assert.Equal(2, count);
+                    }
+                }
+            }
+        }
 
-		[Fact]
-		public void CanAddMultiValuesUnderTheSameKeyToBatch()
-		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-			{
-				var rand = new Random();
-				var testBuffer = new byte[168];
-				rand.NextBytes(testBuffer);
+        [Fact]
+        public void CanAddMultiValuesUnderTheSameKeyToBatch()
+        {
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            {
+                var rand = new Random();
+                var testBuffer = new byte[168];
+                rand.NextBytes(testBuffer);
 
-				CreateTrees(env, 1, "multitree");
+                CreateTrees(env, 1, "multitree");
 
                 using (var tx = env.WriteTransaction())
                 {
@@ -145,53 +145,53 @@ namespace FastTests.Voron.Bugs
                 }
 
 
-				using (var tx = env.ReadTransaction())
-				{
-					var tree = tx.CreateTree("multitree0");
-					using (var it = tree.MultiRead("key"))
-					{
-						Assert.True(it.Seek(Slice.BeforeAllKeys));
+                using (var tx = env.ReadTransaction())
+                {
+                    var tree = tx.CreateTree("multitree0");
+                    using (var it = tree.MultiRead("key"))
+                    {
+                        Assert.True(it.Seek(Slices.BeforeAllKeys));
 
-						Assert.Equal("value1", it.CurrentKey.ToString());
-						Assert.True(it.MoveNext());
+                        Assert.Equal("value1", it.CurrentKey.ToString());
+                        Assert.True(it.MoveNext());
 
-						Assert.Equal("value2", it.CurrentKey.ToString());
-					}
-				}
-			}
-		}
+                        Assert.Equal("value2", it.CurrentKey.ToString());
+                    }
+                }
+            }
+        }
 
-		private void ValidateMultiRecords(StorageEnvironment env, IEnumerable<string> trees, int documentCount, int i)
-		{
-			using (var tx = env.ReadTransaction())
-			{
-				for (var j = 0; j < 10; j++)
-				{
-					
-					foreach (var treeName in trees)
-					{
-					    var tree = tx.CreateTree(treeName);
-						using (var iterator = tree.MultiRead((j % 10).ToString()))
-						{
-							Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+        private void ValidateMultiRecords(StorageEnvironment env, IEnumerable<string> trees, int documentCount, int i)
+        {
+            using (var tx = env.ReadTransaction())
+            {
+                for (var j = 0; j < 10; j++)
+                {
+                    
+                    foreach (var treeName in trees)
+                    {
+                        var tree = tx.CreateTree(treeName);
+                        using (var iterator = tree.MultiRead((j % 10).ToString()))
+                        {
+                            Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
-							var count = 0;
-							do
-							{
-								count++;
-							}
-							while (iterator.MoveNext());
+                            var count = 0;
+                            do
+                            {
+                                count++;
+                            }
+                            while (iterator.MoveNext());
 
-							Assert.Equal((i * documentCount) / 10, count);
-						}
-					}
-				}
-			}
-		}
-		private void AddMultiRecords(StorageEnvironment env, IList<string> trees, int documentCount, bool sequential)
-		{
-		    using (var tx = env.WriteTransaction())
-		    {
+                            Assert.Equal((i * documentCount) / 10, count);
+                        }
+                    }
+                }
+            }
+        }
+        private void AddMultiRecords(StorageEnvironment env, IList<string> trees, int documentCount, bool sequential)
+        {
+            using (var tx = env.WriteTransaction())
+            {
                 var key = Guid.NewGuid().ToString();
 
                 for (int i = 0; i < documentCount; i++)
@@ -207,23 +207,23 @@ namespace FastTests.Voron.Bugs
                 tx.Commit();
             }
 
-		}
+        }
 
-		private IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)
-		{
-			var results = new List<string>();
+        private IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)
+        {
+            var results = new List<string>();
 
-			using (var tx = env.WriteTransaction())
-			{
-				for (var i = 0; i < number; i++)
-				{
-					results.Add(tx.CreateTree( prefix + i).Name);
-				}
+            using (var tx = env.WriteTransaction())
+            {
+                for (var i = 0; i < number; i++)
+                {
+                    results.Add(tx.CreateTree( prefix + i).Name);
+                }
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			return results;
-		}
-	}
+            return results;
+        }
+    }
 }

@@ -7,6 +7,7 @@ using Raven.Client.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Sorting;
 

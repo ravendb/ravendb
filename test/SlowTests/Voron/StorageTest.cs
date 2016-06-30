@@ -7,6 +7,8 @@ using FastTests;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
+using Voron.Global;
+using Sparrow;
 
 namespace SlowTests.Voron
 {
@@ -15,6 +17,8 @@ namespace SlowTests.Voron
         private StorageEnvironment _storageEnvironment;
         protected StorageEnvironmentOptions _options;
         protected readonly string DataDir = GenerateDataDir();
+
+        private ByteStringContext _allocator = new ByteStringContext();
 
         public static string GenerateDataDir()
         {
@@ -38,6 +42,11 @@ namespace SlowTests.Voron
                 }
                 return _storageEnvironment;
             }
+        }
+
+        protected ByteStringContext Allocator
+        {
+            get { return _allocator; }
         }
 
         protected StorageTest(StorageEnvironmentOptions options)
@@ -162,7 +171,7 @@ namespace SlowTests.Voron
             return results;
         }
 
-        protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key)
+        protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key) 
         {
             TreeNodeHeader* node;
             var p = tree.FindPageFor(key, out node);
@@ -171,13 +180,12 @@ namespace SlowTests.Voron
             if (node == null)
                 return null;
 
-            var item1 = p.GetNodeKey(node).ToSlice();
+            var item1 = TreeNodeHeader.ToSlicePtr(txh.Allocator, node);
 
-            if (item1.Compare(key) != 0)
+            if (SliceComparer.CompareInline(item1,key) != 0)
                 return null;
-            return Tuple.Create(item1,
-                new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize,
-                    (ushort)node->DataSize));
+
+            return Tuple.Create(item1, Slice.External( txh.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort)node->DataSize, ByteStringType.Immutable));
         }
     }
 }

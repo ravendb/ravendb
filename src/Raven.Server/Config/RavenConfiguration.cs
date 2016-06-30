@@ -6,8 +6,8 @@ using Microsoft.Extensions.Configuration;
 
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-using Sparrow.Platform;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
+using Sparrow;
 
 namespace Raven.Server.Config
 {
@@ -75,6 +75,7 @@ namespace Raven.Server.Config
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
             Patching = new PatchingConfiguration();
+            DebugLog = new DebugLoggingConfiguration();
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
             Memory = new MemoryConfiguration();
@@ -86,6 +87,8 @@ namespace Raven.Server.Config
             Tombstones = new TombstoneConfiguration();
         }
 
+        public DebugLoggingConfiguration DebugLog { get; set; }
+
         public string DatabaseName { get; set; }
 
         public RavenConfiguration Initialize()
@@ -94,6 +97,7 @@ namespace Raven.Server.Config
             Replication.Initialize(Settings);
             Queries.Initialize(Settings);
             Patching.Initialize(Settings);
+            DebugLog.Initialize(Settings);
             BulkInsert.Initialize(Settings);
             Server.Initialize(Settings);
             Memory.Initialize(Settings);

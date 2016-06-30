@@ -1,12 +1,11 @@
 ﻿using Sparrow;
-using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow.Compression;
+using Voron.Global;
 using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
@@ -20,8 +19,8 @@ namespace Voron.Impl.Journal
             public int NumberOfOverflowPages = -1;
         }
 
-        private readonly IVirtualPager _pager;
-        private readonly IVirtualPager _recoveryPager;
+        private readonly AbstractPager _pager;
+        private readonly AbstractPager _recoveryPager;
 
         private readonly long _lastSyncedTransactionId;
         private long _readingPage;
@@ -36,7 +35,7 @@ namespace Voron.Impl.Journal
             get { return _readingPage; }
         }
 
-        public JournalReader(IVirtualPager pager, IVirtualPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous, int recoverPage = 0)
+        public JournalReader(AbstractPager pager, AbstractPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous, int recoverPage = 0)
         {
             RequireHeaderUpdate = false;
             _pager = pager;

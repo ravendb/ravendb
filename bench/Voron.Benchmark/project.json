@@ -1,6 +1,4 @@
 ﻿{
-  "version": "4.0.0-*",
-
   "buildOptions": {
     "allowUnsafe": true,
     "emitEntryPoint": true,
@@ -9,7 +7,9 @@
       "include": [ "**/*.cs" ]
     }
   },
-
+  "commands": {
+    "Voron.Benchmark": "Voron.Benchmark"
+  },
   "configurations": {
     "Release": {
       "buildOptions": {
@@ -19,27 +19,21 @@
   },
 
   "dependencies": {
+    "Microsoft.CSharp": "4.0.1",
     "Voron": "4.0.0-*"
-  },
-
-  "commands": {
-    "Voron.Benchmark": "Voron.Benchmark"
   },
 
   "frameworks": {
     "netcoreapp1.0": {
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-rc2-*",
-        "NETStandard.Library": "1.5.0-rc2-*",
-
         "Microsoft.NETCore.App": {
           "type": "platform",
-          "version": "1.0.0-rc2-*"
+          "version": "1.0.0"
         }
       },
-      "imports": [
-        "dotnet5.4"
-      ]
+      "imports": "dnxcore50"
     }
-  }
+  },
+
+  "version": "4.0.0-*"
 }

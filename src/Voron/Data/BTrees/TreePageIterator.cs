@@ -1,4 +1,5 @@
 using System;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
@@ -8,18 +9,18 @@ namespace Voron.Data.BTrees
         private readonly Slice _treeKey;
         private readonly Tree _parent;
         private readonly TreePage _page;
-        private readonly bool _allowWritable;
-        private Slice _currentKey = new Slice(SliceOptions.Key);
-        private Slice _currentInternalKey;
+        private readonly LowLevelTransaction _tx;
+
+        private Slice _currentKey = default(Slice);
+        private Slice _currentInternalKey = default(Slice);
         private bool _disposed;
 
-        public TreePageIterator(Slice treeKey, Tree parent, TreePage page, bool allowWritable)
+        public TreePageIterator(LowLevelTransaction tx, Slice treeKey, Tree parent, TreePage page)
         {
+            _tx = tx;
             _treeKey = treeKey;
             _parent = parent;
             _page = page;
-            _allowWritable = allowWritable;
-            _currentInternalKey = page.CreateNewEmptyKey();
         }
 
         public void Dispose()
@@ -33,14 +34,17 @@ namespace Voron.Data.BTrees
         {
             if(_disposed)
                 throw new ObjectDisposedException("PageIterator");
-            var current = _page.Search(key);
+            var current = _page.Search(_tx, key);
             if (current == null)
                 return false;
 
-            _page.SetNodeKey(current, ref _currentInternalKey);
-            _currentKey = _currentInternalKey.ToSlice();
+            _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current);
+            _currentKey = _currentInternalKey;
 
-            return this.ValidateCurrentKey(current, _page);
+            if (DoRequireValidation)
+                return this.ValidateCurrentKey(_tx, current);
+
+            return true;
         }
 
         public TreeNodeHeader* Current
@@ -77,8 +81,33 @@ namespace Voron.Data.BTrees
         }
 
 
-        public Slice RequiredPrefix { get; set; }
-        public Slice MaxKey { get; set; }
+       private bool _requireValidation;
+        public bool DoRequireValidation
+        {
+            get { return _requireValidation; }
+        }
+
+        private Slice _requiredPrefix;
+        public Slice RequiredPrefix
+        {
+            get { return _requiredPrefix; }
+            set
+            {
+                _requiredPrefix = value;
+                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
+            }
+        }
+
+        private Slice _maxKey;
+        public Slice MaxKey
+        {
+            get { return _maxKey; }
+            set
+            {
+                _maxKey = value;
+                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
+            }
+        }
 
         public bool MoveNext()
         {
@@ -110,12 +139,13 @@ namespace Voron.Data.BTrees
                 return false;
 
             var current = _page.GetNode(_page.LastSearchPosition);
-            if (this.ValidateCurrentKey(current, _page) == false)
+            if (DoRequireValidation && this.ValidateCurrentKey(_tx, current) == false)
             {
                 return false;
             }
-            _page.SetNodeKey(current, ref _currentInternalKey);
-            _currentKey = _currentInternalKey.ToSlice();
+
+            _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current);
+            _currentKey = _currentInternalKey;
             return true;
         }
 
@@ -126,18 +156,5 @@ namespace Voron.Data.BTrees
         }
 
         public event Action<IIterator> OnDisposal;
-
-        public bool DeleteCurrentAndMoveNext()
-        {
-            if(_allowWritable == false)
-                throw new InvalidOperationException("Cannot modify a tree page iterator that wasn't marked as writable");
-            _page.RemoveNode(_page.LastSearchPosition);
-            if (_page.NumberOfEntries == 0)
-            {
-                _parent.Delete(_treeKey);
-                return false;
-            }
-            return TrySetPosition();
-        }
     }
 }

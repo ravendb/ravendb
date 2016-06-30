@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * lodash 3.3.1 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern -o ./lodash.js`
@@ -7195,7 +7195,7 @@
      * @category Function
      * @param {Function} func The function to debounce.
      * @param {number} [wait=0] The number of milliseconds to delay.
-     * @param {Object} [options] The options object.
+     * @param {Object} [options] The currentConnectedClientConnectionOptions object.
      * @param {boolean} [options.leading=false] Specify invoking on the leading
      *  edge of the timeout.
      * @param {number} [options.maxWait] The maximum time `func` is allowed to be
@@ -7774,7 +7774,7 @@
      * @category Function
      * @param {Function} func The function to throttle.
      * @param {number} [wait=0] The number of milliseconds to throttle invocations to.
-     * @param {Object} [options] The options object.
+     * @param {Object} [options] The currentConnectedClientConnectionOptions object.
      * @param {boolean} [options.leading=true] Specify invoking on the leading
      *  edge of the timeout.
      * @param {boolean} [options.trailing=true] Specify invoking on the trailing
@@ -10028,7 +10028,7 @@
      * @memberOf _
      * @category String
      * @param {string} [string=''] The template string.
-     * @param {Object} [options] The options object.
+     * @param {Object} [options] The currentConnectedClientConnectionOptions object.
      * @param {RegExp} [options.escape] The HTML "escape" delimiter.
      * @param {RegExp} [options.evaluate] The "evaluate" delimiter.
      * @param {Object} [options.imports] An object to import into the template as free variables.
@@ -10312,7 +10312,7 @@
      * @memberOf _
      * @category String
      * @param {string} [string=''] The string to truncate.
-     * @param {Object|number} [options] The options object or maximum string length.
+     * @param {Object|number} [options] The currentConnectedClientConnectionOptions object or maximum string length.
      * @param {number} [options.length=30] The maximum string length.
      * @param {string} [options.omission='...'] The string to indicate text is omitted.
      * @param {RegExp|string} [options.separator] The separator pattern to truncate to.
@@ -10639,7 +10639,7 @@
      * @category Utility
      * @param {Function|Object} [object=this] object The destination object.
      * @param {Object} source The object of functions to add.
-     * @param {Object} [options] The options object.
+     * @param {Object} [options] The currentConnectedClientConnectionOptions object.
      * @param {boolean} [options.chain=true] Specify whether the functions added
      *  are chainable.
      * @returns {Function|Object} Returns `object`.

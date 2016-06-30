@@ -14,10 +14,11 @@ using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
-using Sparrow.Platform;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -109,9 +110,6 @@ namespace Raven.Server.Documents.Indexes
                 var indexId = _indexes.GetNextIndexId();
 
                 Index index;
-
-                if (definition.Type == IndexType.Unknown)
-                    definition.Type = definition.DetectIndexType();
 
                 switch (definition.Type)
                 {
@@ -300,9 +298,9 @@ namespace Raven.Server.Documents.Indexes
                 {
                     index.Dispose();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    //TODO [ppekrol] log
+                    Log.ErrorException($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
 
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
@@ -420,6 +418,10 @@ namespace Raven.Server.Documents.Indexes
                         var autoMapIndex = (AutoMapIndex)index;
                         var autoMapIndexDefinition = autoMapIndex.Definition;
                         return CreateIndex(autoMapIndexDefinition);
+                    case IndexType.Map:
+                        var staticMapIndex = (StaticMapIndex)index;
+                        var staticMapIndexDefinition = staticMapIndex.Definition.IndexDefinition;
+                        return CreateIndex(staticMapIndexDefinition);
                     default:
                         throw new NotSupportedException(index.Type.ToString());
                 }

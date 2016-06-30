@@ -1,11 +1,12 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Voron.Exceptions;
-using Voron.Impl;
+using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Util;
@@ -65,18 +66,19 @@ namespace Voron.Platform.Win32
             _nativeOverlapped->OffsetHigh = (int) (position >> 32);
             _nativeOverlapped->EventHandle = IntPtr.Zero;
 
-            PreparePagesToWrite(pages);            
-          
+            PreparePagesToWrite(pages);
+            var sp = Stopwatch.StartNew();
             // WriteFileGather will only be able to write x pages of size GetSystemInfo().dwPageSize. Usually that is 4096 (4kb). If you are
             // having trouble with this method, ensure that this value havent changed for your environment. 
             var operationCompleted = Win32NativeFileMethods.WriteFileGather(_handle, _segments, (uint)(physicalPages * PhysicalPageSize), IntPtr.Zero, _nativeOverlapped);
 
             uint lpNumberOfBytesWritten;
-
+            var sizeToWrite = physicalPages*PhysicalPageSize;
             if (operationCompleted)
             {
                 if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
                     throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                // TODO : Measure IO times (RavenDB-4659) - Wrote  {sizeToWrite/1024:#,#} kb in {sp.ElapsedMilliseconds:#,#} ms
                 return;
             }
 
@@ -86,6 +88,7 @@ namespace Voron.Platform.Win32
                 case Win32NativeFileMethods.ErrorIOPending:
                     if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
                         throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                    // TODO : Measure IO times (RavenDB-4659) - Wrote  {sizeToWrite/1024:#,#} kb in {sp.ElapsedMilliseconds:#,#} ms
                     break;
                 default:
                     throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
@@ -144,7 +147,7 @@ namespace Voron.Platform.Win32
         public int NumberOfAllocatedPages { get; }
         public bool DeleteOnClose { get; set; }
 
-        public IVirtualPager CreatePager()
+        public AbstractPager CreatePager()
         {
             return new Win32MemoryMapPager(_options.PageSize,_filename);
         }
@@ -204,14 +207,18 @@ namespace Voron.Platform.Win32
             _nativeOverlapped->OffsetHigh = (int)(position >> 32);
             _nativeOverlapped->EventHandle = IntPtr.Zero;
 
+
+            var sp = Stopwatch.StartNew();
             var operationCompleted = Win32NativeFileMethods.WriteFile(_handle, srcPointer, sizeToWrite, out written, _nativeOverlapped);
 
             uint lpNumberOfBytesWritten;
 
             if (operationCompleted)
             {
+
                 if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
                     throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                // TODO : Measure IO times (RavenDB-4659) - Wrote {sizeToWrite/1024:#,#} kb in {sp.ElapsedMilliseconds:#,#} ms
                 return;
             }
 
@@ -221,6 +228,7 @@ namespace Voron.Platform.Win32
                 case Win32NativeFileMethods.ErrorIOPending:
                     if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
                         throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                    // TODO : Measure IO times (RavenDB-4659) - Wrote  {sizeToWrite / 1024:#,#} kb in {sp.ElapsedMilliseconds:#,#} ms
                     break;
                 default:
                     throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));

@@ -71,9 +71,9 @@ namespace SlowTests.Voron
 
             using (var snapshot = Env.ReadTransaction())
             {
-                using (var iterator = snapshot.ReadTree(TestTreeName).Iterate())
+                using (var iterator = snapshot.ReadTree(TestTreeName).Iterate(false))
                 {
-                    Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+                    Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
                     do
                     {

@@ -6,11 +6,9 @@
 
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Sparrow.Compression;
@@ -18,23 +16,22 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
-using Voron.Platform.Posix;
-using Voron.Platform.Win32;
 using Voron.Util;
+using Voron.Global;
 
 namespace Voron.Impl.Journal
 {
     public unsafe class WriteAheadJournal : IDisposable
     {
         private readonly StorageEnvironment _env;
-        private readonly IVirtualPager _dataPager;
+        private readonly AbstractPager _dataPager;
 
         private long _currentJournalFileSize;
         private DateTime _lastFile;
 
         private long _journalIndex = -1;
 
-        private bool disposed;
+        private bool _disposed;
 
         private readonly LZ4 _lz4 = new LZ4();
         private readonly JournalApplicator _journalApplicator;
@@ -44,7 +41,7 @@ namespace Voron.Impl.Journal
         internal JournalFile CurrentFile;
 
         private readonly HeaderAccessor _headerAccessor;
-        private readonly IVirtualPager _compressionPager;
+        private readonly AbstractPager _compressionPager;
 
         private LazyTransactionBuffer _lazyTransactionBuffer;
 
@@ -262,7 +259,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private void RecoverCurrentJournalSize(IVirtualPager pager)
+        private void RecoverCurrentJournalSize(AbstractPager pager)
         {
             var journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * pager.PageSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
@@ -316,14 +313,14 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
-            if (disposed)
+            if (_disposed)
                 return;
-            disposed = true;
+            _disposed = true;
 
             // we cannot dispose the journal until we are done with all of the pending writes
             if (_lazyTransactionBuffer != null)
             {
-                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile, null);
                 _lazyTransactionBuffer.Dispose();
             }
             _compressionPager.Dispose();
@@ -433,9 +430,9 @@ namespace Voron.Impl.Journal
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
                 bool lockTaken = false;
-
                 try
                 {
+                    _waj._env.IsFlushingScratchBuffer = true;
                     Monitor.TryEnter(_flushingLock, Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30), ref lockTaken);
 
                     if (lockTaken == false)
@@ -558,26 +555,46 @@ namespace Voron.Impl.Journal
                         _journalsToDelete.Add(unused.Number, unused);
                     }
 
-                    using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
+                    var timeout = TimeSpan.FromSeconds(3);
+                    bool tryEnterReadLock = false;
+                    if (alreadyInWriteTx == false)
+                        tryEnterReadLock = _waj._env.FlushInProgressLock.TryEnterWriteLock(timeout);
+                    try
                     {
-                        _lastSyncedJournal = lastProcessedJournal;
-                        _lastSyncedTransactionId = lastFlushedTransactionId;
-
-                        _lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
-                        
-                        if (unusedJournals.Count > 0)
+                        using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
-                            var lastUnusedJournalNumber = unusedJournals.Last().Number;
-                            _waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber);
+                            _lastSyncedJournal = lastProcessedJournal;
+                            _lastSyncedTransactionId = lastFlushedTransactionId;
+
+                            _lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
+
+                            if (unusedJournals.Count > 0)
+                            {
+                                var lastUnusedJournalNumber = unusedJournals.Last().Number;
+                                _waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber);
+                            }
+
+                            if (_waj._files.Count == 0)
+                                _waj.CurrentFile = null;
+
+                            FreeScratchPages(unusedJournals, txw ?? transaction);
+
+                            if (txw != null)
+                            {
+                                // we force a dummy change to a page, so when we commit, this will be written to the journal
+                                // as well as force us to generate a new transaction id, which will mean that the next time
+                                // that we run, we have freed lazy transactions, we have freed all the pages that were freed
+                                // in this transaction
+                                txw.ModifyPage(0);
+
+                                txw.Commit();
+                            }
                         }
-
-                        if (_waj._files.Count == 0)
-                            _waj.CurrentFile = null;
-
-                        FreeScratchPages(unusedJournals, txw ?? transaction);
-
-                        if (txw != null)
-                            txw.Commit();
+                    }
+                    finally
+                    {
+                        if(tryEnterReadLock)
+                            _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
                     
                     if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
@@ -591,6 +608,7 @@ namespace Voron.Impl.Journal
                 {
                     if(lockTaken)
                         Monitor.Exit(_flushingLock);
+                    _waj._env.IsFlushingScratchBuffer = false;
                 }
             }
 
@@ -782,9 +800,17 @@ namespace Voron.Impl.Journal
                 get { return Monitor.IsEntered(_flushingLock); }
             }
 
-            public IDisposable TryTakeFlushingLock(ref bool lockTaken)
+            public IDisposable TryTakeFlushingLock(ref bool lockTaken, TimeSpan? timeout = null)
             {
-                Monitor.TryEnter(_flushingLock, ref lockTaken);
+                if (timeout == null)
+                {
+                    Monitor.TryEnter(_flushingLock, ref lockTaken);
+                }
+                else
+                {
+                    Monitor.TryEnter(_flushingLock, timeout.Value, ref lockTaken);
+                }
+
                 bool localLockTaken = lockTaken;
 
                 ignoreLockAlreadyTaken = true;
@@ -827,8 +853,9 @@ namespace Voron.Impl.Journal
                 if (current.Number != _lastSyncedJournal)
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
 
-                if(_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
-                    throw new InvalidOperationException();
+              
+                if(_waj._env.NextWriteTransactionId - 2 /* we also need to count write tx created for flushing purposes */ != _lastSyncedTransactionId)
+                    throw new InvalidOperationException("Cannot delete current journal because it hasn't synced everything up to the last write transaction");
                     
                 _waj._files = _waj._files.RemoveFront(1);
                 _waj.CurrentFile = null;
@@ -851,20 +878,20 @@ namespace Voron.Impl.Journal
 
             if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
             {
-                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                 CurrentFile = NextFile(pages.Length);
             }
 
-            CurrentFile.Write(tx, pages, _lazyTransactionBuffer);
+            CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
 
             if (CurrentFile.AvailablePages == 0)
             {
-                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                 CurrentFile = null;
             }
         }
 
-        private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, IVirtualPager compressionPager)
+        private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, AbstractPager compressionPager)
         {
             // numberOfPages include the tx header page, which we don't compress
             var dataPagesCount = numberOfPages - 1;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +7,9 @@ using System.Linq;
 using Lucene.Net.Documents;
 
 using Raven.Abstractions.Data;
-
+using Raven.Client.Linq;
+using Raven.Json.Linq;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -52,7 +55,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private PropertyAccessor GetPropertyAccessor(object document)
         {
             var type = document.GetType();
-            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create(type));
+            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
+        }
+
+        public static bool ShouldTreatAsEnumerable(object item)
+        {
+            if (item == null)
+                return false;
+
+            if (item is DynamicDocumentObject)
+                return false;
+
+            if (item is string || item is LazyStringValue)
+                return false;
+
+            if (item is IDictionary)
+                return false;
+
+            return true;
         }
     }
 }

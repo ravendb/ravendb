@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
 using Voron.Data;
 using Voron.Data.BTrees;
-using Voron.Impl;
+using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Xunit;

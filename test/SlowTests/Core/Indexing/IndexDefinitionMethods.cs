@@ -1,9 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
-
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -97,7 +97,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanUseRecurse()
         {
             using (var store = await GetDocumentStore())

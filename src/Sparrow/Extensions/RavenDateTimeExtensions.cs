@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Extensions
 {

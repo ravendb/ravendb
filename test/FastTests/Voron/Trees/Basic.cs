@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Xunit;
 using Voron;
-using Voron.Impl;
+using Voron.Global;
 
 namespace FastTests.Voron.Trees
 {
@@ -62,9 +62,9 @@ namespace FastTests.Voron.Trees
                 tree.Add("a", StreamFor("1"));
                 var actual = tree.Read("a");
 
-                using (var it = tree.Iterate())
+                using (var it = tree.Iterate(false))
                 {
-                    Assert.True(it.Seek("a"));
+                    Assert.True(it.Seek(Slice.From(tx.Allocator, "a")));
                     Assert.Equal("a", it.CurrentKey.ToString());
                 }
 
@@ -77,7 +77,7 @@ namespace FastTests.Voron.Trees
         {
             using (var tx = Env.WriteTransaction())
             {
-                Slice key = "test";
+                Slice key = Slice.From(tx.Allocator, "test");
                 var tree = tx.CreateTree("foo");
                 tree.Add(key, StreamFor("value"));
 
@@ -131,11 +131,11 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                using (var it = tree.Iterate())
+                using (var it = tree.Iterate(false))
                 {
                     for (int i = 0; i < count; i++)
                     {
-                        Assert.True(it.Seek("test-" + i.ToString("000")));
+                        Assert.True(it.Seek(Slice.From(tx.Allocator, "test-" + i.ToString("000"))));
                         Assert.Equal("test-" + i.ToString("000"), it.CurrentKey.ToString());
                         Assert.Equal("val-" + i, it.CreateReaderForCurrent().ToString());
                     }

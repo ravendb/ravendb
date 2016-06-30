@@ -4,7 +4,7 @@ using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Sparrow.Collections;
-using Sparrow.Platform;
+using Sparrow;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {

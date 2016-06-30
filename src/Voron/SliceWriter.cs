@@ -1,3 +1,4 @@
+using Sparrow;
 using System;
 using System.Text;
 using Voron.Util.Conversion;
@@ -45,9 +46,10 @@ namespace Voron
             _pos += sizeof(short);
         }
 
-        public Slice CreateSlice()
+        public Slice CreateSlice(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
         {
-            return new Slice(_buffer);
+            var content = context.From(_buffer, type);
+            return new Slice(content);
         }
 
         public void Write(bool b)
@@ -90,9 +92,10 @@ namespace Voron
             _pos = 0;
         }
 
-        public Slice CreateSlice(int size)
+        public Slice CreateSlice(ByteStringContext context, int size, ByteStringType type = ByteStringType.Mutable)
         {
-            return new Slice(_buffer, (ushort)size);
+            var content = context.From(_buffer, size, type);
+            return new Slice(content);
         }
     }
 }

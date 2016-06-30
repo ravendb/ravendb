@@ -11,6 +11,11 @@ namespace Voron.Data
             return false;
         }
 
+        public bool DoRequireValidation
+        {
+            get { throw new InvalidOperationException("No current page"); }
+        }
+
         public Slice CurrentKey
         {
             get { throw new InvalidOperationException("No current page"); }
@@ -33,11 +38,6 @@ namespace Voron.Data
 
 
         public event Action<IIterator> OnDisposal;
-
-        public bool DeleteCurrentAndMoveNext()
-        {
-            return false;
-        }
 
         public IEnumerable<string> DumpValues()
         {
@@ -72,7 +72,9 @@ namespace Voron.Data
 
         public void Dispose()
         {
-            OnDisposal?.Invoke(this);
+            var action = OnDisposal;
+            if (action != null)
+                action(this);
         }
     }
 }

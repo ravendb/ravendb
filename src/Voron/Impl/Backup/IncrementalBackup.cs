@@ -14,7 +14,7 @@ using System.Linq;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
-using Voron.Platform.Win32;
+using Voron.Global;
 using Voron.Util;
 
 namespace Voron.Impl.Backup

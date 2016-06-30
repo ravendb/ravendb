@@ -36,7 +36,7 @@ namespace Voron.Impl.Journal
         public bool Disposed { get; private set; }
         public bool DeleteOnClose { get; set; }
 
-        public IVirtualPager CreatePager()
+        public AbstractPager CreatePager()
         {
             _locker.EnterReadLock();
             try

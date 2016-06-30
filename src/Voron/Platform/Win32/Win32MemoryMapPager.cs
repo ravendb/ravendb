@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
@@ -91,7 +92,7 @@ namespace Voron.Platform.Win32
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
             PagerState.Release();
             PagerState = CreatePagerState();
         }
@@ -131,7 +132,7 @@ namespace Voron.Platform.Win32
             }
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
 
             return newPagerState;
         }
@@ -150,6 +151,15 @@ namespace Voron.Platform.Win32
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
 
+            if (Sparrow.Platform.CanPrefetch)
+            {
+                // We are asking to allocate pages. It is a good idea that they should be already in memory to only cause a single page fault (as they are continuous).
+                Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
+                entry.VirtualAddress = allocationInfo.BaseAddress;
+                entry.NumberOfBytes = (IntPtr)allocationInfo.Size;
+
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)1, &entry, 0);
+            }
             return true;
         }
 
@@ -249,6 +259,7 @@ namespace Voron.Platform.Win32
 
             if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
                 throw new Win32Exception();
+            // TODO : Measure IO times (RavenDB-4659) - Flushed & sync {sizeToWrite/1024:#,#} kb in {sp.ElapsedMilliseconds:#,#} ms
         }
 
 
@@ -277,5 +288,64 @@ namespace Voron.Platform.Win32
                 throw new Win32Exception();
         }
 
+        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        {
+            if (Sparrow.Platform.CanPrefetch == false)
+                return; // not supported
+
+            if (pagesToPrefetch.Count == 0)
+                return;
+
+            var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
+            for (int i = 0; i < entries.Length; i++)
+            {
+                entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
+                entries[i].VirtualAddress = AcquirePagePointer(null, pagesToPrefetch[i]);
+            }
+
+            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entriesPtr = entries)
+            {
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
+                    (UIntPtr)PagerState.AllocationInfos.Length, entriesPtr, 0);
+            }
+        }
+
+        public override void TryPrefetchingWholeFile()
+        {
+            if (Sparrow.Platform.CanPrefetch == false)
+                return; // not supported
+
+            var pagerState = PagerState;
+            var entries =
+                stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
+
+            for (var i = 0; i < pagerState.AllocationInfos.Length; i++)
+            {
+                entries[i].VirtualAddress = pagerState.AllocationInfos[i].BaseAddress;
+                entries[i].NumberOfBytes = (IntPtr)pagerState.AllocationInfos[i].Size;
+            }
+
+            if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
+                (UIntPtr)pagerState.AllocationInfos.Length, entries, 0) == false)
+                throw new Win32Exception();
+        }
+
+
+        public override void MaybePrefetchMemory(List<TreePage> sortedPages)
+        {
+            if (Sparrow.Platform.CanPrefetch == false)
+                return; // not supported
+
+            if (sortedPages.Count == 0)
+                return;
+
+            var ranges = SortedPagesToList(sortedPages);
+            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = ranges.ToArray())
+            {
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
+                    (UIntPtr)ranges.Count,
+                    entries, 0);
+            }
+        }
     }
 }

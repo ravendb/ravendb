@@ -2,7 +2,7 @@
 using System.IO;
 using Xunit;
 using Voron;
-using Voron.Impl;
+using Voron.Global;
 
 namespace FastTests.Voron.Trees
 {
@@ -69,8 +69,8 @@ namespace FastTests.Voron.Trees
                 tree.Add("test", StreamFor("2"));
 
                 var readKey = ReadKey(tx, tree, "test");
-                Assert.Equal("test", readKey.Item1);
-                Assert.Equal("2", readKey.Item2);
+                Assert.Equal("test", readKey.Item1.ToString());
+                Assert.Equal("2", readKey.Item2.ToString());
             }
         }
 
@@ -86,12 +86,12 @@ namespace FastTests.Voron.Trees
                 tree.Add("test/1", StreamFor("3"));
 
                 var readKey = ReadKey(tx, tree, "test/1");
-                Assert.Equal("test/1", readKey.Item1);
-                Assert.Equal("3", readKey.Item2);
+                Assert.Equal("test/1", readKey.Item1.ToString());
+                Assert.Equal("3", readKey.Item2.ToString());
 
                 readKey = ReadKey(tx, tree, "test/2");
-                Assert.Equal("test/2", readKey.Item1);
-                Assert.Equal("2", readKey.Item2);
+                Assert.Equal("test/2", readKey.Item1.ToString());
+                Assert.Equal("2", readKey.Item2.ToString());
 
             }
         }
@@ -108,12 +108,12 @@ namespace FastTests.Voron.Trees
                 tree.Add("test/2", StreamFor("3"));
 
                 var readKey = ReadKey(tx, tree, "test/1");
-                Assert.Equal("test/1", readKey.Item1);
-                Assert.Equal("1", readKey.Item2);
+                Assert.Equal("test/1", readKey.Item1.ToString());
+                Assert.Equal("1", readKey.Item2.ToString());
 
                 readKey = ReadKey(tx, tree, "test/2");
-                Assert.Equal("test/2", readKey.Item1);
-                Assert.Equal("3", readKey.Item2);
+                Assert.Equal("test/2", readKey.Item1.ToString());
+                Assert.Equal("3", readKey.Item2.ToString());
 
             }
         }

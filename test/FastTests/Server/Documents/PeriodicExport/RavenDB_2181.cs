@@ -22,7 +22,7 @@ namespace FastTests.Server.Documents.PeriodicExport
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
-        [Fact(Skip = "Requires Windows Azure Development Storage")]
+        [Fact]
         public async Task PutBlob()
         {
             var containerName = "testContainer";

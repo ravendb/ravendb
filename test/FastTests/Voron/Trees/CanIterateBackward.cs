@@ -12,9 +12,9 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                using (var it = tree.Iterate())
+                using (var it = tree.Iterate(false))
                 {
-                    Assert.False(it.Seek(Slice.AfterAllKeys));
+                    Assert.False(it.Seek(Slices.AfterAllKeys));
 
                     tx.Commit();
                 }
@@ -37,9 +37,9 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                using (var it = tree.Iterate())
+                using (var it = tree.Iterate(false))
                 {
-                    Assert.True(it.Seek(Slice.AfterAllKeys));
+                    Assert.True(it.Seek(Slices.AfterAllKeys));
                     Assert.Equal("c", it.CurrentKey.ToString());
 
                     tx.Commit();
@@ -63,9 +63,9 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                using (var it = tree.Iterate())
+                using (var it = tree.Iterate(false))
                 {
-                    Assert.True(it.Seek(Slice.AfterAllKeys));
+                    Assert.True(it.Seek(Slices.AfterAllKeys));
                     Assert.Equal("c", it.CurrentKey.ToString());
 
                     Assert.True(it.MovePrev());

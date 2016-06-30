@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,7 +18,7 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
@@ -360,6 +361,8 @@ namespace Raven.Server.Documents.Indexes
                     if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, collection, cutoff.Value) > 0)
                         return true;
                 }
+
+
             }
 
             return false;
@@ -520,6 +523,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
             using (InitializeIndexingWork(indexContext))
+            using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext))
             {
                 var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
@@ -543,8 +547,9 @@ namespace Raven.Server.Documents.Indexes
                         using (stats.For("Lucene_Write"))
                             writeOperation.Value.Dispose();
                     }
-
                 }
+
+                _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
 
                 using (stats.For("Storage_Commit"))
                     tx.Commit();
@@ -557,11 +562,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
+        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
 
-        public abstract void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChangeNotification notification)
         {
@@ -572,7 +577,7 @@ namespace Raven.Server.Documents.Indexes
                 Stop();
         }
 
-        private void HandleDocumentChange(DocumentChangeNotification notification)
+        protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
         {
             if (Collections.Contains(notification.CollectionName) == false)
                 return;
@@ -710,7 +715,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
-                        documentsContext.OpenReadTransaction(); // we have to open read tx for documents _after_ we open index tx
+                        documentsContext.OpenReadTransaction(); // we have to open read tx for mapResults _after_ we open index tx
 
                         if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
                             query.CutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
@@ -734,7 +739,7 @@ namespace Raven.Server.Documents.Indexes
                         FillQueryResult(result, isStale, documentsContext, indexContext);
 
                         if (Type.IsMapReduce())
-                            documentsContext.Reset(); // map reduce don't need to access documents storage
+                            documentsContext.Reset(); // map reduce don't need to access mapResults storage
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
@@ -868,13 +873,27 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        private unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        protected virtual unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             var indexEtagBytes = new long[
                 1 + // definition hash
                 1 + // isStale
-                2 * Collections.Count]; // last document etags and last mapped etags per collection
+                2 * Collections.Count // last document etags and last mapped etags per collection
+                ];
 
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
+
+            unchecked
+            {
+                fixed (long* buffer = indexEtagBytes)
+                {
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
+                }
+            }
+        }
+
+        protected int CalculateIndexEtagInternal(long[] indexEtagBytes, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
             var index = 0;
 
             indexEtagBytes[index++] = Definition.GetHashCode();
@@ -889,13 +908,7 @@ namespace Raven.Server.Documents.Indexes
                 indexEtagBytes[index++] = lastMappedEtag;
             }
 
-            unchecked
-            {
-                fixed (long* buffer = indexEtagBytes)
-                {
-                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
-                }
-            }
+            return index;
         }
 
         public long GetIndexEtag()

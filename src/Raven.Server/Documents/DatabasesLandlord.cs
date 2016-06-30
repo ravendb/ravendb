@@ -14,6 +14,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -88,7 +89,7 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler);
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, LoggerSetup);
                 documentDatabase.Initialize();
 
                 if (Log.IsInfoEnabled)
@@ -203,7 +204,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DatabasesLandlord(ServerStore serverStore) : base(serverStore)
+        public DatabasesLandlord(ServerStore serverStore, LoggerSetup loggerSetup) : base(serverStore, loggerSetup)
         {
 
         }

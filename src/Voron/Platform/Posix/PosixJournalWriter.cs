@@ -134,7 +134,7 @@ namespace Voron.Platform.Posix
 
         public bool DeleteOnClose { get; set; }
 
-        public IVirtualPager CreatePager()
+        public AbstractPager CreatePager()
         {
             return new PosixMemoryMapPager(_options.PageSize,_filename);
         }

@@ -1,15 +1,33 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO.MemoryMappedFiles;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Voron.Impl.Paging;
+
+
 namespace Voron.Impl
 {
-    using System.Collections.Concurrent;
-    using System.Diagnostics;
-    using System.IO.MemoryMappedFiles;
-    using System.Threading;
-    using System.Threading.Tasks;
-
-    using Voron.Impl.Paging;
-
     public unsafe class PagerState
     {
+        public sealed class Comparer : IEqualityComparer<PagerState>
+        {
+            public readonly static Comparer Instance = new Comparer();
+
+            public bool Equals(PagerState x, PagerState y)
+            {
+                return x == y;
+            }
+
+            public int GetHashCode(PagerState obj)
+            {
+                return obj._pager.GetHashCode();
+            }
+        }
+
         private readonly AbstractPager _pager;
 
         public bool DisposeFilesOnDispose = true;

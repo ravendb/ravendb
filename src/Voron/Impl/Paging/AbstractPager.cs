@@ -5,18 +5,28 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Sparrow;
-using Voron.Util;
 using Sparrow.Binary;
+using Voron.Data.BTrees;
+using Voron.Platform.Win32;
+using Voron.Global;
 
 namespace Voron.Impl.Paging
 {
-    public unsafe abstract class AbstractPager : IVirtualPager
+    public abstract unsafe class AbstractPager : IDisposable
     {
-        protected int MinIncreaseSize { get { return 16 * PageSize; } } // 64 KB with 4Kb pages. 
-        protected int MaxIncreaseSize { get { return Constants.Size.Gigabyte; } }
+        protected int MinIncreaseSize
+        {
+            get { return 16*_pageSize; }
+        } // 64 KB with 4Kb pages. 
+
+        protected int MaxIncreaseSize
+        {
+            get { return Constants.Size.Gigabyte; }
+        }
 
         private long _increaseSize;
         private DateTime _lastIncrease;
+        protected readonly int _pageSize;
 
         public PagerState PagerState
         {
@@ -45,62 +55,40 @@ namespace Voron.Impl.Paging
 
         protected AbstractPager(int pageSize)
         {
-            Debug.Assert((pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
+            Debug.Assert((pageSize - Constants.TreePageHeaderSize)/Constants.MinKeysInPage >= 1024);
 
-            PageSize = pageSize;
-            PageMaxSpace = PageSize - Constants.TreePageHeaderSize;
-            NodeMaxSize = PageMaxSpace / 2 - 1;
+            _pageSize = pageSize;
+
+            PageMaxSpace = pageSize - Constants.TreePageHeaderSize;
+            NodeMaxSize = PageMaxSpace/2 - 1;
 
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
-            
+
             _increaseSize = MinIncreaseSize;
 
-            PageMinSpace = (int)(PageMaxSpace * 0.33);
+            PageMinSpace = (int)(PageMaxSpace*0.33);
             PagerState = new PagerState(this);
-          
+
             PagerState.AddRef();
         }
 
         public int PageSize
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return _pageSize; }
         }
 
-        public int PageMinSpace
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
+        public int PageMinSpace { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] private set; }
 
-        public bool DeleteOnClose
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set;
-        }
+        public bool DeleteOnClose { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] set; }
 
-        public int NodeMaxSize
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
+        public int NodeMaxSize { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] private set; }
 
-        public int PageMaxSpace
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
+        public int PageMaxSpace { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] private set; }
 
         public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
 
@@ -120,11 +108,11 @@ namespace Voron.Impl.Paging
             if (pageNumber > NumberOfAllocatedPages)
                 ThrowOnInvalidPageNumber(pageNumber);
 
-            var state = pagerState ?? PagerState;
+            var state = pagerState ?? _pagerState;
 
             tx?.EnsurePagerStateReference(state);
 
-            return state.MapBase + pageNumber * PageSize;
+            return state.MapBase + pageNumber*_pageSize;
         }
 
         public abstract void Sync();
@@ -140,8 +128,8 @@ namespace Voron.Impl.Paging
 
             // this ensure that if we want to get a range that is more than the current expansion
             // we will increase as much as needed in one shot
-            var minRequested = (requestedPageNumber + numberOfPages) * PageSize;
-            var allocationSize = Math.Max(NumberOfAllocatedPages * PageSize, PageSize);
+            var minRequested = (requestedPageNumber + numberOfPages)*_pageSize;
+            var allocationSize = Math.Max(NumberOfAllocatedPages*_pageSize, PageSize);
             while (minRequested > allocationSize)
             {
                 allocationSize = GetNewLength(allocationSize);
@@ -176,8 +164,8 @@ namespace Voron.Impl.Paging
         }
 
         protected abstract PagerState AllocateMorePages(long newLength);
-        
-      
+
+
         private long GetNewLength(long current)
         {
             DateTime now = DateTime.UtcNow;
@@ -190,11 +178,11 @@ namespace Voron.Impl.Paging
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
             if (timeSinceLastIncrease.TotalSeconds < 30)
             {
-                _increaseSize = Math.Min(_increaseSize * 2, MaxIncreaseSize);
+                _increaseSize = Math.Min(_increaseSize*2, MaxIncreaseSize);
             }
             else if (timeSinceLastIncrease.TotalMinutes > 2)
             {
-                _increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
+                _increaseSize = Math.Max(MinIncreaseSize, _increaseSize/2);
             }
 
             _lastIncrease = now;
@@ -206,7 +194,7 @@ namespace Voron.Impl.Paging
             // the file size increases, we will reserve more & more from the OS.
             // This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
             // eager to reserve space
-            var actualIncrease = Math.Min(_increaseSize, current / 4);
+            var actualIncrease = Math.Min(_increaseSize, current/4);
 
             // we then want to get the next power of two number, to get pretty file size
             return current + Bits.NextPowerOf2(actualIncrease);
@@ -217,12 +205,13 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            int toCopy = pagesToWrite * PageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, p, toCopy);
+            int toCopy = pagesToWrite*_pageSize;
+            Memory.BulkCopy(PagerState.MapBase + pagePosition*_pageSize, p, toCopy);
 
             return toCopy;
         }
-        public override abstract string ToString();
+
+        public abstract override string ToString();
 
         public void RegisterDisposal(Task run)
         {
@@ -247,21 +236,78 @@ namespace Voron.Impl.Paging
 
         public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetMaxKeySize()
-        {
-            // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-            return 2038;
-        }
+        // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
+        public static readonly int MaxKeySize = 2038 - RequiredSpaceForNewNode;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsKeySizeValid(int keySize)
         {
-           
-            if (keySize + RequiredSpaceForNewNode > GetMaxKeySize())
+            if (keySize > MaxKeySize)
                 return false;
 
             return true;
         }
+
+        protected List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY> SortedPagesToList(List<TreePage> sortedPages)
+        {
+            var rangesList = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>();
+
+            long lastPage = -1;
+            int numberOfPagesInBatch = Sparrow.Platform.RunningOnPosix ? 32 : 8; // 128k in linux, 32k in windows - when you touch a page, let us reuse this
+
+            var sizeInPages = numberOfPagesInBatch;
+            foreach (var page in sortedPages)
+            {
+                if (lastPage == -1)
+                {
+                    lastPage = page.PageNumber;
+                }
+
+                var numberOfPagesInLastPage = page.IsOverflow == false
+                    ? 1
+                    : this.GetNumberOfOverflowPages(page.OverflowSize);
+
+                var endPage = page.PageNumber + numberOfPagesInLastPage - 1;
+
+                if (endPage <= lastPage + sizeInPages)
+                    continue; // already within the allocation granularity we have
+
+                if (page.PageNumber <= lastPage + sizeInPages + numberOfPagesInBatch)
+                {
+                    while (endPage > lastPage + sizeInPages)
+                    {
+                        sizeInPages += numberOfPagesInBatch;
+                    }
+
+                    continue;
+                }
+
+                rangesList.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
+                {
+                    VirtualAddress = AcquirePagePointer(null, lastPage),
+                    NumberOfBytes = (IntPtr)(sizeInPages * PageSize)
+                });
+
+                lastPage = page.PageNumber;
+                sizeInPages = numberOfPagesInBatch;
+                while (endPage > lastPage + sizeInPages)
+                {
+                    sizeInPages += numberOfPagesInBatch;
+                }
+            }
+
+            rangesList.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
+            {
+                VirtualAddress = AcquirePagePointer(null, lastPage),
+                NumberOfBytes = (IntPtr)(sizeInPages * PageSize)
+            });
+
+            return rangesList;
+        }
+
+        public abstract void TryPrefetchingWholeFile();
+        public abstract void MaybePrefetchMemory(List<long> pagesToPrefetch);
+        public abstract void MaybePrefetchMemory(List<TreePage> sortedPagesToWrite);
     }
 }
+

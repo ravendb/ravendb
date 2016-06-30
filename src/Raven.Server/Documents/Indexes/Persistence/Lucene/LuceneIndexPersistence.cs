@@ -7,6 +7,7 @@ using Lucene.Net.Search;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 case IndexType.MapReduce:
                     _converter = new AnonymousLuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
                     break;
-                case IndexType.Unknown:
+                case IndexType.Faulty:
                     _converter = null;
                     break;
                 default:
@@ -151,9 +152,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void Dispose()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Index));
 

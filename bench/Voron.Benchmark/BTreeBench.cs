@@ -272,9 +272,9 @@ namespace Voron.Benchmark
                         using (var tx = env.ReadTransaction())
                         {
                             var tree = tx.ReadTree("test");
-                            using (var it = tree.Iterate())
+                            using (var it = tree.Iterate(false))
                             {
-                                if (it.Seek(Slice.BeforeAllKeys))
+                                if (it.Seek(Slices.BeforeAllKeys))
                                 {
                                     do
                                     {

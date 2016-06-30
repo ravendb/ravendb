@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -11,61 +13,64 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Raven.Abstractions.Exceptions;
+using Raven.Client.Data;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Indexes.Static.Roslyn;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public static class StaticIndexCompiler
     {
-        private static readonly MetadataReference[] References =
-            {
-                MetadataReference.CreateFromFile(typeof (object).GetTypeInfo().Assembly.Location),
-                MetadataReference.CreateFromFile(typeof (Enumerable).GetTypeInfo().Assembly.Location),
-                MetadataReference.CreateFromFile(typeof (StaticIndexCompiler).GetTypeInfo().Assembly.Location),
-                MetadataReference.CreateFromFile(typeof (DynamicAttribute).GetTypeInfo().Assembly.Location),
-                MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
-                MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
-            };
-
-        private static readonly SyntaxTree BaseSyntaxTree = CSharpSyntaxTree.ParseText(@"
-
-using System;
-using System.Linq;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
-
-namespace Raven.Server.Documents.Indexes.Static.Generated
-{
-    public class WillBeReplaced : StaticIndexBase
-    {
-        public WillBeReplaced()
+        private static readonly UsingDirectiveSyntax[] Usings =
         {
-        }
-    }
-}
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections.Generic")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Linq")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static")),
+        };
 
-");
+        private static readonly MetadataReference[] References =
+        {
+            MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(StaticIndexCompiler).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(DynamicAttribute).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
+            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
+            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
+        };
+
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition);
-            var syntaxNode = new TransformIndexClass(cSharpSafeName, definition).Visit(BaseSyntaxTree.GetRoot());
 
-            var syntaxTree = SyntaxFactory.SyntaxTree(syntaxNode.NormalizeWhitespace());
+            var @class = CreateClass(cSharpSafeName, definition);
 
+            var @namespace = RoslynHelper.CreateNamespace("Raven.Server.Documents.Indexes.Static.Generated")
+                .WithMembers(SyntaxFactory.SingletonList(@class));
 
-            CSharpCompilation compilation = CSharpCompilation.Create(
-                assemblyName: definition.Name + ".index.dll",
-                syntaxTrees: new[] { syntaxTree },
+            var compilationUnit = SyntaxFactory.CompilationUnit()
+                .WithUsings(RoslynHelper.CreateUsings(Usings))
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
+                .NormalizeWhitespace();
+
+            var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace());
+
+            var compilation = CSharpCompilation.Create(
+                assemblyName: cSharpSafeName + "." + Guid.NewGuid() + ".index.dll",
+                syntaxTrees: new[] { SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString()) }, // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
                 references: References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(OptimizationLevel.Release)
                 );
 
+            var code = formatedCompilationUnit.SyntaxTree.ToString();
+
             var asm = new MemoryStream();
             //var pdb = new MemoryStream();
-
-            var code = syntaxTree.ToString();
 
             var result = compilation.Emit(asm);
 
@@ -80,13 +85,13 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
                 sb.AppendLine();
                 sb.AppendLine(code);
                 sb.AppendLine();
-                foreach (Diagnostic diagnostic in failures)
-                {
+
+                foreach (var diagnostic in failures)
                     sb.AppendLine(diagnostic.ToString());
-                }
 
                 throw new IndexCompilationException(sb.ToString());
             }
+
             asm.Position = 0;
             //pdb.Position = 0;
             //var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
@@ -95,77 +100,43 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
             var type = indexAssembly.GetType("Raven.Server.Documents.Indexes.Static.Generated." + cSharpSafeName);
 
             var index = (StaticIndexBase)Activator.CreateInstance(type);
-
             index.Source = code;
 
             return index;
         }
 
-
-        private static string GetCSharpSafeName(IndexDefinition definition)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
         {
-            return $"Index_{Regex.Replace(definition.Name, @"[^\w\d]", "_")}";
-        }
-    }
+            var statements = new List<StatementSyntax>();
+            statements.AddRange(definition.Maps.SelectMany(HandleMap));
 
-    internal class TransformIndexClass : CSharpSyntaxRewriter
-    {
-        private readonly IndexDefinition _definition;
-        private readonly SyntaxToken _name;
+            if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
+                statements.Add(HandleReduce(definition.Reduce));
 
-        public TransformIndexClass(string name, IndexDefinition definition)
-        {
-            _definition = definition;
-            _name = SyntaxFactory.Identifier(name);
+            var ctor = RoslynHelper.PublicCtor(name)
+                .AddBodyStatements(statements.ToArray());
+
+            return RoslynHelper.PublicClass(name)
+                .WithBaseClass<StaticIndexBase>()
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
-        {
-            return base.VisitClassDeclaration(node.WithIdentifier(_name));
-        }
-
-        public override SyntaxNode VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
-        {
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var map in _definition.Maps)
-            {
-                var invocationExpressionSyntax = HandleMap(map);
-                node = node.AddBodyStatements(SyntaxFactory.ExpressionStatement(invocationExpressionSyntax));
-            }
-
-            return node.WithIdentifier(_name);
-        }
-
-        private InvocationExpressionSyntax HandleMap(string map)
+        private static List<StatementSyntax> HandleMap(string map)
         {
             try
             {
-                StatementSyntax statement = SyntaxFactory.ParseStatement("var q = " + map);
-                var declaration = (LocalDeclarationStatementSyntax)statement.SyntaxTree.GetRoot();
-                var expression = declaration.Declaration.Variables[0].Initializer.Value;
-
+                var expression = SyntaxFactory.ParseExpression(map);
                 var queryExpression = expression as QueryExpressionSyntax;
-                if (queryExpression == null)
-                    throw new InvalidOperationException("A map clause must be a valid query");
-                var mapRewriter = new MapRewriter();
-                queryExpression = (QueryExpressionSyntax)mapRewriter.Visit(queryExpression);
-                var arguments = SyntaxFactory.SeparatedList<ArgumentSyntax>(new SyntaxNodeOrToken[]
-                {
-                    // "Users" or null, the collection name
-                    SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(mapRewriter.CollectionName))),
-                    SyntaxFactory.Token(SyntaxKind.CommaToken),
-                    // docs => from doc in docs ...
-                    SyntaxFactory.Argument(SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), queryExpression)),
+                if (queryExpression != null)
+                    return HandleSyntaxInMap(new QuerySyntaxMapRewriter(), queryExpression);
 
-                });
+                var invocationExpression = expression as InvocationExpressionSyntax;
+                if (invocationExpression != null)
+                    return HandleSyntaxInMap(new MethodSyntaxMapRewriter(), invocationExpression);
 
-                return SyntaxFactory.InvocationExpression(
-                    SyntaxFactory.IdentifierName("AddMap"))
-                    .WithArgumentList(SyntaxFactory.ArgumentList(arguments));
-
-
+                throw new InvalidOperationException("Not supported expression type.");
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex)
             {
                 throw new IndexCompilationException(ex.Message, ex)
                 {
@@ -175,29 +146,88 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
             }
         }
 
-    }
-
-    internal class MapRewriter : CSharpSyntaxRewriter
-    {
-        public string CollectionName;
-
-        public override SyntaxNode VisitFromClause(FromClauseSyntax node)
+        private static StatementSyntax HandleReduce(string reduce)
         {
-            if (CollectionName != null)
-                return node;
+            try
+            {
+                var expression = SyntaxFactory.ParseExpression(reduce);
+                var queryExpression = expression as QueryExpressionSyntax;
+                if (queryExpression != null)
+                    return HandleSyntaxInReduce(new ReduceFunctionProcessor(ResultsVariableNameRetriever.QuerySyntax, GroupByFieldsRetriever.QuerySyntax), queryExpression);
 
-            var docsExpression = node.Expression as MemberAccessExpressionSyntax;
-            if (docsExpression == null)
-                return node;
+                var invocationExpression = expression as InvocationExpressionSyntax;
+                if (invocationExpression != null)
+                    return HandleSyntaxInReduce(new ReduceFunctionProcessor(ResultsVariableNameRetriever.MethodSyntax, null /*TODO arek */), invocationExpression);
 
-            var docsIdentifier = docsExpression.Expression as IdentifierNameSyntax;
-            if (string.Equals(docsIdentifier?.Identifier.Text, "docs", StringComparison.OrdinalIgnoreCase) == false)
-                return node;
-
-            CollectionName = docsExpression.Name.Identifier.Text;
-
-            return node.WithExpression(docsExpression.Expression);
+                throw new InvalidOperationException("Not supported expression type.");
+            }
+            catch (Exception ex)
+            {
+                throw new IndexCompilationException(ex.Message, ex)
+                {
+                    IndexDefinitionProperty = "Reduce",
+                    ProblematicText = reduce
+                };
+            }
         }
 
+        private static List<StatementSyntax> HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
+        {
+            var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
+            if (string.IsNullOrWhiteSpace(mapRewriter.CollectionName))
+                throw new InvalidOperationException("Could not extract collection name from expression");
+
+            var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(mapRewriter.CollectionName));
+            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
+
+            var results = new List<StatementSyntax>();
+            results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, indexingFunction).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+
+            if (mapRewriter.ReferencedCollections != null)
+            {
+                foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                {
+                    var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
+                    results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
+                }
+            }
+
+            return results;
+        }
+
+        private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, ExpressionSyntax expression)
+        {
+            var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
+
+            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(reduceFunctionProcessor.ResultsVariableName)), rewrittenExpression);
+
+            var groupByFields = SyntaxFactory.ArrayCreationExpression(SyntaxFactory.ArrayType(
+                        SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)))
+                    .WithRankSpecifiers(
+                        SyntaxFactory.SingletonList<ArrayRankSpecifierSyntax>(
+                            SyntaxFactory.ArrayRankSpecifier(
+                                    SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(
+                                        SyntaxFactory.OmittedArraySizeExpression()
+                                            .WithOmittedArraySizeExpressionToken(
+                                                SyntaxFactory.Token(SyntaxKind.OmittedArraySizeExpressionToken))))
+                                .WithOpenBracketToken(SyntaxFactory.Token(SyntaxKind.OpenBracketToken))
+                                .WithCloseBracketToken(SyntaxFactory.Token(SyntaxKind.CloseBracketToken)))))
+                .WithNewKeyword(SyntaxFactory.Token(SyntaxKind.NewKeyword))
+                .WithInitializer(SyntaxFactory.InitializerExpression(SyntaxKind.ArrayInitializerExpression,
+                        SyntaxFactory.SeparatedList<ExpressionSyntax>(reduceFunctionProcessor.GroupByFields.Select(
+                            x =>
+                                SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
+                                    SyntaxFactory.Literal(x)))))
+                    .WithOpenBraceToken(SyntaxFactory.Token(SyntaxKind.OpenBraceToken))
+                    .WithCloseBraceToken(SyntaxFactory.Token(SyntaxKind.CloseBraceToken)));
+
+            return RoslynHelper.This("SetReduce")
+                .Invoke(indexingFunction, groupByFields).AsExpressionStatement();
+        }
+
+        private static string GetCSharpSafeName(IndexDefinition definition)
+        {
+            return $"Index_{Regex.Replace(definition.Name, @"[^\w\d]", "_")}";
+        }
     }
 }

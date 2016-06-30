@@ -1283,7 +1283,12 @@ namespace Raven.Client.Connection.Async
                 if (indexEntriesOnly)
                     path += "&debug=entries";
 
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders)))
+                TimeSpan? timeoutWithWaiting = null;
+
+                if (query.WaitForNonStaleResultsTimeout != null)
+                    timeoutWithWaiting = HttpJsonRequest.DefaultHttpClientTimeout + query.WaitForNonStaleResultsTimeout.Value;
+
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url), timeoutWithWaiting) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders)))
                 {
                     RavenJObject json = null;
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);

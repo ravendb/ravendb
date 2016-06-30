@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Voron.Util;
 
@@ -29,7 +30,7 @@ namespace Voron.Impl.Paging
             foreach (var buffer in _buffers)
             {
                 if (page + buffer.SizeInPages > pageNumber)
-                    return buffer.Pointer + ((pageNumber - page)*PageSize);
+                    return buffer.Pointer + ((pageNumber - page)* _pageSize);
 
                 page += buffer.SizeInPages;
             }
@@ -55,6 +56,18 @@ namespace Voron.Impl.Paging
         public override unsafe void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
             throw new NotSupportedException();
+        }
+
+        public override void TryPrefetchingWholeFile()
+        {
+        }
+
+        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        {
+        }
+
+        public override void MaybePrefetchMemory(List<TreePage> sortedPagesToWrite)
+        {
         }
     }
 }

@@ -7,6 +7,7 @@
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Data;
 using System.Linq;
 
 namespace FastTests.Voron.Journal

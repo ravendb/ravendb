@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Json;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         protected readonly ILog Log = LogManager.GetLogger(typeof(ReduceMapResults));
 
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
-        private readonly AutoMapReduceIndexDefinition _indexDefinition;
+        private readonly IndexDefinitionBase _indexDefinition;
         private readonly IndexStorage _indexStorage;
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _mapReduceContext;
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
+        public ReduceMapResults(IndexDefinitionBase indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
         {
             _indexDefinition = indexDefinition;
             _indexStorage = indexStorage;
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         writer.DeleteReduceResult(reduceKeyHash, stats);
 
                         var emptyPageNumber = page.PageNumber;
-                        table.DeleteByKey(new Slice((byte*)&emptyPageNumber, sizeof(long)));
+                        table.DeleteByKey(Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long)));
 
                         continue;
                     }
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
 
                 long tmp = 0;
-                Slice pageNumberSlice = new Slice((byte*)&tmp, sizeof(long));
+                var pageNumberSlice = Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long));
                 foreach (var freedPage in modifiedState.FreedPages)
                 {
                     tmp = freedPage;
@@ -240,7 +241,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
                 var childPageNumber = IPAddress.HostToNetworkOrder(page.GetNode(i)->PageNumber);
-                var tvr = table.ReadByKey(new Slice((byte*)&childPageNumber, sizeof(long)));
+                var tvr = table.ReadByKey(Slice.External(indexContext.Allocator, (byte*)&childPageNumber, sizeof(long)));
                 if (tvr == null)
                 {
                     throw new InvalidOperationException("Couldn't find pre-computed results for existing page " + childPageNumber);

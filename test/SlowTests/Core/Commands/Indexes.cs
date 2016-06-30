@@ -26,7 +26,7 @@ namespace SlowTests.Core.Commands
 {
     public class Indexes : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
         {
             using (var store = await GetDocumentStore())
@@ -59,7 +59,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanGetTermsForIndex()
         {
             using (var store = await GetDocumentStore())
@@ -76,7 +76,7 @@ namespace SlowTests.Core.Commands
                 store.DatabaseCommands.PutIndex("test",
                                                 new IndexDefinition
                                                 {
-                                                    Maps = { "from doc in docs select new { doc.Name }" }
+                                                    Maps = { "from doc in docs.Users select new { doc.Name }" }
                                                 });
 
                 WaitForIndexing(store);
@@ -94,7 +94,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanGetTermsForIndex_WithPaging()
         {
             using (var store = await GetDocumentStore())
@@ -111,7 +111,7 @@ namespace SlowTests.Core.Commands
                 store.DatabaseCommands.PutIndex("test",
                                                 new IndexDefinition
                                                 {
-                                                    Maps = { "from doc in docs select new { doc.Name }" }
+                                                    Maps = { "from doc in docs.Users select new { doc.Name }" }
                                                 });
 
                 WaitForIndexing(store);
@@ -129,7 +129,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: query for index entries only")]
         public async Task CanQueryForMetadataAndIndexEntriesOnly()
         {
             using (var store = await GetDocumentStore())
@@ -146,7 +146,7 @@ namespace SlowTests.Core.Commands
                 store.DatabaseCommands.PutIndex("test",
                                                 new IndexDefinition
                                                 {
-                                                    Maps = { "from doc in docs select new { doc.Name }" },
+                                                    Maps = { "from doc in docs.Users select new { doc.Name }" },
                                                     Fields = new Dictionary<string, IndexFieldOptions>
                                                                  {
                                                                      { "Name", new IndexFieldOptions { Sort = SortOptions.String } }
@@ -174,11 +174,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing endpoint: /indexes?namesOnly=true")]
+        [Fact]
         public async Task CanGetIndexNames()
         {
             var index1 = new Users_ByName();
-            var index2 = new Posts_Recurse();
+            var index2 = new Posts_ByTitleAndContent();
             using (var store = await GetDocumentStore())
             {
                 index1.Execute(store);
@@ -191,17 +191,23 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanResetIndex()
         {
             var index = new Users_ByName();
             using (var store = await GetDocumentStore())
             {
                 index.Execute(store);
-                for (var i = 0; i < 20; i++)
+                using (var session = store.OpenSession())
                 {
-                    await store.AsyncDatabaseCommands.PutAsync("users/" + i, null, RavenJObject.FromObject(new User { }), new RavenJObject());
+                    for (var i = 0; i < 20; i++)
+                    {
+                        session.Store(new User());
+                    }
+
+                    session.SaveChanges();
                 }
+
                 WaitForIndexing(store);
 
                 var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();

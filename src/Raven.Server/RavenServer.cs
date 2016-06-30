@@ -12,6 +12,7 @@ using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 
 namespace Raven.Server
 {
@@ -29,6 +30,7 @@ namespace Raven.Server
         public readonly ServerStore ServerStore;
 
         private IWebHost _webHost;
+        public LoggerSetup LoggerSetup { get; }
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -38,7 +40,8 @@ namespace Raven.Server
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
-            ServerStore = new ServerStore(Configuration);
+            LoggerSetup = new LoggerSetup(Configuration.DebugLog.Path, Configuration.DebugLog.LogMode, Configuration.DebugLog.RetentionTime.AsTimeSpan);
+            ServerStore = new ServerStore(Configuration, LoggerSetup);
             Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
             Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
@@ -118,7 +121,8 @@ namespace Raven.Server
 
         public void Dispose()
         {
-            Metrics.Dispose();
+            Metrics?.Dispose();
+            LoggerSetup?.Dispose();
             _webHost?.Dispose();
             ServerStore?.Dispose();
             Timer?.Dispose();

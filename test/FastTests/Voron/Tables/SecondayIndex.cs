@@ -33,7 +33,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
+                var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
                 var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], etag)
                                  .First();
 
@@ -69,7 +69,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                docs.DeleteByKey("users/1");
+                docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
 
                 tx.Commit();
             }
@@ -78,7 +78,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], new Slice(EndianBitConverter.Big.GetBytes(1)));
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1)));
                 Assert.Empty(reader);
             }
         }
@@ -116,7 +116,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
+                var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
                 var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], etag)
                                  .First();
 

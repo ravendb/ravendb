@@ -57,7 +57,7 @@ namespace FastTests.Voron.Tables
                 for (int i = 0; i < Transactions * ItemsPerTransaction; i++)
                 {
                     var key = i.ToString(Template);
-                    var tableReader = docs.ReadByKey(key);
+                    var tableReader = docs.ReadByKey(Slice.From(tx.Allocator, key));
 
                     Assert.NotNull(tableReader);
 
@@ -98,7 +98,7 @@ namespace FastTests.Voron.Tables
                     var docs = new Table(DocsSchema, "docs", tx);
 
                     var ids = new List<long>();
-                    foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slice.BeforeAllKeys))
+                    foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slices.BeforeAllKeys))
                     {
                         foreach (var tvr in sr.Results)
                             ids.Add(tvr.Id);
@@ -114,7 +114,7 @@ namespace FastTests.Voron.Tables
                 {
                     var docs = new Table(DocsSchema, "docs", tx);
 
-                    var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], new Slice(EndianBitConverter.Big.GetBytes(1)));
+                    var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1)));
                     Assert.Empty(reader);
                 }
             }

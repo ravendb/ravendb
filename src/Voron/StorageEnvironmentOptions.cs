@@ -6,7 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
-using Voron.Impl;
+using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -89,7 +89,7 @@ namespace Voron
 
         public bool IncrementalBackupEnabled { get; set; }
 
-        public abstract IVirtualPager DataPager { get; }
+        public abstract AbstractPager DataPager { get; }
 
         public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
 
@@ -167,7 +167,7 @@ namespace Voron
             private readonly string _journalPath;
             private readonly string _basePath;
 
-            private readonly Lazy<IVirtualPager> _dataPager;
+            private readonly Lazy<AbstractPager> _dataPager;
 
             private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
                 new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
@@ -186,7 +186,7 @@ namespace Voron
                 if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
                     Directory.CreateDirectory(_journalPath);
 
-                _dataPager = new Lazy<IVirtualPager>(() =>
+                _dataPager = new Lazy<AbstractPager>(() =>
                 {
                     FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
                     if (RunningOnPosix)
@@ -197,7 +197,7 @@ namespace Voron
 
             public string FilePath { get; private set; }
 
-            public override IVirtualPager DataPager
+            public override AbstractPager DataPager
             {
                 get
                 {
@@ -210,7 +210,7 @@ namespace Voron
                 get { return _basePath; }
             }
 
-            public override IVirtualPager OpenPager(string filename)
+            public override AbstractPager OpenPager(string filename)
             {
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(PageSize, filename);
@@ -300,7 +300,7 @@ namespace Voron
             }
 
 
-            public override IVirtualPager CreateScratchPager(string name)
+            public override AbstractPager CreateScratchPager(string name)
             {
                 var scratchFile = Path.Combine(TempPath, name);
                 if (File.Exists(scratchFile))
@@ -316,7 +316,7 @@ namespace Voron
                 return new Win32MemoryMapPager(PageSize, scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
             }
 
-            public override IVirtualPager OpenJournalPager(long journalNumber)
+            public override AbstractPager OpenJournalPager(long journalNumber)
             {
                 var name = JournalName(journalNumber);
                 var path = Path.Combine(_journalPath, name);
@@ -335,7 +335,7 @@ namespace Voron
         {
             private static int _counter;
 
-            private readonly Lazy<IVirtualPager> _dataPager;            
+            private readonly Lazy<AbstractPager> _dataPager;            
 
             private readonly Dictionary<string, IJournalWriter> _logs =
                 new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
@@ -350,7 +350,7 @@ namespace Voron
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
 
-                _dataPager = new Lazy<IVirtualPager>(() =>
+                _dataPager = new Lazy<AbstractPager>(() =>
                 {
                     if (RunningOnPosix)
                         return new PosixTempMemoryMapPager(PageSize, Path.Combine(TempPath, filename), InitialFileSize);
@@ -358,7 +358,7 @@ namespace Voron
                 }, true);
             }
 
-            public override IVirtualPager DataPager
+            public override AbstractPager DataPager
             {
                 get { return _dataPager.Value; }
             }
@@ -437,7 +437,7 @@ namespace Voron
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
             }
 
-            public override IVirtualPager CreateScratchPager(string name)
+            public override AbstractPager CreateScratchPager(string name)
             {
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
@@ -449,14 +449,14 @@ namespace Voron
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
-            public override IVirtualPager OpenPager(string filename)
+            public override AbstractPager OpenPager(string filename)
             {
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(PageSize, filename);
                 return new Win32MemoryMapPager(PageSize, filename);
             }
 
-            public override IVirtualPager OpenJournalPager(long journalNumber)
+            public override AbstractPager OpenJournalPager(long journalNumber)
             {
                 var name = JournalName(journalNumber);
                 IJournalWriter value;
@@ -489,11 +489,11 @@ namespace Voron
 
         public unsafe abstract void WriteHeader(string filename, FileHeader* header);
 
-        public abstract IVirtualPager CreateScratchPager(string name);
+        public abstract AbstractPager CreateScratchPager(string name);
 
-        public abstract IVirtualPager OpenJournalPager(long journalNumber);
+        public abstract AbstractPager OpenJournalPager(long journalNumber);
 
-        public abstract IVirtualPager OpenPager(string filename);
+        public abstract AbstractPager OpenPager(string filename);
 
         public static bool RunningOnPosix
             => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||

@@ -6,50 +6,63 @@
 using System;
 using System.Threading;
 using Raven.Abstractions.Util;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
     public class SubscriptionConnectionOptions
     {
-        private static int connectionCounter;
+        private static int _connectionCounter;
+        private string _connectionId;
+        public long SubscriptionId { get; set; }
 
         public SubscriptionConnectionOptions()
         {
-            ConnectionId = Interlocked.Increment(ref connectionCounter) + "/" + Base62Util.Base62Random();
-            BatchOptions = new SubscriptionBatchOptions();
-            ClientAliveNotificationInterval = TimeSpan.FromMinutes(2);
-            TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
-            PullingRequestTimeout = TimeSpan.FromMinutes(5);
+            _timeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
+            TimeToWaitBeforeConnectionRetry = _timeToWaitBeforeConnectionRetry.Ticks;
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
+            MaxDocsPerBatch = 4096;
         }
 
-        public string ConnectionId { get; private set; }
+        public string ConnectionId
+        {
+            get
+            {
+                if (_connectionId == null)
+                {
+                    _connectionId = Interlocked.Increment(ref _connectionCounter) + "/" + Base62Util.Base62Random();
+                }
+                return _connectionId;
+            }
+            set { _connectionId = value; }
+        }
 
-        public SubscriptionBatchOptions BatchOptions { get; set; }
+        private TimeSpan _timeToWaitBeforeConnectionRetry;
 
-        public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
+        [JsonIgnore] public CancellationTokenSource CancellationTokenSource;
+        [JsonIgnore] public IDisposable DisposeOnDisconnect;
 
-        public TimeSpan ClientAliveNotificationInterval { get; set; }
+        [JsonIgnore]
+        public TimeSpan TimeToWaitBeforeConnectionRetryTimespan
+        {
+            get
+            {
+                if (_timeToWaitBeforeConnectionRetry.Ticks != TimeToWaitBeforeConnectionRetry)
+                    _timeToWaitBeforeConnectionRetry = new TimeSpan(TimeToWaitBeforeConnectionRetry);
+                return _timeToWaitBeforeConnectionRetry;
+            }
+        }
 
-        public TimeSpan PullingRequestTimeout { get; set; }
+        public long TimeToWaitBeforeConnectionRetry { get; set; }
+
+        public long ClientAliveNotificationInterval { get; set; }
 
         public bool IgnoreSubscribersErrors { get; set; }
 
         public SubscriptionOpeningStrategy Strategy { get; set; }
-    }
 
-    public class SubscriptionBatchOptions
-    {
-        public SubscriptionBatchOptions()
-        {
-            MaxDocCount = 4096;
-            AcknowledgmentTimeout = TimeSpan.FromMinutes(1);
-        }
+        public int? MaxBatchSize { get; set; }
 
-        public int? MaxSize { get; set; }
-
-        public int MaxDocCount { get; set; }
-
-        public TimeSpan AcknowledgmentTimeout { get; set; }
-    }
+        public int MaxDocsPerBatch { get; set; }
+    }        
 }

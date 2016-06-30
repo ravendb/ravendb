@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 using Voron;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
     {
         protected const string MetadataFileName = "metadata";
 
-        protected static readonly Slice DefinitionSlice = "Definition";
+        protected static readonly Slice DefinitionSlice = Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable); 
 
         private int? _cachedHashCode;
 
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Indexes
                 writer.Flush();
 
                 stream.Position = 0;
-                tree.Add(DefinitionSlice, stream.ToArray());
+                tree.Add(DefinitionSlice, Slice.From(context.Allocator, stream.ToArray()));
             }
         }
 
@@ -134,34 +135,18 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexDefinition ConvertToIndexDefinition(Index index)
         {
-            var indexDefinition = new IndexDefinition();
-            indexDefinition.IndexId = index.IndexId;
+            var indexDefinition = CreateIndexDefinition() ?? new IndexDefinition();
             indexDefinition.Name = index.Name;
-            indexDefinition.Fields = MapFields.ToDictionary(
-                x => x.Key,
-                x => new IndexFieldOptions
-                {
-                    Sort = x.Value.SortOption,
-                    TermVector = x.Value.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null,
-                    Analyzer = x.Value.Analyzer,
-                    Indexing = x.Value.Indexing,
-                    Storage = x.Value.Storage
-                });
-
+            indexDefinition.IndexId = index.IndexId;
             indexDefinition.Type = index.Type;
             indexDefinition.LockMode = LockMode;
 
-            indexDefinition.IndexVersion = -1; // TODO [ppekrol]      
-            indexDefinition.IsSideBySideIndex = false; // TODO [ppekrol]
-            indexDefinition.IsTestIndex = false; // TODO [ppekrol]       
-            indexDefinition.MaxIndexOutputsPerDocument = null; // TODO [ppekrol]
-
-            FillIndexDefinition(indexDefinition);
+            indexDefinition.IndexVersion = -1; // TODO [ppekrol]
 
             return indexDefinition;
         }
 
-        protected abstract void FillIndexDefinition(IndexDefinition indexDefinition);
+        protected abstract IndexDefinition CreateIndexDefinition();
 
         public bool ContainsField(string field)
         {
@@ -285,6 +270,20 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return fields;
+        }
+
+        protected Dictionary<string, IndexFieldOptions> ConvertFields(Dictionary<string, IndexField> fields)
+        {
+            return fields.ToDictionary(
+                x => x.Key,
+                x => new IndexFieldOptions
+                {
+                    Sort = x.Value.SortOption,
+                    TermVector = x.Value.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null,
+                    Analyzer = x.Value.Analyzer,
+                    Indexing = x.Value.Indexing,
+                    Storage = x.Value.Storage
+                });
         }
     }
 }

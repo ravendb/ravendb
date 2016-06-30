@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using System.ComponentModel;
 using System.IO;
 using Voron.Impl.FileHeaders;
@@ -11,6 +13,8 @@ namespace Voron.Platform.Win32
 {
     public class Win32Helper
     {
+        public static IntPtr CurrentProcess = Win32NativeMethods.GetCurrentProcess();
+
         public static unsafe void WriteFileHeader(FileHeader* header, string path)
         {
             using (var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))

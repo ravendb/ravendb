@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public abstract class IndexOperationBase : IDisposable
     {
-        private static readonly Dictionary<Type, bool> NotForQuerying = new Dictionary<Type, bool>();
+        private static readonly ConcurrentDictionary<Type, bool> NotForQuerying = new ConcurrentDictionary<Type, bool>();
 
         protected RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, Dictionary<string, IndexField> fields, bool forQuerying = false)
         {
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             else
                 defaultAnalyzer = createDefaultAnalyzer();
 
-            StandardAnalyzer standardAnalyzer = null;
+            RavenStandardAnalyzer standardAnalyzer = null;
             KeywordAnalyzer keywordAnalyzer = null;
             var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
             foreach (var field in fields)
@@ -39,32 +40,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         perFieldAnalyzerWrapper.AddAnalyzer(field.Key, keywordAnalyzer);
                         break;
                     case FieldIndexing.Analyzed:
-                        if (string.IsNullOrWhiteSpace(field.Value.Analyzer) == false)
+                        var analyzer = GetAnalyzer(field.Key, field.Value, forQuerying);
+                        if (analyzer != null)
                         {
-                            // TODO [ppekrol] can we use one instance like with KeywordAnalyzer and StandardAnalyzer?
-                            var analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(field.Key, field.Value.Analyzer);
-
-                            var addAnalyzer = true;
-                            if (forQuerying)
-                            {
-                                var analyzerType = analyzerInstance.GetType();
-                                bool notForQuerying;
-                                if (NotForQuerying.TryGetValue(analyzerType, out notForQuerying) == false)
-                                    NotForQuerying[analyzerType] = notForQuerying = analyzerInstance.GetType().GetTypeInfo().GetCustomAttributes<NotForQueryingAttribute>(false).Any();
-
-                                if (notForQuerying)
-                                    addAnalyzer = false;
-                            }
-
-                            if (addAnalyzer)
-                            {
-                                perFieldAnalyzerWrapper.AddAnalyzer(field.Key, analyzerInstance);
-                                continue;
-                            }
+                            perFieldAnalyzerWrapper.AddAnalyzer(field.Key, analyzer);
+                            continue;
                         }
 
                         if (standardAnalyzer == null)
-                            standardAnalyzer = new StandardAnalyzer(global::Lucene.Net.Util.Version.LUCENE_29);
+                            standardAnalyzer = new RavenStandardAnalyzer(global::Lucene.Net.Util.Version.LUCENE_29);
 
                         perFieldAnalyzerWrapper.AddAnalyzer(field.Key, standardAnalyzer);
                         break;
@@ -75,5 +59,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         public abstract void Dispose();
+
+        private Analyzer GetAnalyzer(string name, IndexField field, bool forQuerying)
+        {
+            if (string.IsNullOrWhiteSpace(field.Analyzer))
+                return null;
+
+            // TODO [ppekrol] can we use one instance like with KeywordAnalyzer and StandardAnalyzer?
+            var analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(name, field.Analyzer);
+
+            if (forQuerying)
+            {
+                var analyzerType = analyzerInstance.GetType();
+
+                var notForQuerying = NotForQuerying
+                    .GetOrAdd(analyzerType, t => analyzerInstance.GetType().GetTypeInfo().GetCustomAttributes<NotForQueryingAttribute>(false).Any());
+
+                if (notForQuerying)
+                    return null;
+            }
+
+            return analyzerInstance;
+        }
     }
 }

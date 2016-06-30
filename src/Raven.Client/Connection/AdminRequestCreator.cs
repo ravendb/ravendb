@@ -145,7 +145,7 @@ namespace Raven.Client.Connection
             {
                 var result = await requestForSystemDatabase.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 var json = (RavenJArray)result;
-                return json.Select(x => x.ToString())
+                return json.Select(x => x.Value<string>("Name"))
                     .ToArray();
             }
         }

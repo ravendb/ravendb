@@ -11,11 +11,15 @@ namespace Voron.Data.RawData
     public unsafe class RawDataSection
     {
         protected const ushort ReservedHeaderSpace = 96;
-        private readonly HashSet<long> _dirtyPages = new HashSet<long>();
-        protected readonly int _pageSize;
+
+        private readonly PageLocator _pageLocator;
+
         protected readonly LowLevelTransaction _tx;
+        protected readonly int _pageSize;
+
         public readonly int MaxItemSize;
-        protected RawDataSmallSectionPageHeader* _sectionHeader;
+                
+        protected RawDataSmallSectionPageHeader* _sectionHeader;        
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RawDataEntrySizes
@@ -27,12 +31,13 @@ namespace Voron.Data.RawData
         public RawDataSection(LowLevelTransaction tx, long pageNumber)
         {
             PageNumber = pageNumber;
-            _tx = tx;
+            _tx = tx;         
             _pageSize = _tx.DataPager.PageSize;
+            _pageLocator = new PageLocator(_tx, 8);
 
             MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
 
-            _sectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(pageNumber).Pointer;
+            _sectionHeader = (RawDataSmallSectionPageHeader*)_pageLocator.GetReadOnlyPage(pageNumber).Pointer;
         }
 
         public long PageNumber { get; }
@@ -178,8 +183,8 @@ namespace Voron.Data.RawData
 
         public static byte* DirectRead(LowLevelTransaction tx, long id, out int size)
         {
-            var posInPage = (int)(id % tx.DataPager.PageSize);
-            var pageNumberInSection = (id - posInPage) / tx.DataPager.PageSize;
+            var posInPage = (int)(id % tx.PageSize);
+            var pageNumberInSection = (id - posInPage) / tx.PageSize;
             var pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
@@ -289,18 +294,14 @@ namespace Voron.Data.RawData
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureHeaderModified()
         {
-            if (_dirtyPages.Add(_sectionHeader->PageNumber) == false)
-                return;
-            var page = _tx.ModifyPage(_sectionHeader->PageNumber);
+            var page = _pageLocator.GetWritablePage(_sectionHeader->PageNumber);
             _sectionHeader = (RawDataSmallSectionPageHeader*)page.Pointer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected RawDataSmallPageHeader* ModifyPage(RawDataSmallPageHeader* pageHeader)
         {
-            if (_dirtyPages.Add(pageHeader->PageNumber) == false)
-                return pageHeader;
-            var page = _tx.ModifyPage(pageHeader->PageNumber);
+            var page = _pageLocator.GetWritablePage(pageHeader->PageNumber);
             return (RawDataSmallPageHeader*)page.Pointer;
         }
 

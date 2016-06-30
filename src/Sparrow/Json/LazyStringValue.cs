@@ -56,7 +56,7 @@ namespace Sparrow.Json
 
         public int Compare(byte* other, int otherSize)
         {
-            var result = Memory.Compare(Buffer, other, Math.Min(Size, otherSize));
+            var result = Memory.CompareInline(Buffer, other, Math.Min(Size, otherSize));
             return result == 0 ? Size - otherSize : result;
         }
 

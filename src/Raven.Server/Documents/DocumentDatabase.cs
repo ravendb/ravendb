@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -17,6 +19,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -29,10 +32,9 @@ namespace Raven.Server.Documents
         public readonly PatchDocument Patch;
 
         private readonly object _idleLocker = new object();
-
         private Task _indexStoreTask;
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler)
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler, LoggerSetup loggerSetup)
         {
             Name = name;
             Configuration = configuration;
@@ -43,10 +45,12 @@ namespace Raven.Server.Documents
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-
+            SubscriptionStorage = new SubscriptionStorage(this);
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
         }
+
+        public SubscriptionStorage SubscriptionStorage { get; set; }
 
         public string Name { get; }
 
@@ -104,6 +108,7 @@ namespace Raven.Server.Documents
             {
                 _indexStoreTask = null;
             }
+            SubscriptionStorage.Initialize();
         }
 
         public void Dispose()
@@ -149,6 +154,10 @@ namespace Raven.Server.Documents
                 SqlReplicationLoader = null;
             });
 
+            exceptionAggregator.Execute(() =>
+            {
+                SubscriptionStorage?.Dispose();
+            });
             exceptionAggregator.Execute(() =>
             {
                 DocumentsStorage?.Dispose();

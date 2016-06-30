@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 
 namespace Raven.Client.Linq.Indexing
 {

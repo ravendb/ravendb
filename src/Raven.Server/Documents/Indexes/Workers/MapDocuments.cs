@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Logging;
@@ -6,6 +8,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
@@ -62,43 +65,52 @@ namespace Raven.Server.Documents.Indexes.Workers
                     using (databaseContext.OpenReadTransaction())
                     {
                         var documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize);
-                        var stateful = new StatefulEnumerator<Document>(documents);
-                        foreach (var document in _index.EnumerateMap(stateful, collection, indexContext))
+
+                        using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                         {
-                            //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
-                            //TODO: we flush the index
-                            token.ThrowIfCancellationRequested();
+                            IEnumerable mapResults;
 
-                            if (indexWriter == null)
-                                indexWriter = writeOperation.Value;
-
-                            var current = stateful.Current;
-
-                            if (Log.IsDebugEnabled)
-                                Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
-
-                            collectionStats.RecordMapAttempt();
-
-                            count++;
-                            lastEtag = current.Etag;
-
-                            try
+                            while (docsEnumerator.MoveNext(out mapResults))
                             {
-                                _index.HandleMap(current.Key, document, indexWriter, indexContext, collectionStats);
+                                //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
+                                //TODO: we flush the index
+                                token.ThrowIfCancellationRequested();
 
-                                collectionStats.RecordMapSuccess();
+                                if (indexWriter == null)
+                                    indexWriter = writeOperation.Value;
+
+                                var current = docsEnumerator.Current;
+
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug(
+                                        $"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
+
+                                collectionStats.RecordMapAttempt();
+
+                                count++;
+                                lastEtag = current.Etag;
+
+                                try
+                                {
+                                    _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, collectionStats);
+
+                                    collectionStats.RecordMapSuccess();
+                                }
+                                catch (Exception e)
+                                {
+                                    collectionStats.RecordMapError();
+                                    if (Log.IsWarnEnabled)
+                                        Log.WarnException(
+                                            $"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.",
+                                            e);
+
+                                    collectionStats.AddMapError(current.Key,
+                                        $"Failed to execute mapping function on {current.Key}. Message: {e.Message}");
+                                }
+
+                                if (sw.Elapsed > timeoutProcessing)
+                                    break;
                             }
-                            catch (Exception e)
-                            {
-                                collectionStats.RecordMapError();
-                                if (Log.IsWarnEnabled)
-                                    Log.WarnException($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
-
-                                collectionStats.AddMapError(current.Key, $"Failed to execute mapping function on {current.Key}. Message: {e.Message}");
-                            }
-
-                            if (sw.Elapsed > timeoutProcessing)
-                                break;
                         }
                     }
 

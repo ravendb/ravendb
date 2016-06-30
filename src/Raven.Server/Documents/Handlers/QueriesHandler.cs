@@ -24,19 +24,91 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/queries/explain/$", "GET")]
-        public Task Explain()
+        [RavenAction("/databases/*/queries/$", "GET")]
+        public async Task Get()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
             DocumentsOperationContext context;
+            using (TrackRequestTime())
+            using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var operation = GetStringQueryString("op", required: false);
+                if (string.Equals(operation, "morelikethis", StringComparison.OrdinalIgnoreCase))
+                {
+                    MoreLikeThis(context, indexName, token);
+                    return;
+                }
+
+                if (string.Equals(operation, "explain", StringComparison.OrdinalIgnoreCase))
+                {
+                    Explain(context, indexName);
+                    return;
+                }
+
+                await Query(context, indexName, token).ConfigureAwait(false);
+            }
+        }
+
+        private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        {
+            var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
+
+            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+            var includes = GetStringValuesQueryString("include", required: false);
+            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
+
+            var runner = new QueryRunner(Database, context);
+
+            var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
+
+            if (result.NotModified)
+            {
+                HttpContext.Response.StatusCode = 304;
+                return;
+            }
+
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
-                var runner = new QueryRunner(Database, context);
+                writer.WriteDocumentQueryResult(context, result, metadataOnly);
+            }
+        }
 
-                var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
+        private void MoreLikeThis(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        {
+            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+
+            var query = GetMoreLikeThisQuery(context);
+            var runner = new QueryRunner(Database, context);
+
+            var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
+
+            if (result.NotModified)
+            {
+                HttpContext.Response.StatusCode = 304;
+                return;
+            }
+
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteQueryResult(context, result, metadataOnly: false);
+            }
+        }
+
+        private void Explain(DocumentsOperationContext context, string indexName)
+        {
+            var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
+            var runner = new QueryRunner(Database, context);
+
+            var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
                 var isFirst = true;
                 writer.WriteStartArray();
                 foreach (var explanation in explanations)
@@ -48,75 +120,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteExplanation(context, explanation);
                 }
                 writer.WriteEndArray();
-            }
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/databases/*/queries/morelikethis/$", "GET")]
-        public Task MoreLikeThis()
-        {
-            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-
-            DocumentsOperationContext context;
-            using (TrackRequestTime())
-            using (var token = CreateTimeLimitedOperationToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                var existingResultEtag = GetLongFromHeaders("If-None-Match");
-
-                var query = GetMoreLikeThisQuery(context);
-                var runner = new QueryRunner(Database, context);
-
-                var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
-
-                if (result.NotModified)
-                {
-                    HttpContext.Response.StatusCode = 304;
-                    return Task.CompletedTask;
-                }
-
-                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteQueryResult(context, result);
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/databases/*/queries/$", "GET")]
-        public async Task Get()
-        {
-            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
-
-            DocumentsOperationContext context;
-            using (TrackRequestTime())
-            using (var token = CreateTimeLimitedOperationToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                var existingResultEtag = GetLongFromHeaders("If-None-Match");
-                var includes = GetStringValuesQueryString("include", required: false);
-
-                var runner = new QueryRunner(Database, context);
-
-                var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
-
-                if (result.NotModified)
-                {
-                    HttpContext.Response.StatusCode = 304;
-                    return;
-                }
-
-                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteDocumentQueryResult(context, result);
-                }
             }
         }
 

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 
@@ -8,8 +6,6 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexField
     {
-        private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
-
         public string Name { get; set; }
 
         public string Analyzer { get; set; }
@@ -24,10 +20,49 @@ namespace Raven.Server.Documents.Indexes
 
         public FieldIndexing Indexing { get; set; }
 
+        public FieldTermVector TermVector { get; set; }
+
         public static string ReplaceInvalidCharactersInFieldName(string field)
         {
-            //TODO: This is probably expensive, we can do better
-            return ReplaceInvalidCharacterForFields.Replace(field, "_");
+            // we allow only \w which is equivalent to [a-zA-Z_0-9]
+            const int a = 'a';
+            const int z = 'z';
+            const int A = 'A';
+            const int Z = 'Z';
+            const int Zero = '0';
+            const int Nine = '9';
+            const int Underscore = '_';
+
+            if (string.IsNullOrEmpty(field))
+                return field;
+
+            char[] input = null;
+            
+            for (var i = 0; i < field.Length; i++)
+            {
+                var ch = field[i];
+                if (ch >= a && ch <= z)
+                    continue;
+
+                if (ch >= A && ch <= Z)
+                    continue;
+
+                if (ch >= Zero && ch <= Nine)
+                    continue;
+
+                if (ch == Underscore)
+                    continue;
+
+                if (input == null)
+                {
+                    input = new char[field.Length];
+                    field.CopyTo(0, input, 0, field.Length);
+                }
+
+                input[i] = '_';
+            }
+
+            return input == null ? field : new string(input);
         }
 
         public IndexField()
@@ -36,21 +71,32 @@ namespace Raven.Server.Documents.Indexes
             Storage = FieldStorage.No;
         }
 
-        public static IndexField Create(string name, IndexFieldOptions options)
+        public static IndexField Create(string name, IndexFieldOptions options, IndexFieldOptions allFields)
         {
             var field = new IndexField();
             field.Name = name;
-            field.Analyzer = options.Analyzer;
+            field.Analyzer = options.Analyzer ?? allFields?.Analyzer;
 
             if (options.Indexing.HasValue)
                 field.Indexing = options.Indexing.Value;
+            else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
+                field.Indexing = FieldIndexing.Analyzed;
 
-            field.SortOption = options.Sort;
+            if (options.Sort.HasValue)
+                field.SortOption = options.Sort.Value;
+            else if (allFields != null && allFields.Sort.HasValue)
+                field.SortOption = allFields.Sort.Value;
 
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;
+            else if (allFields != null && allFields.Storage.HasValue)
+                field.Storage = allFields.Storage.Value;
 
-            // options.TermVector // TODO [ppekrol]
+            if (options.TermVector.HasValue)
+                field.TermVector = options.TermVector.Value;
+            else if (allFields != null && allFields.TermVector.HasValue)
+                field.TermVector = allFields.TermVector.Value;
+
             // options.Suggestions // TODO [ppekrol]
             // options.Spatial // TODO [ppekrol]
 
@@ -65,7 +111,8 @@ namespace Raven.Server.Documents.Indexes
                 && Highlighted == other.Highlighted
                 && MapReduceOperation == other.MapReduceOperation
                 && Storage == other.Storage
-                && Indexing == other.Indexing;
+                && Indexing == other.Indexing
+                && TermVector == other.TermVector;
         }
 
         public override bool Equals(object obj)
@@ -96,6 +143,7 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (int)MapReduceOperation;
                 hashCode = (hashCode * 397) ^ (int)Storage;
                 hashCode = (hashCode * 397) ^ (int)Indexing;
+                hashCode = (hashCode * 397) ^ (int)TermVector;
                 return hashCode;
             }
         }

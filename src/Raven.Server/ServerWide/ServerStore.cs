@@ -13,6 +13,8 @@ using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Voron;
 using Voron.Data;
+using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide
 {
@@ -35,17 +37,19 @@ namespace Raven.Server.ServerWide
 
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         public readonly RavenConfiguration Configuration;
+        private readonly LoggerSetup _loggerSetup;
         public readonly MetricsScheduler MetricsScheduler;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
-        public ServerStore(RavenConfiguration configuration)
+        public ServerStore(RavenConfiguration configuration, LoggerSetup loggerSetup)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             MetricsScheduler = new MetricsScheduler();
             Configuration = configuration;
+            _loggerSetup = loggerSetup;
 
-            DatabasesLandlord = new DatabasesLandlord(this);
+            DatabasesLandlord = new DatabasesLandlord(this, _loggerSetup);
         }
 
         public TransactionContextPool ContextPool;
@@ -117,9 +121,9 @@ namespace Raven.Server.ServerWide
         public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
         {
             var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
-            using (var it = dbs.Iterate())
+            using (var it = dbs.Iterate(true))
             {
-                it.RequiredPrefix = prefix;
+                it.RequiredPrefix = Slice.From(ctx.Allocator, prefix, ByteStringType.Immutable);
                 if (it.Seek(it.RequiredPrefix) == false)
                     yield break;
 

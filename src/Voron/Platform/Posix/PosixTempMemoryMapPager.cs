@@ -1,12 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Voron.Impl;
-using Voron.Impl.Paging;
-using Voron.Util;
-using Sparrow;
-using System.IO;
 
 namespace Voron.Platform.Posix
 {
@@ -23,7 +17,7 @@ namespace Voron.Platform.Posix
     /// files for that purpose (so we'll get assured allocation of space on disk, and then be able to mmap them).
     /// 
     /// </summary>
-    public unsafe class PosixTempMemoryMapPager : AbstractPager
+    public unsafe class PosixTempMemoryMapPager : PosixAbstractPager
     {
         private readonly string _file;
         private int _fd;
@@ -51,7 +45,7 @@ namespace Voron.Platform.Posix
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
             PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize);
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
             PagerState.Release();
             PagerState = CreatePagerState();
         }
@@ -105,7 +99,7 @@ namespace Voron.Platform.Posix
             PagerState = newPagerState;
             tmp.Release(); //replacing the pager state --> so one less reference for it
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
 
             return newPagerState;
         }

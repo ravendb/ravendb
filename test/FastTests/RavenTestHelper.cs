@@ -6,8 +6,8 @@ using System.Threading;
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
-using Sparrow.Platform;
 
+using Sparrow;
 using Sparrow.Collections;
 
 namespace FastTests

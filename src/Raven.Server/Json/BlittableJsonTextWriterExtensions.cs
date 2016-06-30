@@ -10,13 +10,41 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-
+using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 
 namespace Raven.Server.Json
 {
     public static class BlittableJsonTextWriterExtensions
     {
+        public static void WriteChangeVector(this BlittableJsonTextWriter writer, JsonOperationContext context,
+            ChangeVectorEntry[] changeVector)
+        {
+            writer.WriteStartArray();
+            for (int i = 0; i < changeVector.Length; i++)
+            {
+                var entry = changeVector[i];
+                writer.WriteChangeVectorEntry(context,entry);
+                writer.WriteComma();
+            }
+            writer.WriteEndArray();
+        }
+
+        public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, JsonOperationContext context, ChangeVectorEntry entry)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(entry.Etag)));
+            writer.WriteInteger(entry.Etag);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(entry.DbId)));
+            writer.WriteString(context.GetLazyString(entry.DbId.ToString()));
+
+            writer.WriteEndObject();
+        }
+
+
         public static void WriteExplanation(this BlittableJsonTextWriter writer, JsonOperationContext context, DynamicQueryToIndexMatcher.Explanation explanation)
         {
             writer.WriteStartObject();
@@ -31,7 +59,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDocumentQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result)
+        public static void WriteDocumentQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly)
         {
             writer.WriteStartObject();
 
@@ -43,12 +71,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
 
-            writer.WriteQueryResult(context, result, partial: true);
+            writer.WriteQueryResult(context, result, metadataOnly, partial: true);
 
             writer.WriteEndObject();
         }
 
-        public static void WriteQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<Document> result, bool partial = false)
+        public static void WriteQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<Document> result, bool metadataOnly, bool partial = false)
         {
             if (partial == false)
                 writer.WriteStartObject();
@@ -58,11 +86,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Results)));
-            writer.WriteDocuments(context, result.Results, metadataOnly: false);
+            writer.WriteDocuments(context, result.Results, metadataOnly);
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Includes)));
-            writer.WriteDocuments(context, result.Includes, metadataOnly: false);
+            writer.WriteDocuments(context, result.Includes, metadataOnly);
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyString(nameof(result.IndexTimestamp)));
@@ -773,11 +801,12 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly = false)
+        public static long WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
         {
             writer.WriteStartArray();
 
-            bool first = true;
+            var first = true;
+            Document lastDocument = null;
             foreach (var document in documents)
             {
                 if (document == null)
@@ -791,9 +820,11 @@ namespace Raven.Server.Json
 
                     writer.WriteDocument(context, document, metadataOnly);
                 }
+                lastDocument = document;
             }
 
             writer.WriteEndArray();
+            return lastDocument?.Etag ?? 0;
         }
 
         public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, List<Document> documents, bool metadataOnly, int start, int count)

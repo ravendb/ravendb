@@ -5,7 +5,9 @@ using System.Threading;
 using Lucene.Net.Store;
 using Raven.Abstractions.Extensions;
 using Voron;
+using Voron.Data;
 using Voron.Impl;
+using Sparrow;
 
 namespace Raven.Server.Indexing
 {
@@ -36,9 +38,9 @@ namespace Raven.Server.Indexing
         {
             var files = new List<string>();
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            using (var it = filesTree.Iterate())
+            using (var it = filesTree.Iterate(false))
             {
-                if (it.Seek(Slice.BeforeAllKeys))
+                if (it.Seek(Slices.BeforeAllKeys))
                 {
                     do
                     {
@@ -55,24 +57,24 @@ namespace Raven.Server.Indexing
             var readResult = filesTree.Read(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
+
             return readResult.Version;
         }
 
         public override unsafe void TouchFile(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            Slice key = name;
-            var readResult = filesTree.Read(key);
+            var readResult = filesTree.Read(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
-            filesTree.DirectAdd(key, readResult.Reader.Length);
+
+            filesTree.DirectAdd(name, readResult.Reader.Length);
         }
 
         public override long FileLength(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            Slice key = name;
-            var readResult = filesTree.Read(key);
+            var readResult = filesTree.Read(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
@@ -83,11 +85,11 @@ namespace Raven.Server.Indexing
         public override void DeleteFile(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            Slice key = name;
-            var readResult = filesTree.Read(key);
+            var readResult = filesTree.Read(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
-            filesTree.Delete(key);
+
+            filesTree.Delete(name);
         }
 
         public override IndexInput OpenInput(string name)

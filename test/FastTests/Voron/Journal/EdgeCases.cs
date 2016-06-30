@@ -7,8 +7,7 @@
 using System.IO;
 using Xunit;
 using Voron;
-using Voron.Impl;
-using Voron.Impl.Journal;
+using Voron.Global;
 
 namespace FastTests.Voron.Journal
 {

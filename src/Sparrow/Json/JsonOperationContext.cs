@@ -129,7 +129,7 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, GetMemory(_lastStreamSize));
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (_disposed)
                 return;
@@ -284,6 +284,10 @@ namespace Sparrow.Json
             return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
+        public Task<BlittableJsonReaderObject> ReadForMemoryAsync(Stream stream, string documentId)
+        {
+            return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
+        }
 
         public BlittableJsonReaderObject ReadForMemory(Stream stream, string documentId)
         {
@@ -355,6 +359,7 @@ namespace Sparrow.Json
                 return writer.CreateReader();
             }
         }
+
 
         public BlittableJsonReaderObject Read(Stream stream, string documentId)
         {

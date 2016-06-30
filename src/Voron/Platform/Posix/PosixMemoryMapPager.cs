@@ -1,25 +1,18 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Voron.Impl;
-using Voron.Impl.Paging;
-using Voron.Util;
-using Sparrow;
 
 namespace Voron.Platform.Posix
 {
-    public unsafe class PosixMemoryMapPager : AbstractPager
+    public unsafe class PosixMemoryMapPager : PosixAbstractPager
     {
         private readonly string _file;
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
-        private bool _isSyncDirAllowed;
+        private readonly bool _isSyncDirAllowed;
         
-        private static object lockObj = new object();
-
         public PosixMemoryMapPager(int pageSize,string file, long? initialFileSize = null):base(pageSize)
         {
             _file = file;
@@ -56,7 +49,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
             PagerState.Release();
             PagerState = CreatePagerState();
         }
@@ -123,7 +116,7 @@ namespace Voron.Platform.Posix
             tmp.Release(); //replacing the pager state --> so one less reference for it
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize/PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize/ _pageSize;
 
             return newPagerState;
         }

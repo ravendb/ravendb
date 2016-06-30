@@ -2,18 +2,20 @@
 using System.IO;
 using Lucene.Net.Store;
 using Voron.Impl;
+using Voron;
+using Sparrow;
 
 namespace Raven.Server.Indexing
 {
     public class VoronIndexOutput : BufferedIndexOutput
     {
-        private readonly string _name;
+        private readonly Slice _name;
         private readonly Transaction _tx;
         private readonly FileStream _file;
 
         public VoronIndexOutput(string tempPath, string name, Transaction tx)
         {
-            _name = name;
+            _name = Slice.From(tx.Allocator, name, ByteStringType.Immutable);
             _tx = tx;
             var fileTempPath = Path.Combine(tempPath, name + "_" + Guid.NewGuid());
             //TODO: Pass this flag

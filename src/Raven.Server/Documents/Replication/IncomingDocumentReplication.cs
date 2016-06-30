@@ -5,7 +5,6 @@ using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -20,39 +19,52 @@ namespace Raven.Server.Documents.Replication
 
         //by design this method won't handle opening and commit of the transaction
         //(that should happen at the calling code)
-        public void ReceiveReplicatedDocuments(DocumentsOperationContext context,
-            List<BlittableJsonReaderObject> docs)
+        public void ReceiveDocuments(DocumentsOperationContext context,
+            BlittableJsonReaderArray docs)
         {
             var dbChangeVector = _database.DocumentsStorage.GetChangeVector(context);
             var changeVectorUpdated = false;
             var maxReceivedChangeVector = new Dictionary<Guid, long>();
-            for (int i = 0; i < docs.Count; i++)
+            foreach (var member in docs)
             {
-                var doc = docs[i];
+                var doc = member as BlittableJsonReaderObject;
+                Debug.Assert(doc != null);
+
                 var changeVector = doc.EnumerateChangeVector();
-                for (int j = 0; j < changeVector.Length; j++)
+                foreach (var currentEntry in changeVector)
                 {
-                    var currentEntry = changeVector[j];
                     Debug.Assert(currentEntry.DbId != Guid.Empty); //should never happen, but..
-
-                    long existingValue;
-                    if (!maxReceivedChangeVector.TryGetValue(currentEntry.DbId, out existingValue) ||
-                        existingValue < currentEntry.Etag)
-                        maxReceivedChangeVector[currentEntry.DbId] = currentEntry.Etag;
-                    else
-                        maxReceivedChangeVector.Add(currentEntry.DbId, currentEntry.Etag);
+                    maxReceivedChangeVector[currentEntry.DbId] = currentEntry.Etag;
                 }
-
                 ReceiveReplicated(context, doc);
             }
 
             for (int i = 0; i < dbChangeVector.Length; i++)
             {
-                var receivedVal = maxReceivedChangeVector.GetOrAdd(dbChangeVector[i].DbId, 0);
-                if (receivedVal > dbChangeVector[i].Etag)
+                long dbEtag;
+                if (maxReceivedChangeVector.TryGetValue(dbChangeVector[i].DbId, out dbEtag) == false)
+                    continue;
+                maxReceivedChangeVector.Remove(dbChangeVector[i].DbId);
+                if (dbEtag > dbChangeVector[i].Etag)
                 {
                     changeVectorUpdated = true;
-                    dbChangeVector[i].Etag = receivedVal;
+                    dbChangeVector[i].Etag = dbEtag;
+                }
+            }
+
+            if (maxReceivedChangeVector.Count > 0)
+            {
+                changeVectorUpdated = true;
+                var oldSize = dbChangeVector.Length;
+                Array.Resize(ref dbChangeVector,oldSize + maxReceivedChangeVector.Count);
+
+                foreach (var kvp in maxReceivedChangeVector)
+                {
+                    dbChangeVector[oldSize++] = new ChangeVectorEntry
+                    {
+                        DbId = kvp.Key,
+                        Etag = kvp.Value,
+                    };
                 }
             }
 
@@ -66,6 +78,9 @@ namespace Raven.Server.Documents.Replication
             if (id == null)
                 throw new InvalidDataException($"Missing {Constants.DocumentIdFieldName} field from a document; this is not something that should happen...");
 
+            // we need to split this document to an independent blittable document
+            // and this time, we'll prepare it for disk.
+            doc.PrepareForStorage();
             _database.DocumentsStorage.Put(context, id, null, doc);
         }
     }

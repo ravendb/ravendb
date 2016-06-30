@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (tombstone.DeletedEtag > lastMappedEtag)
                                 continue; // no-op, we have not yet indexed this document
 
-                            _index.HandleDelete(tombstone, indexWriter, indexContext, collectionScope);
+                            _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionScope);
 
                             if (sw.Elapsed > timeoutProcessing)
                                 break;

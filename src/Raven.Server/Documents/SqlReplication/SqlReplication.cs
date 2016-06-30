@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -62,12 +63,12 @@ namespace Raven.Server.Documents.SqlReplication
             _database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        protected override void ExecuteReplicationOnce()
+        protected override Task ExecuteReplicationOnce()
         {
             if (Configuration.Disabled)
-                return;
+                return Task.CompletedTask;
             if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > SystemTime.UtcNow)
-                return;
+                return Task.CompletedTask;
 
             int countOfReplicatedItems = 0;
             var startTime = SystemTime.UtcNow;
@@ -114,9 +115,11 @@ namespace Raven.Server.Documents.SqlReplication
                 var afterReplicationCompleted = _database.SqlReplicationLoader.AfterReplicationCompleted;
                 afterReplicationCompleted?.Invoke(Statistics);
             }
+
+            return Task.CompletedTask;
         }
 
-        protected override bool ShouldWaitForChanges()
+        protected override bool HasMoreDocumentsToSend()
         {
             return _shouldWaitForChanges;
         }

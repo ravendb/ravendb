@@ -223,6 +223,8 @@ namespace Raven.Server.Documents.Versioning
 
         public static Slice GetSliceFromKey(DocumentsOperationContext context, string key)
         {
+            // REVIEW: Is this needed? Could we just use the ByteString?
+
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
             if (byteCount > 255)
                 throw new ArgumentException(
@@ -248,7 +250,7 @@ namespace Raven.Server.Documents.Versioning
                 var keyBytes = buffer + sizeof(char) + key.Length * sizeof(char);
 
                 size = Encoding.UTF8.GetBytes(destChars, key.Length + 1, keyBytes, byteCount + 1);
-                return new Slice(keyBytes, (ushort)size);
+                return Slice.External(context.Allocator, keyBytes, (ushort)size);
             }
         }
 

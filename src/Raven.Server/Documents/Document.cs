@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Abstractions.Data;
-using Raven.Server.ReplicationUtil;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -9,6 +8,9 @@ namespace Raven.Server.Documents
 {
     public class Document
     {
+        public const string NoCollectionSpecified = "Raven/Empty";
+        public const string SystemDocumentsCollection = "Raven/SystemDocs";
+
         private ulong? _hash;
 
         public long Etag;
@@ -63,6 +65,25 @@ namespace Raven.Server.Documents
             }
 
             _hash = null;
+        }
+
+        public static string GetCollectionName(string key, BlittableJsonReaderObject document, out bool isSystemDocument)
+        {
+            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            {
+                isSystemDocument = true;
+                return SystemDocumentsCollection;
+            }
+
+            isSystemDocument = false;
+            string collectionName;
+            BlittableJsonReaderObject metadata;
+            if (document.TryGet(Constants.Metadata, out metadata) == false ||
+                metadata.TryGet(Constants.Headers.RavenEntityName, out collectionName) == false)
+            {
+                collectionName = NoCollectionSpecified;
+            }
+            return collectionName;
         }
     }
 }

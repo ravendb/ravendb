@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 #endif
 using System.Runtime.CompilerServices;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
@@ -36,7 +37,7 @@ namespace Voron.Data.BTrees
             var originalLastSearchPositionOfParent = _parentPage.LastSearchPosition;
 
             if (nodePos == null)
-                nodePos = _parentPage.NodePositionFor(separator); // select the appropriate place for this
+                nodePos = _parentPage.NodePositionFor(_tx, separator); // select the appropriate place for this
 
             if (_parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separator) + Constants.NodeOffsetSize) == false)
             {

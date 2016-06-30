@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Xunit;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
+using Voron.Global;
 
 namespace FastTests.Voron.Trees
 {
@@ -79,7 +81,7 @@ namespace FastTests.Voron.Trees
                 tx.Commit();
             }
 
-            var expected = new List<Slice>();
+            var expected = new List<string>();
             for (int i = 15; i < 1000; i++)
             {
                 expected.Add(string.Format("{0,5}", i));
@@ -99,7 +101,8 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                var list = Keys(tree, tx);
+                var list = Keys(tree, tx).Select( x => x.ToString());
+
                 Assert.Equal(expected, list);
             }
         }
@@ -107,14 +110,15 @@ namespace FastTests.Voron.Trees
         public List<Slice> Keys(Tree t, Transaction tx)
         {
             var results = new List<Slice>();
-            using (var it = t.Iterate())
+            using (var it = t.Iterate(false))
             {
-                if (it.Seek(Slice.BeforeAllKeys) == false)
+                if (it.Seek(Slices.BeforeAllKeys) == false)
                     return results;
                 do
                 {
-                    results.Add(it.CurrentKey);
-                } while (it.MoveNext());
+                    results.Add(it.CurrentKey.Clone(tx.Allocator));
+                }
+                while (it.MoveNext());
             }
             return results;
         }
