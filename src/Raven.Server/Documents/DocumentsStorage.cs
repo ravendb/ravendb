@@ -147,7 +147,7 @@ namespace Raven.Server.Documents
             options.SchemaVersion = 1;
             try
             {
-                Environment = new StorageEnvironment(options);
+                Environment = new StorageEnvironment(options, _documentDatabase.LoggerSetup);
                 _unmanagedBuffersPool = new UnmanagedBuffersPool(_name);
                 ContextPool = new DocumentsContextPool(_unmanagedBuffersPool, _documentDatabase);
 

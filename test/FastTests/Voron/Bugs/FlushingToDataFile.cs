@@ -148,7 +148,7 @@ namespace FastTests.Voron.Bugs
             using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
             {
                 options.ManualFlushing = true;
-                using (var env = new StorageEnvironment(options))
+                using (var env = new StorageEnvironment(options, NullLoggerSetup))
                 {
                     var trees = CreateTrees(env, 1, "tree");
                     var transactions = new List<Transaction>();

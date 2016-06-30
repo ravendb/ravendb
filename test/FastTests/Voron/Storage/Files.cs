@@ -35,7 +35,7 @@ namespace FastTests.Voron.Storage
         public void DefaultScratchLocation()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
                 Assert.True(File.Exists(scratchFile));
@@ -46,7 +46,7 @@ namespace FastTests.Voron.Storage
         public void ScratchLocationWithTemporaryPathSpecified()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp");
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
                 var scratchFileTemp = Path.Combine(DataDir +"Temp", StorageEnvironmentOptions.ScratchBufferName(0));

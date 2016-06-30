@@ -54,7 +54,7 @@ namespace SlowTests.Voron
 			var options = StorageEnvironmentOptions.ForPath(DataDir);
 			options.MaxLogFileSize = 10 * options.PageSize;
 
-			using (var env = new StorageEnvironment(options))
+			using (var env = new StorageEnvironment(options, NullLoggerSetup))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -72,7 +72,7 @@ namespace SlowTests.Voron
 			options = StorageEnvironmentOptions.ForPath(DataDir);
 			options.MaxLogFileSize = 10 * options.PageSize;
 
-			using (var env = new StorageEnvironment(options))
+			using (var env = new StorageEnvironment(options, NullLoggerSetup))
 			{
 				using (var tx = env.WriteTransaction())
 				{

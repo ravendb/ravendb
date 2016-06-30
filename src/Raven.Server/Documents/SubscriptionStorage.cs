@@ -44,7 +44,7 @@ namespace Raven.Server.Documents
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"));
             
-            _environment = new StorageEnvironment(options);
+            _environment = new StorageEnvironment(options, db.LoggerSetup);
             _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");
 
             var databaseName = db.Name;

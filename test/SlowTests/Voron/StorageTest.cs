@@ -9,11 +9,14 @@ using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Global;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace SlowTests.Voron
 {
     public abstract class StorageTest : LinuxRaceConditionWorkAround, IDisposable
     {
+        protected static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(System.IO.Path.GetTempPath(), LogMode.None);
+
         private StorageEnvironment _storageEnvironment;
         protected StorageEnvironmentOptions _options;
         protected readonly string DataDir = GenerateDataDir();
@@ -37,7 +40,7 @@ namespace SlowTests.Voron
                     lock (this)
                     {
                         if (_storageEnvironment == null)
-                            _storageEnvironment = new StorageEnvironment(_options);
+                            _storageEnvironment = new StorageEnvironment(_options, NullLoggerSetup);
                     }
                 }
                 return _storageEnvironment;
@@ -82,7 +85,7 @@ namespace SlowTests.Voron
 
         protected void StartDatabase()
         {
-            _storageEnvironment = new StorageEnvironment(_options);
+            _storageEnvironment = new StorageEnvironment(_options, NullLoggerSetup);
         }
 
         protected void StopDatabase()

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Logging;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -27,6 +28,8 @@ namespace Voron
 {
     public class StorageEnvironment : IDisposable
     {
+        private readonly LoggerSetup _loggerSetup;
+
         /// <summary>
         /// This is the shared storage where we are going to store all the static constants for names. 
         /// WARNING: This context will never be released, so only static constants should be added here.
@@ -63,10 +66,11 @@ namespace Voron
         public StorageEnvironmentState State { get; private set; }
 
      
-        public StorageEnvironment(StorageEnvironmentOptions options)
+        public StorageEnvironment(StorageEnvironmentOptions options, LoggerSetup loggerSetup)
         {
             try
             {
+                _loggerSetup = loggerSetup;
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();

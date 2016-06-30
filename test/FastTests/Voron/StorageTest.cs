@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -18,6 +19,8 @@ namespace FastTests.Voron
         protected readonly string DataDir = GenerateDataDir();
 
         private ByteStringContext _allocator = new ByteStringContext();
+
+        protected static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(Path.GetTempPath(), LogMode.None);
 
         public static string GenerateDataDir()
         {
@@ -35,7 +38,7 @@ namespace FastTests.Voron
                     lock (this)
                     {
                         if (_storageEnvironment == null)
-                            _storageEnvironment = new StorageEnvironment(_options);
+                            _storageEnvironment = new StorageEnvironment(_options, NullLoggerSetup);
                     }
                 }
                 return _storageEnvironment;
@@ -80,7 +83,7 @@ namespace FastTests.Voron
 
         protected void StartDatabase()
         {
-            _storageEnvironment = new StorageEnvironment(_options);
+            _storageEnvironment = new StorageEnvironment(_options, NullLoggerSetup);
         }
 
         protected void StopDatabase()

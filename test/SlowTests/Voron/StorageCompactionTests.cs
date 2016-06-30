@@ -46,7 +46,7 @@ namespace SlowTests.Voron
             const int multiValueRecordsCount = 4;
             const int multiValuesCount = 3;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir), NullLoggerSetup))
             {
                 for (int i = 0; i < treeCount; i++)
                 {
@@ -89,9 +89,11 @@ namespace SlowTests.Voron
             }
 
             var compactedData = Path.Combine(DataDir, "Compacted");
-            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData)
+                , NullLoggerSetup);
 
-            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData), NullLoggerSetup))
             {
                 using (var tx = compacted.ReadTransaction())
                 {

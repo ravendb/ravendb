@@ -12,7 +12,7 @@ namespace FastTests.Voron.Storage
             using (var pager = StorageEnvironmentOptions.ForPath(DataDir))
             {
                 pager.OwnsPagers = false;
-                using (var env = new StorageEnvironment(pager))
+                using (var env = new StorageEnvironment(pager, NullLoggerSetup))
                 {
                     using (var tx = env.WriteTransaction())
                     {
@@ -28,7 +28,7 @@ namespace FastTests.Voron.Storage
                     }
                 }
 
-                using (var env = new StorageEnvironment(pager))
+                using (var env = new StorageEnvironment(pager, NullLoggerSetup))
                 {
                     using (var tx = env.ReadTransaction())
                     {
@@ -47,7 +47,7 @@ namespace FastTests.Voron.Storage
             using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())
             {
                 pureMemoryPager.OwnsPagers = false;
-                using (var env = new StorageEnvironment(pureMemoryPager))
+                using (var env = new StorageEnvironment(pureMemoryPager, NullLoggerSetup))
                 {
                     using (var tx = env.WriteTransaction())
                     {
@@ -63,7 +63,7 @@ namespace FastTests.Voron.Storage
                     }
                 }
 
-                using (var env = new StorageEnvironment(pureMemoryPager))
+                using (var env = new StorageEnvironment(pureMemoryPager, NullLoggerSetup))
                 {
                     using (var tx = env.ReadTransaction())
                     {
@@ -82,7 +82,7 @@ namespace FastTests.Voron.Storage
             using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())
             {
                 pureMemoryPager.OwnsPagers = false;
-                using (var env = new StorageEnvironment(pureMemoryPager))
+                using (var env = new StorageEnvironment(pureMemoryPager, NullLoggerSetup))
                 {
                     using (var tx = env.WriteTransaction())
                     {
@@ -99,7 +99,7 @@ namespace FastTests.Voron.Storage
                     }
                 }
 
-                using (var env = new StorageEnvironment(pureMemoryPager))
+                using (var env = new StorageEnvironment(pureMemoryPager, NullLoggerSetup))
                 {
                     using (var tx = env.WriteTransaction())
                     {
