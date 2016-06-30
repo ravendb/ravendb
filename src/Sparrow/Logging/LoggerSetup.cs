@@ -15,7 +15,7 @@ namespace Sparrow.Logging
     /// </summary>
     public class LoggerSetup : IDisposable
     {
-        [ThreadStatic] private static string CurrentThreadId;
+        [ThreadStatic] private static string _currentThreadId;
 
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ThreadLocal<LocalThreadWriterState> _localState;
@@ -25,6 +25,7 @@ namespace Sparrow.Logging
             new ConcurrentQueue<WeakReference<LocalThreadWriterState>>();
 
         private readonly string _path;
+        private readonly TimeSpan _retentionTime;
         private string _dateString;
         private volatile bool _keepLogging = true;
         private int _logNumber;
@@ -32,31 +33,41 @@ namespace Sparrow.Logging
         public bool IsInfoEnabled;
         public bool IsOperationsEnabled;
 
-        public LoggerSetup(string path, LogMode logMode = LogMode.Information)
+        public LoggerSetup(string path, LogMode logMode = LogMode.Information, TimeSpan retentionTime = default(TimeSpan))
         {
             _path = path;
-            Directory.CreateDirectory(_path);
-            SetupLogMode(logMode);
+            if (retentionTime == default(TimeSpan))
+                retentionTime = TimeSpan.FromDays(3);
+
+            _retentionTime = retentionTime;
             _localState = new ThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
             _loggingThread = new Thread(BackgroundLogger)
             {
                 IsBackground = true,
                 Name = "Logging Thread"
             };
-            _loggingThread.Start();
+            SetupLogMode(logMode);
         }
 
         public void Dispose()
         {
             _keepLogging = false;
             _hasEntries.Dispose();
-            _loggingThread.Join();
+            if (_loggingThread.ThreadState != ThreadState.Unstarted)
+                _loggingThread.Join();
         }
 
         public void SetupLogMode(LogMode logMode)
         {
             IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
             IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
+
+            if (logMode == LogMode.None)
+                return;
+
+            Directory.CreateDirectory(_path);
+            if (_loggingThread.ThreadState == ThreadState.Unstarted)
+                _loggingThread.Start();
         }
 
 
@@ -71,6 +82,8 @@ namespace Sparrow.Logging
                         _today = DateTime.Today;
                         _dateString = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                         _logNumber = 0;
+
+                        CleanupOldLogFiles();
                     }
                 }
             }
@@ -81,9 +94,39 @@ namespace Sparrow.Logging
                                nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
                 if (File.Exists(fileName))
                     continue;
-                // TODO: If avialable file size is too small, emit a warning, and return a Null Stream, instead
+                // TODO: If avialable file size on the disk is too small, emit a warning, and return a Null Stream, instead
                 // TODO: We don't want to have the debug log kill us
                 return new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32*1024, false);
+            }
+        }
+
+        private void CleanupOldLogFiles()
+        {
+            string[] existingLogFiles;
+            try
+            {
+                // we use GetFiles because we don't expect to have a massive amount of files, and it is 
+                // not sure what kind of iteration we get if we run and modify using Enumerate
+                existingLogFiles = Directory.GetFiles(_path, "*.log"); 
+            }
+            catch (Exception)
+            {
+                return;// this can fail for various reasons, we don't really care for that in most cases
+            }
+            foreach (var existingLogFile in existingLogFiles)
+            {
+                try
+                {
+                    if (_today - File.GetLastWriteTimeUtc(existingLogFile) > _retentionTime)
+                    {
+                        File.Delete(existingLogFile);
+                    }
+                }
+                catch (Exception)
+                {
+                    // we don't actually care if we can't handle this scenario, we'll just try again later
+                    // maybe something is currently reading the file?
+                }
             }
         }
 
@@ -120,14 +163,14 @@ namespace Sparrow.Logging
 
         private void WriteEntryToWriter(StreamWriter writer, LogEntry entry)
         {
-            if (CurrentThreadId == null)
+            if (_currentThreadId == null)
             {
-                CurrentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) +
+                _currentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) +
                                   ", ";
             }
 
             writer.Write(entry.At.GetDefaultRavenFormat(true));
-            writer.Write(CurrentThreadId);
+            writer.Write(_currentThreadId);
 
             switch (entry.Type)
             {
