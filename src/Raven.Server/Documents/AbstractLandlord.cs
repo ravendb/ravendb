@@ -8,6 +8,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -17,6 +18,7 @@ namespace Raven.Server.Documents
         protected static readonly ILog Log = LogManager.GetLogger(typeof(AbstractLandlord<TResource>).FullName);
 
         protected readonly ServerStore ServerStore;
+        protected readonly LoggerSetup LoggerSetup;
         protected readonly SemaphoreSlim ResourceSemaphore;
         protected readonly TimeSpan ConcurrentResourceLoadTimeout;
         protected static string DisposingLock = Guid.NewGuid().ToString();
@@ -30,9 +32,10 @@ namespace Raven.Server.Documents
         protected readonly ConcurrentSet<string> Locks = 
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public AbstractLandlord(ServerStore serverStore)
+        public AbstractLandlord(ServerStore serverStore, LoggerSetup loggerSetup)
         {
             ServerStore = serverStore;
+            LoggerSetup = loggerSetup;
             ResourceSemaphore = new SemaphoreSlim(ServerStore.Configuration.Databases.MaxConcurrentResourceLoads);
             ConcurrentResourceLoadTimeout = ServerStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
         }

@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide
 {
@@ -36,17 +37,19 @@ namespace Raven.Server.ServerWide
 
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         public readonly RavenConfiguration Configuration;
+        private readonly LoggerSetup _loggerSetup;
         public readonly MetricsScheduler MetricsScheduler;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
-        public ServerStore(RavenConfiguration configuration)
+        public ServerStore(RavenConfiguration configuration, LoggerSetup loggerSetup)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             MetricsScheduler = new MetricsScheduler();
             Configuration = configuration;
+            _loggerSetup = loggerSetup;
 
-            DatabasesLandlord = new DatabasesLandlord(this);
+            DatabasesLandlord = new DatabasesLandlord(this, _loggerSetup);
         }
 
         public TransactionContextPool ContextPool;

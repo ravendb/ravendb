@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -53,7 +54,7 @@ namespace Sparrow.Logging
         {
             _keepLogging = false;
             _hasEntries.Dispose();
-            if (_loggingThread.ThreadState != ThreadState.Unstarted)
+            if ((_loggingThread.ThreadState & ThreadState.Unstarted) != ThreadState.Unstarted)
                 _loggingThread.Join();
         }
 
@@ -66,7 +67,7 @@ namespace Sparrow.Logging
                 return;
 
             Directory.CreateDirectory(_path);
-            if (_loggingThread.ThreadState == ThreadState.Unstarted)
+            if ((_loggingThread.ThreadState & ThreadState.Unstarted) != ThreadState.Unstarted)
                 _loggingThread.Start();
         }
 

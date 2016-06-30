@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -15,6 +16,7 @@ using Raven.Server.Utils.Metrics;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Xunit;
 
 namespace FastTests
@@ -48,7 +50,7 @@ namespace FastTests
 
             modifyConfiguration?.Invoke(configuration);
 
-            var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler);
+            var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler, new LoggerSetup(Path.GetTempFileName(), LogMode.None));
             documentDatabase.Initialize();
 
             return documentDatabase;
