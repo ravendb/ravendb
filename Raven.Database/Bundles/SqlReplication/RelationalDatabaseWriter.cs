@@ -524,19 +524,42 @@ namespace Raven.Database.Bundles.SqlReplication
                             }
                             return;
                         }
-                        if (objectValue != null && objectValue.Keys.Count >= 2 && objectValue.ContainsKey("$ArrayType") && objectValue.ContainsKey("Values"))
+                        if (objectValue != null && objectValue.Keys.Count >= 4
+                            && objectValue.ContainsKey("EnumType") && objectValue.ContainsKey("EnumValue")
+                            && objectValue.ContainsKey("EnumProperty") && (objectValue.ContainsKey("Value") || objectValue.ContainsKey("Values")))
                         {
-                            var arrayTypeName = objectValue["$ArrayType"].Value<string>();
-                            var arrayType = Type.GetType(arrayTypeName);
-                            if (arrayType == null)
+                            var enumType = Type.GetType(objectValue["EnumType"].Value<string>(), false);
+                            if (enumType == null)
                             {
-                                throw new Exception(string.Format("No type named '{0}' found. ", arrayTypeName));
+                                throw new InvalidOperationException(string.Format("Couldn't find type '{0}'.", objectValue["EnumType"]));
                             }
-                            var list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(arrayType));
-                            objectValue["Values"].Values<object>()
-                                .ForEach(v => list.Add(Convert.ChangeType(v, arrayType)));
+                            var enumStringvalue = objectValue["EnumValue"].Value<string>();
+                            object enumValue;
+                            if (enumStringvalue.Contains("|"))
+                            {
+                                var splitvalue = enumStringvalue.Split('|').Select(e => (int) Enum.Parse(enumType, e.Trim()));
+                                enumValue = splitvalue.Aggregate((a, b) => a | b);
+                            }
+                            else
+                            {
+                                enumValue = Enum.Parse(enumType, enumStringvalue);
+                            }
 
-                            colParam.Value = list;
+                            var property = colParam.GetType().GetProperty(objectValue["EnumProperty"].Value<string>());
+                            if (property == null)
+                            {
+                                throw new InvalidOperationException(string.Format("Missing property '{0}' on type '{1}' of parameter.", 
+                                    objectValue["EnumProperty"], colParam.GetType().FullName));
+                            }
+                            if (objectValue.ContainsKey("Value"))
+                            {
+                                colParam.Value = objectValue["Value"].Value<object>();
+                            }
+                            else if (objectValue.ContainsKey("Values"))
+                            {
+                                colParam.Value = objectValue["Values"].Values<object>().ToArray();
+                            }
+                            property.SetValue(colParam, enumValue);
 
                             if (objectValue.ContainsKey("Size"))
                             {

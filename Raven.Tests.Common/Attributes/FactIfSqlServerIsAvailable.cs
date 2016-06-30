@@ -9,14 +9,14 @@ namespace Raven.Tests.Common.Attributes
     public class MaybeSqlServerIsAvailable
     {
         private static bool triedLoading;
-        private static ConnectionStringSettings connectionStringSettings;
-        public static ConnectionStringSettings ConnectionStringSettings
+        private static ConnectionStringSettings sqlServerConnectionStringSettings;
+        public static ConnectionStringSettings SqlServerConnectionStringSettings
         {
             get
             {
-                if (connectionStringSettings == null)
+                if (sqlServerConnectionStringSettings == null)
                 {
-                    var skipException = new SkipException("Cannot execute this test, because there are no valid connection strings in this machine");
+                    var skipException = new SkipException("Cannot execute this test, because there are no sql server valid connection strings in this machine");
 
                     if (triedLoading)
                         throw skipException;
@@ -24,25 +24,42 @@ namespace Raven.Tests.Common.Attributes
                     lock (typeof(MaybeSqlServerIsAvailable))
                     {
                         triedLoading = true;
-                        connectionStringSettings = GetAppropriateConnectionStringNameInternal();
-                        if (connectionStringSettings == null)
+                        sqlServerConnectionStringSettings = GetAppropriateConnectionStringNameInternal(GetPossibleSqlServerConnectionStrings());
+                        if (sqlServerConnectionStringSettings == null)
                             throw skipException;
                     }
                 }
-                return connectionStringSettings;
+                return sqlServerConnectionStringSettings;
+            }
+        }
+        private static ConnectionStringSettings postgresConnectionStringSettings;
+        public static ConnectionStringSettings PostgresConnectionStringSettings
+        {
+            get
+            {
+                if (postgresConnectionStringSettings == null)
+                {
+                    var skipException = new SkipException("Cannot execute this test, because there are no postgres valid connection strings in this machine");
+
+                    if (triedLoading)
+                        throw skipException;
+
+                    lock (typeof(MaybeSqlServerIsAvailable))
+                    {
+                        triedLoading = true;
+                        postgresConnectionStringSettings = GetAppropriateConnectionStringNameInternal(GetPossiblePostgresConnectionStrings());
+                        if (postgresConnectionStringSettings == null)
+                            throw skipException;
+                    }
+                }
+                return postgresConnectionStringSettings;
             }
         }
 
     
-        private static ConnectionStringSettings GetAppropriateConnectionStringNameInternal()
+        private static ConnectionStringSettings GetAppropriateConnectionStringNameInternal(ConnectionStringSettings[] possibleConnectionStrings)
         {
-            foreach (var settings in new[]
-            {
-                ConfigurationManager.ConnectionStrings["PostgreSQL"],
-                ConfigurationManager.ConnectionStrings["SqlExpress"],
-                ConfigurationManager.ConnectionStrings["LocalHost"],
-                ConfigurationManager.ConnectionStrings["CiHost"]
-            })
+            foreach (var settings in possibleConnectionStrings)
             {
                 if (settings == null)
                     continue;
@@ -73,6 +90,24 @@ namespace Raven.Tests.Common.Attributes
                 }
             }
             return null;
+        }
+
+        private static ConnectionStringSettings[] GetPossibleSqlServerConnectionStrings()
+        {
+            return new[]
+            {
+                ConfigurationManager.ConnectionStrings["SqlExpress"],
+                ConfigurationManager.ConnectionStrings["LocalHost"],
+                ConfigurationManager.ConnectionStrings["CiHost"]
+            };
+        }
+        private static ConnectionStringSettings[] GetPossiblePostgresConnectionStrings()
+        {
+            return new[]
+            {
+                ConfigurationManager.ConnectionStrings["Postgres"],
+                ConfigurationManager.ConnectionStrings["CiHostPostgres"]
+            };
         }
     }
 }
