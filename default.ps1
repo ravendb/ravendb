@@ -164,6 +164,7 @@ task Test -depends TestDnx {
     [void]$test_prjs.Add("$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll");
     [void]$test_prjs.Add("$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll");
     [void]$test_prjs.Add("$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Raft\bin\$global:configuration\Raven.Tests.Raft.dll");
 
     Write-Host $test_prjs
     
