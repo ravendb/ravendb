@@ -220,17 +220,24 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var metadata = metadataBuffer.ToJObject();
 
             RavenJObject dataAsJson;
-            using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+            try
             {
-                using (var aggregateStream = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+                using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
                 {
-                    var streamInUse = aggregateStream;
-                    if (streamInUse != stream)
-                        streamInUse = new CountingStream(aggregateStream);
+                    using (var aggregateStream = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+                    {
+                        var streamInUse = aggregateStream;
+                        if (streamInUse != stream)
+                            streamInUse = new CountingStream(aggregateStream);
 
-                    dataAsJson = streamInUse.ToJObject();
-                    docSize = (int)Math.Max(streamInUse.Position, stream.Position);
+                        dataAsJson = streamInUse.ToJObject();
+                        docSize = (int)Math.Max(streamInUse.Position, stream.Position);
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidDataException("Failed to deserialize document " + key, e);
             }
 
             bool isDocumentModifiedInsideTransaction = false;
