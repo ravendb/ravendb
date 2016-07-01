@@ -63,10 +63,14 @@
                 <i class="fa fa-forward"></i> Patch All
             </button>
         </div>
-        <button data-bind="visible: patchOperationId(), enable: !patchKillInProgress(), click: $root.killPatch.bind($root)" class="btn btn-primary">
+        <button data-bind="visible: patchOperationId(), enable: !patchKillInProgress(), click: $root.killPatch.bind($root)" class="btn btn-primary btn-group">
             <i data-bind="visible: !patchKillInProgress()" class="fa fa-fw fa-bolt"></i>
             <i data-bind="visible: patchKillInProgress()" class="fa fa-fa fa-spin fa-spinner"></i> Stop patch
         </button>
+        
+        <div class="btn-group text-height-fix padd-left-10" data-bind="visible: runningPatchesCount()">
+            <a data-bind="attr: { href: runningTasksUrl() }"><i class="fa fa-spin fa-spinner"></i> <span data-bind="text: runningPatchesText()"></span></a>
+        </div>
     </div>
     <br/>
     <div class="row">
@@ -74,8 +78,8 @@
             <div class="progress" data-bind="css: { active: isPatchingInProgress() }, visible: showPatchingProgress() && (!!patchDocument()) && (patchDocument().isDocumentPatch() == false)">
                 <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuemin="0" aria-valuemax="100" 
                      data-bind="style: {width: patchingProgressPercentage}, aria-valuenow: patchingProgress, css: { 'progress-bar-success' : patchSuccess(), 'progress-bar-danger': patchFailure() }">
-                    <span data-bind="text: patchingProgressText" />
                 </div>
+                <div class="text-center center-progress-text"><span data-bind="text: patchingProgressText"></span></div>
             </div>
         </div>
     </div>

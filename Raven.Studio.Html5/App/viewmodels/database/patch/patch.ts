@@ -25,6 +25,7 @@ import queryUtil = require("common/queryUtil");
 import recentPatchesStorage = require("common/recentPatchesStorage");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import killRunningTaskCommand = require('commands/operations/killRunningTaskCommand');
+import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 
 type indexInfo = {
     name: string;
@@ -63,6 +64,17 @@ class patch extends viewModelBase {
     loadedDocuments = ko.observableArray<string>();
     putDocuments = ko.observableArray<any>();
     outputLog = ko.observableArray<string>();
+
+    runningPatchesCount = ko.observable<number>();
+    runningTasksUrl = ko.computed(() => appUrl.forRunningTasks(this.activeDatabase()));
+    runningPatchesText = ko.computed(() => {
+        var count = this.runningPatchesCount();
+        if (count > 1) {
+            return count + ' patches in progress';
+        }
+        return count + ' patch in progress';
+    });
+    runningPatchesPollingHandle: number;
 
     isExecuteAllowed: KnockoutComputed<boolean>;
     isMapReduceIndexSelected: KnockoutComputed<boolean>;
@@ -218,6 +230,7 @@ class patch extends viewModelBase {
         if (!!db) {
             this.fetchRecentPatches();
             this.fetchAllPatches();
+            this.fetchRunningPatches();
         }
 
         if (recentPatchHash) {
@@ -254,6 +267,28 @@ class patch extends viewModelBase {
         new getPatchesCommand(this.activeDatabase())
             .execute()
             .done((patches: patchDocument[]) => this.savedPatches(patches));
+    }
+
+    private fetchRunningPatches() {
+        if (this.runningPatchesPollingHandle)
+            return;
+
+        new getRunningTasksCommand(this.activeDatabase())
+            .execute()
+            .done((tasks: runningTaskDto[]) => {
+                var count = tasks.filter(x => x.TaskType === "IndexBulkOperation" && !x.Completed).length;
+                this.runningPatchesCount(count);
+
+                // we enable polling only if at least one patch is in progress
+                if (count > 0) {
+                    this.runningPatchesPollingHandle = setTimeout(() => {
+                        this.runningPatchesPollingHandle = null;
+                        this.fetchRunningPatches();
+                    }, 5000);
+                } else {
+                    this.runningPatchesPollingHandle = null;
+                }
+            });
     }
 
     private fetchRecentPatches() {
@@ -559,6 +594,7 @@ class patch extends viewModelBase {
                 this.resetProgressBar();
                 this.isPatchingInProgress(true);
                 this.showPatchingProgress(true);
+                this.fetchRunningPatches();
             });
 
         patchByQueryCommand.getPatchOperationId()
@@ -596,7 +632,9 @@ class patch extends viewModelBase {
                     this.patchSuccess(true);
                 }
             }
-            this.patchingProgressText(progressPrefix + status.OperationProgress.ProcessedEntries.toLocaleString() + " / " + status.OperationProgress.TotalEntries.toLocaleString() + " (" + progressValue + "%)");
+            if (status.OperationProgress.TotalEntries) {
+                this.patchingProgressText(progressPrefix + status.OperationProgress.ProcessedEntries.toLocaleString() + " / " + status.OperationProgress.TotalEntries.toLocaleString() + " (" + progressValue + "%)");    
+            }
         }
 
         if (status.Completed) {

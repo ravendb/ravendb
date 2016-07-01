@@ -9150,3 +9150,16 @@ a#uploadQueuePanelToggle {
   text-decoration: underline;
   cursor: pointer;
 }
+.center-progress-text {
+  font-size: 14px;
+  position: absolute;
+  width: 100%;
+}
+.center-progress-text > span {
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  padding: 0px 6px;
+  font-size: 11px;
+  position: relative;
+  top: -1px;
+}
