@@ -60,5 +60,31 @@ namespace Raven.Abstractions.Replication
         /// If you want to use that, you have to open the session with ForceReadFromMaster set to true.
         /// </remarks>
         ReadFromAllServers = 1024,
+
+        /// <summary>
+        /// Cluster Behavior:
+        /// Allows read from leader and write only to leader
+        /// </summary>
+        ReadFromLeaderWriteToLeader = 8,
+
+        /// <summary>
+        /// Cluster Behavior:
+        /// Allows read from leader and write only to leader with failovers
+        /// </summary>
+        ReadFromLeaderWriteToLeaderWithFailovers = 8+32,
+
+        /// <summary>
+        /// Cluster Behavior:
+        /// Allows read from any server and write only to leader
+        /// </summary>
+        ReadFromAllWriteToLeader = 16,
+
+        /// <summary>
+        /// Cluster Behavior:
+        /// Allows read from any server and write only to leader with failovers
+        /// </summary>
+        ReadFromAllWriteToLeaderWithFailovers = 16+32
+
+   
     }
 }

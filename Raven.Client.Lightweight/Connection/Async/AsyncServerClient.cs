@@ -54,7 +54,7 @@ namespace Raven.Client.Connection.Async
 
         private readonly Guid? sessionId;
 
-        private readonly Func<AsyncServerClient, string, ClusterBehavior, bool, IRequestExecuter> requestExecuterGetter;
+        private readonly Func<AsyncServerClient, string, bool, IRequestExecuter> requestExecuterGetter;
 
         private readonly Func<string, RequestTimeMetric> requestTimeMetricGetter;
 
@@ -64,7 +64,7 @@ namespace Raven.Client.Connection.Async
 
         private readonly OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
 
-        private readonly IRequestExecuter requestExecuter;
+        private readonly RequestExecuterSelector requestExecuterSelector;
 
         internal readonly DocumentConvention convention;
 
@@ -81,7 +81,7 @@ namespace Raven.Client.Connection.Async
 
         public IRequestExecuter RequestExecuter
         {
-            get { return requestExecuter; }
+            get { return requestExecuterSelector.Select(); }
         }
 
         public OperationCredentials PrimaryCredentials
@@ -92,20 +92,17 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public ClusterBehavior ClusterBehavior { get; private set; }
-
         public AsyncServerClient(
             string url,
             DocumentConvention convention,
             OperationCredentials credentials,
             HttpJsonRequestFactory jsonRequestFactory,
             Guid? sessionId,
-            Func<AsyncServerClient, string, ClusterBehavior, bool, IRequestExecuter> requestExecuterGetter,
+            Func<AsyncServerClient, string, bool, IRequestExecuter> requestExecuterGetter,
             Func<string, RequestTimeMetric> requestTimeMetricGetter,
             string databaseName,
             IDocumentConflictListener[] conflictListeners,
-            bool incrementReadStripe,
-            ClusterBehavior clusterBehavior)
+            bool incrementReadStripe)
         {
             profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
             primaryUrl = url;
@@ -117,12 +114,11 @@ namespace Raven.Client.Connection.Async
             credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             this.databaseName = databaseName;
             this.conflictListeners = conflictListeners;
-            ClusterBehavior = clusterBehavior;
 
             this.requestExecuterGetter = requestExecuterGetter;
             this.requestTimeMetricGetter = requestTimeMetricGetter;
-            requestExecuter = requestExecuterGetter(this, databaseName, clusterBehavior, incrementReadStripe);
-            requestExecuter.UpdateReplicationInformationIfNeededAsync(this);
+            requestExecuterSelector = new RequestExecuterSelector(() => requestExecuterGetter(this, databaseName, incrementReadStripe), convention);
+            requestExecuterSelector.Select().UpdateReplicationInformationIfNeededAsync(this);
         }
 
         public void Dispose()
@@ -644,9 +640,9 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
+        public IAsyncDatabaseCommands ForDatabase(string database)
         {
-            return ForDatabaseInternal(database, clusterBehavior);
+            return ForDatabaseInternal(database);
         }
 
         public IAsyncDatabaseCommands ForSystemDatabase()
@@ -654,18 +650,16 @@ namespace Raven.Client.Connection.Async
             return ForSystemDatabaseInternal();
         }
 
-        internal AsyncServerClient ForDatabaseInternal(string database, ClusterBehavior? clusterBehavior = null)
+        internal AsyncServerClient ForDatabaseInternal(string database)
         {
             if (database == Constants.SystemDatabase)
                 return ForSystemDatabaseInternal();
 
-            var requestedClusterBehavior = clusterBehavior ?? convention.ClusterBehavior;
-
             var databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url).ForDatabase(database);
-            if (databaseUrl == Url && ClusterBehavior == requestedClusterBehavior)
+            if (databaseUrl == Url)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false, requestedClusterBehavior) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false) { operationsHeaders = operationsHeaders };
         }
 
         internal AsyncServerClient ForSystemDatabaseInternal()
@@ -674,7 +668,7 @@ namespace Raven.Client.Connection.Async
             if (databaseUrl == Url)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false, ClusterBehavior.None) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, null, conflictListeners, false) { operationsHeaders = operationsHeaders };
         }
 
         public NameValueCollection OperationsHeaders
@@ -1856,7 +1850,7 @@ namespace Raven.Client.Connection.Async
 
         public IDisposable ForceReadFromMaster()
         {
-            return requestExecuter.ForceReadFromMaster();
+            return RequestExecuter.ForceReadFromMaster();
         }
 
         public Task<JsonDocumentMetadata> HeadAsync(string key, CancellationToken token = default(CancellationToken))
@@ -2517,7 +2511,7 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return await requestExecuter.ExecuteOperationAsync(this, method, currentRequest, operation, token).ConfigureAwait(false);
+                return await RequestExecuter.ExecuteOperationAsync(this, method, currentRequest, operation, token).ConfigureAwait(false);
             }
             finally
             {
@@ -2682,7 +2676,7 @@ namespace Raven.Client.Connection.Async
 
         internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
         {
-            return new AsyncServerClient(Url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false, convention.ClusterBehavior);
+            return new AsyncServerClient(Url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false);
         }
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, TimeSpan? timeout = null)

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -19,6 +20,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
+using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
 using Raven.Database.Raft.Dto;
@@ -42,7 +44,7 @@ namespace Raven.Tests.Raft.Client
         {
             using (var store = NewRemoteDocumentStore())
             {
-                Assert.Equal(ClusterBehavior.None, store.Conventions.ClusterBehavior);
+                Assert.Equal(FailoverBehavior.AllowReadsFromSecondaries, store.Conventions.FailoverBehavior);
 
                 var client = (ServerClient)store.DatabaseCommands;
                 Assert.True(client.RequestExecuter is ReplicationAwareRequestExecuter);
@@ -50,12 +52,8 @@ namespace Raven.Tests.Raft.Client
                 client = (ServerClient)store.DatabaseCommands.ForSystemDatabase();
                 Assert.True(client.RequestExecuter is ReplicationAwareRequestExecuter);
 
-                var defaultClient = (ServerClient)store.DatabaseCommands;
-                client = (ServerClient)defaultClient.ForDatabase(store.DefaultDatabase, ClusterBehavior.None);
-                Assert.True(client.RequestExecuter is ReplicationAwareRequestExecuter);
-                Assert.True(defaultClient == client);
-
-                client = (ServerClient)store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.ReadFromLeaderWriteToLeader);
+                store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
+                client = (ServerClient)store.DatabaseCommands.ForDatabase(store.DefaultDatabase);
                 Assert.True(client.RequestExecuter is ClusterAwareRequestExecuter);
             }
         }
@@ -64,7 +62,7 @@ namespace Raven.Tests.Raft.Client
         [PropertyData("Nodes")]
         public void ClientsShouldBeAbleToPerformCommandsEvenIfTheyDoNotPointToLeader(int numberOfNodes)
         {
-            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader);
 
             SetupClusterConfiguration(clusterStores);
 
@@ -96,23 +94,26 @@ namespace Raven.Tests.Raft.Client
         [Fact]
         public void NonClusterCommandsCanPerformCommandsOnClusterServers()
         {
-            var clusterStores = CreateRaftCluster(2, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+            var clusterStores = CreateRaftCluster(2, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader);
 
             SetupClusterConfiguration(clusterStores);
 
             using (var store1 = clusterStores[0])
             using (var store2 = clusterStores[1])
             {
-                var nonClusterCommands1 = (ServerClient) store1.DatabaseCommands.ForDatabase(store1.DefaultDatabase, ClusterBehavior.None);
-                var nonClusterCommands2 = (ServerClient) store2.DatabaseCommands.ForDatabase(store1.DefaultDatabase, ClusterBehavior.None);
+                using (ForceNonClusterRequests(new List<DocumentStore> {store1, store2}))
+                {
+                    var nonClusterCommands1 = (ServerClient)store1.DatabaseCommands;
+                    var nonClusterCommands2 = (ServerClient)store2.DatabaseCommands;
 
-                nonClusterCommands1.Put("keys/1", null, new RavenJObject(), new RavenJObject());
-                nonClusterCommands2.Put("keys/2", null, new RavenJObject(), new RavenJObject());
+                    nonClusterCommands1.Put("keys/1", null, new RavenJObject(), new RavenJObject());
+                    nonClusterCommands2.Put("keys/2", null, new RavenJObject(), new RavenJObject());
 
-                var allNonClusterCommands = new[] {nonClusterCommands1, nonClusterCommands2};
+                    var allNonClusterCommands = new[] { nonClusterCommands1, nonClusterCommands2 };
 
-                allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/1"));
-                allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/2"));
+                    allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/1"));
+                    allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/2"));
+                }
             }
         }
 
@@ -125,7 +126,7 @@ namespace Raven.Tests.Raft.Client
             {
                 var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store =>
                 {
-                    store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader;
+                    store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
                 });
 
                 foreach (var documentStore in clusterStores)

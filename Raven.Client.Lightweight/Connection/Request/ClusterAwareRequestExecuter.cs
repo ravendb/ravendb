@@ -120,10 +120,10 @@ namespace Raven.Client.Connection.Request
         {
             httpJsonRequest.AddHeader(Constants.Cluster.ClusterAwareHeader, "true");
 
-            if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeader)
+            if (serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeader)
                 httpJsonRequest.AddHeader(Constants.Cluster.ClusterReadBehaviorHeader, "All");
 
-            if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers || serverClient.ClusterBehavior == ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers)
+            if (serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers || serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers)
                 httpJsonRequest.AddHeader(Constants.Cluster.ClusterFailoverBehaviorHeader, "true");
         }
 
@@ -141,10 +141,10 @@ namespace Raven.Client.Connection.Request
                 UpdateReplicationInformationIfNeededAsync(serverClient); // maybe start refresh task
 #pragma warning restore 4014
 
-                switch (serverClient.ClusterBehavior)
+                switch (serverClient.convention.FailoverBehavior)
                 {
-                    case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
-                    case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
+                    case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
+                    case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
                         if (Nodes.Count == 0)
                             leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds));
                         break;
@@ -157,20 +157,20 @@ namespace Raven.Client.Connection.Request
                 node = LeaderNode;
             }
 
-            switch (serverClient.ClusterBehavior)
+            switch (serverClient.convention.FailoverBehavior)
             {
-                case ClusterBehavior.ReadFromAllWriteToLeader:
+                case FailoverBehavior.ReadFromAllWriteToLeader:
                     if (method == HttpMethods.Get)
                         node = GetNodeForReadOperation(node);
                     break;
-                case ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers:
+                case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     if (node == null)
                         return await HandleWithFailovers(operation, token).ConfigureAwait(false);
 
                     if (method == HttpMethods.Get)
                         node = GetNodeForReadOperation(node);
                     break;
-                case ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
+                case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
                     if (node == null)
                         return await HandleWithFailovers(operation, token).ConfigureAwait(false);
                     break;

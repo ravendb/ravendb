@@ -505,20 +505,22 @@ namespace Raven.Client.Document
 
             databaseCommandsGenerator = () =>
             {
-                string databaseUrl = Url;
-                if (string.IsNullOrEmpty(DefaultDatabase) == false)
-                {
-                    databaseUrl = rootDatabaseUrl;
-                    databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
-                }
-                return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
-                    Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
+                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
+                   currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
+                   Listeners.ConflictListeners, true);
+
+                var serverClient = new ServerClient(asyncServerClient);
+
+                if (string.IsNullOrEmpty(DefaultDatabase))
+                    return serverClient;
+                return serverClient.ForDatabase(DefaultDatabase);
             };
 
             asyncDatabaseCommandsGenerator = () =>
             {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
+                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
+                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
+                    Listeners.ConflictListeners, true);
 
                 if (string.IsNullOrEmpty(DefaultDatabase))
                     return asyncServerClient;
@@ -554,18 +556,22 @@ namespace Raven.Client.Document
             return result;
         }
 
-        private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, ClusterBehavior clusterBehavior, bool incrementStrippingBase)
+        private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, bool incrementStrippingBase)
         {
             var key = Url;
-            databaseName = databaseName ?? DefaultDatabase;
             if (string.IsNullOrEmpty(databaseName) == false)
                 key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
 
             IRequestExecuter requestExecuter;
-            if (clusterBehavior == ClusterBehavior.None)
-                requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory, GetRequestTimeMetricForUrl)));
-            else
+            
+            if (Conventions.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeader
+                || Conventions.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers
+                || Conventions.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeader
+                || Conventions.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers)
                 requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
+            else
+                requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory, GetRequestTimeMetricForUrl)));
+            
 
             requestExecuter.GetReadStripingBase(incrementStrippingBase);
 
@@ -793,3 +799,4 @@ namespace Raven.Client.Document
         }
     }
 }
+

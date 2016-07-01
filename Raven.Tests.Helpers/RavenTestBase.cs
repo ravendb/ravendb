@@ -748,7 +748,7 @@ namespace Raven.Tests.Helpers
                 // We expect to get the doc from the <system> database
                 var doc = databaseCommands.Get(id);
                 if (afterEtag == null)
-                return doc != null;
+                    return doc != null; 
                 return EtagUtil.IsGreaterThan(doc.Etag, afterEtag);
             }, timeout);
 

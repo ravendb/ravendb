@@ -122,7 +122,6 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
       <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
     </Compile>
-    <Compile Include="Cluster\ClusterBehavior.cs" />
     <Compile Include="Cluster\ClusterInformation.cs" />
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />

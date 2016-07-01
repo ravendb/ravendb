@@ -43,7 +43,7 @@ namespace Raven.Abstractions.Data
 
         public bool IsSetForDatabase(string databaseName)
         {
-            return forDatabases.Keys.Contains(databaseName) && forDatabases[databaseName] != null && forDatabases[databaseName].Count > 0;
+            return databaseName != null && forDatabases.Keys.Contains(databaseName) && forDatabases[databaseName] != null && forDatabases[databaseName].Count > 0;
         }
 
         public ReplicationDestination[] GetForDatabase(string databaseName)

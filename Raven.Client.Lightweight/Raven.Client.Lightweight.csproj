@@ -120,6 +120,7 @@
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
+    <Compile Include="Connection\Request\RequestExecuterSelector.cs" />
     <Compile Include="FileSystem\FilesQuery.cs" />
     <Compile Include="QueryConvention.cs" />
     <Compile Include="ConventionBase.cs" />
