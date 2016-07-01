@@ -47,6 +47,7 @@
     <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\fsCheckSufficientDiskSpaceCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationsByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFoldersStartsWithCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resolveConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getResourceDrives.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
@@ -161,6 +162,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\tasks\subscriptionsTask.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\files\searchInFolderClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
@@ -222,6 +224,7 @@
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceBatchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\mapBatchInfo.html" />
     <Content Include="App\views\database\tasks\subscriptionsTask.html" />
+    <Content Include="App\views\filesystem\files\searchInFolderClause.html" />
     <Content Include="App\views\filesystem\search\fieldRangeFilter.html" />
     <Content Include="App\views\filesystem\search\fieldStringFilter.html" />
     <Content Include="App\views\databaseStudioConfig.html" />

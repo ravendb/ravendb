@@ -1,11 +1,11 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
+import searchInFolderClause = require("viewmodels/filesystem/files/searchInFolderClause");
 import searchSingleInputClause = require("viewmodels/filesystem/files/searchSingleInputClause");
 import searchFileSizeRangeClause = require("viewmodels/filesystem/files/searchFileSizeRangeClause");
 import searchHasMetadataClause = require("viewmodels/filesystem/files/searchHasMetadataClause");
@@ -99,15 +99,17 @@ class search extends viewModelBase {
     }
 
     inFolder() {
-        var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
-        searchSingleInputClauseViewModel
+        var inFolderViewModel: searchInFolderClause = new searchInFolderClause(this.activeFilesystem());
+        inFolderViewModel 
             .applyFilterTask
             .done((input: string) => {
-                if (!input.startsWith("/")) input = "/" + input;
-                    var escaped = queryUtil.escapeTerm(input);
+                if (!input.startsWith("/")) {
+                    input = "/" + input;
+                }
+                var escaped = queryUtil.escapeTerm(input);
                 this.addToSearchInput("__directoryName:" + escaped);
             });
-        app.showDialog(searchSingleInputClauseViewModel);
+        app.showDialog(inFolderViewModel);
     }
 
     lastModifiedBetween() {
