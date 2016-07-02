@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,9 +12,11 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.BulkInsert;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server
@@ -30,6 +35,8 @@ namespace Raven.Server
         public readonly ServerStore ServerStore;
 
         private IWebHost _webHost;
+        private TcpListener _tcpListener;
+        private readonly UnmanagedBuffersPool _unmanagedBuffersPool = new UnmanagedBuffersPool("TcpConnectionPool");
         public LoggerSetup LoggerSetup { get; }
 
         public RavenServer(RavenConfiguration configuration)
@@ -92,6 +99,7 @@ namespace Raven.Server
                     .ConfigureServices(services => services.AddSingleton(Router))
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
+                _tcpListener = new TcpListener(IPAddress.Loopback, 9999);//TODO: Make this configurable based on server url
                 Log.Info("Initialized Server...");
             }
             catch (Exception e)
@@ -108,12 +116,79 @@ namespace Raven.Server
             try
             {
                 _webHost.Start();
+                _tcpListener.Start();
+                for (int i = 0; i < 4; i++)
+                {
+                    ListenToNewTcpConnection();
+                }
             }
             catch (Exception e)
             {
                 Log.FatalException("Could not start server", e);
                 throw;
             }
+        }
+
+        private void ListenToNewTcpConnection()
+        {
+            Task.Run(async () =>
+            {
+                TcpClient tcpClient;
+                try
+                {
+                    tcpClient = await _tcpListener.AcceptTcpClientAsync();
+                }
+                catch (Exception e)
+                {
+                    //TODO: logging
+                    Console.WriteLine("Failed to accept tcp connection", e);
+                    return;
+                }
+                ListenToNewTcpConnection();
+
+                try
+                {
+                    tcpClient.NoDelay = true;
+                    tcpClient.ReceiveBufferSize = 32 * 1024;
+                    tcpClient.SendBufferSize = 4096;
+                    using (var stream = tcpClient.GetStream())
+                    using (var context = new JsonOperationContext(_unmanagedBuffersPool))
+                    {
+                        var reader = context.ReadForMemory(stream, "tcp command");
+                        string db;
+                        if (reader.TryGet("Database", out db) == false)
+                        {
+                            throw new InvalidOperationException("Could not read Database property from the tcp command");
+                        }
+                        var databasesLandlord = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(db);
+                        if (databasesLandlord == null)
+                        {
+                            throw new InvalidOperationException("There is no database named " + db);
+                        }
+                        var documentDatabase = databasesLandlord.Result;//TODO: should probably avoid doing that, at a minimum, have a timeout if this is the first request
+                        using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream))
+                        {
+                            bulkInsert.Execute();
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failed to process tcp connection", e);// todo: logging
+                }
+                finally
+                {
+                    try
+                    {
+                        tcpClient.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e); // todo: logging
+                    }
+                }
+
+            });
         }
 
         public RequestRouter Router { get; private set; }
@@ -124,8 +199,10 @@ namespace Raven.Server
             Metrics?.Dispose();
             LoggerSetup?.Dispose();
             _webHost?.Dispose();
+            _tcpListener?.Stop();
             ServerStore?.Dispose();
             Timer?.Dispose();
+            _unmanagedBuffersPool?.Dispose();
         }
     }
 }
