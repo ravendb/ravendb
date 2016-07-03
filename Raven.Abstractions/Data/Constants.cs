@@ -197,6 +197,10 @@ namespace Raven.Abstractions.Data
 
         public const string RavenReplicationHistory = "Raven-Replication-History";
 
+        //Indicates that the replication history has been merged so old documents won't 
+        //Conflict with new documents
+        public const string RavenReplicationMergedHistory = "Raven-Replication-Merged-History";
+
         public const string RavenReplicationConflict = "Raven-Replication-Conflict";
 
         public const string RavenReplicationConflictSkipResolution = "Raven-Replication-Conflict-Skip-Resolution";
