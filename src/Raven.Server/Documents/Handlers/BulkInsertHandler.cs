@@ -180,6 +180,9 @@ namespace Raven.Server.Documents.Handlers
 
                     using (var tx = context.OpenWriteTransaction())
                     {
+                        // set IsLazyTransaction=false to override global LazyTx mode on this Database
+                        tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = false;
+                        
                         // this non lazy transaction forces the journal to actually
                         // flush everything
                         tx.Commit();
