@@ -1614,6 +1614,8 @@ namespace Raven.Bundles.Replication.Tasks
             ResetFailureForHeartbeat(src);
 
             heartbeatDictionary.AddOrUpdate(src, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+
+            docDb.WorkContext.ReplicationResetEvent.Set();
         }
 
         public bool IsHeartbeatAvailable(string src, DateTime lastCheck)
