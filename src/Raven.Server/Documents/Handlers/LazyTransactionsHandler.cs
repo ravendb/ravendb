@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class LazyTransactionsHandler : AdminDatabaseRequestHandler
     {
-        [RavenAction("/admin/databases/*/lazy-transaction", "GET")]
+        [RavenAction("/databases/*/admin/lazy-transaction", "GET")]
         public Task CommitNonLazyTx()
         {
             var isLazyTxMode = GetBoolValueQueryString("mode") ?? false;
