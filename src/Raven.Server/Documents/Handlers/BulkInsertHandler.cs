@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers
                                                 "The blittable size specified is more than the available data, aborting...");
 
                                         var reader = new BlittableJsonReaderObject(docPtr, size, context);
-                                        reader.BlittableValidation(size);
+                                        reader.BlittableValidation();
                                         docPtr += size;
 
                                         string docKey;

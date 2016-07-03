@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -11,7 +12,7 @@ namespace FastTests.Blittable
 {
     public class BlittableValidationTest : RavenTestBase
     {
-        private BlittableJsonReaderObject initSimpleBlittable(out int size)
+        private BlittableJsonReaderObject InitSimpleBlittable(out int size)
         {
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new JsonOperationContext(pool))
@@ -34,6 +35,30 @@ namespace FastTests.Blittable
             }
         }
 
+        [Fact]
+        public void WithEscape()
+        {
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            {
+                var obj = RavenJObject.FromObject(new Employee
+                {
+                    Id = "1",
+                    FirstName = "Hibernating\nRhinos",
+                    LastName = "Rhinos"
+                });
+                var objString = obj.ToString(Formatting.None);
+                var stream = new MemoryStream();
+                var streamWriter = new StreamWriter(stream);
+                streamWriter.Write(objString);
+                streamWriter.Flush();
+                stream.Position = 0;
+                var reader = context.Read(stream, "docs/1 ");
+                reader.BlittableValidation();
+            }
+        }
+
         public class AllTokensTypes
         {
             public bool Bool { get; set; }
@@ -49,8 +74,6 @@ namespace FastTests.Blittable
         {
             public string str { get; set; }
         }
-
-        private int Size = 0xbc;
 
         private byte[] GetBlittableWithExtraSpace()
         {
@@ -178,7 +201,7 @@ namespace FastTests.Blittable
             public AddressClass Address { get; set; }
             public string Phone { get; set; }
             public string Fax { get; set; }
-            public CompanyType Type { get; set; }
+            public Company.CompanyType Type { get; set; }
             public Employee[] EmployeesIds { get; set; }
         }
 
@@ -204,7 +227,7 @@ namespace FastTests.Blittable
                 streamWriter.Flush();
                 stream.Position = 0;
                 var reader = context.Read(stream, "docs/1 ");
-                reader.BlittableValidation(reader.Size);
+                reader.BlittableValidation();
             }
         }
 
@@ -223,7 +246,7 @@ namespace FastTests.Blittable
                 stream.Position = 0;
 
                 var reader = context.Read(stream, "docs/1 ");
-                reader.BlittableValidation(reader.Size);
+                reader.BlittableValidation();
             }
         }
 
@@ -238,8 +261,7 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x10, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<InvalidDataException>(() => test(reader.Size));
+                var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Bool not valid");
             }
         }
@@ -257,8 +279,7 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x1F, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<InvalidDataException>(() => test(reader.Size));
+                var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Compressed string not valid");
             }
         }
@@ -275,8 +296,7 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x16, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<InvalidDataException>(() => test(reader.Size));
+                var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Float not valid");
             }
         }
@@ -293,8 +313,7 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x1A, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<FormatException>(() => test(reader.Size));
+                var message = Assert.Throws<FormatException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Bad variable size int");
             }
         }
@@ -311,8 +330,7 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x1a, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<FormatException>(() => test(reader.Size));
+                var message = Assert.Throws<FormatException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Bad variable size int");
             }
         }
@@ -321,20 +339,19 @@ namespace FastTests.Blittable
         public unsafe void Invalid_Names_Offset()
         {
             int size;
-            var reader = initSimpleBlittable(out size);
+            var reader = InitSimpleBlittable(out size);
             var basePointer = reader.BasePointer;
-            Action<int> test = reader.BlittableValidation;
 
             *(basePointer + size - 7) = 0x11;
-            var message = Assert.Throws<InvalidDataException>(() => test(size));
+            var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
             Assert.Equal(message.Message, "Properties names token not valid");
 
             *(basePointer + size - 7) = 0x50;
-            message = Assert.Throws<InvalidDataException>(() => test(size));
+            message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
             Assert.Equal(message.Message, "Properties names token not valid");
 
             *(basePointer + size - 7) = 0x00;
-            var messageArg = Assert.Throws<ArgumentException>(() => test(size));
+            var messageArg = Assert.Throws<ArgumentException>(() => reader.BlittableValidation());
             Assert.Equal(messageArg.Message, "Illegal offset size");
 
             *(basePointer + size - 7) = 0x10;
@@ -345,7 +362,7 @@ namespace FastTests.Blittable
                 var temp = basePointer[listStart + i];
 
                 basePointer[listStart + i] = (byte)listStart;
-                message = Assert.Throws<InvalidDataException>(() => test(size));
+                message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Properties names offset not valid");
             }
 
@@ -354,7 +371,7 @@ namespace FastTests.Blittable
                 var temp = basePointer[listStart + i];
 
                 basePointer[listStart + i] = basePointer[listStart + i + 1];
-                message = Assert.Throws<InvalidDataException>(() => test(size));
+                message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Properties names offset not valid");
 
                 basePointer[listStart + i] = temp;
@@ -372,8 +389,7 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x10, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<InvalidDataException>(() => test(reader.Size));
+                var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Null not valid");
             }
         }
@@ -409,64 +425,8 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, size, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<InvalidDataException>(() => test(size));
+                var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Number of properties not valid");
-            }
-        }
-
-        [Fact]
-        public unsafe void Invalid_Props_Offset()
-        {
-            fixed (byte* ptr = &GetBlittableWithExtraSpace()[0])
-            {
-                var reader = new BlittableJsonReaderObject(ptr, Size, null);
-                Action<int> test = reader.BlittableValidation;
-
-                *(ptr + 186) = 0xbc;
-                var message = Assert.Throws<InvalidDataException>(() => test(Size));
-                Assert.Equal(message.Message, "Properties names offset not valid");
-
-                *(ptr + 186) = 0x00;
-                message = Assert.Throws<InvalidDataException>(() => test(Size));
-                Assert.Equal(message.Message, "Properties names offset not valid");
-
-                Size += 1;
-                *(ptr + 185) = 0x10;
-                *(ptr + 186) = 0x80;
-                *(ptr + 187) = 0x80;
-                *(ptr + 188) = 0x51;
-                message = Assert.Throws<InvalidDataException>(() => test(Size));
-                Assert.Equal(message.Message, "Properties names offset not valid");
-            }
-        }
-
-        [Fact]
-        public unsafe void Invalid_Root_Metadata_Offset()
-        {
-            fixed (byte* ptr = &GetBlittableWithExtraSpace()[0])
-            {
-                var reader = new BlittableJsonReaderObject(ptr, Size, null);
-                Action<int> test = reader.BlittableValidation;
-
-                Size += 1;
-                *(ptr + 184) = 0x01;
-                *(ptr + 185) = 0xbc;
-                *(ptr + 186) = 0x01;
-                *(ptr + 187) = 0xb0;
-                *(ptr + 188) = 0x51;
-                var message = Assert.Throws<InvalidDataException>(() => test(Size));
-                Assert.Equal(message.Message, "Root metadata offset not valid");
-
-                Size += 1;
-                *(ptr + 184) = 0x10;
-                *(ptr + 185) = 0x80;
-                *(ptr + 186) = 0x80;
-                *(ptr + 187) = 0x01;
-                *(ptr + 188) = 0xb0;
-                *(ptr + 189) = 0x51;
-                message = Assert.Throws<InvalidDataException>(() => test(Size));
-                Assert.Equal(message.Message, "Root metadata offset not valid");
             }
         }
 
@@ -474,20 +434,19 @@ namespace FastTests.Blittable
         public unsafe void Invalid_Root_Token()
         {
             int size;
-            var reader = initSimpleBlittable(out size);
+            var reader = InitSimpleBlittable(out size);
             var basePointer = reader.BasePointer;
-            Action<int> test = reader.BlittableValidation;
 
             *(basePointer + size - 1) = 0x52;
-            var message = Assert.Throws<InvalidDataException>(() => test(size));
+            var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
             Assert.Equal(message.Message, "Illegal root object");
 
             *(basePointer + size - 1) = 0x41;
-            var messageArg = Assert.Throws<ArgumentException>(() => test(size));
+            var messageArg = Assert.Throws<ArgumentException>(() => reader.BlittableValidation());
             Assert.Equal(messageArg.Message, "Illegal offset size");
 
             *(basePointer + size - 1) = 0x11;
-            messageArg = Assert.Throws<ArgumentException>(() => test(size));
+            messageArg = Assert.Throws<ArgumentException>(() => reader.BlittableValidation());
             Assert.Equal(messageArg.Message, "Illegal offset size");
         }
 
@@ -503,9 +462,8 @@ namespace FastTests.Blittable
             fixed (byte* ptr = &blittable[0])
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x1A, null);
-                Action<int> test = reader.BlittableValidation;
-                var message = Assert.Throws<InvalidDataException>(() => test(reader.Size));
-                Assert.Equal(message.Message, "String not valid");
+                var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
+                Assert.StartsWith("String not valid", message.Message);
             }
         }
 
@@ -513,8 +471,8 @@ namespace FastTests.Blittable
         public void Simple_Valid_Blittable_Test()
         {
             int size;
-            var reader = initSimpleBlittable(out size);
-            reader.BlittableValidation(size);
+            var reader = InitSimpleBlittable(out size);
+            reader.BlittableValidation();
         }
 
         [Fact]
@@ -541,7 +499,7 @@ namespace FastTests.Blittable
                 streamWriter.Flush();
                 stream.Position = 0;
                 var reader = context.Read(stream, "docs/1 ");
-                reader.BlittableValidation(reader.Size);
+                reader.BlittableValidation();
             }
         }
 
@@ -583,36 +541,7 @@ namespace FastTests.Blittable
                     writer.FinalizeDocument();
                     var reader = writer.CreateReader();
 
-                    reader.BlittableValidation(reader.Size);
-                }
-            }
-        }
-
-        [Fact]
-        public void Valied_String_with_Esc_Char()
-        {
-            using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new JsonOperationContext(pool))
-            {
-                var state = new JsonParserState();
-                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
-                {
-                    var temp = new Str
-                    {
-                        str = "aa\baaa\taaa\ra\naa\faaa\\aa/a''"
-                    };
-                    var obj = RavenJObject.FromObject(temp);
-                    var objString = obj.ToString(Formatting.None);
-                    var buffer = Encoding.UTF8.GetBytes(objString);
-                    parser.SetBuffer(buffer, buffer.Length);
-                    var writer = new BlittableJsonDocumentBuilder(ctx,
-                        BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings,
-                        "test", parser, state);
-                    writer.ReadObject();
-                    var x = writer.Read();
-                    writer.FinalizeDocument();
-                    var reader = writer.CreateReader();
-                    reader.BlittableValidation(reader.Size);
+                    reader.BlittableValidation();
                 }
             }
         }

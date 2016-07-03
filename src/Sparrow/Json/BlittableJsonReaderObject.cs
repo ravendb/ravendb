@@ -524,10 +524,10 @@ namespace Sparrow.Json
             Memory.Copy(ptr, _mem, _size);
         }
 
-        public void BlittableValidation(int size)
+        public void BlittableValidation()
         {
             byte offset;
-            var currentSize = size - 1;
+            var currentSize = Size - 1;
             int rootPropOffsetSize;
             int rootPropIdSize;
 
@@ -607,17 +607,20 @@ namespace Sparrow.Json
                 for (var i = 0; i < escCount; i++)
                 {
                     var escCharOffset = ReadNumber(_mem + str + stringLength + escOffset + i, 1);
-                    var escChar = ReadNumber(_mem + str + stringLength + escOffset - 1 - escCharOffset, 1);
+                    var escChar = (char)ReadNumber(_mem + str + stringLength + escOffset - 1 - escCharOffset, 1);
                     switch (escChar)
                     {
-                        case 10:
-                        case 11:
-                        case 15:
-                        case 12:
-                        case 57:
-                        case 92:
-                        case 34:
-                            throw new InvalidDataException("String not valid");
+                        case '\\':
+                        case '/':
+                        case '"':
+                        case 'b':
+                        case 'f':
+                        case 'n':
+                        case 'r':
+                        case 't':
+                            break;
+                        default:
+                            throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
                     };
                 }
             }
