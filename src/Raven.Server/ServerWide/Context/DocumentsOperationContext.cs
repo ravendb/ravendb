@@ -1,4 +1,5 @@
-﻿using Raven.Server.Documents;
+﻿using System;
+using Raven.Server.Documents;
 using Sparrow;
 using Sparrow.Json;
 using Voron;
@@ -22,7 +23,15 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsTransaction CreateWriteTransaction(ByteStringContext context)
         {
-            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(context), _documentDatabase.Notifications);
+            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(context), _documentDatabase.Notifications);
+
+            if (_documentDatabase.LazyTransactionMode && _documentDatabase.LazyTransactionExpiration < DateTime.Now)
+                _documentDatabase.LazyTransactionMode = false;
+
+            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = _documentDatabase.LazyTransactionMode;
+            // IsLazyTransaction can be overriden kater by a specific feature like bulk insert
+
+            return tx;
         }
 
         public StorageEnvironment Environment()
