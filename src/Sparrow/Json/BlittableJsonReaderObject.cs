@@ -18,7 +18,6 @@ namespace Sparrow.Json
         private readonly long _currentPropertyIdSize;
         private readonly byte* _objStart;
         private LazyStringValue[] _propertyNames;
-        private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };
 
         public DynamicJsonValue Modifications;
 
@@ -608,9 +607,18 @@ namespace Sparrow.Json
                 for (var i = 0; i < escCount; i++)
                 {
                     var escCharOffset = ReadNumber(_mem + str + stringLength + escOffset + i, 1);
-                    var escChar = (char)ReadNumber(_mem + str + escCharOffset, 1);
-                    if (!(EscapeChars.Contains(escChar)))
-                        throw new InvalidDataException("String not valid");
+                    var escChar = ReadNumber(_mem + str + stringLength + escOffset - 1 - escCharOffset, 1);
+                    switch (escChar)
+                    {
+                        case 10:
+                        case 11:
+                        case 15:
+                        case 12:
+                        case 57:
+                        case 92:
+                        case 34:
+                            throw new InvalidDataException("String not valid");
+                    };
                 }
             }
             return stringLength + escOffset + escCount + lenOffset;
@@ -677,17 +685,21 @@ namespace Sparrow.Json
                         break;
                     case BlittableJsonToken.Float:
                         var floatLen = ReadNumber(_mem + objStartOffset - propOffset, 1);
-                        var pointFlag = true;
-                        for (var j = 0; j < floatLen; j++)
+                        var floatStringBuffer = new string(' ', floatLen);
+                        fixed (char* pChars = floatStringBuffer)
                         {
-                            var floatDigit = ReadNumber((_mem + objStartOffset - propOffset + 1 + j), sizeof(byte));
-                            if ((floatDigit == '.') && (pointFlag))
+                            for (int j = 0; j < floatLen; j++)
                             {
-                                pointFlag = false;
-                                continue;
+                                pChars[j] = (char)ReadNumber((_mem + objStartOffset - propOffset + 1 + j), sizeof(byte));
                             }
-                            if (!(char.IsDigit((char)floatDigit)))
-                                throw new InvalidDataException("Float not valid");
+                        }
+                        try
+                        {
+                            float.Parse(floatStringBuffer);
+                        }
+                        catch (Exception)
+                        {
+                            throw new InvalidDataException("Float not valid");
                         }
                         break;
                     case BlittableJsonToken.String:
