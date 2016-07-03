@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -11,20 +12,39 @@ namespace Raven.Server.Utils
     public static class IncludeUtil
     {
         private const char PrefixSeparator = '(';
+        private const char SuffixSeparator = '[';
+        private const string SuffixStart = "{0}/";
         private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
+        private static readonly char[] SuffixSeparatorChar = { SuffixSeparator };
         private static readonly BlittableJsonTraverser Traverser = new BlittableJsonTraverser();
+        private static Func<object, StringSegment, string> ValueHandler;
 
-        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, HashSet<string> includedIds)
+        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath,
+            HashSet<string> includedIds)
         {
             var indexOfPrefixStart = includePath.IndexOfAny(PrefixSeparatorChar, 0);
+            var indexOfSuffixStart = includePath.IndexOfAny(SuffixSeparatorChar, 0);
 
             StringSegment pathSegment;
-            StringSegment? prefix = null;
+            StringSegment? addition = null;
 
-            if (indexOfPrefixStart != -1)
+            if (indexOfSuffixStart != -1)
             {
-                prefix = includePath.SubSegment(indexOfPrefixStart + 1);
+                addition = includePath.SubSegment(indexOfSuffixStart + 1);
+                if (!addition.Value[addition.Value.Length - 1].Equals(']') ||
+                    ((addition.Value.Length >= 4) &&
+                     !addition.Value.SubSegment(0, 4).Equals(SuffixStart)))
+                    return;
+                pathSegment = includePath.SubSegment(0, indexOfSuffixStart);
+                ValueHandler = HandleSuffixValue;
+            }
+            else if (indexOfPrefixStart != -1)
+            {
+                addition = includePath.SubSegment(indexOfPrefixStart + 1);
+                if (!includePath[includePath.Length - 1].Equals(')'))
+                    return;
                 pathSegment = includePath.SubSegment(0, indexOfPrefixStart);
+                ValueHandler = HandlePrefixValue;
             }
             else
             {
@@ -41,17 +61,34 @@ namespace Raven.Server.Utils
             {
                 foreach (var item in collectionOfIds)
                 {
-                    var id = prefix == null ? BlittableValueToString(item) : HandlePrefixValue(item, prefix.Value);
-                    if (id != null)
-                        includedIds.Add(id);
+                    if (addition != null)
+                    {
+                        var includedId = ValueHandler(item, addition.Value);
+                        if (includedId != null)
+                            includedIds.Add(includedId);
+                    }
+                    includedIds.Add(BlittableValueToString(item));
                 }
             }
             else
             {
-                var includedId = prefix == null ? BlittableValueToString(value) : HandlePrefixValue(value, prefix.Value);
-                if (includedId != null)
-                    includedIds.Add(includedId);
+                if (addition != null)
+                {
+                    var includedId = ValueHandler(value, addition.Value);
+                    if (includedId != null)
+                        includedIds.Add(includedId);
+                }
+                includedIds.Add(BlittableValueToString(value));
             }
+        }
+
+        private static string HandleSuffixValue(object val, StringSegment suffixSegment)
+        {
+            var doubleVal = val as LazyDoubleValue;
+            if (doubleVal != null)
+                val = doubleVal.Inner;
+            var res = string.Format(suffixSegment, val).TrimEnd(']');
+            return res == "" ? null : res;
         }
 
         private static string HandlePrefixValue(object val, StringSegment prefixSegment)
