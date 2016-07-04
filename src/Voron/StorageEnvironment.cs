@@ -589,10 +589,10 @@ namespace Voron
                         }, envToFlush) == false)
                         {
                             MaybeFlushEnvironment(envToFlush);// re-register if the thread pool is full
-                            Thread.Sleep(10); // but let it wait a bit to give it chance to actually do some work
+                            Thread.Sleep(0); // but let it give up the execution slice so we'll let the TP time to run
                         }
-                    }
-                }
+                    }}
+                
             }
 
 
