@@ -324,7 +324,6 @@ namespace Voron.Impl.Journal
                 _lazyTransactionBuffer.Dispose();
             }
             _compressionPager.Dispose();
-            _lz4.Dispose();
 
             _journalApplicator.Dispose();
             if (_env.Options.OwnsPagers)
