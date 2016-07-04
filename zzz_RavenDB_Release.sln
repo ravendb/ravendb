@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{3617B75B-4CD6-4420-86B9-CACDC3C00D47}"
 EndProject
@@ -111,6 +111,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.TimeSeries", "Raven.Tests.TimeSeries\Raven.Tests.TimeSeries.csproj", "{662D9514-F553-4263-B2E5-B81BBE09A069}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.ApiToken", "Tools\Raven.ApiToken\Raven.ApiToken.csproj", "{51D4913D-E932-46A8-983E-26D4602A6B3F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Raft", "Raven.Tests.Raft\Raven.Tests.Raft.csproj", "{99D596EB-A15D-4407-BD28-DA46D5635773}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -658,6 +660,18 @@ Global
 		{51D4913D-E932-46A8-983E-26D4602A6B3F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{51D4913D-E932-46A8-983E-26D4602A6B3F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{51D4913D-E932-46A8-983E-26D4602A6B3F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Any CPU.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Any CPU.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Mixed Platforms.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -699,6 +713,7 @@ Global
 		{479222E7-C9DF-448E-B6C9-9E8EEBE1A51D} = {3617B75B-4CD6-4420-86B9-CACDC3C00D47}
 		{662D9514-F553-4263-B2E5-B81BBE09A069} = {3617B75B-4CD6-4420-86B9-CACDC3C00D47}
 		{51D4913D-E932-46A8-983E-26D4602A6B3F} = {34CAACF8-D3EB-4161-931D-C850F076115C}
+		{99D596EB-A15D-4407-BD28-DA46D5635773} = {3617B75B-4CD6-4420-86B9-CACDC3C00D47}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 90d6cc9d-ef79-4360-ac7d-a7523ee38ad0
