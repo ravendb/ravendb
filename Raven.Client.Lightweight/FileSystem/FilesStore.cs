@@ -126,7 +126,19 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public string DefaultFileSystem { get; set; }
+        public string DefaultFileSystem
+        {
+            get { return defaultFileSystem; }
+            set
+            { 
+                if (string.IsNullOrEmpty(value))
+                    throw new ArgumentException("DefaultFileSystem can not be null or empty");
+                defaultFileSystem = value;
+            }
+        }
+
+        private string defaultFileSystem;
+
         private bool disableReplicationInformerGeneration = false;
         public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
         {

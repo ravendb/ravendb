@@ -867,5 +867,19 @@ namespace Raven.Tests.FileSystem.ClientApi
                 }
             }
         }
+
+        [Fact]
+        public void DefaultFileSystemCannotBeEmptyOrNull()
+        {
+            Assert.Throws<ArgumentException>(() => new FilesStore
+            {
+                DefaultFileSystem = null
+            });
+
+            Assert.Throws<ArgumentException>(() => new FilesStore
+            {
+                DefaultFileSystem = ""
+            });
+        }
     }
 }
