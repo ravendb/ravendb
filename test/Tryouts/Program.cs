@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using FastTests.Blittable;
+using SlowTests.Tests.Sorting;
 
 namespace Tryout
 {
@@ -10,7 +11,7 @@ namespace Tryout
     {
         static void Main(string[] args)
         {
-            new BlittableValidationTest().Valid_String_with_Esc_Char();
+            new AlphaNumericSorting().random_words_using_document_query_async().Wait();
         }
     }
 }
