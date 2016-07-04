@@ -435,6 +435,9 @@ namespace Voron.Impl.Journal
                     _waj._env.IsFlushingScratchBuffer = true;
                     Monitor.TryEnter(_flushingLock, Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30), ref lockTaken);
 
+                    if (_waj._env.Disposed)
+                        return;
+                    
                     if (lockTaken == false)
                         throw new TimeoutException("Could not acquire the write lock in 30 seconds");
 

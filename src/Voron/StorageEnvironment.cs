@@ -73,6 +73,7 @@ namespace Voron
         private int _sizeOfUnflushedTransactionsInJournalFile;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
+        public bool Disposed;
 
         public Guid DbId { get; set; }
 
@@ -284,26 +285,25 @@ namespace Voron
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
+            Disposed = true;
             try
             {
-                FlushWritesToDataFile();
-            }
-            catch (TimeoutException)
-            {
-                // currently being background flushed
-                using (_journal.Applicator.TakeFlushingLock())
+                // if there is a pending flush operation, we need to wait for it
+                bool lockTaken = false;
+                using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                 {
-                    // we are going to wait until the background flush is over, then continue 
-                    // with the environment flushing
+                    if (lockTaken == false)
+                    {
+                        // if we are here, then we didn't get the flush lock, so it is currently being run
+                        // we need to wait for it to complete (so we won't be shutting down the db while we 
+                        // are flushing and maybe access in valid memory.
+                        using (_journal.Applicator.TakeFlushingLock())
+                        {
+                            // when we are here, we know that we aren't flushing, and we can dispose, 
+                            // any future calls to flush will abort because we are marked as disposed
+                        }
+                    }
                 }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (AggregateException ae)
-            {
-                if (ae.InnerException is OperationCanceledException == false)
-                    throw;
             }
             finally
             {
@@ -543,6 +543,9 @@ namespace Voron
                     StorageEnvironment envToFlush;
                     while (_maybeNeedToFlush.TryDequeue(out envToFlush))
                     {
+                        if (envToFlush.Disposed)
+                            continue;
+
                         var sizeOfUnflushedTransactionsInJournalFile = Volatile.Read(ref envToFlush._sizeOfUnflushedTransactionsInJournalFile);
 
                         if (sizeOfUnflushedTransactionsInJournalFile == 0)
@@ -566,6 +569,8 @@ namespace Voron
                         if (ThreadPool.QueueUserWorkItem(env =>
                         {
                             var storageEnvironment = ((StorageEnvironment)env);
+                            if (storageEnvironment.Disposed)
+                                return;
 
                             try
                             {
