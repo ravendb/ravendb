@@ -40,6 +40,10 @@
                                 <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
                                 <span data-bind="visible: readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached()">Read from all servers but switch when request time SLA threshold is reached</span>
                                 <span data-bind="visible: readFromAllAllowWriteToSecondaries()">Read from all servers and allow write to secondaries</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromLeaderWriteToLeader'">Read from leader write to leader</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromLeaderWriteToLeaderWithFailovers'">Read from leader write to leader with failovers</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllWriteToLeader'">Read from all write to leader</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllWriteToLeaderWithFailovers'">Read from all write to leader with failovers</span>
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">
@@ -52,6 +56,10 @@
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached,ReadFromAllServers')">Read from all servers but switch when request time SLA threshold is reached</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeader')">Read from leader write to leader</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeaderWithFailovers')">Read from leader write to leader with failovers</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeader')">Read from all write to leader</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeaderWithFailovers')">Read from all write to leader with failovers</a></li>
                             </ul>
                         </div>
                     </div>
@@ -66,6 +74,10 @@
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
                                 <span data-bind="visible: $root.globalReadFromAllButSwitchWhenRequestTimeSlaThresholdIsReached">Read from all servers but switch when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.globalReadFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromLeaderWriteToLeader'">Read from leader write to leader</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromLeaderWriteToLeaderWithFailovers'">Read from leader write to leader with failovers</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllWriteToLeader'">Read from all write to leader</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllWriteToLeaderWithFailovers'">Read from all write to leader with failovers</span>
                                 <span class="caret"></span>
                             </button>
                         </div>

@@ -12,6 +12,7 @@ import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import shell = require("viewmodels/shell");
 
 class globalConfigReplications extends viewModelBase {
 
@@ -28,6 +29,8 @@ class globalConfigReplications extends viewModelBase {
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
     settingsAccess = new settingsAccessAuthorizer();
+
+    isInCluster = shell.clusterMode;
 
     activated = ko.observable<boolean>(false);
 

@@ -85,6 +85,7 @@
     <Compile Include="Client\Attachments.cs" />
     <Compile Include="Client\Batches.cs" />
     <Compile Include="Client\Documents.cs" />
+    <Compile Include="Client\FailoverBehaviorServerSide.cs" />
     <Compile Include="Client\FailoverServers.cs" />
     <Compile Include="Client\Indexes.cs" />
     <Compile Include="Client\WithFailovers.cs" />

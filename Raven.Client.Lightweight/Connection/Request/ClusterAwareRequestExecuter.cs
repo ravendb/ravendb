@@ -104,7 +104,7 @@ namespace Raven.Client.Connection.Request
                 return new CompletedTask();
 
             LeaderNode = null;
-            return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
+            return UpdateReplicationInformationForCluster(serverClient, new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
             {
                 return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, null, timeout: TimeSpan.FromSeconds(GetReplicationDestinationsTimeoutInSeconds)).ContinueWith(t =>
                 {
@@ -271,7 +271,7 @@ namespace Raven.Client.Connection.Request
             return operationResult;
         }
 
-        private Task UpdateReplicationInformationForCluster(OperationMetadata primaryNode, Func<OperationMetadata, Task<ReplicationDocumentWithClusterInformation>> getReplicationDestinationsTask)
+        private Task UpdateReplicationInformationForCluster(AsyncServerClient serverClient, OperationMetadata primaryNode, Func<OperationMetadata, Task<ReplicationDocumentWithClusterInformation>> getReplicationDestinationsTask)
         {
             lock (this)
             {
@@ -376,6 +376,9 @@ namespace Raven.Client.Connection.Request
                                 Nodes.FirstOrDefault(n => n.Url == newestTopology.Node.Url) : null;
 
                             ReplicationInformerLocalCache.TrySavingClusterNodesToLocalCache(serverHash, Nodes);
+
+                            if (newestTopology.Task.Result.ClientConfiguration != null)
+                                serverClient.convention.UpdateFrom(newestTopology.Task.Result.ClientConfiguration);
 
                             if (LeaderNode != null)
                                 return;
