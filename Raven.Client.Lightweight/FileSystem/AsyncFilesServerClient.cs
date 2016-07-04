@@ -716,11 +716,6 @@ namespace Raven.Client.FileSystem
                 }
                 catch (Exception e)
                 {
-                    if (request.ResponseStatusCode == HttpStatusCode.ExpectationFailed)
-                    {
-                        throw new BadRequestException(e.Message);
-                    }
-
                     var simplified = e.SimplifyException();
 
                     if (simplified != e)
