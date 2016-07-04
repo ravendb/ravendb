@@ -576,7 +576,7 @@ namespace Voron
 
                             try
                             {
-                                storageEnvironment.FlushWritesToDataFile();
+                                storageEnvironment.BackgroundFlushWritesToDataFile();
                             }
                             catch (Exception e)
                             {
@@ -606,11 +606,14 @@ namespace Voron
         
 
 
-        private void FlushWritesToDataFile()
+        private void BackgroundFlushWritesToDataFile()
         {
             try
             {
-                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
+                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token,
+                    // we intentionally don't wait, if the flush lock is held, something else is flushing, so we don't need
+                    // to hold the thread
+                    TimeSpan.Zero);
             }
             catch (TimeoutException)
             {
@@ -638,7 +641,9 @@ namespace Voron
 
         public void ForceLogFlushToDataFile(LowLevelTransaction tx, bool allowToFlushOverwrittenPages)
         {
-            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages);
+            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, 
+                Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30), 
+                tx, allowToFlushOverwrittenPages);
         }
 
         internal void AssertFlushingNotFailed()

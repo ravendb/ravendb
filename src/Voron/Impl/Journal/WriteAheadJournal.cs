@@ -421,7 +421,7 @@ namespace Voron.Impl.Journal
                 });
             }
 
-            public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, LowLevelTransaction transaction = null, bool allowToFlushOverwrittenPages = false)
+            public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, TimeSpan timeToWait, LowLevelTransaction transaction = null, bool allowToFlushOverwrittenPages = false)
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -433,7 +433,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     _waj._env.IsFlushingScratchBuffer = true;
-                    Monitor.TryEnter(_flushingLock, Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30), ref lockTaken);
+                    Monitor.TryEnter(_flushingLock, timeToWait, ref lockTaken);
 
                     if (_waj._env.Disposed)
                         return;
@@ -534,7 +534,7 @@ namespace Voron.Impl.Journal
 
                             using (ForceFlushingPagesOlderThan(oldestActiveTransaction))
                             {
-                                ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, false);
+                                ApplyLogsToDataFile(oldestActiveTransaction, token, timeToWait, transaction, false);
                             }
                         }
 
