@@ -56,7 +56,6 @@ namespace Voron
 
         private readonly AbstractPager _dataPager;
         private ExceptionDispatchInfo _flushingTaskFailure;
-        private Task _flushingTaskTimer;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
         internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
@@ -101,7 +100,7 @@ namespace Voron
                     LoadExistingDatabase();
 
                 if (_options.ManualFlushing == false)
-                    _flushingTaskTimer = IdleFlushTimer();
+                    Task.Run(IdleFlushTimer);
             }
             catch (Exception)
             {
@@ -116,6 +115,9 @@ namespace Voron
 
             while (cancellationToken.IsCancellationRequested == false)
             {
+                if (Disposed)
+                    return;
+
                 try
                 {
                     await Task.Delay(Options.IdleFlushTimeout, cancellationToken);
@@ -366,7 +368,7 @@ namespace Voron
                             _flushingTaskFailure = null;
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
-                            _flushingTaskTimer = IdleFlushTimer();
+                            Task.Run(IdleFlushTimer);
                             GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         }
                     }
