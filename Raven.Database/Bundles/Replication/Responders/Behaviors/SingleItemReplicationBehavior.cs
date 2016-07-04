@@ -83,10 +83,12 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             RavenJObject resolvedMetadataToSave;
             TExternal resolvedItemToSave;
             if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
-            {
+            {                
                 if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
                    metadata.Value<bool>("Raven-Remove-Document-Marker"))
                 {
+                    if (resolvedMetadataToSave.ContainsKey(Constants.RavenEntityName))
+                        metadata[Constants.RavenEntityName] = resolvedMetadataToSave[Constants.RavenEntityName];
                     DeleteItem(id, null);
                     MarkAsDeleted(id, metadata);
                 }
@@ -146,6 +148,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
                     metadata.Value<bool>("Raven-Remove-Document-Marker"))
                 {
+                    if(resolvedMetadataToSave.ContainsKey(Constants.RavenEntityName))
+                        metadata[Constants.RavenEntityName] = resolvedMetadataToSave[Constants.RavenEntityName];
                     DeleteItem(id, null);
                     MarkAsDeleted(id, metadata);
                 }
@@ -203,7 +207,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring.", id, Src);
                 return;
             }
-
+            if (existingMetadata.ContainsKey(Constants.RavenEntityName))
+                newMetadata[Constants.RavenEntityName] = existingMetadata[Constants.RavenEntityName];
             RavenJObject currentReplicationEntry = null;
             if (newMetadata.ContainsKey(Constants.RavenReplicationVersion) &&
                 newMetadata.ContainsKey(Constants.RavenReplicationSource))
@@ -214,6 +219,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     {Constants.RavenReplicationSource, newMetadata[Constants.RavenReplicationSource]}
                 };
             }
+                        
             var existingHistory = ReplicationData.GetHistory(existingMetadata);
             if (currentReplicationEntry != null &&
                 existingHistory.Contains(currentReplicationEntry, RavenJTokenEqualityComparer.Default))

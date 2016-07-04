@@ -831,7 +831,7 @@ namespace Raven.Database.Actions
                             DeleteDocumentFromIndexesForCollection(key, collection, actions);
                             if (deletedETag != null)
                                 Database.Prefetcher.AfterDelete(key, deletedETag);
-                            Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
+                            Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null, metadataVar));
                         }
 
                         TransactionalStorage
