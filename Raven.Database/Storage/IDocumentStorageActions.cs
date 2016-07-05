@@ -36,6 +36,8 @@ namespace Raven.Database.Storage
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
         Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped);
 
+        IEnumerable<JsonDocument> GetDocuments(int start);
+
         long GetDocumentsCount();
 
         JsonDocument DocumentByKey(string key);
