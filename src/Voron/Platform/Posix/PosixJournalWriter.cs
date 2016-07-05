@@ -28,7 +28,7 @@ namespace Voron.Platform.Posix
             _filename = filename;
 
 
-            _fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT,
+            _fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | OpenFlags.O_DIRECT | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             
             if (_fd == -1)
