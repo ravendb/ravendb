@@ -162,7 +162,7 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         ///     Get the bulk insert operation
         /// </summary>
-        WebSocketBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource));
+        TcpBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource));
 
         /// <summary>
         ///     Retrieves multiple documents.

@@ -19,9 +19,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Document
 {
-    public class WebSocketBulkInsertOperation : IDisposable
+    public class TcpBulkInsertOperation : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(WebSocketBulkInsertOperation));
+        private static readonly ILog Log = LogManager.GetLogger(typeof(TcpBulkInsertOperation));
         private readonly CancellationTokenSource _cts;
         private readonly Task _getServerResponseTask;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
@@ -32,7 +32,7 @@ namespace Raven.Client.Document
             new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
         private readonly Task _writeToServerTask;
         private DateTime _lastHeartbeat;
-        private long _sentAccumulator;
+        private readonly long _sentAccumulator;
 
         private readonly ManualResetEventSlim _throttlingEvent = new ManualResetEventSlim();
         private bool _isThrottling;
@@ -40,7 +40,7 @@ namespace Raven.Client.Document
         private TcpClient _tcpClient;
 
 
-        ~WebSocketBulkInsertOperation()
+        ~TcpBulkInsertOperation()
         {
             try
             {
@@ -53,7 +53,7 @@ namespace Raven.Client.Document
             }
         }
 
-        public WebSocketBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
+        public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
             _unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/client");
@@ -66,21 +66,37 @@ namespace Raven.Client.Document
                 _buffers.Add(new MemoryStream());
             }
 
-            var socketConnectionTask = _tcpClient.ConnectAsync(new UriBuilder(asyncServerClient.Url).Host, 9999);//TODO: fix the url, ssl support, etc
 
-            socketConnectionTask.Wait();//TODO: wait elsewhere?
+            var connectToServerTask = ConnectToServer(asyncServerClient);
+            
+            _sentAccumulator = 0;
+            _getServerResponseTask = connectToServerTask.ContinueWith(task =>
+            {
+                ReadServerResponses(task.Result);
+            });
+
+            _writeToServerTask = connectToServerTask.ContinueWith(task =>
+            {
+                WriteToServer(task.Result);
+            });
+
+        }
+
+        private async Task<Stream> ConnectToServer(AsyncServerClient asyncServerClient)
+        {
+            var connectionInfo = await asyncServerClient.GetTcpInfoAsync();
+            await _tcpClient.ConnectAsync(new Uri(connectionInfo.Url).Host, connectionInfo.Port);
+
             _tcpClient.NoDelay = true;
             _tcpClient.SendBufferSize = 32*1024;
             _tcpClient.ReceiveBufferSize = 4096;
             var networkStream = _tcpClient.GetStream();
 
+            //TODO: generate the command properly
             var buffer = Encoding.UTF8.GetBytes("{'Database':'" + MultiDatabase.GetDatabaseName(asyncServerClient.Url) + "'}");
-            networkStream.Write(buffer,0, buffer.Length); // TODO: do this properly
+            await networkStream.WriteAsync(buffer,0, buffer.Length);
 
-            _sentAccumulator = 0;
-            _getServerResponseTask = Task.Factory.StartNew(() => ReadServerResponses(networkStream));
-            _writeToServerTask = Task.Factory.StartNew(() => WriteToServer(networkStream));
-
+            return networkStream;
         }
 
         private void WriteToServer(Stream serverStream)
@@ -303,7 +319,7 @@ namespace Raven.Client.Document
             if (_getServerResponseTask.IsCompleted)
             {
                 // we can only get here if we closed the connection
-                throw new ObjectDisposedException(nameof(WebSocketBulkInsertOperation));
+                throw new ObjectDisposedException(nameof(TcpBulkInsertOperation));
             }
 
             metadata[Constants.MetadataDocId] = id;

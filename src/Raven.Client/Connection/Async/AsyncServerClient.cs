@@ -1127,6 +1127,18 @@ namespace Raven.Client.Connection.Async
             }
         }
 
+        public async Task<TcpConnectionInfo> GetTcpInfoAsync(CancellationToken token = default(CancellationToken))
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetRootDatabaseUrl(Url)+ "/info/tcp"), HttpMethod.Get, 
+                credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
+            {
+                request.AddOperationHeaders(OperationsHeaders);
+
+                var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+            }
+        }
+
         public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync(CancellationToken token = default(CancellationToken))
         {
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/debug/suggest-index-merge"), HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
@@ -1992,9 +2004,9 @@ namespace Raven.Client.Connection.Async
             return Url.Doc(documentKey);
         }
 
-        public WebSocketBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource))
+        public TcpBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource))
         {
-            return new WebSocketBulkInsertOperation(this, cts);
+            return new TcpBulkInsertOperation(this, cts);
         }
 
         private async Task<long?> DirectHeadAsync(OperationMetadata operationMetadata, string key, CancellationToken token = default(CancellationToken))

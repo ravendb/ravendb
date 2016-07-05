@@ -302,7 +302,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetLicenseStatusAsync());
         }
 
-        public WebSocketBulkInsertOperation GetBulkInsertOperation()
+        public TcpBulkInsertOperation GetBulkInsertOperation()
         {			
 
             return asyncServerClient.GetBulkInsertOperation();

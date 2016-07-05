@@ -15,6 +15,7 @@ namespace Raven.Server.Config.Categories
         private string workingDirectory;
         private string dataDirectory;
         private string serverUrl;
+        private string tcpServerUrl;
 
         [Description("The maximum allowed page size for queries")]
         [DefaultValue(1024)]
@@ -31,6 +32,18 @@ namespace Raven.Server.Config.Categories
             set
             {
                 serverUrl = value;
+            }
+        }
+
+        [Description("The URLs which the server should listen to. By default we listen to localhost:8081")]
+        [DefaultValue("tcp://localhost:8081")]
+        [ConfigurationEntry("Raven/ServerUrl/TCP")]
+        public string TcpServerUrl
+        {
+            get { return tcpServerUrl; }
+            set
+            {
+                tcpServerUrl = value;
             }
         }
 

@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.BulkInsert
                         {
                             var reader = new BlittableJsonReaderObject(bulkInsertDoc.Pointer, bulkInsertDoc.Used,
                                 context);
-                            reader.BlittableValidation(bulkInsertDoc.Used);
+                            reader.BlittableValidation();
 
                             string docKey;
                             BlittableJsonReaderObject metadata;

@@ -12,42 +12,11 @@ namespace Tryout
     {
         static void Main(string[] args)
         {
-            var tasks = new Func<Task>[]
+            using (var bulkInserts = new FastTests.Client.BulkInsert.BulkInserts())
             {
-                async () =>
-                {
-                    using (var alphaNumericSorting = new AlphaNumericSorting())
-                    {
-                        await alphaNumericSorting.random_words_using_document_query();
-                    }
-                },
-                async () =>
-                {
-                    using (var alphaNumericSorting = new AlphaNumericSorting())
-                    {
-                        await alphaNumericSorting.random_words();
-                    }
-                },
-                async () =>
-                {
-                    using (var alphaNumericSorting = new AlphaNumericSorting())
-                    {
-                        await alphaNumericSorting.random_words_using_document_query_async();
-                    }
-                }
-            };
+                bulkInserts.SimpleBulkInsertShouldWork().Wait();
 
-            for (int i = 0; i < 100; i++)
-            {
-                Console.WriteLine(i);
-                var run = new Task[tasks.Length];
-                for (int j = 0; j < tasks.Length; j++)
-                {
-                    run[j] = Task.Run(tasks[j]);
-                }
-                Task.WhenAll(run);
             }
-
         }
     }
 }
