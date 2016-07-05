@@ -1,6 +1,8 @@
 using System;
+#if !DNXCORE50
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+#endif
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -10,9 +12,7 @@ using Raven.Tests.Core.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Raven.Tests.Core.Utils.Transformers;
-
 using Sparrow.Collections;
-
 using Xunit;
 
 namespace Raven.Tests.Core.ChangesApi
@@ -29,50 +29,36 @@ namespace Raven.Tests.Core.ChangesApi
         }
 #endif
 
-
         [Fact]
         public void CanSubscribeToDocumentChanges()
         {
             using (var store = GetDocumentStore())
             {
-
                 store.Changes().Task.Result
                     .ForAllDocuments()
-                    .Subscribe(change =>
-                    {
-                        output.Add("passed_foralldocuments");
-                    });
+                    .Subscribe(new ChangesObserver(this, "passed_foralldocuments"));
 
                 store.Changes().Task.Result
                     .ForDocumentsStartingWith("companies")
-                    .Subscribe(change =>
-                    {
-                        output.Add("passed_forfordocumentsstartingwith");
-                    });
+                    .Subscribe(new ChangesObserver(this, "passed_forfordocumentsstartingwith"));
 
                 store.Changes().Task.Result
                     .ForDocumentsInCollection("posts")
-                    .Subscribe(change =>
-                    {
-                        output.Add("passed_ForDocumentsInCollection");
-                    });
+                    .Subscribe(new ChangesObserver(this, "passed_ForDocumentsInCollection"));
 
                 store.Changes().Task.Result
                     .ForDocumentsOfType(new Camera().GetType())
-                    .Subscribe(changes =>
-                    {
-                        output.Add("passed_ForDocumentsOfType");
-                    });
+                    .Subscribe(new ChangesObserver(this, "passed_ForDocumentsOfType"));
 
                 store.Changes().Task.Result
                     .ForDocument("companies/1")
-                    .Subscribe(change =>
+                    .Subscribe(new ActionObserver<DocumentChangeNotification>(change =>
                     {
                         if (change.Type == DocumentChangeTypes.Delete)
                         {
                             output.Add("passed_fordocumentdelete");
                         }
-                    });
+                    }));
 
                 using (var session = store.OpenSession())
                 {
@@ -111,6 +97,54 @@ namespace Raven.Tests.Core.ChangesApi
             }
         }
 
+        public class ChangesObserver : IObserver<DocumentChangeNotification>
+        {
+            private readonly Subscribing subscribing;
+            private readonly string message;
+
+            public ChangesObserver(Subscribing subscribing, string message)
+            {
+                this.subscribing = subscribing;
+                this.message = message;
+            }
+
+            public void OnNext(DocumentChangeNotification notification)
+            {
+                subscribing.output.Add(message);
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnCompleted()
+            {
+            }
+        }
+
+        public class IndexChangeActionObserver : IObserver<IndexChangeNotification>
+        {
+            private readonly Action<IndexChangeNotification> action;
+
+            public IndexChangeActionObserver(Action<IndexChangeNotification> action)
+            {
+                this.action = action;
+            }
+
+            public void OnNext(IndexChangeNotification notification)
+            {
+                action(notification);
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnCompleted()
+            {
+            }
+        }
+
         private void WaitUntilOutput(string expected)
         {
             Assert.True(SpinWait.SpinUntil(() => output.Contains(expected), 5000));
@@ -128,14 +162,14 @@ namespace Raven.Tests.Core.ChangesApi
             {
                 store.Changes().Task.Result
                     .ForAllIndexes().Task.Result
-                    .Subscribe(change =>
+                    .Subscribe(new IndexChangeActionObserver(change =>
                     {
                         Console.WriteLine(JsonConvert.SerializeObject(change));
                         if (change.Type == IndexChangeTypes.IndexAdded)
                         {
                             output.Add("passed_forallindexesadded");
                         }
-                    });
+                    }));
 
                 new Companies_CompanyByType().Execute(store);
                 WaitForIndexing(store);
@@ -146,21 +180,21 @@ namespace Raven.Tests.Core.ChangesApi
                 WaitForIndexing(store);
                 store.Changes().Task.Result
                     .ForIndex(usersByName.IndexName).Task.Result
-                    .Subscribe(change =>
+                    .Subscribe(new IndexChangeActionObserver(change =>
                     {
                         Console.WriteLine(JsonConvert.SerializeObject(change));
                         if (change.Type == IndexChangeTypes.MapCompleted)
                         {
                             output.Add("passed_forindexmapcompleted");
                         }
-                    });
+                    }));
 
                 var companiesSompanyByType = new Companies_CompanyByType();
                 companiesSompanyByType.Execute(store);
                 WaitForIndexing(store);
                 store.Changes().Task.Result
                     .ForIndex(companiesSompanyByType.IndexName).Task.Result
-                    .Subscribe(change =>
+                    .Subscribe(new IndexChangeActionObserver(change =>
                     {
                         Console.WriteLine(JsonConvert.SerializeObject(change));
                         if (change.Type == IndexChangeTypes.RemoveFromIndex)
@@ -171,7 +205,7 @@ namespace Raven.Tests.Core.ChangesApi
                         {
                             output.Add("passed_forindexreducecompleted");
                         }
-                    });
+                    }));
 
                 using (var session = store.OpenSession())
                 {
@@ -194,13 +228,13 @@ namespace Raven.Tests.Core.ChangesApi
 
                 store.Changes().Task.Result
                     .ForAllIndexes().Task.Result
-                    .Subscribe(change =>
-                    {
-                        if (change.Type == IndexChangeTypes.IndexRemoved)
-                        {
-                            output.Add("passed_forallindexesremoved");
-                        }
-                    });
+                     .Subscribe(new IndexChangeActionObserver(change =>
+                     {
+                         if (change.Type == IndexChangeTypes.IndexRemoved)
+                         {
+                             output.Add("passed_forallindexesremoved");
+                         }
+                     }));
                 store.DatabaseCommands.DeleteIndex("Companies/CompanyByType");
                 WaitForIndexing(store);
                 Assert.Contains("passed_forallindexesremoved", output);
@@ -220,10 +254,10 @@ namespace Raven.Tests.Core.ChangesApi
 
                 destination.Changes().Task.Result
                     .ForAllReplicationConflicts().Task.Result
-                    .Subscribe(conflict =>
-                    {
-                        output.Add("conflict");
-                    });
+                     .Subscribe(new ActionObserver<ReplicationConflictNotification>(change =>
+                     {
+                         output.Add("conflict");
+                     }));
 
                 SetupReplication(source, destinations: destination);
                 source.Replication.WaitAsync(eTag, replicas: 1).Wait();
@@ -241,10 +275,10 @@ namespace Raven.Tests.Core.ChangesApi
                 {
                     store.Changes().Task.Result
                         .ForBulkInsert(bulkInsert.OperationId).Task.Result
-                        .Subscribe(changes =>
-                        {
+                         .Subscribe(new ActionObserver<BulkInsertChangeNotification>(change =>
+                         {
                             output.Add("passed_bulkInsert");
-                        });
+                         }));
 
                     bulkInsert.Store(new User
                     {
@@ -268,13 +302,13 @@ namespace Raven.Tests.Core.ChangesApi
 
                 store.Changes().Task.Result
                         .ForBulkInsert().Task.Result
-                        .Subscribe(changes =>
+                        .Subscribe(new ActionObserver<BulkInsertChangeNotification>(changes =>
                         {
                             if (changes.Type == DocumentChangeTypes.BulkInsertEnded)
                                 Interlocked.Increment(ref bulkEndedCount);
                             else if (changes.Type == DocumentChangeTypes.BulkInsertStarted)
                                 Interlocked.Increment(ref bulkStartedCount);
-                        });
+                        }));
 
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -304,7 +338,7 @@ namespace Raven.Tests.Core.ChangesApi
             {
                 store.Changes().Task.Result
                     .ForAllTransformers().Task.Result
-                    .Subscribe(changes =>
+                    .Subscribe(new ActionObserver<TransformerChangeNotification>(changes =>
                     {
                         if (changes.Type == TransformerChangeTypes.TransformerAdded)
                         {
@@ -314,8 +348,8 @@ namespace Raven.Tests.Core.ChangesApi
                         {
                             output.Add("passed_CanSubscribeToAllTransformers_TransformerRemoved");
                         }
-                    });
-
+                    }));
+                
                 var transformer = new CompanyFullAddressTransformer();
                 transformer.Execute(store);
                 WaitUntilOutput("passed_CanSubscribeToAllTransformers_TransformerAdded");
@@ -332,17 +366,17 @@ namespace Raven.Tests.Core.ChangesApi
             {
                 store.Changes().Task.Result
                     .ForAllDataSubscriptions().Task.Result
-                    .Subscribe(changes =>
-                    {
-                        if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
-                        {
-                            output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened");
-                        }
-                        if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
-                        {
-                            output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased");
-                        }
-                    });
+                     .Subscribe(new ActionObserver<DataSubscriptionChangeNotification>(changes =>
+                     {
+                         if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
+                         {
+                             output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionOpened");
+                         }
+                         if (changes.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+                         {
+                             output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased");
+                         }
+                     }));
 
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
@@ -366,7 +400,7 @@ namespace Raven.Tests.Core.ChangesApi
 
                 store.Changes().Task.Result
                     .ForDataSubscription(1).Task.Result
-                    .Subscribe(changes =>
+                    .Subscribe(new ActionObserver<DataSubscriptionChangeNotification>(changes =>
                     {
                         if (changes.Type == DataSubscriptionChangeTypes.SubscriptionOpened)
                         {
@@ -376,7 +410,7 @@ namespace Raven.Tests.Core.ChangesApi
                         {
                             output.Add("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + changes.Id);
                         }
-                    });
+                    }));
 
                 var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
                 var subscription2 = store.Subscriptions.Open(id2, new SubscriptionConnectionOptions());
@@ -390,6 +424,7 @@ namespace Raven.Tests.Core.ChangesApi
             }
         }
 
+#if !DNXCORE50
         [Fact]
         public async Task CanSubscribeToStartingWithDocumentChanges()
         {
@@ -435,5 +470,6 @@ namespace Raven.Tests.Core.ChangesApi
                 Assert.Equal("companies/2", change.Id);
             }
         }
+#endif
     }
 }

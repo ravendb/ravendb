@@ -1,7 +1,9 @@
 ﻿{
   "version": "3.5.0",
 
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+  "buildOptions": {
+    "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
+  },
 
   "commands": {
     "test": "xunit.runner.dnx"
@@ -9,21 +11,26 @@
 
   "dependencies": {
     "Raven.Client.Lightweight": "3.5.0",
-    "Rx-Linq": "2.2.5"
-  },
-  
-  "runtimes": {
-    "win-x64": {
-    }
+
+    "xunit": "2.2.0-beta2-build3300",
+    "xunit.runner.utility": "2.2.0-beta2-build3300"
   },
 
   "frameworks": {
-    "dnxcore50": {
-      "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "xunit": "2.1.0-rc2-build3176",
-        "xunit.runner.dnx": "2.1.0-rc1-build204"
+    "net45": {
+      "buildOptions": {
+        "define": [ "NET4_5" ]
+      }
+    },
+
+    "netcoreapp1.0": {
+      "buildOptions": {
+        "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
       }
     }
+  },
+
+  "runtimes": {
+    "win-x64": {} 
   }
 }

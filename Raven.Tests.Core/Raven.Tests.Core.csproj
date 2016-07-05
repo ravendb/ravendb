@@ -154,6 +154,7 @@
     <Compile Include="Auth\WindowsAuthenticationUserInfo.cs" />
     <Compile Include="BulkInsert\ChunkedBulkInsert.cs" />
     <Compile Include="Bundles\MoreLikeThis.cs" />
+    <Compile Include="ChangesApi\ActionObserver.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="ChangesApi\WebsocketsTests.cs" />

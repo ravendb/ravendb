@@ -76,9 +76,9 @@
     <Compile Include="Platform\Win32\Win32UnmanagedMemory.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Sparrow.project.json" />
     <None Include="RavenDB.snk" />
     <None Include="readme.md" />
+    <None Include="Sparrow.project.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
