@@ -15,7 +15,7 @@ namespace Raven.StorageExporter
 {
     public class EsentExportOperation : IDisposable
     {
-        public EsentExportOperation(string dataDirPath)
+        public EsentExportOperation(string dataDirPath, bool hasCompression, EncryptionConfiguration encryption)
         {
             var dbFullPath = Path.Combine(dataDirPath, "Data");            
             try
@@ -24,9 +24,12 @@ namespace Raven.StorageExporter
                 var ravenConfiguration = new RavenConfiguration();
                 ravenConfiguration.DataDirectory = dataDirPath;
                 ravenConfiguration.Storage.PreventSchemaUpdate = true;
+
                 ITransactionalStorage storage;
-                var success = StorageExporter.TryToCreateTransactionalStorage(ravenConfiguration, out storage);
-                if (!success) ConsoleUtils.PrintErrorAndFail("Failed to create transactional storage");
+                var success = StorageExporter.TryToCreateTransactionalStorage(ravenConfiguration, hasCompression, encryption, out storage);
+                if (success == false)
+                    ConsoleUtils.PrintErrorAndFail("Failed to create transactional storage");
+
                 var configurator = new TransactionalStorageConfigurator(ravenConfiguration, (TransactionalStorage)storage);
                 configurator.ConfigureInstance(instance, dataDirPath);
                 storage.Dispose();

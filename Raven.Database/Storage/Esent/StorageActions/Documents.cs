@@ -443,6 +443,16 @@ namespace Raven.Database.Storage.Esent.StorageActions
             } while (Api.TryMoveNext(session, Documents) && take > 0);
         }
 
+        public IEnumerable<JsonDocument> GetDocuments(int start)
+        {
+            if (start > 0 && TryMoveTableRecords(Documents, start, backward: false))
+                yield break;
+            do
+            {
+                yield return ReadCurrentDocument();
+            } while (Api.TryMoveNext(session, Documents));
+        }
+
         private bool StartsWithIgnoreCaseAndSymbols(string keyFromDb, string idPrefix)
         {
             var keyPos = 0;
