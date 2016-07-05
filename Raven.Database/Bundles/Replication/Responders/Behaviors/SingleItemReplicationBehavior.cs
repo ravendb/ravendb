@@ -222,7 +222,9 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                         
             var existingHistory = ReplicationData.GetHistory(existingMetadata);
             if (currentReplicationEntry != null &&
-                existingHistory.Contains(currentReplicationEntry, RavenJTokenEqualityComparer.Default))
+                existingHistory.Any(x => RavenJTokenEqualityComparer.Default.Equals(
+                    ((RavenJObject)x)[Constants.RavenReplicationSource], currentReplicationEntry[Constants.RavenReplicationSource])
+                    && ((RavenJObject)x)[Constants.RavenReplicationVersion].Value<long>() >= currentReplicationEntry[Constants.RavenReplicationVersion].Value<long>()))
             {
                 if (log.IsDebugEnabled)
                     log.Debug("Replicated delete for {0} already exist in item history, ignoring", id);
@@ -239,19 +241,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     newHistory.Add(currentReplicationEntry);
 
                 //Merge histories
-                foreach (var historyEntry in newHistory)
-                {
-                    if (existingHistory.Contains(historyEntry, RavenJTokenEqualityComparer.Default))
-                        continue;
-
-                    existingHistory.Add(historyEntry);
-                }
-
-                while (newHistory.Length > Constants.ChangeHistoryLength)
-                {
-                    newHistory.RemoveAt(0);
-                }
-                ReplicationData.SetHistory(newMetadata, existingHistory);
+                ReplicationData.SetHistory(newMetadata, Historian.MergeReplicationHistories(newHistory, existingHistory));
+                newMetadata[Constants.RavenReplicationMergedHistory] = true;
                 MarkAsDeleted(id, newMetadata);
 
                 return;

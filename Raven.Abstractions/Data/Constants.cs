@@ -231,8 +231,6 @@ namespace Raven.Abstractions.Data
         [Obsolete("Use RavenFS instead.")]
         public const string RavenPeriodicExportsAttachmentsTombstones = "Raven/PeriodicExports/Attachments/Tombstones";
 
-        public const int ChangeHistoryLength = 50;
-
         //Spatial
         public const string DefaultSpatialFieldName = "__spatial";
 

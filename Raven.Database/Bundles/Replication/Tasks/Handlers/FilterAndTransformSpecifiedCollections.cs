@@ -47,7 +47,7 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
                     return null;
                 }
 
-                if (script == null)
+                if (script == null || doc.Metadata.ContainsKey(Constants.RavenDeleteMarker))
                     return doc;
 
                 var scriptedPatchRequest = new ScriptedPatchRequest
