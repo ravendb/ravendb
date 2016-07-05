@@ -201,10 +201,6 @@
       <Project>{ea32fd05-8537-4a31-879e-20a0f2c87479}</Project>
       <Name>Raven.Tests.MailingList</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests.Raft\Raven.Tests.Raft.csproj">
-      <Project>{99d596eb-a15d-4407-bd28-da46d5635773}</Project>
-      <Name>Raven.Tests.Raft</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>
