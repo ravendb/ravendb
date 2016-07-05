@@ -51,10 +51,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
                 if(conflicts == null)
                     return;
 
-                var list = new List<RavenJArray>
-                {
-                    new RavenJArray(ReplicationData.GetHistory(metadata)) // first item to interleave
-                };
+                Dictionary <string,RavenJObject> conflictHistoryAsDictionary = new Dictionary<string, RavenJObject>();
 
                 foreach (var prop in conflicts)
                 {
@@ -69,32 +66,12 @@ namespace Raven.Database.Bundles.Replication.Triggers
                             {Constants.RavenReplicationVersion, deletedMetadata[Constants.RavenReplicationVersion]},
                             {Constants.RavenReplicationSource, deletedMetadata[Constants.RavenReplicationSource]}
                         });
-                        list.Add(conflictHistory);
+                        Historian.MergeSingleHistory(conflictHistory, conflictHistoryAsDictionary);
                     }
                 }
 
-
-                int index = 0;
-                bool added = true;
-                while (added) // interleave the history from all conflicts
-                {
-                    added = false;
-                    foreach (var deletedMetadata in list)
-                    {
-                        // add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
-                        if (index < deletedMetadata.Length)
-                        {
-                            history.Add(deletedMetadata[index]);
-                            added = true;
-                        }
-                    }
-                    index++;
-                }
-
-                while (history.Length > Constants.ChangeHistoryLength)
-                {
-                    history.RemoveAt(0);
-                }
+                metadata[Constants.RavenReplicationHistory] = new RavenJArray(conflictHistoryAsDictionary.Values);
+                metadata[Constants.RavenReplicationMergedHistory] = true;
             }
         }
 
