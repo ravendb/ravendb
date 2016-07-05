@@ -66,6 +66,11 @@ namespace Raven.Bundles.Replication.Tasks
             return metadata.Value<string>(Constants.RavenReplicationSource) == destinationId;
         }
 
+        public bool OriginsFromOtherDestination(string sourceId, RavenJObject metadata)
+        {
+            return metadata.Value<string>(Constants.RavenReplicationSource) != sourceId;
+        }
+
         public bool IsSystemDocumentId(string key)
         {
             if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase)) // don't replicate system docs
@@ -118,6 +123,5 @@ namespace Raven.Bundles.Replication.Tasks
                 ConnectionStringOptions.ApiKey
             }.Where(x => x != null));
         }
-
     }
 }

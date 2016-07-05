@@ -4,13 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
@@ -25,7 +23,7 @@ namespace Raven.Client.Document
         private readonly DocumentStore documentStore;
 
 #if !DNXCORE50
-        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
 #else
         private readonly static ILog log = LogManager.GetLogger(typeof(ReplicationBehavior));
 #endif

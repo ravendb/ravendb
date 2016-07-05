@@ -78,6 +78,7 @@ namespace Raven.Bundles.Replication.Tasks
             get { return destinationStats; }
         }
 
+        private string _transactionalStorageId;
 
         [Obsolete("Use for debugging only!")]
         public bool ShouldWaitForWork { get; set; }
@@ -105,7 +106,7 @@ namespace Raven.Bundles.Replication.Tasks
         public void Execute(DocumentDatabase database)
         {
             docDb = database;
-
+            _transactionalStorageId = docDb.TransactionalStorage.Id.ToString();
 
             docDb.Notifications.OnIndexChange += OnIndexChange;
             docDb.Notifications.OnTransformerChange += OnTransformerChange;
@@ -688,7 +689,7 @@ namespace Raven.Bundles.Replication.Tasks
                             // we don't notify remote server about updates to system docs, see: RavenDB-715
                             if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0
                                 || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
-                                || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
+                                || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromOtherDestinations > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-4570
                             {
                                 using (scope.StartRecording("Notify"))
                                 {
@@ -1313,7 +1314,7 @@ namespace Raven.Bundles.Replication.Tasks
             public DateTime LastLastModified { get; set; }
             public RavenJArray Documents { get; set; }
             public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
-            public int CountOfFilteredDocumentsWhichOriginFromDestination { get; set; }
+            public int CountOfFilteredDocumentsWhichOriginFromOtherDestinations { get; set; }
             public List<JsonDocument> LoadedDocs { get; set; }
         }
 
@@ -1370,8 +1371,8 @@ namespace Raven.Bundles.Replication.Tasks
                         docsSinceLastReplEtag += docsToReplicate.Count;
                         result.CountOfFilteredDocumentsWhichAreSystemDocuments +=
                             docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
-                        result.CountOfFilteredDocumentsWhichOriginFromDestination +=
-                            docsToReplicate.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
+                        result.CountOfFilteredDocumentsWhichOriginFromOtherDestinations +=
+                            docsToReplicate.Count(doc => destination.OriginsFromOtherDestination(_transactionalStorageId, doc.Metadata) && !destination.IsSystemDocumentId(doc.Key));
 
                         if (docsToReplicate.Count > 0)
                         {
