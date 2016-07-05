@@ -109,9 +109,9 @@ task CompileHtml5 {
 
 task CompileDotNet {
 
-    &"$dotnet" restore Raven.Client.Lightweight Bundles\Raven.Client.Authorization Bundles\Raven.Client.UniqueConstraints
+    &"$dotnet" --verbose restore Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight Bundles\Raven.Client.Authorization Bundles\Raven.Client.UniqueConstraints
     
-    &"$dotnet" build Raven.Client.Lightweight --configuration "$global:configuration" Bundles\Raven.Client.Authorization Bundles\Raven.Client.UniqueConstraints --build-base-path "$build_dir\DotNet"
+    &"$dotnet" build --verbose Raven.Client.Lightweight --configuration "$global:configuration" Bundles\Raven.Client.Authorization Bundles\Raven.Client.UniqueConstraints --build-base-path "$build_dir\DotNet"
 }
 
 task TestDotNet -depends CompileDotNet {
