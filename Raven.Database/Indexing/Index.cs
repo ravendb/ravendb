@@ -666,46 +666,37 @@ namespace Raven.Database.Indexing
                 switch (stats.Operation)
                 {
                     case IndexingWorkStats.Status.Map:
-                        workContext.TransactionalStorage.Batch(accessor =>
+                        try
                         {
-                            try
+                            workContext.TransactionalStorage.Batch(accessor =>
                             {
                                 accessor.Indexing.UpdateIndexingStats(indexId, stats);
-                            }
-                            catch (Exception e)
-                            {
-                                if (accessor.IsWriteConflict(e))
-                                {
-                                    run = true;
-                                    return;
-                                }
-                                throw;
-                            }
-                        });
+                            });
+                        }
+                        catch (ConcurrencyException)
+                        {
+                            run = true;
+                        }
                         break;
                     case IndexingWorkStats.Status.Reduce:
-                        workContext.TransactionalStorage.Batch(accessor =>
+                        try
                         {
-                            try
+                            workContext.TransactionalStorage.Batch(accessor =>
                             {
                                 accessor.Indexing.UpdateReduceStats(indexId, stats);
-                            }
-                            catch (Exception e)
-                            {
-                                if (accessor.IsWriteConflict(e))
-                                {
-                                    run = true;
-                                    return;
-                                }
-                                throw;
-                            }
-                        });
+                            });
+                        }
+                        catch (ConcurrencyException)
+                        {
+                            run = true;
+                        }
                         break;
                     case IndexingWorkStats.Status.Ignore:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+
                 if (run)
                     Thread.Sleep(11);
             }

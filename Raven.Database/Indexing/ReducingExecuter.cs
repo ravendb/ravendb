@@ -385,6 +385,17 @@ namespace Raven.Database.Indexing
 
                 BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
                 {
+                    var localKeys = new HashSet<string>();
+                    while (enumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        localKeys.Add(enumerator.Current);
+                    }
+
+                    if (localKeys.Count == 0)
+                        return;
+
                     var parallelStats = new ParallelBatchStats
                     {
                         StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
@@ -394,14 +405,6 @@ namespace Raven.Database.Indexing
                     needToMoveToSingleStepQueue.Enqueue(localNeedToMoveToSingleStep);
                     var localAlreadySingleStep = new HashSet<string>();
                     alreadySingleStepQueue.Enqueue(localAlreadySingleStep);
-
-                    var localKeys = new HashSet<string>();
-                    while (enumerator.MoveNext())
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        localKeys.Add(enumerator.Current);
-                    }
 
                     transactionalStorage.Batch(actions =>
                     {

@@ -700,17 +700,35 @@ namespace Raven.Database.Indexing
                             batchForIndex.Index.PublicName);
                     }
 
-                    if (wasOutOfMemory == false && wasOperationCanceled == false)
+                    if (wasOutOfMemory)
                     {
-                        transactionalStorage.Batch(actions =>
-                        {
-                            // whatever we succeeded in indexing or not, we have to update this
-                            // because otherwise we keep trying to re-index failed documents
-                            actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
-                        });
-                    }
-                    else if (wasOutOfMemory)
                         HandleOutOfMemory(batchForIndex);
+                    }
+                    else if (wasOperationCanceled == false)
+                    {
+                        var keepTrying = true;
+                        for (var i = 0; i < 10 && keepTrying; i++)
+                        {
+                            keepTrying = false;
+
+                            try
+                            {
+                                transactionalStorage.Batch(actions =>
+                                {
+                                    // whatever we succeeded in indexing or not, we have to update this
+                                    // because otherwise we keep trying to re-index failed documents
+                                    actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+                                });
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                keepTrying = true;
+                            }
+
+                            if (keepTrying)
+                                Thread.Sleep(11);
+                        }
+                    }
                 }
                 finally
                 {
