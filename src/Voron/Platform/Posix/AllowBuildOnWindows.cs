@@ -510,7 +510,6 @@ namespace Voron.Platform.Posix
 
         O_NOFOLLOW = 0x00020000,
         O_DIRECTORY = 0x00010000,
-        // O_DIRECT = 0x00004000,
         O_ASYNC = 0x00002000,
         O_LARGEFILE = 0x00008000,
         O_CLOEXEC = 0x00080000,
