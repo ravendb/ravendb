@@ -804,7 +804,7 @@ namespace Raven.Database.Indexing
                 if (TransactionalStorageHelper.IsWriteConflict(exception))
                     return null;
 
-                Log.WarnException(string.Format("Failed to index documents for index: {0}", batchForIndex.Index.PublicName), exception);
+                Log.WarnException($"Failed to index documents for index: {batchForIndex.Index.PublicName}", exception);
 
                 wasOutOfMemory = TransactionalStorageHelper.IsOutOfMemoryException(exception);
 
@@ -828,38 +828,35 @@ namespace Raven.Database.Indexing
 
                 try
                 {
-                    if (wasOutOfMemory == false && wasOperationCanceled == false)
+                    if (wasOutOfMemory)
                     {
-                        bool keepTrying = true;
-
-                        for (int i = 0; i < 10 && keepTrying; i++)
+                        HandleOutOfMemory(batchForIndex);
+                    }
+                    else if (wasOperationCanceled == false)
+                    {
+                        var keepTrying = true;
+                        for (var i = 0; i < 10 && keepTrying; i++)
                         {
                             keepTrying = false;
-                            transactionalStorage.Batch(actions =>
+
+                            try
                             {
-                                try
+                                transactionalStorage.Batch(actions =>
                                 {
                                     // whatever we succeeded in indexing or not, we have to update this
                                     // because otherwise we keep trying to re-index failed documents
                                     actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
-                                }
-                                catch (Exception e)
-                                {
-                                    if (actions.IsWriteConflict(e))
-                                    {
-                                        keepTrying = true;
-                                        return;
-                                    }
-                                    throw;
-                                }
-                            });
+                                });
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                keepTrying = true;
+                            }
 
                             if (keepTrying)
                                 Thread.Sleep(11);
                         }
                     }
-                    else if (wasOutOfMemory)
-                        HandleOutOfMemory(batchForIndex);
                 }
                 finally
                 {
@@ -1017,14 +1014,15 @@ namespace Raven.Database.Indexing
                     // we use it this way to batch all the updates together
                     if (indexToWorkOn.LastIndexedEtag.CompareTo(lastEtag) < 0)
                         actions.Enqueue(accessor =>
-                    {
-                        accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
-                        accessor.AfterStorageCommit += () =>
                         {
-                            indexToWorkOn.Index.EnsureIndexWriter();
-                            indexToWorkOn.Index.Flush(lastEtag);
-                        };
-                    });
+                            accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
+                            accessor.AfterStorageCommit += () =>
+                            {
+                                indexToWorkOn.Index.EnsureIndexWriter();
+                                indexToWorkOn.Index.Flush(lastEtag);
+                            };
+                        });
+
                     innerFilteredOutIndexes.Push(indexToWorkOn);
                     context.MarkIndexFilteredOut(indexName);
                     return;
@@ -1043,31 +1041,27 @@ namespace Raven.Database.Indexing
             }, description: $"Filtering documents for {indexesToWorkOn.Count} indexes");
 
             filteredOutIndexes = innerFilteredOutIndexes.ToList();
-                foreach (var action in actions)
-                {
-                bool keepTrying = true;
-                for (int i = 0; i < 10 && keepTrying; i++)
+            foreach (var action in actions)
+            {
+                if (action == null)
+                    continue;
+
+                var keepTrying = true;
+                for (var i = 0; i < 10 && keepTrying; i++)
                 {
                     keepTrying = false;
-                    transactionalStorage.Batch(actionsAccessor =>
+
+                    try
                     {
-                    if (action != null)
-                    {
-                        try
+                        transactionalStorage.Batch(actionsAccessor =>
                         {
                             action(actionsAccessor);
-                        }
-                        catch (Exception e)
-                        {
-                                if (actionsAccessor.IsWriteConflict(e))
-                                {
-                                    keepTrying = true;
-                                    return;
-                        }
-                                throw;
+                        });
                     }
-                }
-            });
+                    catch (ConcurrencyException)
+                    {
+                        keepTrying = true;
+                    }
 
                     if (keepTrying)
                         Thread.Sleep(11);

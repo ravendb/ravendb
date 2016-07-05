@@ -6,10 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-
-using Raven.Database.Indexing;
 using Raven.Abstractions.Data;
-using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Sparrow.Collections;
@@ -36,7 +33,7 @@ namespace Raven.Database.Storage
 
         void ScheduleReductions(int index, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
         IList<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken);
-        ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete);
+        ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete, CancellationToken token);
         Dictionary<int, RemainingReductionPerLevel> GetRemainingScheduledReductionPerIndex();
         void DeleteScheduledReduction(int index, int level, string reduceKey);
         void PutReducedResult(int index, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);

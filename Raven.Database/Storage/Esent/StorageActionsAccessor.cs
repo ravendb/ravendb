@@ -104,22 +104,6 @@ namespace Raven.Storage.Esent
             remove { inner.AfterStorageCommit -= value; }
         }
 
-        public bool IsWriteConflict(Exception exception)
-        {
-            var esentErrorException = exception as EsentErrorException;
-            if (esentErrorException == null)
-                return false;
-            switch (esentErrorException.Error)
-            {
-                case JET_err.WriteConflict:
-                case JET_err.SessionWriteConflict:
-                case JET_err.WriteConflictPrimaryIndex:
-                case JET_err.KeyDuplicate:
-                    return true;
-                default:
-                    return false;
-            }
-        }
         private readonly List<DatabaseTask> tasks = new List<DatabaseTask>();
 
         public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : DatabaseTask

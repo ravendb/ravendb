@@ -22,6 +22,7 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
@@ -1109,26 +1110,25 @@ namespace Raven.Database.Indexing
             if ((value.Priority.HasFlag(IndexingPriority.Idle) || value.Priority.HasFlag(IndexingPriority.Abandoned)) &&
                 value.Priority.HasFlag(IndexingPriority.Forced) == false)
             {
-                documentDatabase.TransactionalStorage.Batch(accessor =>
+                value.Priority = IndexingPriority.Normal;
+                try
                 {
-                    value.Priority = IndexingPriority.Normal;
-                    try
+                    documentDatabase.TransactionalStorage.Batch(accessor =>
                     {
                         accessor.Indexing.SetIndexPriority(value.indexId, IndexingPriority.Normal);
-                    }
-                    catch (Exception e)
-                    {
-                        if (accessor.IsWriteConflict(e) == false)
-                            throw;
-
-                        // we explciitly ignore write conflicts here, it is okay if we got set twice (two concurrent queries, or setting while indexing).
-                    }
-                    documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
-                    documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
-                    {
-                        Name = value.PublicName,
-                        Type = IndexChangeTypes.IndexPromotedFromIdle
                     });
+                }
+                catch (ConcurrencyException)
+                {
+                    //we explicitly ignore write conflicts here, 
+                    //it is okay if we got set twice (two concurrent queries, or setting while indexing).
+                }
+
+                documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
+                documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                {
+                    Name = value.PublicName,
+                    Type = IndexChangeTypes.IndexPromotedFromIdle
                 });
             }
 
