@@ -12,7 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.BulkInsert;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -227,64 +227,65 @@ namespace Raven.Server
                 }
                 ListenToNewTcpConnection();
                 NetworkStream stream = null;
+                JsonOperationContext context = null;
                 try
                 {
                     tcpClient.NoDelay = true;
-                    tcpClient.ReceiveBufferSize = 32 * 1024;
+                    tcpClient.ReceiveBufferSize = 32*1024;
                     tcpClient.SendBufferSize = 4096;
                     stream = tcpClient.GetStream();
-                    using (var context = new JsonOperationContext(_unmanagedBuffersPool))
+                    context = new JsonOperationContext(_unmanagedBuffersPool);
+                    try
                     {
-                        try
+                        var reader = context.ReadForMemory(stream, "tcp command");
+                        string db;
+                        if (reader.TryGet("Database", out db) == false)
                         {
-                            var reader = context.ReadForMemory(stream, "tcp command");
-                            string db;
-                            if (reader.TryGet("Database", out db) == false)
-                            {
-                                throw new InvalidOperationException("Could not read Database property from the tcp command");
-                            }
-                            string op;
-                            if (reader.TryGet("Operation", out op) == false)
-                            {
-                                throw new InvalidOperationException("Could not read Operation property from the tcp command");
-                            }
-                            var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(db);
-                            if (databaseLoadingTask == null)
-                            {
-                                throw new InvalidOperationException("There is no database named " + db);
-                            }
-                            if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
-                            {
-                                throw new InvalidOperationException("Timeout when loading database + " + db + ", try again later");
-                            }
-                            var documentDatabase = await databaseLoadingTask;
-                            switch (op)
-                            {
-                                case "BulkInsert":
-                                    BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient);
-                                    tcpClient = null;// the bulk insert will dispose this
-                                    stream = null;
-                                    break;
-                                case "Subscription":
-                                    break;
-                                default:
-                                    throw new InvalidOperationException("Unknown operation for tcp " + op);
-                            }
+                            throw new InvalidOperationException("Could not read Database property from the tcp command");
                         }
-                        catch (Exception e)
+                        string op;
+                        if (reader.TryGet("Operation", out op) == false)
                         {
-                            if (_tcpLogger.IsInfoEnabled)
+                            throw new InvalidOperationException("Could not read Operation property from the tcp command");
+                        }
+                        var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(db);
+                        if (databaseLoadingTask == null)
+                        {
+                            throw new InvalidOperationException("There is no database named " + db);
+                        }
+                        if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
+                        {
+                            throw new InvalidOperationException("Timeout when loading database + " + db +
+                                                                ", try again later");
+                        }
+                        var documentDatabase = await databaseLoadingTask;
+                        switch (op)
+                        {
+                            case "BulkInsert":
+                                BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient);
+                                tcpClient = null; // the bulk insert will dispose this
+                                stream = null;
+                                context = null;
+                                break;
+                            case "Subscription":
+                                break;
+                            default:
+                                throw new InvalidOperationException("Unknown operation for tcp " + op);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (_tcpLogger.IsInfoEnabled)
+                        {
+                            _tcpLogger.Info("Failed to process TCP connection run", e);
+                        }
+                        using (var writer = new BlittableJsonTextWriter(context, stream))
+                        {
+                            context.Write(writer, new DynamicJsonValue
                             {
-                                _tcpLogger.Info("Failed to process TCP connection run", e);
-                            }
-                            using (var writer = new BlittableJsonTextWriter(context, stream))
-                            {
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Exception"] = e.ToString()
-                                });
-                            }
+                                ["Type"] = "Error",
+                                ["Exception"] = e.ToString()
+                            });
                         }
                     }
                 }
@@ -300,7 +301,20 @@ namespace Raven.Server
                     try
                     {
                         stream?.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
                         tcpClient?.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        context?.Dispose();
                     }
                     catch (Exception)
                     {
