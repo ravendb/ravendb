@@ -175,6 +175,8 @@ namespace Raven.Client.Document
 
         public void Dispose()
         {
+            if (subscriptions.Count == 0)
+                return;
             var tasks = new List<Task>();
 
             foreach (var subscription in subscriptions)

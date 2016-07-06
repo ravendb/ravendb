@@ -340,7 +340,8 @@ namespace Raven.Client.Document
                                 var messageType = curDoc["Type"].Value<string>();
                                 if (messageType == "Data")
                                 {
-                                    queue.Add((RavenJObject)curDoc["Data"]);
+                                    var ravenJObject = (RavenJObject)curDoc["Data"];
+                                    queue.Add(ravenJObject);
                                     if (IsErroredBecauseOfSubscriber)
                                         break;
 

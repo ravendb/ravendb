@@ -198,7 +198,6 @@ namespace Raven.Server.Documents.Handlers
                         _writer.Flush();
                         await FlushStreamToClient();
                         _database.SubscriptionStorage.UpdateSubscriptionTimes(id, updateLastBatch: true, updateClientActivity: false);
-                        _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         
                         if (hasDocuments == false)
                         {
@@ -217,8 +216,8 @@ namespace Raven.Server.Documents.Handlers
 
                         if (documentsSent > 0)
                         {
-                            
-                            while (_lastEtagAcceptedFromClient < lastEtagSentToClient)
+                            long recentLasAcceptedEtag = 0;
+                            while ((recentLasAcceptedEtag = Volatile.Read(ref _lastEtagAcceptedFromClient) )< lastEtagSentToClient)
                             {
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 var waitForAckTask = _listeningAMRE.WaitAsync();
@@ -227,7 +226,9 @@ namespace Raven.Server.Documents.Handlers
                                     _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                     await SendHeartBeat();
                                 }
-                                _database.SubscriptionStorage.AcknowledgeBatchProcessed(id, _lastEtagAcceptedFromClient);
+
+                                recentLasAcceptedEtag = Volatile.Read(ref _lastEtagAcceptedFromClient);
+                                _database.SubscriptionStorage.AcknowledgeBatchProcessed(id, recentLasAcceptedEtag);
                             }
                         }
                     }
@@ -241,8 +242,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 _state.EndConnection();
                 _options.DisposeOnDisconnect.Dispose();
-
-
 
                 if (_webSocket.State == WebSocketState.Open)
                 {
@@ -306,7 +305,7 @@ namespace Raven.Server.Documents.Handlers
                             if (reader.TryGet("Data", out lastEtagAcceptedFromClient) == false)
                                 // ReSharper disable once NotResolvedInText
                                 throw new ArgumentNullException("Did not receive Data field in subscription ACK message");
-                            _lastEtagAcceptedFromClient = lastEtagAcceptedFromClient;
+                            Volatile.Write(ref _lastEtagAcceptedFromClient, lastEtagAcceptedFromClient);
                             _listeningAMRE.SetByAsyncCompletion();
                             break;
                         case "ConnectionTermination":

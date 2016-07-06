@@ -6,6 +6,7 @@
 using System;
 using System.Threading;
 using Raven.Abstractions.Util;
+using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data

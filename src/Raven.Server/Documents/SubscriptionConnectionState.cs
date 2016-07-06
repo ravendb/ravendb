@@ -4,16 +4,19 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Extensions;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents
 {
+
+    
     public class SubscriptionConnectionState
     {
         private readonly AsyncManualResetEvent _connectionInUse = new AsyncManualResetEvent();
-
+        
         public SubscriptionConnectionState(SubscriptionConnectionOptions currentConnection)
         {
             _currentConnection = currentConnection;
@@ -61,16 +64,15 @@ namespace Raven.Server.Documents
                                                             incomingConnection.Strategy);
                 }
             }
-            Console.WriteLine("Connected");
+
+            await WaitOnCriticalSection();
             _connectionInUse.Reset();
             _currentConnection = incomingConnection;
             return new DisposableAction(() =>
             {
                 _connectionInUse.SetByAsyncCompletion();
-                Console.WriteLine("Disconnected");
             });
         }
-
 
         public void EndConnection()
         {
