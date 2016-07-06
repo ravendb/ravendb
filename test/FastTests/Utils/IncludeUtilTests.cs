@@ -122,7 +122,27 @@ namespace FastTests.Utils
 
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,(abc/)", ids);
-                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+                Assert.Equal(new[] { "abc/foo/1", "foo/1",
+                    "abc/foo/2", "foo/2",
+                    "abc/foo/3", "foo/3",
+                    "abc/bar/1", "bar/1",
+                    "abc/bar/2", "bar/2",
+                    "abc/bar/3", "bar/3",
+                    "abc/foobar/1", "foobar/1",
+                    "abc/foobar/2", "foobar/2",
+                    "abc/foobar/3", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,[{0}/abc]", ids);
+                Assert.Equal(new[] { "foo/1/abc", "foo/1",
+                    "foo/2/abc", "foo/2",
+                    "foo/3/abc", "foo/3",
+                    "bar/1/abc", "bar/1",
+                    "bar/2/abc", "bar/2",
+                    "bar/3/abc", "bar/3",
+                    "foobar/1/abc", "foobar/1",
+                    "foobar/2/abc", "foobar/2",
+                    "foobar/3/abc", "foobar/3" }, ids);
             }
         }
 
@@ -150,7 +170,28 @@ namespace FastTests.Utils
 
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Foo(abc/)", ids);
-                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+                Assert.Equal(new[] { "abc/foo/1", "foo/1",
+                    "abc/foo/2", "foo/2",
+                    "abc/foo/3", "foo/3",
+                    "abc/bar/1", "bar/1",
+                    "abc/bar/2", "bar/2",
+                    "abc/bar/3", "bar/3",
+                    "abc/foobar/1", "foobar/1",
+                    "abc/foobar/2", "foobar/2",
+                    "abc/foobar/3", "foobar/3" }, ids);
+
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Foo[{0}/abc]", ids);
+                Assert.Equal(new[] { "foo/1/abc", "foo/1",
+                    "foo/2/abc", "foo/2",
+                    "foo/3/abc", "foo/3",
+                    "bar/1/abc", "bar/1",
+                    "bar/2/abc", "bar/2",
+                    "bar/3/abc", "bar/3",
+                    "foobar/1/abc", "foobar/1",
+                    "foobar/2/abc", "foobar/2",
+                    "foobar/3/abc", "foobar/3" }, ids);
             }
         }
 
@@ -178,7 +219,27 @@ namespace FastTests.Utils
 
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Bar.Foo(abc/)", ids);
-                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+                Assert.Equal(new[] { "abc/foo/1", "foo/1",
+                    "abc/foo/2", "foo/2",
+                    "abc/foo/3", "foo/3",
+                    "abc/bar/1", "bar/1",
+                    "abc/bar/2", "bar/2",
+                    "abc/bar/3", "bar/3",
+                    "abc/foobar/1", "foobar/1",
+                    "abc/foobar/2", "foobar/2",
+                    "abc/foobar/3", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Bar.Foo[{0}/abc]", ids);
+                Assert.Equal(new[] { "foo/1/abc", "foo/1",
+                    "foo/2/abc", "foo/2",
+                    "foo/3/abc", "foo/3",
+                    "bar/1/abc", "bar/1",
+                    "bar/2/abc", "bar/2",
+                    "bar/3/abc", "bar/3",
+                    "foobar/1/abc", "foobar/1",
+                    "foobar/2/abc", "foobar/2",
+                    "foobar/3/abc", "foobar/3" }, ids);
             }
         }
 
@@ -215,7 +276,27 @@ namespace FastTests.Utils
 
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo,Bar.Foo(abc/)", ids);
-                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+                Assert.Equal(new[] { "abc/foo/1", "foo/1",
+                    "abc/foo/2", "foo/2",
+                    "abc/foo/3", "foo/3",
+                    "abc/bar/1", "bar/1",
+                    "abc/bar/2", "bar/2",
+                    "abc/bar/3", "bar/3",
+                    "abc/foobar/1", "foobar/1",
+                    "abc/foobar/2", "foobar/2",
+                    "abc/foobar/3", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo,Bar.Foo[{0}/abc]", ids);
+                Assert.Equal(new[] { "foo/1/abc", "foo/1",
+                    "foo/2/abc", "foo/2",
+                    "foo/3/abc", "foo/3",
+                    "bar/1/abc", "bar/1",
+                    "bar/2/abc", "bar/2",
+                    "bar/3/abc", "bar/3",
+                    "foobar/1/abc", "foobar/1",
+                    "foobar/2/abc", "foobar/2",
+                    "foobar/3/abc", "foobar/3" }, ids);
             }
         }
 
@@ -261,13 +342,33 @@ namespace FastTests.Utils
 
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,BarX.Foo,Bar.Foo(abc/)", ids);
-                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+                Assert.Equal(new[] { "abc/foo/1", "foo/1",
+                    "abc/foo/2", "foo/2",
+                    "abc/foo/3", "foo/3",
+                    "abc/bar/1", "bar/1",
+                    "abc/bar/2", "bar/2",
+                    "abc/bar/3", "bar/3",
+                    "abc/foobar/1", "foobar/1",
+                    "abc/foobar/2", "foobar/2",
+                    "abc/foobar/3", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,BarX.Foo,Bar.Foo[{0}/abc]", ids);
+                Assert.Equal(new[] { "foo/1/abc", "foo/1",
+                    "foo/2/abc", "foo/2",
+                    "foo/3/abc", "foo/3",
+                    "bar/1/abc", "bar/1",
+                    "bar/2/abc", "bar/2",
+                    "bar/3/abc", "bar/3",
+                    "foobar/1/abc", "foobar/1",
+                    "foobar/2/abc", "foobar/2",
+                    "foobar/3/abc", "foobar/3" }, ids);
             }
         }
 
         private static DynamicJsonArray GetStringArray(string prefix)
         {
-            return new DynamicJsonArray(new[] {$"{prefix}/1", $"{prefix}/2", $"{prefix}/3"});
+            return new DynamicJsonArray(new[] { $"{prefix}/1", $"{prefix}/2", $"{prefix}/3" });
         }
 
         private static DynamicJsonArray GetObjectArray(string prefix)
@@ -466,7 +567,83 @@ namespace FastTests.Utils
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y(ccc/)", ids);
-                Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
+                Assert.Equal(new[] { "ccc/1", "1", "ccc/3", "3", "ccc/4", "4", "ccc/5", "5" }, ids);
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_of_nested_objects_with_suffix_should_work()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["Foo"] = new DynamicJsonValue
+                {
+                    ["Bar"] = new DynamicJsonValue
+                    {
+                        ["C"] = new DynamicJsonArray(new[]
+                        {
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
+                                {
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 1
+                                    }
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
+                                {
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["YABC"] = 2
+                                    }
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
+                                {
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 3
+                                    }
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
+                                {
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 4
+                                    }
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
+                                {
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 5
+                                    }
+                                }
+                            },
+                        })
+                    }
+                }
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y[{0}/ccc]", ids);
+                Assert.Equal(new[] { "1/ccc", "1", "3/ccc", "3", "4/ccc", "4", "5/ccc", "5" }, ids);
             }
         }
 
@@ -476,7 +653,7 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray(new object[] {1, 2, 3})
+                ["ContactInfoId"] = new DynamicJsonArray(new object[] { 1, 2, 3 })
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new JsonOperationContext(pool))
@@ -484,7 +661,25 @@ namespace FastTests.Utils
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)", ids);
-                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
+                Assert.Equal(new[] { "foo/1", "1", "foo/2", "2", "foo/3", "3" }, ids);
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_suffix1()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray(new object[] { 1, 2, 3 })
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,[{0}/foo]", ids);
+                Assert.Equal(new[] { "1/foo", "1", "2/foo", "2", "3/foo", "3" }, ids);
             }
         }
 
@@ -520,7 +715,43 @@ namespace FastTests.Utils
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)", ids);
-                Assert.Equal(new[] { "foo/11", "foo/2", "foo/3", "foo/4" }, ids);
+                Assert.Equal(new[] { "foo/11", "11", "foo/2", "2", "foo/3", "3", "foo/4", "4" }, ids);
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_suffix2()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
+                {
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = 11
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = 2
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = 3
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = 4
+                    },
+                })
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo[{0}/foo]", ids);
+                Assert.Equal(new[] { "11/foo", "11", "2/foo", "2", "3/foo", "3", "4/foo", "4" }, ids);
             }
         }
 
@@ -660,6 +891,44 @@ namespace FastTests.Utils
         }
 
         [Fact]
+        public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_suffix()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ExtendedInfo"] = new DynamicJsonValue
+                {
+                    ["ContactInfoId"] = 1
+                }
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/contacts]", ids);
+                Assert.Equal("1/contacts", ids.FirstOrDefault());
+
+                //edge cases
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[]", ids);
+                Assert.Equal("1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/c]", ids);
+                Assert.Equal("1/c", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/ca]", ids);
+                Assert.Equal("1/ca", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/]", ids);
+                Assert.Equal("1/", ids.FirstOrDefault());
+            }
+        }
+
+        [Fact]
         public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_prefix_and_string_value()
         {
             var obj = new DynamicJsonValue
@@ -694,6 +963,44 @@ namespace FastTests.Utils
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(/)", ids);
                 Assert.Equal("/megadevice", ids.FirstOrDefault());
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_suffix_and_string_value()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ExtendedInfo"] = new DynamicJsonValue
+                {
+                    ["ContactInfoId"] = "megadevice"
+                }
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/contacts]", ids);
+                Assert.Equal("megadevice/contacts", ids.FirstOrDefault());
+
+                //edge cases
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[]", ids);
+                Assert.Equal("megadevice", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/c]", ids);
+                Assert.Equal("megadevice/c", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/ca]", ids);
+                Assert.Equal("megadevice/ca", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId[{0}/]", ids);
+                Assert.Equal("megadevice/", ids.FirstOrDefault());
             }
         }
 
@@ -821,6 +1128,34 @@ namespace FastTests.Utils
         }
 
         [Fact]
+        public void FindDocIdFromPath_should_return_empty_with_incomplete_suffix_in_flat_object()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = 1
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[{0}/contacts", ids);
+                Assert.Empty(ids);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[{0/contacts]", ids);
+                Assert.Empty(ids);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[{}/contacts]", ids);
+                Assert.Empty(ids);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[0}/contacts]", ids);
+                Assert.Empty(ids);
+            }
+        }
+
+        [Fact]
         public void FindDocIdFromPath_should_work_with_prefix_in_flat_object()
         {
             var obj = new DynamicJsonValue
@@ -838,6 +1173,26 @@ namespace FastTests.Utils
                 Assert.Equal("contacts/1", ids.FirstOrDefault());
             }
         }
+
+        [Fact]
+        public void FindDocIdFromPath_should_work_with_suffix_in_flat_object()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = 1
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[{0}/contacts]", ids);
+                Assert.Equal("1/contacts", ids.FirstOrDefault());
+            }
+        }
+
 
         [Fact]
         public void FindDocIdFromPath_should_work_with_very_short_prefix_in_flat_object()
@@ -863,6 +1218,33 @@ namespace FastTests.Utils
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(caa/)", ids);
                 Assert.Equal("caa/1", ids.FirstOrDefault());
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_should_work_with_very_short_suffix_in_flat_object()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = 1
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new JsonOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[{0}/c]", ids);
+                Assert.Equal("1/c", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[{0}/ca]", ids);
+                Assert.Equal("1/ca", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[{0}/caa]", ids);
+                Assert.Equal("1/caa", ids.FirstOrDefault());
             }
         }
 

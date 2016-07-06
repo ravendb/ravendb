@@ -5,11 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Logging;
 
 namespace Voron.Benchmark
 {
     public class BTreeBench : IHasStorageLocation
     {
+        private static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(System.IO.Path.GetTempPath(), LogMode.None);
+
         public string Path => Configuration.Path + ".btree";
 
         private HashSet<long> _randomNumbers;
@@ -54,7 +57,7 @@ namespace Voron.Benchmark
 
         private void InsertRandomMultipleTransactionAfterFill(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path),NullLoggerSetup))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -83,7 +86,7 @@ namespace Voron.Benchmark
 
         private void FillRandomOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -114,7 +117,7 @@ namespace Voron.Benchmark
 
         private void FillSeqOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -147,7 +150,7 @@ namespace Voron.Benchmark
 
         private void FillRandomMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -183,7 +186,7 @@ namespace Voron.Benchmark
 
         private void FillSeqMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -221,7 +224,7 @@ namespace Voron.Benchmark
 
         private void ReadOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 var countdownEvent = new CountdownEvent(concurrency);
 
@@ -258,7 +261,7 @@ namespace Voron.Benchmark
 
         private void IterateAllKeysInOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 var countdownEvent = new CountdownEvent(concurrency);
 
@@ -296,7 +299,7 @@ namespace Voron.Benchmark
 
         private void ReadOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 sw.Start();
                 using (var tx = env.ReadTransaction())
@@ -322,7 +325,7 @@ namespace Voron.Benchmark
 
         private void ReadAndWriteOneTransaction(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);

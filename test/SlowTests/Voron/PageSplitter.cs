@@ -130,7 +130,7 @@ namespace SlowTests.Voron
 
             StorageEnvironmentOptions storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
             storageEnvironmentOptions.MaxScratchBufferSize *=2;
-            using (var env = new StorageEnvironment(storageEnvironmentOptions))
+            using (var env = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
             {
                 var rand = new Random();
                 var testBuffer = new byte[69];

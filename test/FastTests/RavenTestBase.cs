@@ -40,6 +40,7 @@ namespace FastTests
         public void DoNotReuseServer() => _doNotReuseServer = true;
         private bool _doNotReuseServer;
         private int NonReusedServerPort { get; set; }
+        private int NonReusedTcpServerPort { get; set; }
         private const int MaxParallelServer = 79;
         private static readonly List<int> _usedServerPorts = new List<int>();
         private static List<int> _availableServerPorts;
@@ -70,7 +71,8 @@ namespace FastTests
                     }
 
                     NonReusedServerPort = GetAvailablePort();
-                    _localServer = CreateServer(NonReusedServerPort);
+                    NonReusedTcpServerPort = GetAvailablePort();
+                    _localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
                     return _localServer;
                 }
 
@@ -83,7 +85,7 @@ namespace FastTests
                 {
                     if (_globalServer == null)
                     {
-                        var globalServer = CreateServer(8080);
+                        var globalServer = CreateServer(8080, 9090);
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
                             globalServer.Dispose();
@@ -134,12 +136,13 @@ namespace FastTests
             }
         }
 
-        private static RavenServer CreateServer(int port)
+        private static RavenServer CreateServer(int port, int tcpPort)
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
 
             configuration.Core.ServerUrl = $"http://localhost:{port}";
+            configuration.Core.TcpServerUrl = $"tcp://localhost:{tcpPort}";
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
             string postfix = port == 8080 ? "" : "_" + port;
@@ -289,6 +292,7 @@ namespace FastTests
                         _localServer.Dispose();
                         _localServer = null;
                         RemoveUsedPort(NonReusedServerPort);
+                        RemoveUsedPort(NonReusedTcpServerPort);
                     });
 
                     exceptionAggregator.ThrowIfNeeded();

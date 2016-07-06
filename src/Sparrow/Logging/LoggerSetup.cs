@@ -53,6 +53,7 @@ namespace Sparrow.Logging
         public void Dispose()
         {
             _keepLogging = false;
+            _hasEntries.Set();
             _hasEntries.Dispose();
             if ((_loggingThread.ThreadState & ThreadState.Unstarted) != ThreadState.Unstarted)
                 _loggingThread.Join();
@@ -67,7 +68,7 @@ namespace Sparrow.Logging
                 return;
 
             Directory.CreateDirectory(_path);
-            if ((_loggingThread.ThreadState & ThreadState.Unstarted) != ThreadState.Unstarted)
+            if ((_loggingThread.ThreadState & ThreadState.Unstarted) == ThreadState.Unstarted)
                 _loggingThread.Start();
         }
 
@@ -229,6 +230,9 @@ namespace Sparrow.Logging
                                     return;
 
                                 _hasEntries.Wait();
+                                if (_keepLogging == false)
+                                    return;
+
                                 _hasEntries.Reset();
                             }
                             foundEntry = false;

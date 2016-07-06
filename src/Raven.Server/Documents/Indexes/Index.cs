@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 options.SchemaVersion = 1;
 
-                environment = new StorageEnvironment(options);
+                environment = new StorageEnvironment(options, documentDatabase.LoggerSetup);
                 var type = IndexStorage.ReadIndexType(indexId, environment);
 
                 switch (type)
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaVersion = 1;
                 try
                 {
-                    Initialize(new StorageEnvironment(options), documentDatabase);
+                    Initialize(new StorageEnvironment(options, documentDatabase.LoggerSetup), documentDatabase);
                 }
                 catch (Exception)
                 {

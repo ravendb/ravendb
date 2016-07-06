@@ -1,10 +1,10 @@
 ﻿{
   "version": "2.8.1",
   "frameworks": {
-    "netstandard1.5": {
+    "netstandard1.6": {
       "bin": {
-        "assembly": "netstandard1.5\\Jint.dll",
-        "pdb": "netstandard1.5\\Jint.pdb"
+        "assembly": "netstandard1.6\\Jint.dll",
+        "pdb": "netstandard1.6\\Jint.pdb"
       }
     }
   }

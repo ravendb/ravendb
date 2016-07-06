@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -17,6 +14,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -33,11 +31,15 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
+        public bool LazyTransactionMode { get; set; }
+        public DateTime LazyTransactionExpiration { get; set; }
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler, LoggerSetup loggerSetup)
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
+            LoggerSetup loggerSetup)
         {
             Name = name;
             Configuration = configuration;
+            LoggerSetup = loggerSetup;
 
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
@@ -59,6 +61,7 @@ namespace Raven.Server.Documents
         public string ResourceName => $"db/{Name}";
 
         public RavenConfiguration Configuration { get; }
+        public LoggerSetup LoggerSetup { get; set; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
@@ -233,10 +236,12 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                var alertsDocument = context.ReadObject(alerts, Constants.RavenAlerts, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                var alertsDocument = context.ReadObject(alerts, Constants.RavenAlerts,
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 DocumentsStorage.Put(context, Constants.RavenAlerts, etag, alertsDocument);
                 tx.Commit();
             }
         }
+
     }
 }

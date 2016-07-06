@@ -1,10 +1,10 @@
 {
 	"version": "3.0.4",
   "frameworks": {
-    "netstandard1.5": {
+    "netstandard1.6": {
       "bin": {
-        "assembly": "netstandard1.5\\Lucene.Net.Contrib.Spatial.NTS.dll",
-        "pdb": "netstandard1.5\\Lucene.Net.Contrib.Spatial.NTS.pdb"
+        "assembly": "netstandard1.6\\Lucene.Net.Contrib.Spatial.NTS.dll",
+        "pdb": "netstandard1.6\\Lucene.Net.Contrib.Spatial.NTS.pdb"
       }
     }
   },

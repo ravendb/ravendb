@@ -13,7 +13,7 @@ namespace Raven.Client.Document
     {
         private readonly IDocumentStore documentStore;
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-        protected WebSocketBulkInsertOperation Operation { get; set; }
+        protected TcpBulkInsertOperation Operation { get; set; }
         public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
         private readonly EntityToJson entityToJson;
 
@@ -51,7 +51,7 @@ namespace Raven.Client.Document
             entityToJson = new EntityToJson(documentStore, listeners);
         }
 
-        protected virtual WebSocketBulkInsertOperation GetBulkInsertOperation(IAsyncDatabaseCommands commands)
+        protected virtual TcpBulkInsertOperation GetBulkInsertOperation(IAsyncDatabaseCommands commands)
         {			
             return commands.GetBulkInsertOperation();
         }

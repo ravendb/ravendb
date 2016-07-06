@@ -53,9 +53,9 @@ namespace FastTests.Voron.Backups
             var options = StorageEnvironmentOptions.ForPath(IncrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            BackupMethods.Incremental.Restore(options, new[] { IncrementalBackupTestUtils.IncrementalBackupFile(0) });
+            BackupMethods.Incremental.Restore(options, new[] { IncrementalBackupTestUtils.IncrementalBackupFile(0) }, NullLoggerSetup);
 
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
 
                 using (var tx = env.ReadTransaction())
@@ -131,9 +131,9 @@ namespace FastTests.Voron.Backups
                 IncrementalBackupTestUtils.IncrementalBackupFile(0),
                 IncrementalBackupTestUtils.IncrementalBackupFile(1),
                 IncrementalBackupTestUtils.IncrementalBackupFile(2)
-            });
+            }, NullLoggerSetup);
 
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 using (var tx = env.ReadTransaction())
                 {
@@ -201,9 +201,9 @@ namespace FastTests.Voron.Backups
             {
                 IncrementalBackupTestUtils.IncrementalBackupFile(0),
                 IncrementalBackupTestUtils.IncrementalBackupFile(1)
-            });
+            }, NullLoggerSetup);
 
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 using (var tx = env.ReadTransaction())
                 {
@@ -263,9 +263,9 @@ namespace FastTests.Voron.Backups
             {
                 IncrementalBackupTestUtils.IncrementalBackupFile(0),
                 IncrementalBackupTestUtils.IncrementalBackupFile(1)
-            });
+            }, NullLoggerSetup);
 
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 using (var tx = env.ReadTransaction())
                 {
@@ -321,9 +321,9 @@ namespace FastTests.Voron.Backups
             BackupMethods.Incremental.Restore(options, new[]
             {
                 IncrementalBackupTestUtils.IncrementalBackupFile(0)
-            });
+            }, NullLoggerSetup);
 
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 using (var tx = env.ReadTransaction())
                 {
@@ -387,9 +387,9 @@ namespace FastTests.Voron.Backups
             BackupMethods.Incremental.Restore(options, new[]
             {
                 IncrementalBackupTestUtils.IncrementalBackupFile(0)
-            });
+            }, NullLoggerSetup);
 
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 using (var tx = env.ReadTransaction())
                 {
@@ -452,9 +452,9 @@ namespace FastTests.Voron.Backups
             BackupMethods.Incremental.Restore(options, new[]
             {
                 IncrementalBackupTestUtils.IncrementalBackupFile(0)
-            });
+            }, NullLoggerSetup);
 
-            using (var env = new StorageEnvironment(options))
+            using (var env = new StorageEnvironment(options, NullLoggerSetup))
             {
                 using (var tx = env.ReadTransaction())
                 {

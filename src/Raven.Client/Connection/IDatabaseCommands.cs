@@ -147,7 +147,7 @@ namespace Raven.Client.Connection
         /// <summary>
         ///     Get the low level bulk insert operation
         /// </summary>
-        WebSocketBulkInsertOperation GetBulkInsertOperation();
+        TcpBulkInsertOperation GetBulkInsertOperation();
 
         /// <summary>
         ///     Retrieves multiple documents.

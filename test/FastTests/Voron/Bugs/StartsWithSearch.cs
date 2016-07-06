@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Sparrow.Logging;
 using Xunit;
 using Voron;
 
@@ -11,10 +12,12 @@ namespace FastTests.Voron.Bugs
 {
     public class StartsWithSearch
     {
+        private static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(System.IO.Path.GetTempPath(), LogMode.None);
+
         [Fact]
         public void ShouldWork()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly(), NullLoggerSetup))
             {
                 using (var tx = env.WriteTransaction())
                 {

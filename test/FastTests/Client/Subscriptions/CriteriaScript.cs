@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,22 +26,23 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionCriteria = new SubscriptionCriteria
                 {
                     Collection = "Things",
-                    FilterJavaScript = " return this.Name == 'ThingNo1'",
+                    FilterJavaScript = " return this.Name == 'ThingNo3'",
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
                 var subscription = subscriptionManager.Open<Thing>(subsId, new SubscriptionConnectionOptions()
                 {
                     SubscriptionId = subsId
                 });
-                var list = new List<Thing>();
+                var list = new BlockingCollection<Thing>();
                 subscription.Subscribe(x =>
                 {
                     list.Add(x);
                 });
 
-                await AsyncSpin(() => list.Count == 4, 60000).ConfigureAwait(false);
+                var thing = list.Take();
+                Assert.Equal("ThingNo3", thing.Name);
 
-                Assert.Equal(1, list.Count);
+                Assert.False(list.TryTake(out thing, 50));
             }
         }
     }

@@ -74,7 +74,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                _env = new StorageEnvironment(options);
+                _env = new StorageEnvironment(options, _loggerSetup);
                 using (var tx = _env.WriteTransaction())
                 {
                     tx.CreateTree("items");

@@ -18,7 +18,6 @@ namespace Sparrow.Json
         private readonly long _currentPropertyIdSize;
         private readonly byte* _objStart;
         private LazyStringValue[] _propertyNames;
-        private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };
 
         public DynamicJsonValue Modifications;
 
@@ -525,10 +524,10 @@ namespace Sparrow.Json
             Memory.Copy(ptr, _mem, _size);
         }
 
-        public void BlittableValidation(int size)
+        public void BlittableValidation()
         {
             byte offset;
-            var currentSize = size - 1;
+            var currentSize = Size - 1;
             int rootPropOffsetSize;
             int rootPropIdSize;
 
@@ -608,9 +607,21 @@ namespace Sparrow.Json
                 for (var i = 0; i < escCount; i++)
                 {
                     var escCharOffset = ReadNumber(_mem + str + stringLength + escOffset + i, 1);
-                    var escChar = (char)ReadNumber(_mem + str + escCharOffset, 1);
-                    if (!(EscapeChars.Contains(escChar)))
-                        throw new InvalidDataException("String not valid");
+                    var escChar = (char)ReadNumber(_mem + str + stringLength + escOffset - 1 - escCharOffset, 1);
+                    switch (escChar)
+                    {
+                        case '\\':
+                        case '/':
+                        case '"':
+                        case 'b':
+                        case 'f':
+                        case 'n':
+                        case 'r':
+                        case 't':
+                            break;
+                        default:
+                            throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
+                    };
                 }
             }
             return stringLength + escOffset + escCount + lenOffset;
@@ -677,17 +688,21 @@ namespace Sparrow.Json
                         break;
                     case BlittableJsonToken.Float:
                         var floatLen = ReadNumber(_mem + objStartOffset - propOffset, 1);
-                        var pointFlag = true;
-                        for (var j = 0; j < floatLen; j++)
+                        var floatStringBuffer = new string(' ', floatLen);
+                        fixed (char* pChars = floatStringBuffer)
                         {
-                            var floatDigit = ReadNumber((_mem + objStartOffset - propOffset + 1 + j), sizeof(byte));
-                            if ((floatDigit == '.') && (pointFlag))
+                            for (int j = 0; j < floatLen; j++)
                             {
-                                pointFlag = false;
-                                continue;
+                                pChars[j] = (char)ReadNumber((_mem + objStartOffset - propOffset + 1 + j), sizeof(byte));
                             }
-                            if (!(char.IsDigit((char)floatDigit)))
-                                throw new InvalidDataException("Float not valid");
+                        }
+                        try
+                        {
+                            float.Parse(floatStringBuffer);
+                        }
+                        catch (Exception)
+                        {
+                            throw new InvalidDataException("Float not valid");
                         }
                         break;
                     case BlittableJsonToken.String:
