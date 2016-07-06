@@ -1,10 +1,10 @@
 {
   "version": "1.15.0",
   "frameworks": {
-    "netstandard1.5": {
+    "netstandard1.6": {
       "bin": {
-        "assembly": "netstandard1.5\\NetTopologySuite.dll",
-        "pdb": "netstandard1.5\\NetTopologySuite.pdb"
+        "assembly": "netstandard1.6\\NetTopologySuite.dll",
+        "pdb": "netstandard1.6\\NetTopologySuite.pdb"
       }
     }
   }
