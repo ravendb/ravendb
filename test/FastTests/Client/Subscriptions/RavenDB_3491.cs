@@ -12,7 +12,7 @@ namespace FastTests.Client.Subscriptions
 {
     public class RavenDB_3491 : RavenTestBase
     {
-        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
+        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(1);
 
         [Fact]
         public async Task SubscribtionWithEtag()
@@ -25,24 +25,24 @@ namespace FastTests.Client.Subscriptions
                 var us4 = new User { Id = "users/4", Name = "Hila", Age = 29 };
                 var us5 = new User { Id = "users/5", Name = "Revital", Age = 34 };
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(us1);
-                    session.Store(us2);
-                    session.Store(us3);
-                    session.Store(us4);
-                    session.Store(us5);
-                    session.SaveChanges();
+                    await session.StoreAsync(us1);
+                    await session.StoreAsync(us2);
+                    await session.StoreAsync(us3);
+                    await session.StoreAsync(us4);
+                    await session.StoreAsync(us5);
+                    await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    var id = store.Subscriptions.Create(new SubscriptionCriteria
+                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
                     {
                         Collection = "Users"
                     }, user2Etag??0);
 
                     var users = new List<RavenJObject>();
 
-                    using (var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()))
+                    using (var subscription = await store.AsyncSubscriptions.OpenAsync(id, new SubscriptionConnectionOptions()))
                     {
 
                         var docs = new BlockingCollection<RavenJObject>();
@@ -100,21 +100,21 @@ namespace FastTests.Client.Subscriptions
                 var us4 = new User { Id = "users/4", Name = "Hila", Age = 29 };
                 var us5 = new User { Id = "users/5", Name = "Revital", Age = 34 };
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(us1);
-                    session.Store(us2);
-                    session.Store(us3);
-                    session.Store(us4);
-                    session.Store(us5);
-                    session.SaveChanges();
+                    await session.StoreAsync(us1);
+                    await session.StoreAsync(us2);
+                    await session.StoreAsync(us3);
+                    await session.StoreAsync(us4);
+                    await session.StoreAsync(us5);
+                    await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    var id = store.Subscriptions.Create(new SubscriptionCriteria<User>(), user2Etag??0);
+                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria<User>(), user2Etag??0);
 
                     var users = new List<User>();
 
-                    using (var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()))
+                    using (var subscription = await store.AsyncSubscriptions.OpenAsync<User>(id, new SubscriptionConnectionOptions()))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -173,24 +173,24 @@ namespace FastTests.Client.Subscriptions
                 var us5 = new User { Id = "users/5", Name = "Revital", Age = 34 };
 
                 long subscriptionId;
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(us1);
-                    session.Store(us2);
-                    session.Store(us3);
-                    session.Store(us4);
-                    session.Store(us5);
-                    session.SaveChanges();
+                    await session.StoreAsync(us1);
+                    await session.StoreAsync(us2);
+                    await session.StoreAsync(us3);
+                    await session.StoreAsync(us4);
+                    await session.StoreAsync(us5);
+                    await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria
+                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
                     {
                         Collection ="Users" 
                     }, user2Etag??0);
 
                     var users = new List<RavenJObject>();
 
-                    using (var subscription = store.Subscriptions.Open(subscriptionId, new SubscriptionConnectionOptions()))
+                    using (var subscription = await store.AsyncSubscriptions.OpenAsync(subscriptionId, new SubscriptionConnectionOptions()))
                     {
 
                         var docs = new BlockingCollection<RavenJObject>();
@@ -234,7 +234,7 @@ namespace FastTests.Client.Subscriptions
                         Assert.Equal(34, age);
                     }
                 }
-                using (var subscription = store.Subscriptions.Open(subscriptionId, new SubscriptionConnectionOptions()))
+                using (var subscription = await store.AsyncSubscriptions.OpenAsync(subscriptionId, new SubscriptionConnectionOptions()))
                 {
                     var docs = new BlockingCollection<RavenJObject>();
 

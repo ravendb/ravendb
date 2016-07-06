@@ -18,24 +18,24 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = await GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 0; i < 100; i++)
                     {
-                        session.Store(new Company());
-                        session.Store(new User());
-                        session.Store(new Address());
+                        await session.StoreAsync(new Company());
+                        await session.StoreAsync(new User());
+                        await session.StoreAsync(new Address());
                     }
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                var id = store.Subscriptions.Create(new SubscriptionCriteria
+                var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
                 {
                     Collection = "Users"                    
                 });
 
-                var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
+                var subscription = await store.AsyncSubscriptions.OpenAsync(id, new SubscriptionConnectionOptions
                 {
                     MaxDocsPerBatch=31                    
                 });
@@ -44,7 +44,8 @@ namespace FastTests.Client.Subscriptions
 
                 subscription.Subscribe(docs.Add);
 
-                Assert.True(SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60)));
+                SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
+                Assert.Equal(100, docs.Count);
 
 
                 foreach (var jsonDocument in docs)

@@ -39,9 +39,9 @@ namespace FastTests.Client.Subscriptions
                     list.Add(x);
                 });
 
-                var thing = list.Take();
+                Thing thing;
+                Assert.True(list.TryTake(out thing, 1000));
                 Assert.Equal("ThingNo3", thing.Name);
-
                 Assert.False(list.TryTake(out thing, 50));
             }
         }

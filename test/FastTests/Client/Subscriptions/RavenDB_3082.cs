@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,11 +18,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = await GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        session.Store(new PersonWithAddress()
+                        await session.StoreAsync(new PersonWithAddress()
                         {
                             Name = "James",
                             Address = new Address()
@@ -30,7 +31,7 @@ namespace FastTests.Client.Subscriptions
                             }
                         });
 
-                        session.Store(new PersonWithAddress()
+                        await session.StoreAsync(new PersonWithAddress()
                         {
                             Name = "James",
                             Address = new Address()
@@ -39,7 +40,7 @@ namespace FastTests.Client.Subscriptions
                             }
                         });
 
-                        session.Store(new PersonWithAddress()
+                        await session.StoreAsync(new PersonWithAddress()
                         {
                             Name = "David",
                             Address = new Address()
@@ -48,10 +49,10 @@ namespace FastTests.Client.Subscriptions
                             }
                         });
 
-                        session.Store(new Person());
+                        await session.StoreAsync(new Person());
                     }
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 var criteria = new SubscriptionCriteria<PersonWithAddress>
@@ -64,19 +65,21 @@ namespace FastTests.Client.Subscriptions
 
                 var subscription = await store.AsyncSubscriptions.OpenAsync<PersonWithAddress>(id, new SubscriptionConnectionOptions());
 
-                var users = new List<PersonWithAddress>();
+                var users = new BlockingCollection<PersonWithAddress>();
 
                 subscription.Subscribe(users.Add);
 
-                Assert.True(SpinWait.SpinUntil(() => users.Count >= 10, TimeSpan.FromSeconds(60)));
-
-                Assert.Equal(10, users.Count);
-
-                foreach (var user in users)
+                PersonWithAddress userToTake;
+                for (var i = 0; i < 5; i++)
                 {
-                    Assert.Equal("James", user.Name);
-                    Assert.Equal(12345, user.Address.ZipCode);
+                    Assert.True(users.TryTake(out userToTake, 1000));
+                    Assert.Equal("James", userToTake.Name);
+                    Assert.Equal(12345, userToTake.Address.ZipCode);
                 }
+
+                Assert.False(users.TryTake(out userToTake, 50));
+
+
             }
         }
     }
