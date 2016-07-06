@@ -772,9 +772,9 @@ namespace Raven.Server.Documents
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
         {
             var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
-            using (var it = identities.Iterate())
+            using (var it = identities.Iterate(false))
             {
-                if (it.Seek(Slice.BeforeAllKeys) == false)
+                if (it.Seek(Slices.BeforeAllKeys) == false)
                     yield break;
 
                 do
