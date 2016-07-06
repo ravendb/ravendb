@@ -91,3 +91,4 @@ src/Raven.Studio/typings/**/*.d.ts
 /src/Raven.Studio/wwwroot/Content/**/*.css
 /src/Raven.Studio/wwwroot/lib
 test/FastTests/Databases/
+/test/Tryouts/Logs

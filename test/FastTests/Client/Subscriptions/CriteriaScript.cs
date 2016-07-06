@@ -18,10 +18,10 @@ namespace FastTests.Client.Subscriptions
             using (var store = await GetDocumentStore().ConfigureAwait(false))
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
-                CreateDocuments(store, 1);
+                await CreateDocuments(store, 1);
 
                 var lastEtag = store.GetLastWrittenEtag() ?? 0;
-                CreateDocuments(store, 5);
+                await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria
                 {

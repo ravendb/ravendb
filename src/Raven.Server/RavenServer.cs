@@ -226,13 +226,13 @@ namespace Raven.Server
                     return;
                 }
                 ListenToNewTcpConnection();
-
+                NetworkStream stream = null;
                 try
                 {
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
-                    using (var stream = tcpClient.GetStream())
+                    stream = tcpClient.GetStream();
                     using (var context = new JsonOperationContext(_unmanagedBuffersPool))
                     {
                         try
@@ -242,6 +242,11 @@ namespace Raven.Server
                             if (reader.TryGet("Database", out db) == false)
                             {
                                 throw new InvalidOperationException("Could not read Database property from the tcp command");
+                            }
+                            string op;
+                            if (reader.TryGet("Operation", out op) == false)
+                            {
+                                throw new InvalidOperationException("Could not read Operation property from the tcp command");
                             }
                             var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(db);
                             if (databaseLoadingTask == null)
@@ -253,9 +258,17 @@ namespace Raven.Server
                                 throw new InvalidOperationException("Timeout when loading database + " + db + ", try again later");
                             }
                             var documentDatabase = await databaseLoadingTask;
-                            using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream))
+                            switch (op)
                             {
-                                bulkInsert.Execute();
+                                case "BulkInsert":
+                                    BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient);
+                                    tcpClient = null;// the bulk insert will dispose this
+                                    stream = null;
+                                    break;
+                                case "Subscription":
+                                    break;
+                                default:
+                                    throw new InvalidOperationException("Unknown operation for tcp " + op);
                             }
                         }
                         catch (Exception e)
@@ -286,7 +299,8 @@ namespace Raven.Server
                 {
                     try
                     {
-                        tcpClient.Dispose();
+                        stream?.Dispose();
+                        tcpClient?.Dispose();
                     }
                     catch (Exception)
                     {

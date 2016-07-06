@@ -232,20 +232,7 @@ namespace FastTests.Client.Subscriptions
                 var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
                 
                 acceptedSubscription.AfterAcknowledgment += () => batchProccessedByFirstSubscription.SetByAsyncCompletion();
-                // wait until we know that connection was established
 
-                var lastWrittenEtagWhilePerformingFirstSubscription = store.GetLastWrittenEtag();
-                //await AsyncSpin(() =>
-                //{
-                //    var basicValidation = acceptedSusbscriptionList.Count == 5 && batchProccessedByFirstSubscription;
-                //    return basicValidation;
-                //    //if (basicValidation == false)
-                //    //    return false;
-                //    //var subscriptions = store.Subscriptions.GetSubscriptions(0, 1024);
-
-                //    //return subscriptions[0].AckEtag == lastWrittenEtagWhilePerformingFirstSubscription;
-
-                //} , 60*1000).ConfigureAwait(false);
                 Thing thing;
 
                 // wait until we know that connection was established
@@ -254,12 +241,9 @@ namespace FastTests.Client.Subscriptions
                     Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
                 }
 
-                Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
+                Assert.True(await batchProccessedByFirstSubscription.WaitAsync(1000));
 
-                //var allSubscriptions = store.Subscriptions.GetSubscriptions(0, 1024);
-
-                //Assert.True(allSubscriptions[0].AckEtag == lastWrittenEtagWhilePerformingFirstSubscription);
-
+                Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 
                 // open second subscription
                 var takingOverSubscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
@@ -267,16 +251,8 @@ namespace FastTests.Client.Subscriptions
                     SubscriptionId = subsId,
                     Strategy = SubscriptionOpeningStrategy.TakeOver
                 });
-                var secondSubscriptionStartedProccessing = new AsyncManualResetEvent();
-                takingOverSubscription.BeforeBatch += () =>
-                {
-                    secondSubscriptionStartedProccessing.SetByAsyncCompletion();
-                };
-
+               
                 takingOverSubscription.Subscribe(x => takingOverSubscriptionList.Add(x));
-                
-
-                Assert.True(await secondSubscriptionStartedProccessing.WaitAsync(1000));
                 
                 await CreateDocuments(store, 5);
 
@@ -285,7 +261,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Assert.True(takingOverSubscriptionList.TryTake(out thing, 1000));
                 }
-                Assert.False(takingOverSubscriptionList.TryTake(out thing, 50));
+                Assert.False(takingOverSubscriptionList.TryTake(out thing));
             }
         }
     }

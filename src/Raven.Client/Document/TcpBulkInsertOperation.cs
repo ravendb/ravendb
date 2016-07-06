@@ -93,7 +93,8 @@ namespace Raven.Client.Document
             var networkStream = _tcpClient.GetStream();
 
             //TODO: generate the command properly
-            var buffer = Encoding.UTF8.GetBytes("{'Database':'" + MultiDatabase.GetDatabaseName(asyncServerClient.Url) + "'}");
+            var jsonCommand = "{'Database':'" + MultiDatabase.GetDatabaseName(asyncServerClient.Url) + "', 'Operation':'BulkInsert'}";
+            var buffer = Encoding.UTF8.GetBytes(jsonCommand);
             await networkStream.WriteAsync(buffer,0, buffer.Length);
 
             return networkStream;

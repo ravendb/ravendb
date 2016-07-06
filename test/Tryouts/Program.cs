@@ -12,10 +12,13 @@ namespace Tryout
     {
         static void Main(string[] args)
         {
-            using (var bulkInserts = new FastTests.Client.BulkInsert.BulkInserts())
+            for (int i = 0; i < 1000; i++)
             {
-                bulkInserts.SimpleBulkInsertShouldWork().Wait();
-
+                Console.WriteLine( i);
+                using (var n = new FastTests.Server.Documents.SqlReplication.CanReplicate())
+                {
+                    n.ReplicateMultipleBatches().Wait();
+                }
             }
         }
     }

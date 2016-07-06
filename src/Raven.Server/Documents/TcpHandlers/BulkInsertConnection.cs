@@ -3,7 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -47,12 +49,12 @@ namespace Raven.Server.Documents.BulkInsert
         private Task _replyToCustomer;
         private Task _insertDocuments;
 
-        public BulkInsertConnection(DocumentDatabase database, JsonOperationContext context, Stream stream)
+        public BulkInsertConnection(DocumentDatabase database, JsonOperationContext context, Stream stream, Logger logger)
         {
             _database = database;
             _context = context;
             _stream = stream;
-            _logger = database.LoggerSetup.GetLogger<BulkInsertConnection>(database.Name);
+            _logger = logger;
         }
 
         public void Execute()
@@ -400,6 +402,58 @@ namespace Raven.Server.Documents.BulkInsert
             _docsToRelease.Dispose();
             _docsToWrite.Dispose();
             _messagesToClient.Dispose();
+        }
+
+        public static void Run(DocumentDatabase documentDatabase, JsonOperationContext context, NetworkStream stream, TcpClient tcpClient)
+        {
+            var bulkInsertThread = new Thread(() =>
+            {
+                var logger = documentDatabase.LoggerSetup.GetLogger<BulkInsertConnection>(documentDatabase.Name);
+                try
+                {
+                    using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream, logger))
+                    {
+                        bulkInsert.Execute();
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (logger.IsInfoEnabled)
+                    {
+                        logger.Info("Failed to process bulk insert run", e);
+                    }
+                    using (var writer = new BlittableJsonTextWriter(context, stream))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Exception"] = e.ToString()
+                        });
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        stream.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        tcpClient.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "Bulk Insert Operation"
+            };
+            bulkInsertThread.Start();
         }
     }
 }

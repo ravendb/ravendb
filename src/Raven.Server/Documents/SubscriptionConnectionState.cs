@@ -65,7 +65,6 @@ namespace Raven.Server.Documents
                 }
             }
 
-            await WaitOnCriticalSection();
             _connectionInUse.Reset();
             _currentConnection = incomingConnection;
             return new DisposableAction(() =>
