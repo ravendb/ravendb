@@ -612,12 +612,12 @@ task Upload {
 }
 
 task InitNuget {
-
-    $global:nugetVersion = "$version.$env:buildlabel"
-    if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-        $global:nugetVersion += "-Unstable"
+    if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")) {
+        $global:nugetVersion = "$version-rc-$env:buildlabel"
     }
-
+    else {
+        $global:nugetVersion = "$version.$env:buildlabel"
+    }
 }
 
 task PushNugetPackages {
