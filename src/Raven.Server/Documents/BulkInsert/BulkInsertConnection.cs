@@ -261,23 +261,27 @@ namespace Raven.Server.Documents.BulkInsert
                         bool lockTaken = false;
                         var journal = _database.DocumentsStorage.Environment.Journal;
                         Debug.Assert(journal != null);
-                        Console.WriteLine("Going to tryTakeLock. retry=" + retry);
                         using (journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                         {
-                            Console.WriteLine("TryTakeFlushingLock = " + lockTaken);
                             if (lockTaken == false)
                             {
-                                var now = SystemTime.UtcNow;
+                                var sp = Stopwatch.StartNew();
 
                                 // lets wait for the flush to end and retry put doc
                                 using (journal.Applicator.TryTakeFlushingLock(ref lockTaken, TimeSpan.FromSeconds(30)))
                                 {
-                                    Console.WriteLine("exiting = " + lockTaken + " | after " +
-                                                      (SystemTime.UtcNow - now).Seconds);
+                                    if (_logger.IsInfoEnabled)
+                                    {
+                                        _logger.Info($"Waiting for flush to complete for {sp.ElapsedMilliseconds:#,#} ms, flush completed: {lockTaken}");
+                                    }
                                 }
                             }
                             else
                             {
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info($"Forcing flush to data file to cleanup the scratch buffer in bulk insert");
+                                }
                                 // there's no flushing but scratch buffer full - let's flush and retry put doc
                                 context.Environment().ForceLogFlushToDataFile(null, true);
                             }
