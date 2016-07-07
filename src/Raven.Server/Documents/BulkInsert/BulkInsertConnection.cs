@@ -75,15 +75,27 @@ namespace Raven.Server.Documents.BulkInsert
                 ReadBulkInsert();
                 _insertDocuments.Wait(); // need to wait until this is completed
                 _messagesToClient.Add(CompletedMessage);
+                _messagesToClient.CompleteAdding();
+                _replyToCustomer.Wait();
+                _stream.Flush(); // make sure that everyting goes to the client
             }
             catch (AggregateException e)
             {
                 _docsToWrite.CompleteAdding();
+                _messagesToClient.CompleteAdding();
                 try
                 {
                     _insertDocuments.Wait();
                 }
                 catch (Exception )
+                {
+                    // forcing observation of any potential errors
+                }
+                try
+                {
+                    _replyToCustomer.Wait();
+                }
+                catch (Exception)
                 {
                     // forcing observation of any potential errors
                 }
