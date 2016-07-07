@@ -112,6 +112,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Authorization"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj", "{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Raft", "Raven.Tests.Raft\Raven.Tests.Raft.csproj", "{99D596EB-A15D-4407-BD28-DA46D5635773}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -658,6 +660,18 @@ Global
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Any CPU.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Any CPU.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Profiling|Mixed Platforms.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{99D596EB-A15D-4407-BD28-DA46D5635773}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -699,6 +713,7 @@ Global
 		{51D4913D-E932-46A8-983E-26D4602A6B3F} = {34CAACF8-D3EB-4161-931D-C850F076115C}
 		{3A852FD2-E0F9-449C-8F66-0C6A180D030A} = {F2B14D1C-4B20-4DA0-9CE6-C169773B0493}
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F} = {F2B14D1C-4B20-4DA0-9CE6-C169773B0493}
+		{99D596EB-A15D-4407-BD28-DA46D5635773} = {3617B75B-4CD6-4420-86B9-CACDC3C00D47}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 90d6cc9d-ef79-4360-ac7d-a7523ee38ad0

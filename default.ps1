@@ -24,7 +24,9 @@ properties {
     $nowarn = "1591 1573 1591 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
     
     $dotnet = "dotnet"
-
+    $dotnetLib = "netstandard1.6"
+    $dotnetApp = "netcoreapp1.0"
+    
     $nuget = "$base_dir\.nuget\NuGet.exe"
     
     $global:is_pull_request = $FALSE
@@ -109,17 +111,19 @@ task CompileHtml5 {
 
 task CompileDotNet {
 
-    &"$dotnet" restore Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight Bundles\Raven.Client.Authorization Bundles\Raven.Client.UniqueConstraints
+    &"$dotnet" restore
     
-    &"$dotnet" build Raven.Client.Lightweight --configuration "$global:configuration" Bundles\Raven.Client.Authorization Bundles\Raven.Client.UniqueConstraints --build-base-path "$build_dir\DotNet"
+    &"$dotnet" build Raven.Client.Lightweight --configuration "$global:configuration" --output "$build_dir\DotNet\Raven.Client.Lightweight" --framework "$dotnetLib" --no-incremental
+    &"$dotnet" build Bundles\Raven.Client.Authorization --configuration "$global:configuration" --output "$build_dir\DotNet\Bundles\Raven.Client.Authorization" --framework "$dotnetLib" --no-incremental
+    &"$dotnet" build Bundles\Raven.Client.UniqueConstraints --configuration "$global:configuration" --output "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints" --framework "$dotnetLib" --no-incremental
 }
 
-task TestDotNet -depends CompileDotNet {
+task TestDotNet -depends Compile,CompileDotNet {
     Clear-Host
 
     Push-Location "$base_dir\Raven.Tests.Core"
     
-    Start-Process -FilePath "$dotnet" -ArgumentList "test --configuration $global:configuration" -NoNewWindow -Wait
+    Start-Process -FilePath "$dotnet" -ArgumentList "test --configuration $global:configuration --framework $dotnetApp" -NoNewWindow -Wait
 
     Pop-Location
 }
@@ -298,7 +302,7 @@ task CopyStorageExporter {
 task CopyClient {
     @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Abstractions.???", "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???") | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
 
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\bin\$global:configuration\netstandard1.6\$_" $build_dir\Output\Client\netstandard1.6 }
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $build_dir\Output\Client\netstandard1.6 }
 }
 
 task CopyWeb {
@@ -321,8 +325,8 @@ task CopyBundles {
     Copy-Item $base_dir\Bundles\Raven.Client.Authorization\bin\$global:configuration\Raven.Client.Authorization.??? $build_dir\Output\Bundles
     Copy-Item $base_dir\Bundles\Raven.Client.UniqueConstraints\bin\$global:configuration\Raven.Client.UniqueConstraints.??? $build_dir\Output\Bundles
 
-    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.Authorization\bin\$global:configuration\netstandard1.6\$_" $build_dir\Output\Bundles\netstandard1.6 }
-    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints\bin\$global:configuration\netstandard1.6\$_" $build_dir\Output\Bundles\netstandard1.6 }
+    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.Authorization\$_" $build_dir\Output\Bundles\netstandard1.6 }
+    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints\$_" $build_dir\Output\Bundles\netstandard1.6 }
 }
 
 task CopyServer -depends CreateOutpuDirectories {
@@ -674,7 +678,7 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
     [xml] $xmlNuspec = Get-Content("$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec")
 
     New-Item $nuget_dir\RavenDB.Client\lib\netstandard1.6 -Type directory | Out-Null
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\bin\$global:configuration\netstandard1.6\$_" $nuget_dir\RavenDB.Client\lib\netstandard1.6 }
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $nuget_dir\RavenDB.Client\lib\netstandard1.6 }
     
     $projects = "$base_dir\Raven.Sparrow\Sparrow", "$base_dir\Raven.Client.Lightweight", "$base_dir\Raven.Abstractions"
     AddDependenciesToNuspec $projects "$nuspecPath" "netstandard1.6"
@@ -715,7 +719,7 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
         Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec "$nuspecPath"
         
         New-Item $nuget_dir\RavenDB.Client.$name\lib\netstandard1.6 -Type directory | Out-Null
-        @("$build_dir\DotNet\Bundles\Raven.Client.$name\bin\$global:configuration\netstandard1.6\Raven.Client.$_.???", "$build_dir\DotNet\Bundles\Raven.Client.$name\bin\$global:configuration\netstandard1.6\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\netstandard1.6 }
+        @("$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.???", "$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\netstandard1.6 }
         
         $projects = "$base_dir\Bundles\Raven.Client.$name"
         AddDependenciesToNuspec $projects "$nuspecPath" "netstandard1.6"

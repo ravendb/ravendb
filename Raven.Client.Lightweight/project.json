@@ -3,7 +3,8 @@
 
   "buildOptions": {
     "allowUnsafe": true,
-    "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
+    "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+    "warningsAsErrors": false
   },
 
   "configurations": {
@@ -21,16 +22,6 @@
   },
 
   "frameworks": {
-    "net45": {
-      "buildOptions": {
-        "define": [ "NET4_5" ]
-      },
-      "frameworkAssemblies": {
-        "System.Transactions": "4.0.0.0",
-        "Microsoft.VisualBasic": "10.0.0.0"
-      }
-    },
-
     "netstandard1.6": {
       "imports": "dnxcore50",
       "buildOptions": {
@@ -47,8 +38,5 @@
         "System.Net.NameResolution": "4.0.0"
       }
     }
-  },
-
-  "runtimes": {
   }
 }

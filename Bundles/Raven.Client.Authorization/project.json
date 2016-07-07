@@ -7,7 +7,8 @@
       "../Raven.Bundles.Authorization/Model/*.cs",
       "../Raven.Bundles.Authorization/OperationAllowedResult.cs",
       "../../CommonAssemblyInfo.cs"
-    ]
+    ],
+    "warningsAsErrors": false
   },
 
   "configurations": {
@@ -24,20 +25,11 @@
   },
 
   "frameworks": {
-    "net45": {
-      "buildOptions": {
-        "define": [ "NET4_5" ]
-      }
-    },
-
     "netstandard1.6": {
       "imports": "dnxcore50",
       "buildOptions": {
         "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
       }
     }
-  },
-
-  "runtimes": {
   }
 }
