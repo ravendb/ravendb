@@ -906,7 +906,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             var url = destination.ConnectionStringOptions.Url + endpoint + "?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
-            if (destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count > 0)
+            if (destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count == 0)
                 return url;
 
             return url + ("&collections=" + string.Join(";", destination.SpecifiedCollections.Keys));
