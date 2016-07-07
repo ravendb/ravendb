@@ -255,26 +255,26 @@ namespace Raven.Server
                         }
                         if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
                         {
-                            // do we need more gracefull nack?
                             throw new InvalidOperationException("Timeout when loading database + " + db +
                                                                 ", try again later");
                         }
                         
-                        var documentDatabase = await databaseLoadingTask;// change to databaseLoadingTask.Result
+                        var documentDatabase = await databaseLoadingTask;
                         switch (operation)
                         {
                             case "BulkInsert":
                                 BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient);
-                                tcpClient = null; // the bulk insert will dispose this
-                                stream = null;
-                                context = null;
                                 break;
                             case "Subscription":
-                                await SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient);
+                                SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient);
                                 break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + operation);
                         }
+
+                        tcpClient = null; // the connection handler will dispose this, it is not its responsability
+                        stream = null;
+                        context = null;
                     }
                     catch (Exception e)
                     {
@@ -282,13 +282,16 @@ namespace Raven.Server
                         {
                             _tcpLogger.Info("Failed to process TCP connection run", e);
                         }
-                        using (var writer = new BlittableJsonTextWriter(context, stream))
+                        if (context != null)
                         {
-                            context.Write(writer, new DynamicJsonValue
+                            using (var writer = new BlittableJsonTextWriter(context, stream))
                             {
-                                ["Type"] = "Error",
-                                ["Exception"] = e.ToString()
-                            });
+                                context.Write(writer, new DynamicJsonValue
+                                {
+                                    ["Type"] = "Error",
+                                    ["Exception"] = e.ToString()
+                                });
+                            }
                         }
                     }
                 }
