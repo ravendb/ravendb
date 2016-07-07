@@ -90,6 +90,9 @@ namespace Raven.Server.Json
                 type == typeof(long) ||
                 type == typeof(int) ||
                 type == typeof(double) ||
+                type == typeof(DateTime) ||
+                type == typeof(DateTimeOffset) ||
+                type == typeof(TimeSpan) ||
                 type.GetTypeInfo().IsEnum)
             {
                 var value = GetParameter(propertyInfo.PropertyType, vars);

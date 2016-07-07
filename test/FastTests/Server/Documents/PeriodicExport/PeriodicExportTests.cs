@@ -30,6 +30,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                 {
                     await session.StoreAsync(new PeriodicExportConfiguration
                     {
+                        Active = true,
                         LocalFolderName = exportPath,
                         FullExportIntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
                         IntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
@@ -65,6 +66,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "oren" });
                     await session.StoreAsync(new PeriodicExportConfiguration
                     {
+                        Active = true,
                         LocalFolderName = exportPath,
                         IntervalMilliseconds = 25
                     }, Constants.PeriodicExport.ConfigurationDocumentKey);
@@ -99,6 +101,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "oren" });
                     var periodicExportSetup = new PeriodicExportConfiguration
                     {
+                        Active = true,
                         LocalFolderName = exportPath,
                         IntervalMilliseconds = 25
                     };
@@ -133,6 +136,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     session.StoreAsync(new User { Name = "oren" });
                     var periodicExportSetup = new PeriodicExportConfiguration
                     {
+                        Active = true,
                         LocalFolderName = exportPath,
                         IntervalMilliseconds = 25
                     };
@@ -202,6 +206,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     session.StoreAsync(new User { Name = "oren" });
                     var periodicExportSetup = new PeriodicExportConfiguration
                     {
+                        Active = true,
                         LocalFolderName = exportPath,
                         IntervalMilliseconds = 25
                     };
