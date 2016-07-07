@@ -54,7 +54,7 @@ namespace Raven.Server.Routing
 
             var block = Expression.Block(typeof(Task),new [] {handler},
                 Expression.Assign(handler, newExpression),
-                Expression.Call(handler, "InitAsync", new Type[0], currentRequestContext),
+                Expression.Call(handler, "Init", new Type[0], currentRequestContext),
                 Expression.Call(handler, action.Name, new Type[0]));
             // .Handle();
             _request = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
