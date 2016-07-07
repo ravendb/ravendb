@@ -19,6 +19,7 @@ namespace Raven.Abstractions.Data
 
         public SubscriptionConnectionOptions()
         {
+            // todo: remove the ticks thing, this values stay in the client anyway
             _timeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
             TimeToWaitBeforeConnectionRetry = _timeToWaitBeforeConnectionRetry.Ticks;
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
@@ -55,9 +56,7 @@ namespace Raven.Abstractions.Data
         }
 
         public long TimeToWaitBeforeConnectionRetry { get; set; }
-
-        public long ClientAliveNotificationInterval { get; set; }
-
+        
         public bool IgnoreSubscribersErrors { get; set; }
 
         public SubscriptionOpeningStrategy Strategy { get; set; }

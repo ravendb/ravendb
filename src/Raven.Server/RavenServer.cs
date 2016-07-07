@@ -243,8 +243,8 @@ namespace Raven.Server
                         {
                             throw new InvalidOperationException("Could not read Database property from the tcp command");
                         }
-                        string op;
-                        if (reader.TryGet("Operation", out op) == false)
+                        string operation;
+                        if (reader.TryGet("Operation", out operation) == false)
                         {
                             throw new InvalidOperationException("Could not read Operation property from the tcp command");
                         }
@@ -255,11 +255,13 @@ namespace Raven.Server
                         }
                         if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
                         {
+                            // do we need more gracefull nack?
                             throw new InvalidOperationException("Timeout when loading database + " + db +
                                                                 ", try again later");
                         }
-                        var documentDatabase = await databaseLoadingTask;
-                        switch (op)
+                        
+                        var documentDatabase = await databaseLoadingTask;// change to databaseLoadingTask.Result
+                        switch (operation)
                         {
                             case "BulkInsert":
                                 BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient);
@@ -268,9 +270,10 @@ namespace Raven.Server
                                 context = null;
                                 break;
                             case "Subscription":
+                                await SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient);
                                 break;
                             default:
-                                throw new InvalidOperationException("Unknown operation for tcp " + op);
+                                throw new InvalidOperationException("Unknown operation for tcp " + operation);
                         }
                     }
                     catch (Exception e)

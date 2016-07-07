@@ -208,7 +208,7 @@ namespace Raven.Server.Documents
             return config;
         }
 
-        public unsafe void AssertSubscriptionConfigExists(long id)
+        public unsafe void AssertSubscriptionIdExists(long id)
         {
             using (var tx = _environment.ReadTransaction())
             {

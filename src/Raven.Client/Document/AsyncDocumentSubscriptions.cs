@@ -75,9 +75,11 @@ namespace Raven.Client.Document
             if (options.MaxBatchSize.HasValue && options.MaxBatchSize.Value < 16 * 1024)
                 throw new InvalidOperationException("Max size value of batch options cannot be lower than that 16 KB");
 
-            var commands = database == null
+            // todo: treat the sharded connection case..
+            AsyncServerClient commands =
+                 (AsyncServerClient ) (database == null
                 ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
+                : documentStore.AsyncDatabaseCommands.ForDatabase(database));
 
             var subscription = new Subscription<T>(id, options, commands,
                 documentStore.Conventions); // to ensure that subscription is open try to call it with the same connection id

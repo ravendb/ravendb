@@ -6,8 +6,10 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -44,45 +46,54 @@ namespace Raven.Client.Document
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
         private static readonly ILog logger = LogManager.GetLogger(typeof(Subscription<T>));
-        private readonly AsyncManualResetEvent anySubscriber = new AsyncManualResetEvent();
-        private readonly IAsyncDatabaseCommands commands;
-        private readonly DocumentConvention conventions;
-        private readonly CancellationTokenSource proccessingCts = new CancellationTokenSource();
-        private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-        private readonly long id;
-        private readonly bool isStronglyTyped;
+        private readonly AsyncManualResetEvent _anySubscriber = new AsyncManualResetEvent();
+        private readonly AsyncServerClient _commands;
+        private readonly DocumentConvention _conventions;
+        private readonly CancellationTokenSource _proccessingCts = new CancellationTokenSource();
+        private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
+        private readonly long _id;
+        private readonly bool _isStronglyTyped;
         private readonly SubscriptionConnectionOptions _options;
-        private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
-        private RavenClientWebSocket webSocket;
-        private bool completed;
-        private IDisposable dataSubscriptionReleasedObserver;
-        private bool disposed;
-        private IDisposable endedBulkInsertsObserver;
-        private bool firstConnection = true;
-        private Task pullingTask;
-        private Task startPullingTask;
-        private Task _proccessDocsTask;
-
+        private readonly ConcurrentSet<IObserver<T>> _subscribers = new ConcurrentSet<IObserver<T>>();
+        private TcpClient _tcpClient;
+        private bool _completed;
+        private bool _disposed;
+        private Task _subscriptionProccessTask;
+        private Task _startSubscriptionProccessTask;
 
         internal Subscription(long id, SubscriptionConnectionOptions options,
-            IAsyncDatabaseCommands commands, DocumentConvention conventions)
+            AsyncServerClient commands, DocumentConvention conventions)
         {
-            this.id = id;
+            _id = id;
             _options = options;
-            this.commands = commands;
-            this.conventions = conventions;
-            webSocket = new RavenClientWebSocket();
+            _commands = commands;
+            _conventions = conventions;
+            _tcpClient = new TcpClient();
 
             if (typeof(T) != typeof(RavenJObject))
             {
-                isStronglyTyped = true;
-                generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
+                _isStronglyTyped = true;
+                _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
                     entity => { throw new InvalidOperationException("Shouldn't be generating new ids here"); });
             }
 
             Start();
         }
 
+        ~Subscription()
+        {
+            if (_disposed) return;
+            try
+            {
+                _tcpClient.Dispose();
+                logger.Warn($"Subscription {_id} was not disposed properly");
+                //write to log
+            }
+            catch
+            {
+                    
+            }
+        }
         /// <summary>
         ///     It indicates if the subscription is in errored state because one of subscribers threw an exception.
         /// </summary>
@@ -105,7 +116,7 @@ namespace Raven.Client.Document
 
         public void Dispose()
         {
-            if (disposed)
+            if (_disposed)
                 return;
 
             AsyncHelpers.RunSync(DisposeAsync);
@@ -115,40 +126,16 @@ namespace Raven.Client.Document
         {
             try
             {
-                if (disposed)
+                if (_disposed)
                     return;
 
-                disposed = true;
-
+                _disposed = true;
                 OnCompletedNotification();
+                _subscribers.Clear();
+                _proccessingCts.Cancel();
+                _anySubscriber.Set();
 
-                subscribers.Clear();
-
-                endedBulkInsertsObserver?.Dispose();
-
-                dataSubscriptionReleasedObserver?.Dispose();
-
-                proccessingCts.Cancel();
-
-                anySubscriber.Set();
-
-                // first, make sure that the proccessing of the subscribers notification is cancelled
-                if (_proccessDocsTask != null && _proccessDocsTask.Status != TaskStatus.RanToCompletion &&
-                    _proccessDocsTask.Status != TaskStatus.Canceled)
-                {
-                    try
-                    {
-                        await _proccessDocsTask;
-                    }
-                    catch (Exception)
-                    {
-                        // ignored
-                    }
-                }
-                // then, start closing connection (only partlially, will be finished by the pulling request)
-                await CloseSubscriptionAsync().ConfigureAwait(false);
-
-                foreach (var task in new[] { pullingTask, startPullingTask })
+                foreach (var task in new[] { _subscriptionProccessTask, _startSubscriptionProccessTask })
                 {
                     if (task == null)
                         continue;
@@ -163,23 +150,9 @@ namespace Raven.Client.Document
                             {
                                 await task.ConfigureAwait(false);
                             }
-                            catch (AggregateException ae)
+                            catch (Exception ex)
                             {
-                                if (ae.InnerException is OperationCanceledException == false &&
-                                    ae.InnerException is WebSocketException == false)
-                                {
-                                    throw;
-                                }
                             }
-                            catch (OperationCanceledException)
-                            {
-                                
-                            }
-                            catch (WebSocketException)
-                            {
-
-                            }
-
                             break;
                     }
                 }
@@ -190,27 +163,7 @@ namespace Raven.Client.Document
             }
             finally
             {
-                try
-                {
-                    if (webSocket != null && webSocket.State == WebSocketState.Open)
-                    {
-                        try
-                        {
-                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
-                                "Subscription Closed By Client",
-                                CancellationToken.None).ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            // ignored
-                        }
-                    }
-                    webSocket?.Dispose();
-                }
-                catch
-                {
-                    // ignored
-                }
+                CloseTcpClient();
             }
         }
 
@@ -220,17 +173,17 @@ namespace Raven.Client.Document
                 throw new InvalidOperationException(
                     "Subscription encountered errors and stopped. Cannot add any subscriber.");
 
-            if (subscribers.TryAdd(observer))
+            if (_subscribers.TryAdd(observer))
             {
-                if (subscribers.Count == 1)
-                    anySubscriber.Set();
+                if (_subscribers.Count == 1)
+                    _anySubscriber.Set();
             }
 
             return new DisposableAction(() =>
             {
-                subscribers.TryRemove(observer);
-                if (subscribers.Count == 0)
-                    anySubscriber.Reset();
+                _subscribers.TryRemove(observer);
+                if (_subscribers.Count == 0)
+                    _anySubscriber.Reset();
             });
         }
 
@@ -241,154 +194,32 @@ namespace Raven.Client.Document
 
         private void Start()
         {
-            startPullingTask = StartPullingDocs();
+            _startSubscriptionProccessTask = StartSubscriptionProccessTask();
         }
 
-        private class WebSocketReadStream : Stream
+        private async Task<Stream> ConnectToServer()
         {
-            private readonly RavenClientWebSocket _webSocket;
-            private readonly CancellationToken _token;
+            var connectionInfo = await _commands.GetTcpInfoAsync();
+            await _tcpClient.ConnectAsync(new Uri(connectionInfo.Url).Host, connectionInfo.Port);
 
-            public WebSocketReadStream(RavenClientWebSocket webSocket, CancellationToken token)
+            _tcpClient.NoDelay = true;
+            _tcpClient.SendBufferSize = 32 * 1024;
+            _tcpClient.ReceiveBufferSize = 4096;
+            var networkStream = _tcpClient.GetStream();
+
+            var buffer = Encoding.UTF8.GetBytes(new RavenJObject
             {
-                _webSocket = webSocket;
-                _token = token;
-            }
+                ["Database"] = MultiDatabase.GetDatabaseName(_commands.Url),
+                ["Operation"] = "Subscription"
+            }.ToString());
+            await networkStream.WriteAsync(buffer, 0, buffer.Length);
 
-            public override void Flush()
-            {
-                throw new NotImplementedException();
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            {
-                var receiveAsync = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, count), _token).ConfigureAwait(false);
-                return receiveAsync.Count;
-            }
-
-
-
-            public override bool CanRead => true;
-            public override bool CanSeek => false;
-            public override bool CanWrite => false;
-            public override long Length => -1;
-            public override long Position { get; set; }
-        }
-
-        private Task PullDocuments()
-        {
-            return Task.Run(async () =>
-            {
-                var queue = new BlockingCollection<RavenJObject>();
-                var connectionCts = new CancellationTokenSource();
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(connectionCts.Token, proccessingCts.Token);
-                try
-                {
-                    await anySubscriber.WaitAsync().ConfigureAwait(false);
-
-                    var uri = new Uri(CreatePullingRequest().Url.Replace("http://", "ws://").Replace(".fiddler", ""));
-
-                    using (var ms = new MemoryStream())
-                    {
-                        ms.SetLength(1024*4);
-                        await webSocket.ConnectAsync(uri, CancellationToken.None).ConfigureAwait(false);
-                        proccessingCts.Token.ThrowIfCancellationRequested();
-
-                        var firstRun = true;
-
-                        using (
-                            var reader = new StreamReader(new WebSocketReadStream(webSocket, CancellationToken.None), Encoding.UTF8,
-                                true, 1024, true))
-                        using (var jsonReader = new JsonTextReaderAsync(reader))
-                        {
-                            proccessingCts.Token.ThrowIfCancellationRequested();
-                            var connectionStatus =
-                                (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
-                            AssertConnectionState(connectionStatus);
-                            BeforeBatch();
-                            while (proccessingCts.IsCancellationRequested == false)
-                            {
-                                proccessingCts.Token.ThrowIfCancellationRequested();
-                                jsonReader.ResetState();
-                                await jsonReader.ReadAsync().ConfigureAwait(false);
-                                var curDoc= (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
-                                
-                                RavenJToken messageTypeToken;
-                                if (curDoc.TryGetValue("Type", out messageTypeToken) == false)
-                                    throw new ArgumentException($"Could not find message type field in data from server");
-
-                                var messageType = curDoc["Type"].Value<string>();
-                                if (messageType == "Data")
-                                {
-                                    var ravenJObject = (RavenJObject)curDoc["Data"];
-                                    queue.Add(ravenJObject);
-                                    if (IsErroredBecauseOfSubscriber)
-                                        break;
-
-                                    if (firstRun)
-                                    {
-#pragma warning disable 4014
-                                        _proccessDocsTask = Task.Factory.StartNew(() =>
-#pragma warning restore 4014
-                                            {
-                                                    ProcessDocs(queue, linkedCts.Token).Wait();
-                                            }, TaskCreationOptions.LongRunning | TaskCreationOptions.AttachedToParent);
-
-                                        firstRun = false;
-                                    }
-                                }
-                                else if (messageType == "ConnectionState")
-                                {
-                                    connectionCts.Cancel();
-                                    throw new SubscriptionClosedException("Connection terminated by server");
-                                }
-
-                                else
-                                    throw new ArgumentException(
-                                        $"Unrecognized message '{messageType}' type received from server");
-                            }
-
-                            proccessingCts.Token.ThrowIfCancellationRequested();
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    InformSubscribersOnError(ex);
-                    throw;
-                }
-                finally
-                {
-                    queue.CompleteAdding();
-                    connectionCts.Cancel();
-                    proccessingCts.Token.ThrowIfCancellationRequested();
-                }
-            });
+            return networkStream;
         }
 
         private void InformSubscribersOnError(Exception ex)
         {
-            foreach (var subscriber in subscribers)
+            foreach (var subscriber in _subscribers)
             {
                 try
                 {
@@ -398,7 +229,7 @@ namespace Raven.Client.Document
                 {
                     logger.WarnException(
                         string.Format(
-                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError", id), ex);
+                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError", _id), ex);
                 }
             }
         }
@@ -424,152 +255,244 @@ namespace Raven.Client.Document
                     break;
                 case "InUse":
                     throw new SubscriptionInUseException(
-                        $"Subscription With Id {this.id} cannot be opened, because it's in use and the connection strategy is {this._options.Strategy}");
+                        $"Subscription With Id {this._id} cannot be opened, because it's in use and the connection strategy is {this._options.Strategy}");
                 case "Closed":
                     throw new SubscriptionClosedException(
-                        $"Subscription With Id {this.id} cannot be opened, because it was closed");
+                        $"Subscription With Id {this._id} cannot be opened, because it was closed");
                 case "NotFound":
                     throw new SubscriptionDoesNotExistException(
-                        $"Subscription With Id {this.id} cannot be opened, because it does not exist");
+                        $"Subscription With Id {this._id} cannot be opened, because it does not exist");
                 default:
                     throw new ArgumentException(
-                        $"Subscription {this.id} could not be opened, reason: {subscriptionStatus}");
+                        $"Subscription {this._id} could not be opened, reason: {subscriptionStatus}");
             }
         }
-
-        private async Task ProcessDocs(BlockingCollection<RavenJObject> queue, CancellationToken ct)
+        
+        private Task ProccessSubscription()
         {
-            var proccessedDocsInCurrentBatch = 0;
-            long lastReceivedEtag = 0;
-
-
-            while (ct.IsCancellationRequested == false)
+            return Task.Run(async () =>
             {
-                RavenJObject doc;
-                T instance;
-                if (queue.TryTake(out doc) == false)
+                try
                 {
-                    // This is an acknowledge when the server returns documents to the subscriber.
-                    if (BeforeAcknowledgment())
+                    await _anySubscriber.WaitAsync().ConfigureAwait(false);
+                    _proccessingCts.Token.ThrowIfCancellationRequested();
+
+                    using (var tcpStream = await ConnectToServer())
+                    using (var reader = new StreamReader(tcpStream, Encoding.UTF8,true, 1024, true))
+                    using (var jsonReader = new JsonTextReaderAsync(reader))
                     {
-                        await AcknowledgeBatchToServer(webSocket, CancellationToken.None, lastReceivedEtag).ConfigureAwait(false);
-                        AfterAcknowledgment();
-                    }
-
-                    AfterBatch(proccessedDocsInCurrentBatch);
-                    proccessedDocsInCurrentBatch = 0;
-                    if (queue.TryTake(out doc, Timeout.Infinite, ct) == false)
-                        break;
-                    BeforeBatch();
-                }
-
-                proccessedDocsInCurrentBatch++;
-                var metadata = doc["@metadata"] as RavenJObject;
-
-                // ReSharper disable once PossibleNullReferenceException
-                lastReceivedEtag = metadata["@etag"].Value<long>();
-
-                if (isStronglyTyped)
-                {
-                    instance = doc.Deserialize<T>(conventions);
-
-                    var docId = doc[Constants.Metadata].Value<string>("@id");
-
-                    if (string.IsNullOrEmpty(docId) == false)
-                        generateEntityIdOnTheClient.TrySetIdentity(instance, docId);
-                }
-                else
-                {
-                    instance = (T)(object)doc;
-                }
-
-                foreach (var subscriber in subscribers)
-                {
-                    if (proccessingCts.IsCancellationRequested)
-                        break;
-                    try
-                    {
-                        subscriber.OnNext(instance);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.WarnException(
-                            string.Format(
-                                "Subscription #{0}. Subscriber threw an exception", id), ex);
-
-                        if (_options.IgnoreSubscribersErrors == false)
+                        try
                         {
-                            IsErroredBecauseOfSubscriber = true;
-                            LastSubscriberException = ex;
+                            _proccessingCts.Token.ThrowIfCancellationRequested();
+                            var connectionStatus = (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                            AssertConnectionState(connectionStatus);
+                            long lastReceivedEtag = 0;
+                            var incomingBatch = new List<RavenJObject>();
+                            jsonReader.ResetState();
+                            var readingTask = jsonReader.ReadAsync();
 
+                            // todo: we want have one batch that we proccess and one batch that we load while proccessing..
+                            while (_proccessingCts.IsCancellationRequested == false)
+                            {
+                                BeforeBatch();
+                                while (_proccessingCts.IsCancellationRequested == false)
+                                {
+                                    _proccessingCts.Token.ThrowIfCancellationRequested();
+                                    await readingTask.ConfigureAwait(false);
+
+                                    var receivedMessage = (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
+
+                                    var messageType = AssertAndReturnReceivedMessageType(receivedMessage);
+                                    readingTask = jsonReader.ReadAsync();
+
+                                    if (messageType == "EndOfBatch")
+                                        break;
+
+                                    if (messageType == "Confirm")
+                                    {
+                                        // move to while above
+                                        AfterAcknowledgment();
+                                        AfterBatch(incomingBatch.Count);
+                                        incomingBatch.Clear();
+
+                                    }
+                                    else
+                                    {
+                                        incomingBatch.Add((RavenJObject)receivedMessage["Data"]);
+                                    }
+
+                                    
+                                    // reset json reader state machine
+                                    jsonReader.ResetState();
+                                }
+
+                                foreach (var curDoc in incomingBatch)
+                                {
+                                    NotifySubscribers(curDoc, readingTask, out lastReceivedEtag);
+                                }
+
+                                SendAck(lastReceivedEtag, tcpStream);
+                            }
+                        }
+                        finally
+                        {
                             try
                             {
-                                subscriber.OnError(ex);
+                                SendSubscriptionTermination(tcpStream);
                             }
-                            catch (Exception)
+                            catch
                             {
-                                // can happen if a subscriber doesn't have an onError handler - just ignore it
+
                             }
-                            break;
                         }
                     }
+                    
                 }
-
-                if (IsErroredBecauseOfSubscriber)
-                    break;
-
-            }
-        }
-
-        private async Task AcknowledgeBatchToServer(RavenClientWebSocket ws, CancellationToken ct, long lastReceivedEtag)
-        {
-            using (var ms = new MemoryStream())
-            {
-                var ackJson = new RavenJObject
+                catch (Exception ex)
                 {
-                    ["Type"] = "ACK",
-                    ["Data"] = lastReceivedEtag
-                };
+                    InformSubscribersOnError(ex);
+                    throw;
+                }
+                finally
+                {
+                    _proccessingCts.Token.ThrowIfCancellationRequested();
+                }
+            });
+        }
 
-                ackJson.WriteTo(ms);
+        private static string AssertAndReturnReceivedMessageType(RavenJObject receivedMessage)
+        {
+            RavenJToken messageTypeToken;
+            if (receivedMessage.TryGetValue("Type", out messageTypeToken) == false)
+                throw new ArgumentException(
+                    $"Could not find message type field in data from server");
 
-                ArraySegment<byte> buffer;
+            var messageType = receivedMessage["Type"].Value<string>();
+            if (messageType == "Data" || messageType == "EndOfBatch" || messageType == "Confirm")
+            {
+                return messageType;
+            }
 
-                ms.TryGetBuffer(out buffer);
-                await ws.SendAsync(buffer, WebSocketMessageType.Text, true, ct).ConfigureAwait(false);
+            if (messageType == "Terminated")
+            {
+                throw new SubscriptionClosedException("Connection terminated by server");
+            }
+            
+            throw new ArgumentException(
+                $"Unrecognized message '{messageType}' type received from server");
+        }
+
+        private void NotifySubscribers(RavenJObject curDoc, Task<bool> readingTask,out long lastReceivedEtag)
+        {
+            T instance;
+            var metadata = curDoc[Constants.Metadata] as RavenJObject;
+            lastReceivedEtag = metadata[Constants.MetadataEtagId].Value<long>();
+
+            if (_isStronglyTyped)
+            {
+                instance = curDoc.Deserialize<T>(_conventions);
+
+                var docId = metadata[Constants.MetadataDocId].Value<string>();
+
+                if (string.IsNullOrEmpty(docId) == false)
+                    _generateEntityIdOnTheClient.TrySetIdentity(instance, docId);
+            }
+            else
+            {
+                instance = (T)(object)curDoc;
+            }
+
+            // todo: consider parallelize this..
+            foreach (var subscriber in _subscribers)
+            {
+                if (_proccessingCts.IsCancellationRequested || readingTask.IsCompleted)
+                    break;
+                try
+                {
+                    subscriber.OnNext(instance);
+                }
+                catch (Exception ex)
+                {
+                    logger.WarnException(
+                        string.Format(
+                            "Subscription #{0}. Subscriber threw an exception", _id), ex);
+
+                    if (_options.IgnoreSubscribersErrors == false)
+                    {
+                        IsErroredBecauseOfSubscriber = true;
+                        LastSubscriberException = ex;
+
+                        try
+                        {
+                            subscriber.OnError(ex);
+                        }
+                        catch (Exception)
+                        {
+                            // can happen if a subscriber doesn't have an onError handler - just ignore it
+                        }
+                        break;
+                    }
+                }
             }
         }
 
-        private async Task StartPullingDocs()
+        private void SendAck(long lastReceivedEtag, Stream networkStream)
+        {
+            if (!BeforeAcknowledgment()) return;
+
+            var ackJson = new RavenJObject
+            {
+                ["Type"] = "Acknowledge",
+                ["Data"] = lastReceivedEtag
+            };
+
+            ackJson.WriteTo(networkStream);
+        }
+
+        private void SendSubscriptionTermination(Stream networkStream)
+        {
+            if (!BeforeAcknowledgment()) return;
+
+            var ackJson = new RavenJObject
+            {
+                ["Type"] = "Terminated"
+            };
+
+            ackJson.WriteTo(networkStream);
+
+            AfterAcknowledgment();
+        }
+
+        private async Task StartSubscriptionProccessTask()
         {
             SubscriptionConnectionException = null;
 
-            pullingTask = PullDocuments().ObserveException();
+            _subscriptionProccessTask = ProccessSubscription().ObserveException();
 
             try
             {
-                await pullingTask.ConfigureAwait(false);
+                await _subscriptionProccessTask.ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                if (proccessingCts.Token.IsCancellationRequested)
+                if (_proccessingCts.Token.IsCancellationRequested)
                     return;
 
                 logger.WarnException(
-                    string.Format("Subscription #{0}. Pulling task threw the following exception", id), ex);
+                    string.Format("Subscription #{0}. Pulling task threw the following exception", _id), ex);
 
 
                 // todo: implement handling of rejected connection
                 if (await TryHandleRejectedConnection(ex, false).ConfigureAwait(false))
                 {
                     if (logger.IsDebugEnabled)
-                        logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id,
+                        logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", _id,
                             _options.ConnectionId));
                     return;
                 }
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                RestartPullingTask().ConfigureAwait(false);
+                RestartPullingTask();
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
@@ -577,7 +500,7 @@ namespace Raven.Client.Document
             {
                 try
                 {
-                    startPullingTask = null;
+                    _startSubscriptionProccessTask = null;
                     // prevent from calling Wait() on this in Dispose because we are already inside this task
                     await DisposeAsync().ConfigureAwait(false);
                 }
@@ -586,17 +509,16 @@ namespace Raven.Client.Document
                     logger.WarnException(
                         string.Format(
                             "Subscription #{0}. Exception happened during an attempt to close subscription after it had become faulted",
-                            id), e);
+                            _id), e);
                 }
             }
         }
 
-        private async Task RestartPullingTask()
+        private void RestartPullingTask()
         {
-            var closeTask  = CloseSubscriptionAsync();
-            var delayTask = Time.Delay(_options.TimeToWaitBeforeConnectionRetryTimespan);
-            await Task.WhenAll(closeTask, delayTask).ConfigureAwait(false);
-            startPullingTask = StartPullingDocs().ObserveException();
+            CloseTcpClient();
+            _tcpClient = new TcpClient();
+            _startSubscriptionProccessTask = StartSubscriptionProccessTask().ObserveException();
         }
 
         private async Task<bool> TryHandleRejectedConnection(Exception ex, bool reopenTried)
@@ -610,9 +532,9 @@ namespace Raven.Client.Document
             {
                 IsConnectionClosed = true;
 
-                startPullingTask = null;
+                _startSubscriptionProccessTask = null;
                 // prevent from calling Wait() on this in Dispose because we can be already inside this task
-                pullingTask = null;
+                _subscriptionProccessTask = null;
                 // prevent from calling Wait() on this in Dispose because we can be already inside this task
 
                 await DisposeAsync().ConfigureAwait(false);
@@ -623,62 +545,31 @@ namespace Raven.Client.Document
             return false;
         }
 
-        private HttpJsonRequest CreatePullingRequest()
-        {
-            return
-                commands.CreateRequest(
-                    $"/subscriptions/pull?id={id}&connection={_options.ConnectionId}" +
-                    $"&strategy={_options.Strategy}&maxDocsPerBatch={_options.MaxDocsPerBatch}" +
-                    (_options.MaxBatchSize.HasValue ? "&maxBatchSize" + _options.MaxBatchSize.Value : ""),
-                    HttpMethod.Get);
-        }        
-
         private void OnCompletedNotification()
         {
-            if (completed)
+            if (_completed)
                 return;
 
-            foreach (var subscriber in subscribers)
+            foreach (var subscriber in _subscribers)
             {
                 subscriber.OnCompleted();
             }
 
-            completed = true;
+            _completed = true;
         }
 
         
-        private async Task CloseSubscriptionAsync()
+        private void CloseTcpClient()
         {
-            if (webSocket != null && webSocket.State == WebSocketState.Open)
+            if (_tcpClient != null)
             {
                 try
                 {
-                    using (var ms = new MemoryStream())
-                    {
-                        var ackJson = new RavenJObject
-                        {
-                            ["Type"] = "ConnectionTermination",
-                            ["Data"] = "Subscription Closed By Client"
-                        };
-                        ackJson.WriteTo(ms);
-
-                        ArraySegment<byte> buffer;
-
-                        ms.TryGetBuffer(out buffer);
-
-                        
-                        
-                        await webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
-                        
-                    }
+                    _tcpClient.Dispose();
                 }
                 catch
                 {
-                    // ignored
-                }
-                finally
-                {
-                    IsConnectionClosed = true;
+                    
                 }
             }
         }

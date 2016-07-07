@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            
+            // override to make it "no-op"
         }
         public bool MatchCriteria(DocumentsOperationContext context, Document document)
         {
