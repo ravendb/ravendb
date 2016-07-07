@@ -81,11 +81,6 @@ namespace Raven.Database.Storage.Voron
         public event Action BeforeStorageCommit;
         public event Action AfterStorageCommit;
 
-        public bool IsWriteConflict(Exception exception)
-        {
-            return exception is ConcurrencyException;
-        }
-
         private readonly List<DatabaseTask> tasks = new List<DatabaseTask>();
 
         public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : DatabaseTask

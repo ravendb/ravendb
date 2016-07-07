@@ -35,7 +35,6 @@ using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 using Raven.Unix.Native;
 using Raven.Abstractions;
-using Raven.Abstractions.Threading;
 using Raven.Database.Util;
 using Voron.Impl.Paging;
 

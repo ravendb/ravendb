@@ -571,6 +571,9 @@ class replicationStats extends viewModelBase {
                 var leftScroll = $("#replicationStatsContainer").scrollLeft();
                 var containerOffset = $("#replicationTopologySection").offset();
                 nv.tooltip.show([offset.left - containerOffset.left + leftScroll + self.barWidth, offset.top - containerOffset.top], self.getTooltip(d), 's', 5, document.getElementById("replicationStatsContainer"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings({ tooltipClose: nv.tooltip.cleanup }, elem);
+                });
             })
             .transition()
             .attr("height", d => self.perfHeight - self.yScale(d.BatchSize))
@@ -625,7 +628,8 @@ class replicationStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return "<table>"
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>'
+            + "<table>"
             + "<tr><td><strong>Destination:</strong></td><td>" + d.Destination + "</td></tr>"
             + "<tr><td><strong>Duration milliseconds:</strong></td><td>" + d.DurationMilliseconds + "</td></tr>"
             + "<tr><td><strong>Batch size:</strong></td><td>" + d.BatchSize + "</td></tr>"

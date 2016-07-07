@@ -26,5 +26,7 @@ namespace Raven.Database.Config.Settings
         }
 
         public abstract T Value { get; }
+
+        public T DefaultValue => defaultValue;
     }
 }

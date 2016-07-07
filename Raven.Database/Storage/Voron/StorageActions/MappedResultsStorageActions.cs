@@ -718,7 +718,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
+        public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete, CancellationToken token)
         {
             if (itemsToDelete == null)
                 return null;
@@ -728,6 +728,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var currentEtag = Etag.Empty;
             foreach (Etag etag in itemsToDelete.Where(x => x != null))
             {
+                token.ThrowIfCancellationRequested();
+
                 var etagAsString = (Slice)etag.ToString();
 
                 ushort version;

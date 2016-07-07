@@ -37,10 +37,14 @@ class visualizer extends viewModelBase {
     showLoadingIndicator = ko.observable(false);
 
     docKey = ko.observable("");
+    hasFocusDocKey = ko.observable<boolean>(false);
+    loadingDocKeySearchResults = ko.observable<boolean>(false);
     docKeys = ko.observableArray<string>();
     docKeysSearchResults = ko.observableArray<string>();
 
     reduceKey = ko.observable("");
+    hasFocusReduceKey = ko.observable<boolean>(false);
+    loadingReduceKeySearchResults = ko.observable<boolean>(false);
     reduceKeys = ko.observableArray<string>();
     reduceKeysSearchResults = ko.observableArray<string>();
 
@@ -99,9 +103,23 @@ class visualizer extends viewModelBase {
         this.runQueryUrl = ko.computed(() => {
             return appUrl.forQuery(this.activeDatabase(), this.indexName());
         });
-        this.reduceKey.throttle(250).subscribe(search => this.fetchReduceKeySearchResults(search));
-        this.docKey.throttle(250).subscribe(search => this.fetchDocKeySearchResults(search));
 
+        this.hasFocusDocKey.subscribe(value => {
+            if (value === false) {
+                return;
+            }
+            this.fetchDocKeySearchResults("");
+        });
+        this.docKey.throttle(100).subscribe(search => this.fetchDocKeySearchResults(search));
+
+        this.hasFocusReduceKey.subscribe(value => {
+            if (value === false) {
+                return;
+            }
+            this.fetchReduceKeySearchResults("");
+        });
+        this.reduceKey.throttle(100).subscribe(search => this.fetchReduceKeySearchResults(search));
+        
         this.selectedDocs.subscribe(() => this.repaintSelectedNodes());
 
         $(document).bind("fullscreenchange", function () {
@@ -158,32 +176,30 @@ class visualizer extends viewModelBase {
         this.currentlySelectedLinks = d3.set([]);
     }
 
-    fetchReduceKeySearchResults(query: string) {
-        if (query.length >= 2) {
-            new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: query }, 0, 10)
-                .execute()
-                .done((results: string[]) => {
-                    if (this.reduceKey() === query) {
-                        this.reduceKeysSearchResults(results.sort());
-                    }
-                });
-        } else if (query.length == 0) {
-            this.reduceKeysSearchResults.removeAll();
-        }
+    fetchDocKeySearchResults(query: string) {
+        this.loadingDocKeySearchResults(true);
+
+        new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), query, 0, 10)
+            .execute()
+            .done((results: string[]) => {
+                if (this.docKey() === query) {
+                    this.docKeysSearchResults(results.sort());
+                }
+            })
+            .always(() => this.loadingDocKeySearchResults(false));
     }
 
-    fetchDocKeySearchResults(query: string) {
-        if (query.length >= 2) {
-            new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), query, 0, 10)
-                .execute()
-                .done((results: string[]) => {
-                    if (this.docKey() === query) {
-                        this.docKeysSearchResults(results.sort());
-                    }
-                });
-        } else if (query.length == 0) {
-            this.docKeysSearchResults.removeAll();
-        }
+    fetchReduceKeySearchResults(query: string) {
+        this.loadingReduceKeySearchResults(true);
+
+        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: query }, 0, 10)
+            .execute()
+            .done((results: string[]) => {
+                if (this.reduceKey() === query) {
+                    this.reduceKeysSearchResults(results.sort());
+                }
+            })
+            .always(() => this.loadingReduceKeySearchResults(false));
     }
 
     updateScale() {
@@ -612,14 +628,16 @@ class visualizer extends viewModelBase {
         nv.tooltip.cleanup();
     }
 
-    selectReduceKey(value: string) {
-        this.addReduceKey(value);
-        this.reduceKey("");
-    }
-
     selectDocKey(value: string) {
         this.addDocKey(value);
         this.docKey("");
+        this.docKeysSearchResults.removeAll();
+    }
+
+    selectReduceKey(value: string) {
+        this.addReduceKey(value);
+        this.reduceKey("");
+        this.reduceKeysSearchResults.removeAll();
     }
 
     transiviteClosure() {

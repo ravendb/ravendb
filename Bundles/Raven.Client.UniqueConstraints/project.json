@@ -1,19 +1,45 @@
 ﻿{
   "version": "3.5.0",
-  "compile": [
-    "**/*.cs",
-    "../Raven.Bundles.UniqueConstraints/Constants.cs",
-    "../../CommonAssemblyInfo.cs"
-  ],
-  "frameworks": {
-    "dnxcore50": {
-      "dependencies": {
-        "System.Reflection.Extensions": "4.0.1-beta-23516"
+
+  "buildOptions": {
+    "compile": [
+      "**/*.cs",
+      "../Raven.Bundles.UniqueConstraints/Constants.cs",
+      "../../CommonAssemblyInfo.cs"
+    ]
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
       }
     }
   },
+
   "dependencies": {
     "Raven.Abstractions": "3.5.0",
     "Raven.Client.Lightweight": "3.5.0"
+  },
+
+  "frameworks": {
+    "net45": {
+      "buildOptions": {
+        "define": [ "NET4_5" ]
+      }
+    },
+
+  "netstandard1.6": {
+      "imports": "dnxcore50",
+      "buildOptions": {
+        "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
+      },
+      "dependencies": {
+        "System.Reflection.Extensions": "4.0.1"
+      }
+    }
+  },
+
+  "runtimes": {
   }
 }

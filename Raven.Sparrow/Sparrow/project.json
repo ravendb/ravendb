@@ -1,15 +1,36 @@
 ﻿{
   "version": "3.5.0",
 
-  "compilationOptions": { "allowUnsafe": true },
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+  "buildOptions": {
+    "allowUnsafe": true,
+    "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
+
+  "dependencies": {
+    "NETStandard.Library": "1.6.0"
+  },
 
   "frameworks": {
-    "dnxcore50": {
+    "net45": {
+      "buildOptions": {
+        "define": [ "NET4_5" ]
+      }
+    },
+    "netstandard1.6": {
+      "imports": "dnxcore50",
+      "buildOptions": {
+        "define": [ "DNXCORE50" ]
+      },
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "System.Collections.Concurrent": "4.0.11-beta-23516",
-        "System.Diagnostics.Debug": "4.0.11-beta-23516"
+        "Microsoft.CSharp": "4.0.1"
       }
     }
   }

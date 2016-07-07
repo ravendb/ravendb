@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -22,8 +21,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         private readonly CancellationTokenSource _createLinkedTokenSource;
         private readonly CancellationToken _ct;
         private readonly object _locker = new object();
-        private readonly ConcurrentDictionary<ThreadTask, object> _runningTasks =
-            new ConcurrentDictionary<ThreadTask, object>();
+        private readonly ConcurrentDictionary<ThreadTask, object> _runningTasks = new ConcurrentDictionary<ThreadTask, object>();
         private readonly BlockingCollection<ThreadTask> _tasks = new BlockingCollection<ThreadTask>();
         private readonly AutoResetEvent _threadHasNoWorkToDo = new AutoResetEvent(false);
         private readonly ILog logger = LogManager.GetCurrentClassLogger();
@@ -36,9 +34,11 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         private int _hasPartialBatchResumption = 0;
         private ThreadData[] _threads;
         public int UnstoppableTasksCount;
+        private const int defaultPageSize = 1024;
+        public static int DefaultPageSize => defaultPageSize;
 
-        public RavenThreadPool(int maxLevelOfParallelism, CancellationToken ct,DocumentDatabase database, string name = "RavenThreadPool",
-            Action[] longRunningActions = null)
+        public RavenThreadPool(int maxLevelOfParallelism, CancellationToken ct, 
+            DocumentDatabase database, string name = "RavenThreadPool", Action[] longRunningActions = null)
         {
             _createLinkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct);
             _ct = _createLinkedTokenSource.Token;
@@ -377,12 +377,13 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         /// <param name="action"></param>
         /// <param name="pageSize"></param>
         /// <param name="description"></param>
-        public void ExecuteBatch<T>(IList<T> src, Action<IEnumerator<T>> action, int pageSize = 1024,
-            string description = null)
+        public void ExecuteBatch<T>(IList<T> src, Action<IEnumerator<T>> action, 
+            int pageSize = defaultPageSize, string description = null)
         {
             if (src.Count == 0)
                 return;
-            // if we have only none or less then pageSize , we should execute it in current thread, without using RTP threads
+
+            // if we have only none or less than pageSize , we should execute it in current thread, without using RTP threads
             if (src.Count <= pageSize)
             {
                 ExecuteSingleBatchSynchroniously(src, action, description);
@@ -430,7 +431,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     },
                     Description = new OperationDescription
                     {
-                        Type = OperationDescription.OpeartionType.Range,
+                        Type = OperationDescription.OperationType.Range,
                         PlainText = description,
                         From = i*pageSize,
                         To = i*(pageSize + 1),
@@ -587,7 +588,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     },
                     Description = new OperationDescription
                     {
-                        Type = OperationDescription.OpeartionType.Atomic,
+                        Type = OperationDescription.OperationType.Atomic,
                         PlainText = description,
                         From = itemsCount + 1,
                         To = itemsCount + 1,
@@ -601,7 +602,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 _tasks.Add(threadTask, _ct);
             }
 
-            if (!allowPartialBatchResumption)
+            if (allowPartialBatchResumption == false)
             {
                 WaitForBatchToCompletion(lastEvent);
                 return;
@@ -736,22 +737,22 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
         public class OperationDescription
         {
-            public enum OpeartionType
+            public enum OperationType
             {
                 Atomic,
                 Range,
-                Maintaenance
+                Maintenance
             }
 
             public int From;
             public string PlainText;
             public int To;
             public int Total;
-            public OpeartionType Type;
+            public OperationType Type;
 
             public override string ToString()
             {
-                return string.Format("{0} range {1} to {2} of {3}", PlainText, From, To, Total);
+                return $"{PlainText} range {From} to {To} of {Total}";
             }
         }
     }

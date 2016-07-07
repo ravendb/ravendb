@@ -1,19 +1,43 @@
 ﻿{
   "version": "3.5.0",
-  "compile": [
-    "**/*.cs",
-    "../Raven.Bundles.Authorization/Model/*.cs",
-    "../Raven.Bundles.Authorization/OperationAllowedResult.cs",
-    "../../CommonAssemblyInfo.cs"
-  ],
-  "frameworks": {
-    "dnxcore50": {
-      "dependencies": {
+
+  "buildOptions": {
+    "compile": [
+      "**/*.cs",
+      "../Raven.Bundles.Authorization/Model/*.cs",
+      "../Raven.Bundles.Authorization/OperationAllowedResult.cs",
+      "../../CommonAssemblyInfo.cs"
+    ]
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
       }
     }
   },
+
   "dependencies": {
     "Raven.Abstractions": "3.5.0",
     "Raven.Client.Lightweight": "3.5.0"
+  },
+
+  "frameworks": {
+    "net45": {
+      "buildOptions": {
+        "define": [ "NET4_5" ]
+      }
+    },
+
+    "netstandard1.6": {
+      "imports": "dnxcore50",
+      "buildOptions": {
+        "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
+      }
+    }
+  },
+
+  "runtimes": {
   }
 }

@@ -1,14 +1,14 @@
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util;
+using Raven.Bundles.Compression.Plugin;
+using Raven.Bundles.Encryption.Plugin;
+using Raven.Bundles.Encryption.Settings;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -20,20 +20,32 @@ namespace Raven.StorageExporter
 {
     public class StorageExporter
     {
-        public StorageExporter(string databaseBaseDirectory, string databaseOutputFile,int batchSize,Etag documentsStartEtag)
+        public StorageExporter(string databaseBaseDirectory, string databaseOutputFile, 
+            int batchSize, Etag documentsStartEtag, bool hasCompression, EncryptionConfiguration encryption)
         {
+            HasCompression = hasCompression;
+            Encryption = encryption;
             baseDirectory = databaseBaseDirectory;
             outputDirectory = databaseOutputFile;
-            var ravenConfiguration = new RavenConfiguration();
-            ravenConfiguration.DataDirectory = databaseBaseDirectory;
-            ravenConfiguration.Storage.PreventSchemaUpdate = true;
-            ravenConfiguration.Storage.SkipConsistencyCheck = true;
+            var ravenConfiguration = new RavenConfiguration
+            {
+                DataDirectory = databaseBaseDirectory,
+                Storage =
+                {
+                    PreventSchemaUpdate = true,
+                    SkipConsistencyCheck = true
+                }
+            };
             CreateTransactionalStorage(ravenConfiguration);
-            BatchSize = batchSize;
+            this.batchSize = batchSize;
             DocumentsStartEtag = documentsStartEtag;
         }
 
         public Etag DocumentsStartEtag { get; set; }
+
+        public bool HasCompression { get; set; }
+
+        public EncryptionConfiguration Encryption { get; set; }
 
         public void ExportDatabase()
         {
@@ -50,7 +62,7 @@ namespace Raven.StorageExporter
                 //Indexes
                 jsonWriter.WritePropertyName("Indexes");
                 jsonWriter.WriteStartArray();
-                //WriteIndexes(jsonWriter);
+                WriteIndexes(jsonWriter);
                 jsonWriter.WriteEndArray();
                 //documents
                 jsonWriter.WritePropertyName("Docs");
@@ -60,7 +72,7 @@ namespace Raven.StorageExporter
                 //Transformers
                 jsonWriter.WritePropertyName("Transformers");
                 jsonWriter.WriteStartArray();
-                //WriteTransformers(jsonWriter);
+                WriteTransformers(jsonWriter);
                 jsonWriter.WriteEndArray();
                 //Identities
                 jsonWriter.WritePropertyName("Identities");
@@ -73,52 +85,125 @@ namespace Raven.StorageExporter
             }
         }
 
-        private void ReportProgress(string stage,long from, long outof)
+        private void ReportProgress(string stage, long from, long outof)
         {
-            if (from == outof) ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Green, "Completed exporting {0} out of {1} {2}",from,outof,stage);
-            else Console.WriteLine("exporting {0} out of {1} {2}", from, outof, stage);
+            if (from == outof)
+            {
+                ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Green, "Completed exporting {0} out of {1} {2}", from, outof, stage);
+            }
+            else
+            {
+                Console.WriteLine("exporting {0} out of {1} {2}", from, outof, stage);
+            }
+        }
+
+        private static void ReportCorruptedDocument(string stage, long currentDocsCount, string error)
+        {
+            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red,
+                "Failed to export {0}: document number {1} failed to export, skipping it, error: {2}", 
+                stage, currentDocsCount, error);
+        }
+
+        private static void ReportCorruptedDocumentWithEtag(string stage, long currentDocsCount, string error, Etag currentLastEtag)
+        {
+            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red,
+                "Failed to export {0}: document number {1} with etag {2} failed to export, skipping it, error: {3}",
+                stage, currentDocsCount, currentLastEtag, error);
         }
 
         private void WriteDocuments(JsonTextWriter jsonWriter)
         {
             long totalDocsCount = 0;
-            long currentDocsCount = 0;
-            long previesDocsCount = 0;
-            Etag currLastEtag = DocumentsStartEtag;
-            if (DocumentsStartEtag != Etag.Empty)
-            {
-                ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Yellow, "Starting to export documents as of etag={0}\n" +
-                "TotalDocCount doesn't substract skipped items\n", DocumentsStartEtag);
-                currLastEtag.DecrementBy(1);
-            }
+            
+
             storage.Batch(accsesor => totalDocsCount = accsesor.Documents.GetDocumentsCount());
-            try
+
+            if (DocumentsStartEtag == Etag.Empty)
             {
-                CancellationToken ct = new CancellationToken();
-                do
+                ExtractDocuments(jsonWriter, totalDocsCount);
+            }
+            else
+            {
+                ExtractDocumentsFromEtag(jsonWriter, totalDocsCount);
+            }
+        }
+
+        private void ExtractDocuments(JsonTextWriter jsonWriter, long totalDocsCount)
+        {
+            long currentDocsCount = 0;
+            do
+            {
+                var previousDocsCount = currentDocsCount;
+
+                try
                 {
-                    previesDocsCount = currentDocsCount;
                     storage.Batch(accsesor =>
                     {
-                        var docs = accsesor.Documents.GetDocumentsAfter(currLastEtag, BatchSize, ct);
+                        var docs = accsesor.Documents.GetDocuments(start: (int) currentDocsCount);
                         foreach (var doc in docs)
                         {
                             doc.ToJson(true).WriteTo(jsonWriter);
-                        }
-                        var last = docs.LastOrDefault();
-                        if (last != null)
-                        {
-                            currLastEtag = last.Etag;
-                            currentDocsCount += docs.Count();
-                            ReportProgress("documents", currentDocsCount, totalDocsCount);
+                            currentDocsCount++;
+
+                            if (currentDocsCount % batchSize == 0)
+                                ReportProgress("documents", currentDocsCount, totalDocsCount);
                         }
                     });
-                } while (currentDocsCount > previesDocsCount);
-            }
-            catch (Exception e)
+                }
+                catch (Exception e)
+                {
+                    currentDocsCount++;
+                    ReportCorruptedDocument("documents", currentDocsCount, e.Message);
+                }
+                finally
+                {
+                    if (currentDocsCount > previousDocsCount)
+                        ReportProgress("documents", currentDocsCount, totalDocsCount);
+                }
+            } while (currentDocsCount < totalDocsCount);
+        }
+
+        private void ExtractDocumentsFromEtag(JsonTextWriter jsonWriter, long totalDocsCount)
+        {
+            var currentLastEtag = DocumentsStartEtag;
+
+            Debug.Assert(DocumentsStartEtag != Etag.Empty);
+            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Yellow, "Starting to export documents as of etag={0}\n" +
+                    "TotalDocCount doesn't substract skipped items\n", DocumentsStartEtag);
+            currentLastEtag.DecrementBy(1);
+
+            var ct = new CancellationToken();
+            long currentDocsCount = 0;
+            do
             {
-                ConsoleUtils.PrintErrorAndFail("Failed to export documents, error:" + e.Message);
-            }
+                var previousDocsCount = currentDocsCount;
+                try
+                {
+                    storage.Batch(accsesor =>
+                    {
+                        var docs = accsesor.Documents.GetDocumentsAfter(currentLastEtag, batchSize, ct);
+                        foreach (var doc in docs)
+                        {
+                            doc.ToJson(true).WriteTo(jsonWriter);
+                            currentDocsCount++;
+                            currentLastEtag = doc.Etag;
+
+                            if (currentDocsCount % batchSize == 0)
+                                ReportProgress("documents", currentDocsCount, totalDocsCount);
+                        }
+                    });
+                }
+                catch (Exception e)
+                {
+                    currentDocsCount++;
+                    ReportCorruptedDocumentWithEtag("documents", currentDocsCount, e.Message, currentLastEtag);
+                }
+                finally
+                {
+                    if (currentDocsCount > previousDocsCount)
+                        ReportProgress("documents", currentDocsCount, totalDocsCount);
+                }
+            } while (currentDocsCount > totalDocsCount);
         }
 
         private void WriteTransformers(JsonTextWriter jsonWriter)
@@ -167,7 +252,7 @@ namespace Raven.StorageExporter
             {
                 storage.Batch(accsesor =>
                 {
-                    var identities = accsesor.General.GetIdentities(currentIdentitiesCount, BatchSize, out totalIdentities);
+                    var identities = accsesor.General.GetIdentities(currentIdentitiesCount, batchSize, out totalIdentities);
                     var filteredIdentities = identities.Where(x=>FilterIdentity(x.Key));
                     foreach (var identityInfo in filteredIdentities)
                         {
@@ -199,57 +284,72 @@ namespace Raven.StorageExporter
 
         private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
         {
-            if (String.IsNullOrEmpty(ravenConfiguration.DataDirectory) == false && Directory.Exists(ravenConfiguration.DataDirectory))
+            if (string.IsNullOrEmpty(ravenConfiguration.DataDirectory) == false && Directory.Exists(ravenConfiguration.DataDirectory))
             {
-
                 try
                 {
-                    TryToCreateTransactionalStorage(ravenConfiguration, out storage);
+                    if (TryToCreateTransactionalStorage(ravenConfiguration, HasCompression, Encryption, out storage) == false)
+                        ConsoleUtils.PrintErrorAndFail("Failed to create transactional storage");
                 }
                 catch (UnauthorizedAccessException uae)
                 {
-                    ConsoleUtils.PrintErrorAndFail(String.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", uae.Message), uae.StackTrace);
+                    ConsoleUtils.PrintErrorAndFail(string.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", uae.Message), uae.StackTrace);
                 }
                 catch (InvalidOperationException ioe)
                 {
-                    ConsoleUtils.PrintErrorAndFail(String.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", ioe.Message), ioe.StackTrace);
+                    ConsoleUtils.PrintErrorAndFail(string.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", ioe.Message), ioe.StackTrace);
                 }
                 catch (Exception e)
                 {
                     ConsoleUtils.PrintErrorAndFail(e.Message, e.StackTrace);
                     return;
                 }
+
                 return;
             }
+
             ConsoleUtils.PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.DataDirectory));
         }
 
-        public static bool TryToCreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration, out ITransactionalStorage storage)
+        public static bool TryToCreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration,
+            bool hasCompression, EncryptionConfiguration encryption, out ITransactionalStorage storage)
         {
             storage = null;
             if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
             else if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data")))
                 storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.EsentTypeName, () => { }, () => { });
-            if (storage != null)
+
+            if (storage == null)
+                return false;
+
+            var orderedPartCollection = new OrderedPartCollection<AbstractDocumentCodec>();
+            if (encryption != null)
             {
-                storage.Initialize(new SequentialUuidGenerator {EtagBase = 0}, new OrderedPartCollection<AbstractDocumentCodec>());
-                return true;
+                var documentEncryption = new DocumentEncryption();
+                documentEncryption.SetSettings(new EncryptionSettings(encryption.EncryptionKey, encryption.SymmetricAlgorithmType,
+                    encryption.EncryptIndexes, encryption.PreferedEncryptionKeyBitsSize));
+                orderedPartCollection.Add(documentEncryption);
             }
-            return false;
+            if (hasCompression)
+            {
+                orderedPartCollection.Add(new DocumentCompression());
+            }
+                
+            storage.Initialize(new SequentialUuidGenerator {EtagBase = 0}, orderedPartCollection);
+            return true;
         }
 
-        public static bool ValidateStorageExsist(string dataDir)
+        public static bool ValidateStorageExists(string dataDir)
         {
             return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename))
                    || File.Exists(Path.Combine(dataDir, "Data"));
         }
 
-
         private static readonly string indexDefinitionFolder = "IndexDefinitions";
-        private string baseDirectory;
-        private string outputDirectory;
+        private readonly string baseDirectory;
+        private readonly string outputDirectory;
         private ITransactionalStorage storage;
-        private readonly int BatchSize;
+        private readonly int batchSize;
     }
 }

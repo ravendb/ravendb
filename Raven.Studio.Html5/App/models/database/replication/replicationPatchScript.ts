@@ -29,8 +29,9 @@ class replicationPatchScript {
     createSearchResults(collections: KnockoutObservableArray<collection>): KnockoutComputed<string[]> {
         return ko.computed(() => {
             if (this.collection()) {
+                var collectionToLower = this.collection().toLowerCase();
                 return collections()
-                    .filter(collection => collection.name.toLowerCase().indexOf(this.collection()) > -1)
+                    .filter(collection => collection.name.toLowerCase().indexOf(collectionToLower) === 0)
                     .map(x => x.name);
             } else {
                 return collections().map(x => x.name);

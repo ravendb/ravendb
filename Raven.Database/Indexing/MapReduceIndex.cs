@@ -236,7 +236,7 @@ namespace Raven.Database.Indexing
                     allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
                     allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
                 }
-            }, description: string.Format("Reducing index {0} up to Etag {1}, for {2} documents", this.PublicName, batch.HighestEtagBeforeFiltering, documentsWrapped.Count));
+            }, description: $"Reducing index {PublicName} up to etag {batch.HighestEtagBeforeFiltering}, for {documentsWrapped.Count} documents");
 
             performanceStats.Add(new ParallelPerformanceStats
             {
@@ -269,24 +269,27 @@ namespace Raven.Database.Indexing
                 reduceKeyToCount[reduceKey] = reduceKeyToCount.GetOrDefault(reduceKey) + singleDeleted.Value;
             }
 
-            context.Database.MappingThreadPool.ExecuteBatch(reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
-            {
-                while (enumerator.MoveNext())
+            context.Database.MappingThreadPool.ExecuteBatch(reduceKeyStats, enumerator =>
+                context.TransactionalStorage.Batch(accessor =>
                 {
-                    var reduceKeyStat = enumerator.Current;
-                    var value = 0;
-                    reduceKeyToCount.TryRemove(reduceKeyStat.Key, out value);
-
-                    var changeValue = reduceKeyStat.Count - value;
-                    if (changeValue == 0)
+                    while (enumerator.MoveNext())
                     {
-                        // nothing to change
-                        continue;
-                    }
+                        var reduceKeyStat = enumerator.Current;
+                        var value = 0;
+                        reduceKeyToCount.TryRemove(reduceKeyStat.Key, out value);
 
-                    accessor.MapReduce.IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, changeValue);
-                }
-            }), description: string.Format("Incrementing Reducing key counter fo index {0} for operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
+                        var changeValue = reduceKeyStat.Count - value;
+                        if (changeValue == 0)
+                        {
+                            // nothing to change
+                            continue;
+                        }
+
+                        accessor.MapReduce.IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, changeValue);
+                    }
+                }), 
+                description: $"Incrementing reducing key counter fo index {PublicName} for operation " +
+                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}");
 
             foreach (var keyValuePair in reduceKeyToCount)
             {
@@ -300,27 +303,30 @@ namespace Raven.Database.Indexing
             var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
             var parallelReductionStart = SystemTime.UtcNow;
 
-            context.Database.MappingThreadPool.ExecuteBatch(changed, enumerator => context.TransactionalStorage.Batch(accessor =>
-            {
-                var parallelStats = new ParallelBatchStats
+            context.Database.MappingThreadPool.ExecuteBatch(changed, enumerator =>
+                context.TransactionalStorage.Batch(accessor =>
                 {
-                    StartDelay = (long)(SystemTime.UtcNow - parallelReductionStart).TotalMilliseconds
-                };
-
-                var scheduleReductionsDuration = new Stopwatch();
-
-                using (StopwatchScope.For(scheduleReductionsDuration))
-                {
-                    while (enumerator.MoveNext())
+                    var parallelStats = new ParallelBatchStats
                     {
-                        accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
-                        accessor.General.MaybePulseTransaction();
-                    }
-                }
+                        StartDelay = (long) (SystemTime.UtcNow - parallelReductionStart).TotalMilliseconds
+                    };
 
-                parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
-                parallelReductionOperations.Enqueue(parallelStats);
-            }), description: string.Format("Map Scheduling Reducitions for index {0} after operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
+                    var scheduleReductionsDuration = new Stopwatch();
+
+                    using (StopwatchScope.For(scheduleReductionsDuration))
+                    {
+                        while (enumerator.MoveNext())
+                        {
+                            accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+                            accessor.General.MaybePulseTransaction();
+                        }
+                    }
+
+                    parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
+                    parallelReductionOperations.Enqueue(parallelStats);
+                }),
+                description: $"Schedule reductions for index {PublicName} after operation " +
+                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}");
 
             performanceStats.Add(new ParallelPerformanceStats
             {

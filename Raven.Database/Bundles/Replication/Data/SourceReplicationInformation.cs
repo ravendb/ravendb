@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Bundles.Replication.Data
 {
@@ -24,6 +25,9 @@ namespace Raven.Bundles.Replication.Data
         public int? LastBatchSize { get; set; }
 
         public string SourceCollections { get; set; }
+
+        [JsonIgnore]
+        public bool IsETL => string.IsNullOrEmpty(SourceCollections) == false;
 
         public override string ToString()
         {

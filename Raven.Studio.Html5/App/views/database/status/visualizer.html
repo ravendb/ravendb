@@ -93,10 +93,11 @@
         </div>
         <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
-                <input id="docKey" type="text" data-bind="textInput: docKey" class="form-control" placeholder="Document Id" autocomplete="off">
+                <input id="docKey" type="text" data-bind="textInput: docKey, hasFocus: hasFocusDocKey" class="form-control" placeholder="Document Id" autocomplete="off">
                 <span class="input-group-btn" style="width: auto">
-                    <button data-bind="click: addDocKey.bind($root, docKey())" class="btn btn-default" type="button">
-                        <i class="fa fa-plus"></i>
+                    <button data-bind="click: addDocKey.bind($root, docKey()), enable: !!docKey() && !loadingDocKeySearchResults()" class="btn btn-default" type="button">
+                        <i data-bind="visible: !loadingDocKeySearchResults()" class="fa fa-plus"></i>
+                        <i data-bind="visible: loadingDocKeySearchResults" class="fa fa-spinner fa-spin"></i>
                     </button>
                 </span>
             </div>
@@ -110,9 +111,12 @@
         </div>
         <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
             <div class="input-group">
-                <input id="itemKey" type="text" data-bind="textInput: reduceKey" class="form-control" placeholder="Reduce key" autocomplete="off">
+                <input id="itemKey" type="text" data-bind="textInput: reduceKey, hasFocus: hasFocusReduceKey" class="form-control" placeholder="Reduce key" autocomplete="off">
                 <span class="input-group-btn" style="width: auto">
-                    <button data-bind="click: addReduceKey.bind($root, reduceKey()), visible: hasIndexSelected" class="btn btn-default" type="button"><i class="fa fa-plus"></i></button>
+                    <button data-bind="click: addReduceKey.bind($root, reduceKey()), enable: !!reduceKey() && !loadingReduceKeySearchResults(), visible: hasIndexSelected" class="btn btn-default" type="button">
+                        <i data-bind="visible: !loadingReduceKeySearchResults()" class="fa fa-plus"></i>
+                        <i data-bind="visible: loadingReduceKeySearchResults" class="fa fa-spinner fa-spin"></i>
+                    </button>
                 </span>
             </div>
             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#itemKey', foreach: reduceKeysSearchResults">
@@ -157,7 +161,9 @@
         </div>
 
         <div class="btn-group" data-bind="visible: hasIndexSelected">
-            <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
+            <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;">
+                <span class="fa fa-spinner fa-spin fa-2x"></span>
+            </div>
         </div>
     </div>
 

@@ -1021,7 +1021,7 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
-      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
