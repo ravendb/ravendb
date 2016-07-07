@@ -18,7 +18,7 @@ namespace Raven.Server.Web.System
                 DynamicJsonValue output;
                 try
                 {
-                    var ip = await Server.GetTcpServerPort();
+                    var ip = await Server.GetTcpServerPortAsync();
                     output = new DynamicJsonValue
                     {
                         ["Port"] = ip.Port,
