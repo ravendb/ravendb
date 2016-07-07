@@ -364,11 +364,11 @@ class viewModelBase {
         }
     }
 
-    public AddNotification(subscription: changeSubscription) {
+    public addNotification(subscription: changeSubscription) {
         this.notifications.push(subscription);
     }
 
-    public RemoveNotification(subscription: changeSubscription) {
+    public removeNotification(subscription: changeSubscription) {
         this.notifications.remove(subscription);
     }
 

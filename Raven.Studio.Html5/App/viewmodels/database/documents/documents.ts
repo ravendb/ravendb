@@ -61,6 +61,7 @@ class documents extends viewModelBase {
     static gridSelector = "#documentsGrid";
     static isInitialized = ko.observable<boolean>(false);
     isInitialized = documents.isInitialized;
+    showCollectionChanged = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -274,7 +275,6 @@ class documents extends viewModelBase {
         this.fetchCollections(db).done(results => {
             this.updateCollections(results);
             this.refreshCollectionsData();
-            //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
             deferred.resolve();
         });
 
@@ -300,8 +300,6 @@ class documents extends viewModelBase {
         var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
         var allCollections = [this.allDocumentsCollection()].concat(collectionsWithSysCollection);
         this.collections(allCollections);
-
-        
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
         collectionToSelect.activate();
@@ -393,11 +391,21 @@ class documents extends viewModelBase {
 
         this.collections.removeAll(deletedCollections);
 
+        //update collections, including collection count
         receivedCollections.forEach((receivedCol: collection) => {
             var foundCollection = this.collections().first((col: collection) => col.name === receivedCol.name);
             if (!foundCollection) {
                 this.collections.push(receivedCol);
             } else {
+                var oldCount = foundCollection.documentCount();
+                var newCount = receivedCol.documentCount();
+                var selectedCollection = this.selectedCollection();
+                if (oldCount !== newCount) {
+                    if (selectedCollection.name === receivedCol.name || selectedCollection.isAllDocuments) {
+                        this.showCollectionChanged(true);
+                    }
+                }
+
                 foundCollection.documentCount(receivedCol.documentCount());
             }
         });
@@ -410,18 +418,9 @@ class documents extends viewModelBase {
     }
 
     private refreshCollectionsData() {
-        var selectedCollection: collection = this.selectedCollection();
-
         this.collections().forEach((collection: collection) => {
-            if (collection.name === selectedCollection.name) {
-                var docsGrid = this.getDocumentsGrid();
-                if (!!docsGrid) {
-                    docsGrid.refreshCollectionData();
-                }
-            } else {
-                var pagedList = collection.getDocuments();
-                pagedList.invalidateCache();
-            }
+            var pagedList = collection.getDocuments();
+            pagedList.invalidateCache();
         });
     }
 
@@ -438,6 +437,7 @@ class documents extends viewModelBase {
             collection.activate();
             var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
             router.navigate(documentsWithCollectionUrl, false);
+            this.showCollectionChanged(false);
         }
     }
 
@@ -484,6 +484,7 @@ class documents extends viewModelBase {
         var selectedCollection = this.selectedCollection();
         selectedCollection.invalidateCache();
         this.selectNone();
+        this.showCollectionChanged(false);
     }
 
     toggleSelectAll() {
