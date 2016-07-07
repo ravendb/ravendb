@@ -22,6 +22,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Sparrow.Collections;
+using Sparrow.Logging;
 
 namespace FastTests
 {
@@ -140,7 +141,7 @@ namespace FastTests
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
-
+            configuration.DebugLog.LogMode = LogMode.None;
             configuration.Core.ServerUrl = $"http://localhost:{port}";
             configuration.Core.TcpServerUrl = $"tcp://localhost:{tcpPort}";
             configuration.Server.Name = ServerName;
