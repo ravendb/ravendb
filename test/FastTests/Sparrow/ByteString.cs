@@ -135,10 +135,10 @@ namespace FastTests.Sparrow
             }
         }
 
-        [SkippableFact]
+#if VALIDATE
+        [Fact]
         public void ValidationKeyAfterAllocateAndReleaseReuseShouldBeDifferent()
         {
-#if VALIDATE
             using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage));
@@ -149,30 +149,22 @@ namespace FastTests.Sparrow
                 Assert.Equal(first.Key >> 32, repeat._pointer->Key >> 32);
                 context.Release(ref repeat);
             }
-#else
-            throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
-#endif
         }
 
-        [SkippableFact]
+        [Fact]
         public void FailValidationTryingToReleaseInAnotherContext()
         {
-#if VALIDATE
             using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
             using (var otherContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(1);
                 Assert.Throws<ByteStringValidationException>(() => otherContext.Release(ref first));
             }
-#else
-            throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
-#endif
         }
 
-        [SkippableFact]
+        [Fact]
         public void FailValidationReleasingAnAliasAfterReleasingOriginal()
         {
-#if VALIDATE
             using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(1);
@@ -181,16 +173,12 @@ namespace FastTests.Sparrow
 
                 Assert.Throws<InvalidOperationException>(() => context.Release(ref firstAlias));
             }
-#else
-            throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
-#endif
         }
 
 
-        [SkippableFact]
+        [Fact]
         public void DetectImmutableChangeOnValidation()
         {
-#if VALIDATE
             using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
             {
                 var value = context.From("string", ByteStringType.Immutable);
@@ -198,15 +186,11 @@ namespace FastTests.Sparrow
 
                 Assert.Throws<ByteStringValidationException>(() => context.Release(ref value));
             }
-#else
-            throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
-#endif
         }
 
-        [SkippableFact]
+        [Fact]
         public void DetectImmutableChangeOnContextDispose()
         {
-#if VALIDATE
             Assert.Throws<ByteStringValidationException>(() =>
             {
                 using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
@@ -215,9 +199,8 @@ namespace FastTests.Sparrow
                     value.Ptr[2] = (byte)'t';
                 }
             });
-#else
-            throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
-#endif
         }
+#endif
+
     }
 }

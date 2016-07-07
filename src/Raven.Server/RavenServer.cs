@@ -57,7 +57,7 @@ namespace Raven.Server
             _tcpLogger = LoggerSetup.GetLogger<RavenServer>("<TcpServer>");
         }
 
-        public async Task<IPEndPoint> GetTcpServerPort()
+        public async Task<IPEndPoint> GetTcpServerPortAsync()
         {
             var tcpListener = await _tcpListenerTask;
             return ((IPEndPoint)tcpListener.LocalEndpoint);
