@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -195,7 +196,9 @@ namespace Raven.Server.Documents.BulkInsert
             if (docsToWrite.Count == 0)
                 return;
 
-            int retry = 6;
+            // Three retries : 
+            // 1st - if scratch buff full, 2nd - after asking for new flush, 3rd - waiting for the new flush to end
+            int retry = 3;
             while (true)
             {
                 try
@@ -255,7 +258,30 @@ namespace Raven.Server.Documents.BulkInsert
                             // flush everything
                             tx.Commit();
                         }
-                        context.Environment().ForceLogFlushToDataFile(null, true);
+                        bool lockTaken = false;
+                        var journal = _database.DocumentsStorage.Environment.Journal;
+                        Debug.Assert(journal != null);
+                        Console.WriteLine("Going to tryTakeLock. retry=" + retry);
+                        using (journal.Applicator.TryTakeFlushingLock(ref lockTaken))
+                        {
+                            Console.WriteLine("TryTakeFlushingLock = " + lockTaken);
+                            if (lockTaken == false)
+                            {
+                                var now = SystemTime.UtcNow;
+
+                                // lets wait for the flush to end and retry put doc
+                                using (journal.Applicator.TryTakeFlushingLock(ref lockTaken, TimeSpan.FromSeconds(30)))
+                                {
+                                    Console.WriteLine("exiting = " + lockTaken + " | after " +
+                                                      (SystemTime.UtcNow - now).Seconds);
+                                }
+                            }
+                            else
+                            {
+                                // there's no flushing but scratch buffer full - let's flush and retry put doc
+                                context.Environment().ForceLogFlushToDataFile(null, true);
+                            }
+                        }
                         // TODO : Measure IO times (RavenDB-4659) - ForceFlush on a retry
                     }
                     catch (TimeoutException)

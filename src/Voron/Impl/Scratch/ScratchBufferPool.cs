@@ -102,14 +102,14 @@ namespace Voron.Impl.Scratch
 
                 var scratchesToDelete = new List<int>();
 
+                sizeAfterAllocation += current.File.ActivelyUsedBytes(oldestActiveTransaction);
+
                 // determine how many bytes of older scratches are still in use
                 foreach (var scratch in _scratchBuffers.Values)
                 {
                     var bytesInUse = scratch.File.ActivelyUsedBytes(oldestActiveTransaction);
 
-                    if (bytesInUse > 0)
-                        sizeAfterAllocation += bytesInUse;
-                    else
+                    if (bytesInUse <= 0)
                     {
                         if (scratch != current)
                             scratchesToDelete.Add(scratch.Number);
@@ -183,7 +183,14 @@ namespace Voron.Impl.Scratch
 
                 bool createNextFile = false;
 
-                if (current.File.HasDiscontinuousSpaceFor(tx, size, _scratchBuffers.Count))
+                if (tx.IsLazyTransaction)
+                {
+                    // in lazy transaction when reaching full scratch buffer - we might still have continuous space, but because
+                    // of high insertion rate - we reach scratch buffer full, so we will create new scratch anyhow
+
+                    createNextFile = true;
+                }
+                else if (current.File.HasDiscontinuousSpaceFor(tx, size, _scratchBuffers.Count))
                 {
                     // there is enough space for the requested allocation but the problem is its fragmentation
                     // so we will create a new scratch file and will allow to allocate new continuous range from there
