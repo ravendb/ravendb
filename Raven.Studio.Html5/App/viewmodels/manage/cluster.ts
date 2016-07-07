@@ -168,8 +168,8 @@ class cluster extends viewModelBase {
     editNode(node: nodeConnectionInfo) {
         var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
-            .done(nci => {
-                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
+            .done((nci: nodeConnectionInfo) => {
+                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
             });

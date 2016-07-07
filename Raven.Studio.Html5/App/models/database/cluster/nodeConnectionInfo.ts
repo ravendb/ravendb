@@ -8,7 +8,7 @@ class nodeConnectionInfo {
     apiKey = ko.observable<string>();
     state = ko.observable<string>(); // used to store owning collection name (voting, non-voting, promotable)
     status = ko.observable<string>("Loading");
-    isNonVoting = ko.observable<boolean>();
+    isVoting = ko.observable<boolean>();
 
     constructor(dto: nodeConnectionInfoDto) {
         this.uri(dto.Uri);
@@ -17,7 +17,7 @@ class nodeConnectionInfo {
         this.password(dto.Password);
         this.domain(dto.Domain);
         this.apiKey(dto.ApiKey);
-        this.isNonVoting(dto.IsNoneVoter);
+        this.isVoting(!dto.IsNoneVoter);
         if (this.username()) {
             this.isUserCredentials(true);
         } else if (this.apiKey()) {
@@ -33,7 +33,7 @@ class nodeConnectionInfo {
             Password: this.password(),
             Domain: this.domain(),
             ApiKey: this.apiKey(),
-            IsNoneVoter: this.isNonVoting()
+            IsNoneVoter: !this.isVoting()
         };
     }
 

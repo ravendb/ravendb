@@ -349,6 +349,42 @@ namespace Rachis
             return ModifyTopology(requestedTopology);
         }
 
+        public Task UpdateNodeAsync(NodeConnectionInfo node)
+        {
+            var currentTopology = CurrentTopology;
+
+            var allVotingNodes = currentTopology.AllVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList();
+            var nonVotingNodes = currentTopology.NonVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList();
+            var promotableNodes = currentTopology.PromotableNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList();
+
+            var currentNodeConfiguration = currentTopology.AllNodes.First(x => x.Uri.AbsoluteUri == node.Uri.AbsoluteUri);
+            if (currentNodeConfiguration.IsNoneVoter != node.IsNoneVoter)
+            {
+                if (node.IsNoneVoter)
+                {
+                    // move node from voting -> non-voting
+                    allVotingNodes.Remove(node);
+                    nonVotingNodes.Add(node);
+                    promotableNodes.Remove(node);
+                }
+                else
+                {
+                    // move node from non-voting -> voting
+                    allVotingNodes.Add(node);
+                    nonVotingNodes.Remove(node);
+                    promotableNodes.Add(node);
+                }
+            }
+
+            var requestedTopology = new Topology(
+                currentTopology.TopologyId,
+                allVotingNodes,
+                nonVotingNodes,
+                promotableNodes);
+
+            return ModifyTopology(requestedTopology);
+        }
+
         public Task ModifyNodeVotingModeAsync(NodeConnectionInfo node, bool votingMode)
         {
             if (!_currentTopology.Contains(node.Name))
