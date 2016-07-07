@@ -38,7 +38,7 @@ namespace Raven.Client.Document
 
     public delegate void AfterBatch(int documentsProcessed);
 
-    public delegate bool BeforeAcknowledgment();
+    public delegate void BeforeAcknowledgment();
 
     public delegate void AfterAcknowledgment();
 
@@ -159,7 +159,7 @@ namespace Raven.Client.Document
             }
             catch (Exception ex)
             {
-                // log that
+                // TODO: log that
             }
             finally
             {
@@ -189,8 +189,12 @@ namespace Raven.Client.Document
 
         public event BeforeBatch BeforeBatch = delegate { };
         public event AfterBatch AfterBatch = delegate { };
-        public event BeforeAcknowledgment BeforeAcknowledgment = () => true; //TODO: what does it mean to return false here? Why would I do it?
-        public event AfterAcknowledgment AfterAcknowledgment = delegate { };// TODO: what does this gives me that before/after batch don't?
+        public event BeforeAcknowledgment BeforeAcknowledgment = delegate { }; 
+        /// <summary>
+        /// allows the user to define stuff that happens after the confirm was recieved from the server (this way we know we won't
+        /// get those documents again)
+        /// </summary>
+        public event AfterAcknowledgment AfterAcknowledgment = delegate { }; 
 
         private void Start()
         {
@@ -212,6 +216,9 @@ namespace Raven.Client.Document
                 ["Database"] = MultiDatabase.GetDatabaseName(_commands.Url),
                 ["Operation"] = "Subscription"
             }.ToString());
+            await networkStream.WriteAsync(buffer, 0, buffer.Length);
+
+            buffer = Encoding.UTF8.GetBytes(RavenJObject.FromObject(_options).ToString());
             await networkStream.WriteAsync(buffer, 0, buffer.Length);
 
             return networkStream;
@@ -268,96 +275,80 @@ namespace Raven.Client.Document
             }
         }
         
-        private Task ProccessSubscription()
+        private async Task ProccessSubscription()
         {
-            return Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await _anySubscriber.WaitAsync().ConfigureAwait(false);
-                    _proccessingCts.Token.ThrowIfCancellationRequested();
+                await _anySubscriber.WaitAsync().ConfigureAwait(false);
+                _proccessingCts.Token.ThrowIfCancellationRequested();
 
-                    using (var tcpStream = await ConnectToServer())
-                    using (var reader = new StreamReader(tcpStream, Encoding.UTF8,true, 1024, true))
-                    using (var jsonReader = new JsonTextReaderAsync(reader))
+                using (var tcpStream = await ConnectToServer().ConfigureAwait(false))
+                using (var reader = new StreamReader(tcpStream))
+                using (var jsonReader = new JsonTextReaderAsync(reader))
+                {
+                    _proccessingCts.Token.ThrowIfCancellationRequested();
+                    var connectionStatus = (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                    AssertConnectionState(connectionStatus);
+
+                    var readObjectTask =  ReadNextObject(jsonReader);
+
+                    var incomingBatch = new List<RavenJObject>();
+                    long lastReceivedEtag = 0;
+
+
+                    while (_proccessingCts.IsCancellationRequested == false)
                     {
-                        try
+                        BeforeBatch();
+                        while (_proccessingCts.IsCancellationRequested == false)
                         {
-                            _proccessingCts.Token.ThrowIfCancellationRequested();
-                            var connectionStatus = (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
-                            AssertConnectionState(connectionStatus);
-                            long lastReceivedEtag = 0;
-                            var incomingBatch = new List<RavenJObject>();
-                            jsonReader.ResetState();
-                            var readingTask = jsonReader.ReadAsync();
+                            var receivedMessage = (RavenJObject)await readObjectTask.ConfigureAwait(false);
 
-                            // todo: we want have one batch that we proccess and one batch that we load while proccessing..
-                            while (_proccessingCts.IsCancellationRequested == false)
+    
+                            var messageType = AssertAndReturnReceivedMessageType(receivedMessage);
+
+                            readObjectTask = ReadNextObject(jsonReader);
+                            if (messageType == "EndOfBatch")
+                                break;
+
+                            if (messageType == "Confirm")
                             {
-                                BeforeBatch();
-                                while (_proccessingCts.IsCancellationRequested == false)
-                                {
-                                    _proccessingCts.Token.ThrowIfCancellationRequested();
-                                    await readingTask.ConfigureAwait(false);
-
-                                    var receivedMessage = (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
-
-                                    var messageType = AssertAndReturnReceivedMessageType(receivedMessage);
-                                    readingTask = jsonReader.ReadAsync();
-
-                                    if (messageType == "EndOfBatch")
-                                        break;
-
-                                    if (messageType == "Confirm")
-                                    {
-                                        // move to while above
-                                        AfterAcknowledgment();
-                                        AfterBatch(incomingBatch.Count);
-                                        incomingBatch.Clear();
-
-                                    }
-                                    else
-                                    {
-                                        incomingBatch.Add((RavenJObject)receivedMessage["Data"]);
-                                    }
-
-                                    
-                                    // reset json reader state machine
-                                    jsonReader.ResetState();
-                                }
-
-                                foreach (var curDoc in incomingBatch)
-                                {
-                                    NotifySubscribers(curDoc, readingTask, out lastReceivedEtag);
-                                }
-
-                                SendAck(lastReceivedEtag, tcpStream);
+                                // move to while above
+                                AfterAcknowledgment();
+                                AfterBatch(incomingBatch.Count);
+                                incomingBatch.Clear();
+                            }
+                            else
+                            {
+                                incomingBatch.Add((RavenJObject)receivedMessage["Data"]);
                             }
                         }
-                        finally
-                        {
-                            try
-                            {
-                                SendSubscriptionTermination(tcpStream);
-                            }
-                            catch
-                            {
 
-                            }
+                        foreach (var curDoc in incomingBatch)
+                        {
+                            NotifySubscribers(curDoc, out lastReceivedEtag);
                         }
+
+                        SendAck(lastReceivedEtag, tcpStream);
                     }
-                    
                 }
-                catch (Exception ex)
-                {
-                    InformSubscribersOnError(ex);
-                    throw;
-                }
-                finally
-                {
-                    _proccessingCts.Token.ThrowIfCancellationRequested();
-                }
-            });
+            }
+            catch (Exception ex)
+            {
+                InformSubscribersOnError(ex);
+                throw;
+            }
+            finally
+            {
+                _proccessingCts.Token.ThrowIfCancellationRequested();
+            }
+        }
+
+        private async Task<RavenJToken> ReadNextObject(JsonTextReaderAsync jsonReader)
+        {
+            jsonReader.ResetState();
+            if (await jsonReader.ReadAsync() == false)
+                throw new EndOfStreamException();
+            return await RavenJObject.LoadAsync(jsonReader);
         }
 
         private static string AssertAndReturnReceivedMessageType(RavenJObject receivedMessage)
@@ -382,7 +373,7 @@ namespace Raven.Client.Document
                 $"Unrecognized message '{messageType}' type received from server");
         }
 
-        private void NotifySubscribers(RavenJObject curDoc, Task<bool> readingTask,out long lastReceivedEtag)
+        private void NotifySubscribers(RavenJObject curDoc, out long lastReceivedEtag)
         {
             T instance;
             var metadata = curDoc[Constants.Metadata] as RavenJObject;
@@ -402,11 +393,9 @@ namespace Raven.Client.Document
                 instance = (T)(object)curDoc;
             }
 
-            // todo: consider parallelize this..
             foreach (var subscriber in _subscribers)
             {
-                if (_proccessingCts.IsCancellationRequested || readingTask.IsCompleted)
-                    break;
+                _proccessingCts.Token.ThrowIfCancellationRequested();
                 try
                 {
                     subscriber.OnNext(instance);
@@ -438,7 +427,7 @@ namespace Raven.Client.Document
 
         private void SendAck(long lastReceivedEtag, Stream networkStream)
         {
-            if (!BeforeAcknowledgment()) return;
+            BeforeAcknowledgment();
 
             var ackJson = new RavenJObject
             {
@@ -447,20 +436,6 @@ namespace Raven.Client.Document
             };
 
             ackJson.WriteTo(networkStream);
-        }
-
-        private void SendSubscriptionTermination(Stream networkStream)
-        {
-            if (!BeforeAcknowledgment()) return;
-
-            var ackJson = new RavenJObject
-            {
-                ["Type"] = "Terminated"
-            };
-
-            ackJson.WriteTo(networkStream);
-
-            AfterAcknowledgment();
         }
 
         private async Task StartSubscriptionProccessTask()
