@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
@@ -43,7 +42,7 @@ replicateToorders(orderData);
 for (var i = 0; i < this.OrderLines.length; i++) {
 	var line = this.OrderLines[i];
 	orderData.TotalCost += line.Cost;
-	replicateToorderlines({
+	replicateToorder_lines({
 		OrderId: documentId,
 		Qty: line.Quantity,
 		Product: line.Product,
@@ -63,13 +62,13 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                 {
                     dbCommand.CommandText = @"
 
-DROP TABLE IF EXISTS orderlines;
+DROP TABLE IF EXISTS order_lines;
 DROP TABLE IF EXISTS orders;
 ";
                     dbCommand.ExecuteNonQuery();
 
                     dbCommand.CommandText = @"
-CREATE TABLE orderlines
+CREATE TABLE order_lines
 (
 	""Id"" serial primary key,
 	""OrderId"" text NOT NULL,
@@ -131,7 +130,7 @@ CREATE TABLE orders
                         throw new AssertActualExpectedException(null, lastAlert, lastAlert.Message + lastAlert.Exception);
                 }
 
-                AssertCounts(1, 2);
+                AssertCounts(1, 2, new [] {3, 2});
             }
         }
 
@@ -202,7 +201,7 @@ CREATE TABLE orders
                     SqlReplicationTables =
                     {
                         new SqlReplicationTable {TableName = "orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-                        new SqlReplicationTable {TableName = "orderlines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                        new SqlReplicationTable {TableName = "order_lines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
                     },
                     Script = script
                 });
@@ -210,7 +209,7 @@ CREATE TABLE orders
             }
         }
 
-        private static void AssertCounts(long ordersCount, long orderLineCounts)
+        private static void AssertCounts(long ordersCount, long orderLineCounts, int[] orderQuantities = null)
         {
             var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.PostgresConnectionStringSettings.ProviderName);
             using (var con = providerFactory.CreateConnection())
@@ -220,10 +219,17 @@ CREATE TABLE orders
 
                 using (var dbCommand = con.CreateCommand())
                 {
-                    dbCommand.CommandText = "SELECT COUNT(*) FROM Orders";
+                    dbCommand.CommandText = "SELECT COUNT(*) FROM orders";
                     Assert.Equal(ordersCount, dbCommand.ExecuteScalar());
-                    dbCommand.CommandText = "SELECT COUNT(*) FROM OrderLines";
+                    dbCommand.CommandText = "SELECT COUNT(*) FROM order_lines";
                     Assert.Equal(orderLineCounts, dbCommand.ExecuteScalar());
+
+                    if (orderQuantities != null)
+                    {
+                        dbCommand.CommandText = "SELECT \"Quantities\" FROM orders LIMIT 1";
+                        var quantities = dbCommand.ExecuteScalar();
+                        Assert.Equal(orderQuantities, (int[])quantities);
+                    }
                 }
             }
         }
