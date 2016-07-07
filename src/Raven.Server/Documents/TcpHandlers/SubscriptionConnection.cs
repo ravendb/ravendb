@@ -115,64 +115,68 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        public static async Task SendSubscriptionDocuments(DocumentDatabase database,
+        public static void SendSubscriptionDocuments(DocumentDatabase database,
             JsonOperationContext context, NetworkStream stream, TcpClient tcpClient)
         {
-            var connection = new SubscriptionConnection(stream, database, context, tcpClient);
-            try
+            Task.Run(async () =>
             {
-                if (await connection.InitAsync() == false)
-                    return;
-
-                await connection.ProcessSubscriptionAysnc();
-            }
-            catch (Exception e)
-            {
-                if (connection._logger.IsInfoEnabled)
-                {
-                    connection._logger.Info($"Failed to process subscription {connection._options.SubscriptionId}", e);
-                }
+                var connection = new SubscriptionConnection(stream, database, context, tcpClient);
                 try
                 {
-                    if (tcpClient == null || tcpClient.Connected == false)
+                    if (await connection.InitAsync() == false)
                         return;
-                    using (var writer = new BlittableJsonTextWriter(context, stream))
+
+                    await connection.ProcessSubscriptionAysnc();
+                }
+                catch (Exception e)
+                {
+                    if (connection._logger.IsInfoEnabled)
                     {
-                        context.Write(writer, new DynamicJsonValue
+                        connection._logger.Info($"Failed to process subscription {connection._options.SubscriptionId}",
+                            e);
+                    }
+                    try
+                    {
+                        if (tcpClient == null || tcpClient.Connected == false)
+                            return;
+                        using (var writer = new BlittableJsonTextWriter(context, stream))
                         {
-                            ["Type"] = "Error",
-                            ["Exception"] = e.ToString()
-                        });
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Type"] = "Error",
+                                ["Exception"] = e.ToString()
+                            });
+                        }
+                    }
+                    catch (Exception)
+                    {
                     }
                 }
-                catch (Exception)
+                finally
                 {
+                    try
+                    {
+                        stream.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        tcpClient.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        context.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
-            }
-            finally
-            {
-                try
-                {
-                    stream.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-                try
-                {
-                    tcpClient.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-                try
-                {
-                    context.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-            }
+            });
         }
 
         private IDisposable RegisterForNotificationOnNewDocuments(SubscriptionCriteria criteria)
@@ -246,9 +250,16 @@ namespace Raven.Server.Documents.TcpHandlers
                                     }
                                     doc.Data.Dispose();
                                 }
-                                _bufferedWriter.Flush();
-                                await FlushBufferToNetwork();
-                                
+                                if (hasDocuments)
+                                {
+                                    _context.Write(_bufferedWriter, new DynamicJsonValue
+                                    {
+                                        ["Type"] = "EndOfBatch"
+                                    });
+                                    _bufferedWriter.Flush();
+                                    await FlushBufferToNetwork();
+                                }
+
                                 _database.SubscriptionStorage.UpdateSubscriptionTimes(_options.SubscriptionId,
                                     updateLastBatch: true, updateClientActivity: false);
 
@@ -257,12 +268,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                     if (await WaitForChangedDocuments(replyFromClientTask))
                                         continue;
                                 }
-
-                                // make client know that from now on, we are waiting for it's ack
-                                _context.Write(_unbufferedWriter, new DynamicJsonValue
-                                {
-                                    ["Type"] = "EndOfBatch"
-                                });
 
                                 BlittableJsonReaderObject clientReply;
 
@@ -294,9 +299,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                             ["Type"] = "Confirm"
                                         });
                                         break;
-                                    case "Terminated":
-                                        _logger.Info($"Client for {_options.SubscriptionId} sent disconnection message");
-                                        return;
                                 }
                             }
                         }
