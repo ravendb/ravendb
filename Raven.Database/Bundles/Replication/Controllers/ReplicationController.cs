@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Rachis.Storage;
 using Raven.Abstractions;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
@@ -326,7 +327,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             const int BatchSize = 512;
             var topologyId = Request.Headers.GetFirstValue("Topology-Id");
-            if (!string.IsNullOrEmpty(topologyId) && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
+            if (!string.IsNullOrEmpty(topologyId) && Database.ClusterManager?.Value?.Engine.CurrentTopology.ToString() != Topology.EmptyTopology && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
             {
                 return GetMessageWithString("Refusing to accept data outside of my topology", HttpStatusCode.Forbidden);
             }
