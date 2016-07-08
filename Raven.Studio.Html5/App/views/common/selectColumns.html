@@ -58,7 +58,7 @@
                             </div>
                         </td>
                         <td class="col-md-3"><input class="form-control" required type="text" data-bind="value: header, valueUpdate: 'afterkeydown', hasFocus: hasHeaderFocus" /></td>
-                        <td class="col-md-2"><input class="form-control" required type="number" data-bind="value: width, valueUpdate: 'afterkeydown'" /></td>
+                        <td class="col-md-2"><input class="form-control" required type="number" data-bind="numericValue: width, valueUpdate: 'afterkeydown'" /></td>
                         <td class="col-md-2">
                             <div class="btn-group">
                                 <button data-bind="click: $root.moveUp.bind($root, $data), disable: ($index() === 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>

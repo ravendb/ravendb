@@ -8,22 +8,25 @@
         height: 30px;
         font-size: 25px;
         text-align: center; "></div>
-    <div class="ko-grid-column-container" data-bind="visible: noResults() === false, foreach: columns">
-        <!-- ko if: binding === '__IsChecked' -->
-        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }">
+    <div class="ko-grid-column-container-clip" style="overflow: hidden">
+        <div class="ko-grid-column-container" data-bind="visible: noResults() === false, foreach: columns, style: { marginLeft: (-1 * tableXScroll()) + 'px' }">
+            <!-- ko if: binding === '__IsChecked' -->
+            <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }">
 
+            </div>
+            <!-- /ko -->
+            <!-- ko if: binding !== '__IsChecked' -->
+            <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, attr: { title: header }">
+                <span class="ko-grid-column-handle" data-bind="attr: { 'column': $index }"></span>
+                <span data-bind="text: header"></span>
+            </div>
+            <!-- /ko -->
         </div>
-        <!-- /ko -->
-        <!-- ko if: binding !== '__IsChecked' -->
-        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, attr: { title: header }">
-            <span class="ko-grid-column-handle" data-bind="attr: { 'column': $index }"></span>
-            <span data-bind="text: header"></span>
-        </div>
-        <!-- /ko -->
     </div>
+   
     <div class="ko-grid-viewport-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: settings.dynamicHeightTargetSelector, bottomMargin: bottomMargin, container: settings.container }, style: { 'max-height': settings.maxHeight }">
-        <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px' }">
-            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
+        <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }">
+            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px', width: $parent.virtualWidth() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
                 <div class="ko-grid-cell" data-bind="template: { name: $parent.getOrAddTemplateNameCache(binding)() }, style: { width: width() + 'px' }, attr: { title: ($parent.getCellTemplate(binding) !== 'customTemplate') ? $parent.getCellData(binding) : '' }">
 
                 </div>

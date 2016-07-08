@@ -32,7 +32,9 @@ class ctor {
     borderHeight = 2;
     virtualHeight: KnockoutComputed<number>;
     viewportHeight = ko.observable(0);
+    virtualWidth: KnockoutComputed<number>;
     virtualRowCount = ko.observable(0);
+    tableXScroll = ko.observable(0);
     grid: JQuery;
     focusableGridSelector: string;
     columns = ko.observableArray<column>();
@@ -125,6 +127,7 @@ class ctor {
         this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
+        this.virtualWidth = ko.computed(() => this.columns().map(x => x.width()).reduce((a, b) => a + b, 0));
         this.refreshIdAndCheckboxColumn();
 
         this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
@@ -166,6 +169,7 @@ class ctor {
 
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
         this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
+        this.gridViewport.on('scroll', () => this.tableXScroll(this.gridViewport.scrollLeft()));
         this.gridViewport.scroll(() => this.onGridScrolled());
 
         this.setupKeyboardShortcuts();
@@ -178,6 +182,7 @@ class ctor {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
 
         this.gridViewport.off('DynamicHeightSet');
+        this.gridViewport.off('scroll');
 
         this.$window.off('keydown.virtualTable');
         this.$window.off('keyup.virtualTable');
@@ -505,14 +510,14 @@ class ctor {
             if (columnsNeeded.hasOwnProperty(binding)) {
                 var curColWidth = (binding.length + 2) * fontSize;
                 
-                if (freeWidth < curColWidth) {
+                if (!hasOverrides && freeWidth < curColWidth) {
                     break;
                 }
                 freeWidth -= curColWidth;
                 columnCount++;
             }
         }
-        var freeWidthPerColumn = Math.floor((freeWidth / (columnCount + 1)));
+        var freeWidthPerColumn = hasOverrides ? 0 : Math.floor((freeWidth / (columnCount + 1)));
 
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
@@ -520,7 +525,7 @@ class ctor {
             var columnWidth = this.getColumnWidth(binding, curColWidth);
            
             availiableWidth -= columnWidth;
-            if (availiableWidth <= 0) {
+            if (!hasOverrides && availiableWidth <= 0) {
                 break;
             }
 
