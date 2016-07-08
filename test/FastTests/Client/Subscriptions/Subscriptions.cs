@@ -28,7 +28,7 @@ namespace FastTests.Client.Subscriptions
             {
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
-                    Collection = "People",                    
+                    Collection = "People",
                 };
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria);
 
@@ -49,30 +49,33 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag()??0;
+                var lastEtag = store.GetLastWrittenEtag() ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria
                 {
-                    Collection = "Things",                    
+                    Collection = "Things",
                 };
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
-                var subscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
+                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
                 {
                     SubscriptionId = subsId
-                });
-                var list = new BlockingCollection<Thing>();
-                subscription.Subscribe<Thing>(x =>
+                }))
                 {
-                    list.Add(x);
-                });
+                    var list = new BlockingCollection<Thing>();
+                    subscription.Subscribe<Thing>(x =>
+                    {
+                        list.Add(x);
+                    });
+                    subscription.Start();
 
-                Thing thing;
-                for (var i = 0; i < 5; i++)
-                {
-                    Assert.True(list.TryTake(out thing, 1000));
+                    Thing thing;
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(list.TryTake(out thing, 1000));
+                    }
+                    Assert.False(list.TryTake(out thing, 50));
                 }
-                Assert.False(list.TryTake(out thing, 50));
             }
         }
 
@@ -88,43 +91,51 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
-                    Collection = "Things",                    
+                    Collection = "Things",
                 };
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
-                var acceptedSubscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
+                using (
+                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                    {
+                        SubscriptionId = subsId
+                    }))
                 {
-                    SubscriptionId = subsId
-                });
 
-                var acceptedSusbscriptionList = new BlockingCollection<Thing>();
-                var rejectedSusbscriptionList = new BlockingCollection<Thing>();
-                acceptedSubscription.Subscribe(x =>
-                {
-                    acceptedSusbscriptionList.Add(x);
-                });
+                    var acceptedSusbscriptionList = new BlockingCollection<Thing>();
+                    var rejectedSusbscriptionList = new BlockingCollection<Thing>();
+                    acceptedSubscription.Subscribe(x =>
+                    {
+                        acceptedSusbscriptionList.Add(x);
+                    });
+                    acceptedSubscription.Start();
 
-                Thing thing;
+                    Thing thing;
 
-                // wait until we know that connection was established
-                for (var i = 0; i < 5; i++)
-                {
-                    Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
+                    }
+
+                    Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
+
+                    // open second subscription
+                    using (
+                        var rejectedSusbscription =
+                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                            {
+                                SubscriptionId = subsId
+                            }))
+                    {
+                        rejectedSusbscription.Subscribe(x =>
+                        {
+                            rejectedSusbscriptionList.Add(x);
+                        });
+                        rejectedSusbscription.Start();
+
+                        Assert.False(rejectedSusbscriptionList.TryTake(out thing, 250));
+                    }
                 }
-
-                Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
-
-                // open second subscription
-                var rejectedSusbscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
-                {
-                    SubscriptionId = subsId
-                });
-
-                rejectedSusbscription.Subscribe(x =>
-                {
-                    rejectedSusbscriptionList.Add(x);
-                });
-                
-                Assert.False(rejectedSusbscriptionList.TryTake(out thing, 250));
             }
         }
 
@@ -140,64 +151,75 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCriteria = new SubscriptionCriteria
                 {
-                    Collection = "Things",                    
+                    Collection = "Things",
                 };
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
-                var acceptedSubscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
+                using (
+                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                    {
+                        SubscriptionId = subsId
+                    }))
                 {
-                    SubscriptionId = subsId
-                });
 
-                var acceptedSusbscriptionList = new BlockingCollection<Thing>();
-                var waitingSubscriptionList = new BlockingCollection<Thing>();
+                    var acceptedSusbscriptionList = new BlockingCollection<Thing>();
+                    var waitingSubscriptionList = new BlockingCollection<Thing>();
 
-                var ackSentAmre = new AsyncManualResetEvent();
-                acceptedSubscription.AfterAcknowledgment += () => ackSentAmre.SetByAsyncCompletion();
+                    var ackSentAmre = new AsyncManualResetEvent();
+                    acceptedSubscription.AfterAcknowledgment += () => ackSentAmre.SetByAsyncCompletion();
 
-                acceptedSubscription.Subscribe(x =>
-                {
-                    acceptedSusbscriptionList.Add(x);
-                    AsyncHelpers.RunSync(() => Task.Delay(20));
-                });
-                
-                // wait until we know that connection was established
+                    acceptedSubscription.Subscribe(x =>
+                    {
+                        acceptedSusbscriptionList.Add(x);
+                        Thread.Sleep(20);
+                    });
 
-                Thing thing;
-                // wait until we know that connection was established
-                for (var i = 0; i < 5; i++)
-                {
-                    Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
+                    acceptedSubscription.Start();
+
+                    // wait until we know that connection was established
+
+                    Thing thing;
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 50000));
+                    }
+
+                    Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
+
+                    // open second subscription
+                    using (
+                        var waitingSubscription =
+                            store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                            {
+                                SubscriptionId = subsId,
+                                Strategy = SubscriptionOpeningStrategy.WaitForFree,
+                                TimeToWaitBeforeConnectionRetryMilliseconds = 250
+                            }))
+                    {
+
+                        waitingSubscription.Subscribe(x =>
+                        {
+                            waitingSubscriptionList.Add(x);
+                        });
+                        waitingSubscription.Start();
+
+                        Assert.False(waitingSubscriptionList.TryTake(out thing, 250));
+
+                        Assert.True(await ackSentAmre.WaitAsync(50000));
+
+                        acceptedSubscription.Dispose();
+
+                        await CreateDocuments(store, 5);
+
+                        // wait until we know that connection was established
+                        for (var i = 0; i < 5; i++)
+                        {
+                            Assert.True(waitingSubscriptionList.TryTake(out thing, 1000));
+                        }
+
+                        Assert.False(waitingSubscriptionList.TryTake(out thing, 50));
+                    }
                 }
-
-                Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
-                
-                // open second subscription
-                var waitingSubscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
-                {
-                    SubscriptionId = subsId,
-                    Strategy = SubscriptionOpeningStrategy.WaitForFree
-                });
-
-                waitingSubscription.Subscribe(x =>
-                {
-                    waitingSubscriptionList.Add(x);
-                });
-                
-                Assert.False(waitingSubscriptionList.TryTake(out thing, 250));
-
-                Assert.True(await ackSentAmre.WaitAsync(1000));
-                
-                acceptedSubscription.Dispose();
-                
-                await CreateDocuments(store,5);
-
-                // wait until we know that connection was established
-                for (var i = 0; i < 5; i++)
-                {
-                    Assert.True(waitingSubscriptionList.TryTake(out thing, 1000));
-                }
-
-                Assert.False(waitingSubscriptionList.TryTake(out thing, 50));
             }
         }
 
@@ -216,52 +238,59 @@ namespace FastTests.Client.Subscriptions
                     Collection = "Things",
                 };
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
-                var acceptedSubscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
+                using (
+                    var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                    {
+                        SubscriptionId = subsId
+                    }))
                 {
-                    SubscriptionId = subsId
-                });
+                    var acceptedSusbscriptionList = new BlockingCollection<Thing>();
+                    var takingOverSubscriptionList = new BlockingCollection<Thing>();
 
-                var acceptedSusbscriptionList = new BlockingCollection<Thing>();
-                var takingOverSubscriptionList = new BlockingCollection<Thing>();
+                    acceptedSubscription.Subscribe(x =>
+                    {
+                        acceptedSusbscriptionList.Add(x);
+                    });
 
-                acceptedSubscription.Subscribe(x =>
-                {
-                    acceptedSusbscriptionList.Add(x);
-                });
+                     var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
 
-                var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
-                
-                acceptedSubscription.AfterAcknowledgment += () => batchProccessedByFirstSubscription.SetByAsyncCompletion();
+                    acceptedSubscription.AfterAcknowledgment +=
+                        () => batchProccessedByFirstSubscription.SetByAsyncCompletion();
 
-                Thing thing;
+                    acceptedSubscription.Start();
 
-                // wait until we know that connection was established
-                for (var i = 0; i < 5; i++)
-                {
-                    Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
+                    Thing thing;
+
+                    // wait until we know that connection was established
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000));
+                    }
+
+                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(5000));
+
+                    Assert.False(acceptedSusbscriptionList.TryTake(out thing));
+
+                    // open second subscription
+                    using (var takingOverSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
+                    {
+                        SubscriptionId = subsId,
+                        Strategy = SubscriptionOpeningStrategy.TakeOver
+                    }))
+                    {
+                        takingOverSubscription.Subscribe(x => takingOverSubscriptionList.Add(x));
+                        takingOverSubscription.Start();
+
+                        await CreateDocuments(store, 5);
+
+                        // wait until we know that connection was established
+                        for (var i = 0; i < 5; i++)
+                        {
+                            Assert.True(takingOverSubscriptionList.TryTake(out thing, 5000));
+                        }
+                        Assert.False(takingOverSubscriptionList.TryTake(out thing));
+                    }
                 }
-
-                Assert.True(await batchProccessedByFirstSubscription.WaitAsync(1000));
-
-                Assert.False(acceptedSusbscriptionList.TryTake(out thing));
-
-                // open second subscription
-                var takingOverSubscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions()
-                {
-                    SubscriptionId = subsId,
-                    Strategy = SubscriptionOpeningStrategy.TakeOver
-                });
-               
-                takingOverSubscription.Subscribe(x => takingOverSubscriptionList.Add(x));
-                
-                await CreateDocuments(store, 5);
-
-                // wait until we know that connection was established
-                for (var i = 0; i < 5; i++)
-                {
-                    Assert.True(takingOverSubscriptionList.TryTake(out thing, 1000));
-                }
-                Assert.False(takingOverSubscriptionList.TryTake(out thing));
             }
         }
     }

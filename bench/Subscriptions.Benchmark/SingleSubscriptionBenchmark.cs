@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 namespace SubscriptionsBenchmark
 {
 
-    public class CounterObserver:IObserver<RavenJObject>
+    public class CounterObserver : IObserver<RavenJObject>
     {
         public int MaxCount { get; private set; }
         public int CurCount { get; private set; }
@@ -63,14 +63,14 @@ namespace SubscriptionsBenchmark
             return $"Elapsed: {ElapsedMs}; MaxDocs: {DocsRequested}; ProccessedDocs: {DocsProccessed}";
         }
     }
-    public class SingleSubscriptionBenchmark:IDisposable
+    public class SingleSubscriptionBenchmark : IDisposable
     {
         private int? _batchSize;
         private int? _minPowOf10;
         private int? _maxPowOf10;
         private DocumentStore _store;
 
-        public SingleSubscriptionBenchmark(string[] args, string url="http://localhost:8080", string databaseName="freeDB")
+        public SingleSubscriptionBenchmark(string[] args, string url = "http://localhost:8080", string databaseName = "freeDB")
         {
             if (args.Length > 0)
             {
@@ -94,41 +94,44 @@ namespace SubscriptionsBenchmark
         {
             for (var i = _minPowOf10 ?? 1; i < (_maxPowOf10 ?? 6); i++)
             {
-                for (var j=0; j<3; j++)
-                    {
-                        var executionTask = SingleTestRun((int)Math.Pow(10, i), _batchSize);
-                        executionTask.Wait();
-                        Console.WriteLine($"{(int)Math.Pow(10, i)}:  {executionTask.Result}");
-                    }
+                for (var j = 0; j < 3; j++)
+                {
+                    var executionTask = SingleTestRun((int)Math.Pow(10, i), _batchSize);
+                    executionTask.Wait();
+                    Console.WriteLine($"{(int)Math.Pow(10, i)}:  {executionTask.Result}");
+                }
             }
         }
 
 
         private async Task<RunResult> SingleTestRun(int docCount = 10000, int? batchSize = null)
         {
-            
+
             var subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
             {
                 Collection = "Disks"
             });
-            var subscription =
-                await _store.AsyncSubscriptions.OpenAsync(subscriptionId, new SubscriptionConnectionOptions()
-                {
-                    MaxDocsPerBatch = batchSize??docCount
-                });
-            var observer = new CounterObserver(docCount);
-            var sp = Stopwatch.StartNew();
-            subscription.Subscribe(observer);
-            await observer.Tcs.Task;
-            
-            await subscription.DisposeAsync();
-            return new RunResult
+            using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
             {
-                DocsProccessed = observer.CurCount,
-                DocsRequested = docCount,
-                ElapsedMs = sp.ElapsedMilliseconds
-            };
+                MaxDocsPerBatch = batchSize ?? docCount,
+                SubscriptionId = subscriptionId
+            }))
+            {
+                var observer = new CounterObserver(docCount);
+                var sp = Stopwatch.StartNew();
+                subscription.Subscribe(observer);
+                subscription.Start();
 
+                await observer.Tcs.Task;
+
+                await subscription.DisposeAsync();
+                return new RunResult
+                {
+                    DocsProccessed = observer.CurCount,
+                    DocsRequested = docCount,
+                    ElapsedMs = sp.ElapsedMilliseconds
+                };
+            }
         }
 
         public void Dispose()

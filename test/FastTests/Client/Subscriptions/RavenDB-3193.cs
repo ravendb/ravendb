@@ -35,23 +35,28 @@ namespace FastTests.Client.Subscriptions
                     Collection = "Users"                    
                 });
 
-                var subscription = await store.AsyncSubscriptions.OpenAsync(id, new SubscriptionConnectionOptions
+                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
                 {
-                    MaxDocsPerBatch=31                    
-                });
-
-                var docs = new List<RavenJObject>();
-
-                subscription.Subscribe(docs.Add);
-
-                SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
-                Assert.Equal(100, docs.Count);
-
-
-                foreach (var jsonDocument in docs)
+                    MaxDocsPerBatch = 31,
+                    SubscriptionId = id
+                }))
                 {
-                    var collection = jsonDocument[Constants.Metadata].Value<string>(Constants.Headers.RavenEntityName);
-                    Assert.True(collection == "Users");
+                    var docs = new List<RavenJObject>();
+
+                    subscription.Subscribe(docs.Add);
+
+                    subscription.Start();
+
+                    SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
+                    Assert.Equal(100, docs.Count);
+
+
+                    foreach (var jsonDocument in docs)
+                    {
+                        var collection =
+                            jsonDocument[Constants.Metadata].Value<string>(Constants.Headers.RavenEntityName);
+                        Assert.True(collection == "Users");
+                    }
                 }
             }
         }

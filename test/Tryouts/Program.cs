@@ -15,9 +15,9 @@ namespace Tryout
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine( i);
-                using (var n = new FastTests.Server.Documents.SqlReplication.CanReplicate())
+                using (var n = new FastTests.Client.Subscriptions.Subscriptions())
                 {
-                    n.ReplicateMultipleBatches().Wait();
+                    n.SubscriptionSimpleTakeOverStrategy().Wait();
                 }
             }
         }

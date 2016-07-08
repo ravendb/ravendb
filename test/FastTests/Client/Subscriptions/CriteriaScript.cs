@@ -29,20 +29,23 @@ namespace FastTests.Client.Subscriptions
                     FilterJavaScript = " return this.Name == 'ThingNo3'",
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
-                var subscription = subscriptionManager.Open<Thing>(subsId, new SubscriptionConnectionOptions()
+                using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions()
                 {
                     SubscriptionId = subsId
-                });
-                var list = new BlockingCollection<Thing>();
-                subscription.Subscribe(x =>
+                }))
                 {
-                    list.Add(x);
-                });
+                    var list = new BlockingCollection<Thing>();
+                    subscription.Subscribe(x =>
+                    {
+                        list.Add(x);
+                    });
+                    subscription.Start();
 
-                Thing thing;
-                Assert.True(list.TryTake(out thing, 1000));
-                Assert.Equal("ThingNo3", thing.Name);
-                Assert.False(list.TryTake(out thing, 50));
+                    Thing thing;
+                    Assert.True(list.TryTake(out thing, 5000));
+                    Assert.Equal("ThingNo3", thing.Name);
+                    Assert.False(list.TryTake(out thing, 50));
+                }
             }
         }
     }

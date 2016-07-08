@@ -29,35 +29,41 @@ namespace SlowTests.Tests
                 };
 
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
-                var subscription = await store.AsyncSubscriptions.OpenAsync<Thing>(subsId, new SubscriptionConnectionOptions());
-
-                var bc = new BlockingCollection<Thing>();
-                
-
-                subscription.Subscribe(x =>
+                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions
                 {
-                    AsyncHelpers.RunSync(() => Task.Delay(100));
-                    bc.Add(x);
-                });
-
-                Thing thing;
-                for (var i = 0; i < 5; i++)
+                    SubscriptionId = subsId
+                }))
                 {
-                    Assert.True(bc.TryTake(out thing, 1000));
-                }
 
-                Assert.False(bc.TryTake(out thing, 50));
+                    var bc = new BlockingCollection<Thing>();
 
-                for (var j = 0; j < 2; j++)
-                {
-                    await CreateDocuments(store, 1);
+                    subscription.Subscribe(x =>
+                    {
+                        AsyncHelpers.RunSync(() => Task.Delay(100));
+                        bc.Add(x);
+                    });
 
+                    subscription.Start();
+
+                    Thing thing;
                     for (var i = 0; i < 5; i++)
                     {
                         Assert.True(bc.TryTake(out thing, 1000));
                     }
 
                     Assert.False(bc.TryTake(out thing, 50));
+
+                    for (var j = 0; j < 2; j++)
+                    {
+                        await CreateDocuments(store, 1);
+
+                        for (var i = 0; i < 5; i++)
+                        {
+                            Assert.True(bc.TryTake(out thing, 1000));
+                        }
+
+                        Assert.False(bc.TryTake(out thing, 50));
+                    }
                 }
             }
         }

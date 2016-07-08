@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -12,7 +13,7 @@ namespace FastTests.Client.Subscriptions
 {
     public class RavenDB_3491 : RavenTestBase
     {
-        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(1);
+        private readonly TimeSpan waitForDocTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
 
         [Fact]
         public async Task SubscribtionWithEtag()
@@ -38,11 +39,14 @@ namespace FastTests.Client.Subscriptions
                     var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
                     {
                         Collection = "Users"
-                    }, user2Etag??0);
+                    }, user2Etag ?? 0);
 
                     var users = new List<RavenJObject>();
 
-                    using (var subscription = await store.AsyncSubscriptions.OpenAsync(id, new SubscriptionConnectionOptions()))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
+                    {
+                        SubscriptionId = id
+                    }))
                     {
 
                         var docs = new BlockingCollection<RavenJObject>();
@@ -53,6 +57,9 @@ namespace FastTests.Client.Subscriptions
                         subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
                         subscription.Subscribe(docs.Add);
+
+                        subscription.Start();
+
 
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
@@ -110,11 +117,14 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria<User>(), user2Etag??0);
+                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria<User>(), user2Etag ?? 0);
 
                     var users = new List<User>();
 
-                    using (var subscription = await store.AsyncSubscriptions.OpenAsync<User>(id, new SubscriptionConnectionOptions()))
+                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions
+                    {
+                        SubscriptionId = id
+                    }))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -125,6 +135,8 @@ namespace FastTests.Client.Subscriptions
                         subscription.Subscribe(x => ages.Add(x.Age));
 
                         subscription.Subscribe(docs.Add);
+
+                        subscription.Start();
 
                         User doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
@@ -185,12 +197,15 @@ namespace FastTests.Client.Subscriptions
                     var user2Etag = session.Advanced.GetEtagFor(us2);
                     subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
                     {
-                        Collection ="Users" 
-                    }, user2Etag??0);
+                        Collection = "Users"
+                    }, user2Etag ?? 0);
 
                     var users = new List<RavenJObject>();
 
-                    using (var subscription = await store.AsyncSubscriptions.OpenAsync(subscriptionId, new SubscriptionConnectionOptions()))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
+                    {
+                        SubscriptionId = subscriptionId
+                    }))
                     {
 
                         var docs = new BlockingCollection<RavenJObject>();
@@ -201,6 +216,8 @@ namespace FastTests.Client.Subscriptions
                         subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
                         subscription.Subscribe(docs.Add);
+
+                        subscription.Start();
 
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
@@ -234,15 +251,19 @@ namespace FastTests.Client.Subscriptions
                         Assert.Equal(34, age);
                     }
                 }
-                using (var subscription = await store.AsyncSubscriptions.OpenAsync(subscriptionId, new SubscriptionConnectionOptions()))
+                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
+                {
+                    SubscriptionId = subscriptionId
+                }))
                 {
                     var docs = new BlockingCollection<RavenJObject>();
 
                     subscription.Subscribe(o => docs.Add(o));
+                    subscription.Start();
 
                     RavenJObject item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
-                    if(tryTake)
+                    if (tryTake)
                         Console.WriteLine(item.Value<int>("Age"));
                     Assert.False(tryTake);
 

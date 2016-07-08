@@ -67,50 +67,55 @@ namespace SubscriptionsBenchmark
 
         public async Task<RunResult> SingleTest(int docsCount)
         {
-            var subscription = await _store.AsyncSubscriptions.OpenAsync(_subsId, new SubscriptionConnectionOptions()
+            using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
             {
-                MaxDocsPerBatch = _batchSize ?? docsCount
-            });
-            var observer = new CounterObserver(docsCount);
-            subscription.Subscribe(observer);
+                MaxDocsPerBatch = _batchSize ?? docsCount,
+                SubscriptionId = _subsId
+            }))
+            {
+                var observer = new CounterObserver(docsCount);
+                subscription.Subscribe(observer);
 
+                subscription.Start();
 
-            
-            var commands = Enumerable.Range(0,docsCount).Select(x=> {
-                var curId = $"Cats/{_docsCounter++}";
-
-                var ravenJObject = new RavenJObject()
+                var commands = Enumerable.Range(0, docsCount).Select(x =>
                 {
-                    {"Name",$"Cat_{_docsCounter}" },
-                    {Constants.Metadata, new RavenJObject()
+                    var curId = $"Cats/{_docsCounter++}";
+
+                    var ravenJObject = new RavenJObject()
+                    {
+                        {"Name", $"Cat_{_docsCounter}"},
                         {
-                            { Constants.Headers.RavenEntityName,"Cats"}
+                            Constants.Metadata, new RavenJObject()
+                            {
+                                {Constants.Headers.RavenEntityName, "Cats"}
+                            }
                         }
-                    }
-                };
+                    };
 
-                return new PutCommandData()
+                    return new PutCommandData()
+                    {
+                        Document = ravenJObject,
+                        Key = curId
+                    };
+                }).ToArray();
+
+                var sp = Stopwatch.StartNew();
+                await _store.AsyncDatabaseCommands.BatchAsync(commands.ToArray());
+
+                await observer.Tcs.Task;
+
+                var singleTest = new RunResult
                 {
-                    Document = ravenJObject,
-                    Key = curId
+                    DocsProccessed = observer.CurCount,
+                    DocsRequested = docsCount,
+                    ElapsedMs = sp.ElapsedMilliseconds
                 };
-            }).ToArray();
-
-            var sp = Stopwatch.StartNew();
-            await _store.AsyncDatabaseCommands.BatchAsync(commands.ToArray());
-
-            await observer.Tcs.Task;
-
-            var singleTest = new RunResult
-            {
-                DocsProccessed = observer.CurCount,
-                DocsRequested = docsCount,
-                ElapsedMs = sp.ElapsedMilliseconds
-            };
-            //await subscription.CloseSubscriptionAsync();
-            Console.WriteLine("Before Dispose");
-            await subscription.DisposeAsync();
-            return singleTest;
+                //await subscription.CloseSubscriptionAsync();
+                Console.WriteLine("Before Dispose");
+                await subscription.DisposeAsync();
+                return singleTest;
+            }
         }
 
         public void Dispose()

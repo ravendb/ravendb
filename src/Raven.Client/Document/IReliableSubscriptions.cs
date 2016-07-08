@@ -26,7 +26,7 @@ namespace Raven.Client.Document
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
-        Subscription<RavenJObject> Open(long id, SubscriptionConnectionOptions options, string database = null);
+        Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null);
 
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).
@@ -35,7 +35,7 @@ namespace Raven.Client.Document
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
-        Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class;
+        Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class;
 
         /// <summary>
         /// It downloads a list of all existing subscriptions in a database.

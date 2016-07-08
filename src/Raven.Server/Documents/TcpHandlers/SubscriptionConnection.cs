@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 catch (TimeoutException)
                 {
-                    timeout = 3000;
+                    timeout = _options.TimeToWaitBeforeConnectionRetryMilliseconds;
                     await _networkStream.WriteAsync(_heartbeat, 0, _heartbeat.Length);
                 }
                 catch (SubscriptionInUseException)
@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private async Task WriteJsonAsync(DynamicJsonValue value)
         {
             _context.Write(_bufferedWriter, value);
+            _bufferedWriter.Flush();
             await FlushBufferToNetwork();
         }
 
@@ -217,7 +218,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         while (_options.CancellationTokenSource.IsCancellationRequested == false)
                         {
                             bool hasDocuments = false;
-                            int skipNumber = 0;
+                            int skipNumber = 1;
                             using (dbContext.OpenReadTransaction())
                             {
                                 var documents = _database.DocumentsStorage.GetDocumentsAfter(dbContext,
@@ -296,8 +297,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                             clientEtag);
                                         await WriteJsonAsync(new DynamicJsonValue
                                         {
-                                            ["Type"] = "Confirm"
+                                            ["Type"] = "Confirm",
+                                            ["Etag"] = clientEtag
                                         });
+
                                         break;
                                 }
                             }

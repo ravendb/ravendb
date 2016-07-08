@@ -20,7 +20,7 @@ namespace FastTests.Client.Subscriptions
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    for (int i = 0; i < 10; i++)
+                    for (int i = 0; i < 5; i++)
                     {
                         await session.StoreAsync(new PersonWithAddress()
                         {
@@ -59,27 +59,35 @@ namespace FastTests.Client.Subscriptions
                 {
                     FilterJavaScript = "return this.Name == 'James' && this.Address.ZipCode != 54321"
                 };
-                
+
 
                 var id = await store.AsyncSubscriptions.CreateAsync(criteria);
 
-                var subscription = await store.AsyncSubscriptions.OpenAsync<PersonWithAddress>(id, new SubscriptionConnectionOptions());
-
-                var users = new BlockingCollection<PersonWithAddress>();
-
-                subscription.Subscribe(users.Add);
-
-                PersonWithAddress userToTake;
-                for (var i = 0; i < 5; i++)
+                using (
+                    var subscription =
+                        store.AsyncSubscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions
+                        {
+                            SubscriptionId = id
+                        }))
                 {
-                    Assert.True(users.TryTake(out userToTake, 1000));
-                    Assert.Equal("James", userToTake.Name);
-                    Assert.Equal(12345, userToTake.Address.ZipCode);
+
+                    var users = new BlockingCollection<PersonWithAddress>();
+
+                    subscription.Subscribe(users.Add);
+                    subscription.Start();
+
+                    PersonWithAddress userToTake;
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(users.TryTake(out userToTake, 50000));
+                        Assert.Equal("James", userToTake.Name);
+                        Assert.Equal(12345, userToTake.Address.ZipCode);
+                    }
+
+                    Assert.False(users.TryTake(out userToTake, 50));
+
+
                 }
-
-                Assert.False(users.TryTake(out userToTake, 50));
-
-
             }
         }
     }

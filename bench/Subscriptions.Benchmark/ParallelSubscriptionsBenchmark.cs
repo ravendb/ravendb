@@ -141,17 +141,24 @@ namespace SubscriptionsBenchmark
                                 Collection = collectionName
                             });
 
-                            var subscription = await store.AsyncSubscriptions.OpenAsync(subscriptionId,
-                                new SubscriptionConnectionOptions
-                                {
-                                    SubscriptionId = subscriptionId,
-                                });
 
-                            var actionObserver = new ActionObserver<RavenJObject>(onNext:
-                                x =>
-                                {
+                                var actionObserver = new ActionObserver<RavenJObject>(onNext:
+                                    x =>
+                                    {
                                     // Console.WriteLine(x.ToString());                     
                                     if (Interlocked.Increment(ref proccessedDocuments) == maxItems)
+                                        {
+                                            if (tcs.Task.IsCompleted)
+                                                return;
+
+                                            lock (tcs)
+                                            {
+                                                if (tcs.Task.IsCompleted == false)
+                                                    tcs.SetResult(true);
+                                            }
+                                        }
+                                    },
+                                    onCompleted: () =>
                                     {
                                         if (tcs.Task.IsCompleted)
                                             return;
@@ -161,27 +168,23 @@ namespace SubscriptionsBenchmark
                                             if (tcs.Task.IsCompleted == false)
                                                 tcs.SetResult(true);
                                         }
-                                    }
-                                },
-                                onCompleted: () =>
+                                    },
+                                    onError: x => { Console.WriteLine(x); });
+
+                            using (var subscription = store.AsyncSubscriptions.Open(
+                                new SubscriptionConnectionOptions
                                 {
-                                    if (tcs.Task.IsCompleted)
-                                        return;
+                                    SubscriptionId = subscriptionId,
+                                }))
+                            {
+                                subscription.Subscribe(actionObserver);
+                                subscription.Start();
 
-                                    lock (tcs)
-                                    {
-                                        if (tcs.Task.IsCompleted == false)
-                                            tcs.SetResult(true);
-                                    }
-                                },
-                                onError: x => { Console.WriteLine(x); });
-
-                            subscription.Subscribe(
-                                actionObserver);
-                            await tcs.Task;
-                            await subscription.DisposeAsync();
-                            cq.Enqueue(sp.ElapsedMilliseconds);
-                            Console.WriteLine($"Done task {j} iteration {i}");
+                                await tcs.Task;
+                                await subscription.DisposeAsync();
+                                cq.Enqueue(sp.ElapsedMilliseconds);
+                                Console.WriteLine($"Done task {j} iteration {i}");
+                            }
                         }
                     })).ToArray();
 
