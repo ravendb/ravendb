@@ -1503,6 +1503,7 @@ interface nodeConnectionInfoDto {
 
 interface clusterConfigurationDto {
     EnableReplication: boolean;
+    DatabaseSettings?: dictionary<string>;
 }
 
 interface clusterNodeStatusDto {

@@ -15,8 +15,9 @@ class globalConfig extends viewModelBase {
         super();
 
         this.router = adminSettings.adminSettingsRouter.createChildRouter()
-            .map([
+            .map([ 
                 { route: "globalConfig", moduleId: "viewmodels/manage/globalConfig/globalConfigPeriodicExport", title: "Periodic export", tooltip: "", nav: true, hash: appUrl.forGlobalConfigPeriodicExport() },
+                { route: "globalConfigDatabaseSettings", moduleId: "viewmodels/manage/globalConfig/globalConfigDatabaseSettings", title: "Cluster-wide database settings", tooltip: "Global cluster-wide database settings", nav: true, hash: appUrl.forGlobalConfigDatabaseSettings() },
                 { route: "globalConfigReplication", moduleId: "viewmodels/manage/globalConfig/globalConfigReplications", title: "Replication", tooltip: "Global replication settings", nav: true, hash: appUrl.forGlobalConfigReplication() },
                 { route: "globalConfigSqlReplication", moduleId: "viewmodels/manage/globalConfig/globalConfigSqlReplication", title: "SQL Replication", tooltip: "Global SQL replication settings", nav: true, hash: appUrl.forGlobalConfigSqlReplication()},
                 { route: "globalConfigQuotas", moduleId: "viewmodels/manage/globalConfig/globalConfigQuotas", title: "Quotas", tooltip: "Global quotas settings", nav: true, hash: appUrl.forGlobalConfigQuotas() },

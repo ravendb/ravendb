@@ -101,6 +101,7 @@
     <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
+    <TypeScriptCompile Include="App\models\database\cluster\databaseSetting.ts" />
     <TypeScriptCompile Include="App\models\database\debug\logEntry.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\runningTask.ts" />
@@ -169,6 +170,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\activityItems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\sourceSynchronizationInformation.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
+    <TypeScriptCompile Include="App\viewmodels\manage\globalConfig\globalConfigDatabaseSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\topology.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
@@ -268,6 +270,7 @@
     <Content Include="App\views\database\settings\customFunctionsEditor.html" />
     <Content Include="App\views\database\settings\databaseSettings.html" />
     <Content Include="App\views\database\settings\editSqlReplication.html" />
+    <Content Include="App\views\manage\globalConfig\globalConfigDatabaseSettings.html" />
     <Content Include="App\views\manage\hotSpare.html" />
     <Content Include="App\views\database\settings\periodicExport.html" />
     <Content Include="App\views\database\settings\quotas.html" />
