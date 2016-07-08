@@ -1,46 +1,52 @@
-﻿# Raven DB
+﻿# RavenDB - the premier NoSQL database for .NET
 
-## A 2nd generation document database
+This repository contains source code for [RavenDB](http://ravendb.net/) document database.
 
-Issue tracker: http://issues.hibernatingrhinos.com
+Build Status
+------------
+| Version | Windows | Linux |
+|:-------:|:-------|:------:|
+| 3.0 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_30Tests)/statusIcon) | N/A |
+| 3.5 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_35Tests)/statusIcon) | N/A |
+| 4.0 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_40TestsWindows)/statusIcon) | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_40TestsLinux)/statusIcon) |
 
-You can start the Raven Service by executing /server/raven.server.exe, and then you can then visit
-http://localhost:8080 for looking at the UI.
+New to RavenDB?
+---------------
+Check out our [Getting started page](http://ravendb.net/docs/article-page/4.0/csharp/start/getting-started).
 
-For any questions, please visit: http://groups.google.com/group/ravendb/
+How to download?
+-----------------------
+| Stable | [download](http://ravendb.net/downloads) | [NuGet](https://www.nuget.org/packages/RavenDB.Server) |
+|:-------:|:-------:|:-------:|
+| Unstable | [download](http://ravendb.net/downloads/builds) | [NuGet](https://www.nuget.org/packages/RavenDB.Server) |
+| .NET Client | [download](http://ravendb.net/downloads) | [NuGet](https://www.nuget.org/packages/RavenDB.Client) |
+| Java Client | [download](http://ravendb.net/downloads) | [Maven](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22net.ravendb%22%20AND%20a%3A%22ravendb-client%22) |
 
-RavenDB's homepage: http://ravendb.net
+What's new?
+-----------
+Our latest list of changes can always be found [here](http://ravendb.net/docs/article-page/4.0/csharp/start/whats-new).
 
-For your convenience RavenDB is also available as nuget packages: RavenDB.Client and RavenDB.Embedded.
+Found a bug?
+------------
+You can create issues at our [YouTrack](http://issues.hibernatingrhinos.com).
 
-## This release contains the following:
+How to build?
+-------------
+Requirements:
 
-/Client		- RavenDB lightweight client for .NET 4.0 and its dependencies.
-		*** This is the recommended client to use ***
+- .NET Core 1.0
+- TypeScript 1.8
+- WiX Toolset 3.7 or higher
 
-/Silverlight	- A lightweight Silverlight 4.0 client for RavenDB and its dependencies..
+Want to contribute?
+-------------------
+Each Pull Request will be checked against following rules:
 
+- `cla/signed` - all commit authors need to sign CLA. This can be done using our [CLA sign form](http://ravendb.net/contributors/cla/sign)
+- `commit/whitespace` - all changed files cannot contain TABs inside them. Before doing any work we suggest executing our `git_setup.cmd`. This will install git pre-commit hook that will normalize all whitespaces during commit
+- `commit/message/conventions` - all commit messages (except in merge commits) must contain issue number from our [YouTrack](http://issues.hibernatingrhinos.com) e.g. 'RavenDB-1234 Fixed issue with something'
+- `tests` - this executes `build.cmd Test` on our CI to check if no constraints were voilated
 
-/EmbeddedClient	- The files required to run the RavenDB client, in server or embedded mode.
-		  Reference Raven.Client.Embedded.dll and create a DocumentStore, passing a URL
-		  or a directory. See the docs for more help.
-
-Whichever client version you choose to use, reference all the assemblies in the corresponding folder to your project.
-
-As for the rest of the folders in the package, here's a brief description of what they contain:
-
-/Server		- The files required to run RavenDB in server / service mode.
-		  Execute /Server/Raven.Server.exe /install to register and start the Raven service
-		  
-/Web		- The files required to run RavenDB under IIS.
-		  Create an IIS site in the /Web directory to start the Raven site.		
-
-/Bundles	- Bundles for extending RavenDB in various ways
-	
-/Samples	- Some sample applications for RavenDB
-		* Under each sample application folder there is a "Start Raven.cmd" file which will
-		starts Raven with all the data and indexes required to run the sample successfully.
-
-/Backup - [Standalone backup tool](http://ravendb.net/docs/server/administration/backup-restore), for performing backup operations using a user with admin privileges.
-
-/Smuggler - [The Import/Export utility](http://ravendb.net/docs/server/administration/export-import) for RavenDB.
+Need help?
+----------
+If you have any questions please visit our [community group](http://groups.google.com/group/ravendb/).
