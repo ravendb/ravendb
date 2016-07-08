@@ -4,10 +4,11 @@ This repository contains source code for [RavenDB](http://ravendb.net/) document
 
 Build Status
 ------------
-| Version | Windows |
-|:-------:|:-------|
-| 3.0 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_30Tests)/statusIcon) |
-| 3.5 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_35Tests)/statusIcon) |
+| Version | Windows | Linux |
+|:-------:|:-------|:------:|
+| 3.0 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_30Tests)/statusIcon) | N/A |
+| 3.5 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_35Tests)/statusIcon) | N/A |
+| 4.0 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_40TestsWindows)/statusIcon) | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_40TestsLinux)/statusIcon) |
 
 New to RavenDB?
 ---------------
