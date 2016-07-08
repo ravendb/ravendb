@@ -67,7 +67,6 @@ namespace Raven.Abstractions.Extensions
 
         public static string TryReadResponseIfWebException(this Exception ex)
         {
-#if !DNXCORE50
             var webException = ex as WebException;
             if (webException != null && webException.Response != null)
             {
@@ -77,7 +76,6 @@ namespace Raven.Abstractions.Extensions
                     return response;
                 }
             }
-#endif
 
             return string.Empty;
         }

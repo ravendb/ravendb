@@ -15,14 +15,6 @@ namespace Raven.Tests.Core.Querying
 {
     public class Projections : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Projections(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void BasicProjections()
         {

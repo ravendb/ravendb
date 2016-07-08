@@ -21,13 +21,11 @@ namespace Raven.Abstractions.Connection
         /// <value>The request.</value>
         public HttpClient Client { get; set; }
 
-#if !DNXCORE50
         /// <summary>
         /// Gets or sets the web request.
         /// </summary>
         /// <value>The request.</value>
         public WebRequest Request { get; set; }
-#endif
 
         public OperationCredentials Credentials { get; set; }
     }

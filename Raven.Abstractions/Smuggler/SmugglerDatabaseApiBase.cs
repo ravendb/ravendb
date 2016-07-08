@@ -1,4 +1,3 @@
-#if !DNXCORE50
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -1800,4 +1799,3 @@ namespace Raven.Abstractions.Smuggler
         public int NumberOfExportedItems { get; set; }
     }
 }
-#endif

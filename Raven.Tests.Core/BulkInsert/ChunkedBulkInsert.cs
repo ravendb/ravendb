@@ -10,14 +10,6 @@ namespace Raven.Tests.Core.BulkInsert
 {
     public class ChunkedBulkInsert : RavenCoreTestBase
     {
-#if DNXCORE50
-        public ChunkedBulkInsert(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         public class Node
         {
             public string Name { get; set; }

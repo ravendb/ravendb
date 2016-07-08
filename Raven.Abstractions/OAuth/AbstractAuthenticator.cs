@@ -26,10 +26,8 @@ namespace Raven.Abstractions.OAuth
                 SetAuthorization(e.Client);
             }
 
-#if !DNXCORE50
             if (e.Request != null)
                 SetHeader(e.Request.Headers, "Authorization", CurrentOauthTokenWithBearer);
-#endif
         }
 
         protected void SetAuthorization(HttpClient e)
@@ -59,8 +57,6 @@ namespace Raven.Abstractions.OAuth
             }
         }
 
-#if !DNXCORE50
         public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey);
-#endif
     }
 }

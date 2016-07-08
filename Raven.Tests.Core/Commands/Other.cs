@@ -14,14 +14,6 @@ namespace Raven.Tests.Core.Commands
 {
     public class Other : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Other(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public async Task CanGetBuildNumber()
         {

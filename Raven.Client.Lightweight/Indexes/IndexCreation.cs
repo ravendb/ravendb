@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if !DNXCORE50
 using System.ComponentModel.Composition.Hosting;
-#endif
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -25,13 +23,8 @@ namespace Raven.Client.Indexes
     /// </summary>
     public static class IndexCreation
     {
-#if !DNXCORE50
         private readonly static ILog Log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog Log = LogManager.GetLogger(typeof(IndexCreation));
-#endif
 
-#if !DNXCORE50
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
@@ -449,7 +442,6 @@ namespace Raven.Client.Indexes
                 await task.ExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
             }
         }
-#endif
 
         public static IndexToAdd[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConvention conventions)
         {

@@ -10,9 +10,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
-#if !DNXCORE50
 using Raven.Client.Document.DTC;
-#endif
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
@@ -34,9 +32,7 @@ namespace Raven.Client
             InitializeEncryptor();
 
             LastEtagHolder = new GlobalLastEtagHolder();
-#if !DNXCORE50
             TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
-#endif
             AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
             Subscriptions = new DocumentSubscriptions(this);
         }
@@ -225,7 +221,6 @@ namespace Raven.Client
         /// </summary>
         public bool UseFipsEncryptionAlgorithms { get; set; }
 
-#if !DNXCORE50
         ///<summary>
         /// Whatever or not we will automatically enlist in distributed transactions
         ///</summary>
@@ -234,7 +229,6 @@ namespace Raven.Client
             get { return Conventions.EnlistInDistributedTransactions; }
             set { Conventions.EnlistInDistributedTransactions = value; }
         }
-#endif
 
         /// <summary>
         /// The resource manager id for the document store.
@@ -372,9 +366,7 @@ namespace Raven.Client
 
         public ILastEtagHolder LastEtagHolder { get; set; }
 
-#if !DNXCORE50
         public ITransactionRecoveryStorage TransactionRecoveryStorage { get; set; }
-#endif
 
         /// <summary>
         ///  Get the profiling information for the given id

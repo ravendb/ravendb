@@ -1,4 +1,3 @@
-#if !DNXCORE50
 using System;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
@@ -33,4 +32,3 @@ namespace Sparrow.Platform
         public static extern IntPtr Set(byte* dest, int c, int count);
     }
 }
-#endif

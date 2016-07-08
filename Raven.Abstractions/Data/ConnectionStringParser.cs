@@ -1,9 +1,5 @@
 using System;
-using System.Collections.Generic;
-#if !DNXCORE50
 using System.Configuration;
-#endif
-using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Replication;
@@ -43,14 +39,14 @@ namespace Raven.Abstractions.Data
     {
         public RavenConnectionStringOptions()
         {
-#if !(MONO || DNXCORE50)
+#if !MONO
             EnlistInDistributedTransactions = true;
 #endif
         }
 
         public Guid ResourceManagerId { get; set; }
 
-#if !(MONO || DNXCORE50)
+#if !MONO
         public bool EnlistInDistributedTransactions { get; set; }
 #endif
 
@@ -61,11 +57,7 @@ namespace Raven.Abstractions.Data
         public override string ToString()
         {
             var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
-#if !DNXCORE50
             var enlistInDistributedTransactions = string.Format("EnlistInDistributedTransactions: {0}, ", EnlistInDistributedTransactions);
-#else
-            var enlistInDistributedTransactions = string.Empty;
-#endif
             return string.Format("Url: {4}, User: {0}, {1}DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, enlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
         }
     }
@@ -96,14 +88,12 @@ namespace Raven.Abstractions.Data
     {
         public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
         {
-#if !(MONODROID || DNXCORE50)
+#if !MONODROID
             var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
             if (connectionStringSettings == null)
                 throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
         
             return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
-#else
-            throw new ArgumentException(string.Format("Connection string not supported"));
 #endif
         }
 
@@ -186,11 +176,10 @@ namespace Raven.Abstractions.Data
                 case "defaultdatabase":
                     options.DefaultDatabase = value;
                     break;
-#if !DNXCORE50
+
                case "enlist":
                     options.EnlistInDistributedTransactions = bool.Parse(value);
                     break;
-#endif
 
                 case "resourcemanagerid":
                     options.ResourceManagerId = new Guid(value);
@@ -237,10 +226,8 @@ namespace Raven.Abstractions.Data
                     bool result;
                     if (bool.TryParse(value, out result) == false)
                     {
-#if !(MONODROID || DNXCORE50)
+#if !MONODROID
                         throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
-#else
-                        throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));
 #endif
                     }
                     options.RunInMemory = result;

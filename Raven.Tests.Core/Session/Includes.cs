@@ -11,14 +11,6 @@ namespace Raven.Tests.Core.Session
 {
     public class Includes : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Includes(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void BasicInclude()
         {

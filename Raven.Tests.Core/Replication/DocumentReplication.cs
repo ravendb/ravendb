@@ -14,14 +14,6 @@ namespace Raven.Tests.Core.Replication
 {
     public class DocumentReplication : RavenReplicationCoreTest
     {
-#if DNXCORE50
-        public DocumentReplication(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public async Task CanReplicateDocument()
         {

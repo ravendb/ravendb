@@ -52,11 +52,7 @@ namespace Raven.Abstractions.Logging.LogProviders
         {
             try
             {
-#if !DNXCORE50
                 return Assembly.Load("NLog");
-#else
-                return Assembly.Load(new AssemblyName("NLog"));
-#endif
             }
             catch (Exception)
             {

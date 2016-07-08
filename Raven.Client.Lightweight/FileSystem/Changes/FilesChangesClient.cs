@@ -21,11 +21,7 @@ namespace Raven.Client.FileSystem.Changes
                                         IFilesChanges,
                                         IHoldProfilingInformation
     {
-#if !DNXCORE50
         private readonly static ILog logger = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog logger = LogManager.GetLogger(typeof(FilesChangesClient));
-#endif
 
         private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>();
 

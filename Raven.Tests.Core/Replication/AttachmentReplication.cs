@@ -14,14 +14,6 @@ namespace Raven.Tests.Core.Replication
 {
     public class AttachmentReplication : RavenReplicationCoreTest
     {
-#if DNXCORE50
-        public AttachmentReplication(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanReplicateAttachments()
         {

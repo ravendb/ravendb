@@ -17,14 +17,6 @@ namespace Raven.Tests.Core.Session
 {
     public class Crud : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Crud(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public async Task CanSaveAndLoad()
         {

@@ -11,14 +11,6 @@ namespace Raven.Tests.Core.Querying
 {
     public class Linq : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Linq(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanQueryUsingLinq()
         {

@@ -37,11 +37,9 @@ namespace Raven.Abstractions.Util.Encryptors
 
         byte[] Compute20(byte[] bytes, int offset, int size);
 
-#if !DNXCORE50
         byte[] TransformFinalBlock();
 
         void TransformBlock(byte[] bytes, int offset, int length);
-#endif
     }
 
     public interface ISymmetricalEncryptor : IDisposable
@@ -81,9 +79,7 @@ namespace Raven.Abstractions.Util.Encryptors
 
         byte[] Decrypt(byte[] bytes, bool fOAEP);
 
-#if !DNXCORE50
         void FromXmlString(string xml);
-#endif
 
         AsymmetricAlgorithm Algorithm { get; }
 

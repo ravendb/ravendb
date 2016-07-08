@@ -22,11 +22,7 @@ namespace Raven.Client.Document
     {
         private readonly DocumentStore documentStore;
 
-#if !DNXCORE50
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog log = LogManager.GetLogger(typeof(ReplicationBehavior));
-#endif
 
         public ReplicationBehavior(DocumentStore documentStore)
         {

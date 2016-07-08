@@ -17,14 +17,6 @@ namespace Raven.Tests.Core.Querying
 {
     public class Searching : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Searching(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanSearchByMultipleTerms()
         {

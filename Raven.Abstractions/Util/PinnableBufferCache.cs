@@ -1,4 +1,3 @@
-#if !DNXCORE50
 #define ENABLE
 #define MINBUFFERS
 // Copyright (c) Microsoft. All rights reserved.
@@ -663,4 +662,3 @@ namespace Raven.Abstractions.Util
     }
 #endif
 }
-#endif

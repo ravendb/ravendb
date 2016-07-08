@@ -12,9 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-#if !DNXCORE50
 using System.Transactions;
-#endif
 
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -25,9 +23,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document.Batches;
-#if !DNXCORE50
 using Raven.Client.Document.DTC;
-#endif
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -62,11 +58,7 @@ namespace Raven.Client.Document
             internal set { _databaseName = value; }
         }
 
-#if !DNXCORE50
         protected static readonly ILog log = LogManager.GetCurrentClassLogger();
-#else
-        protected static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
-#endif
 
         /// <summary>
         /// The entities waiting to be deleted
@@ -85,9 +77,7 @@ namespace Raven.Client.Document
             get { return externalState ?? (externalState = new Dictionary<string, object>()); }
         }
 
-#if !DNXCORE50
         private bool hasEnlisted;
-#endif
 
         [ThreadStatic]
         private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
@@ -975,10 +965,8 @@ more responsive application.
             };
             deferedCommands.Clear();
 
-#if !DNXCORE50
             if (documentStore.EnlistInDistributedTransactions)
                 TryEnlistInAmbientTransaction();
-#endif
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
@@ -1099,7 +1087,6 @@ more responsive application.
                 deletedEntities.Clear();
         }
 
-#if !DNXCORE50
         protected virtual void TryEnlistInAmbientTransaction()
         {
 
@@ -1136,7 +1123,6 @@ more responsive application.
             }
             hasEnlisted = true;
         }
-#endif
 
         /// <summary>
         /// Mark the entity as read only, change tracking won't apply 
@@ -1258,7 +1244,6 @@ more responsive application.
         {
         }
 
-#if !DNXCORE50
         /// <summary>
         /// Commits the specified tx id.
         /// </summary>
@@ -1277,7 +1262,6 @@ more responsive application.
         {
             hasEnlisted = false;
         }
-#endif
 
         /// <summary>
         /// Metadata held about an entity by the session

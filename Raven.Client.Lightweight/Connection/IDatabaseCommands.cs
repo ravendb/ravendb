@@ -62,13 +62,11 @@ namespace Raven.Client.Connection
         /// <param name="commandDatas">Commands to process</param>
         BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
-#if !DNXCORE50
         /// <summary>
         ///     Commits the specified tx id
         /// </summary>
         /// <param name="txId">transaction identifier</param>
         void Commit(string txId);
-#endif
 
         HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
@@ -433,12 +431,10 @@ namespace Raven.Client.Connection
         /// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
         RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata);
 
-#if !DNXCORE50
         /// <summary>
         ///     Prepares the transaction on the server.
         /// </summary>
         void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
-#endif
 
         /// <summary>
         ///     Puts the document in the database with the specified key.
@@ -549,13 +545,11 @@ namespace Raven.Client.Connection
 
         void SetIndexPriority(string name, IndexingPriority priority);
 
-#if !DNXCORE50
         /// <summary>
         ///     Rollbacks the specified tx id
         /// </summary>
         /// <param name="txId">transaction identifier</param>
         void Rollback(string txId);
-#endif
 
         /// <summary>
         ///     Seeds the next identity value on the server

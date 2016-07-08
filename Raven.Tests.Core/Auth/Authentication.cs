@@ -1,4 +1,3 @@
-#if !DNXCORE50
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
@@ -114,4 +113,3 @@ namespace Raven.Tests.Core.Auth
         }
     }
 }
-#endif

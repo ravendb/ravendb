@@ -17,14 +17,6 @@ namespace Raven.Tests.Core.Replication
 {
     public class AutomaticConflictResolution : RavenReplicationCoreTest
     {
-#if DNXCORE50
-        public AutomaticConflictResolution(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void ShouldResolveDocumentConflictInFavorOfLocalVersion()
         {

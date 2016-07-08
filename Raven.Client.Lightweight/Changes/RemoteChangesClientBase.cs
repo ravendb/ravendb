@@ -18,11 +18,7 @@ namespace Raven.Client.Changes
                                 where TConnectionState : class, IChangesConnectionState
                                 where TChangesApi : class, IConnectableChanges
     {
-#if !DNXCORE50
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-#else
-        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteChangesClientBase<TChangesApi, TConnectionState>));
-#endif
 
         private Timer clientSideHeartbeatTimer;
 

@@ -19,14 +19,6 @@ namespace Raven.Tests.Core.Commands
 {
     public class Documents : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Documents(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanCancelPutDocument()
         {

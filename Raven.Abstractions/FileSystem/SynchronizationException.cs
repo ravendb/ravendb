@@ -19,9 +19,7 @@ namespace Raven.Abstractions.FileSystem
             : base(message, inner)
         { }
 
-#if !DNXCORE50
         protected SynchronizationException(SerializationInfo info, StreamingContext context) : base(info, context)
         { }
-#endif
     }
 }

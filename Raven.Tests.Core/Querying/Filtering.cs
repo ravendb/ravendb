@@ -16,14 +16,6 @@ namespace Raven.Tests.Core.Querying
 {
     public class Filtering : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Filtering(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void BasicFiltering()
         {

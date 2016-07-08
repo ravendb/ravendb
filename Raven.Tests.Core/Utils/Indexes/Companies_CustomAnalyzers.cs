@@ -3,9 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // ----------------------------------------------------------------------
-#if !DNXCORE50
-using Lucene.Net;
-#endif
+
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -29,7 +27,6 @@ namespace Raven.Tests.Core.Utils.Indexes
                                    company.Phone
                                };
 
-#if !DNXCORE50
             Analyzers.Add(c => c.Name, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
             Analyzers.Add(c => c.Desc, typeof(Lucene.Net.Analysis.StopAnalyzer).ToString());
             Analyzers.Add(c => c.Email, typeof(Lucene.Net.Analysis.StopAnalyzer).ToString());
@@ -37,15 +34,6 @@ namespace Raven.Tests.Core.Utils.Indexes
             Analyzers.Add(c => c.Address2, typeof(Lucene.Net.Analysis.WhitespaceAnalyzer).ToString());
             Analyzers.Add(c => c.Address3, typeof(Lucene.Net.Analysis.KeywordAnalyzer).ToString());
             Analyzers.Add(c => c.Phone, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
-#else
-            Analyzers.Add(c => c.Name, "Lucene.Net.Analysis.Standard.StandardAnalyzer");
-            Analyzers.Add(c => c.Desc, "Lucene.Net.Analysis.StopAnalyzer");
-            Analyzers.Add(c => c.Email, "Lucene.Net.Analysis.StopAnalyzer");
-            Analyzers.Add(c => c.Address1, "Lucene.Net.Analysis.SimpleAnalyzer");
-            Analyzers.Add(c => c.Address2, "Lucene.Net.Analysis.WhitespaceAnalyzer");
-            Analyzers.Add(c => c.Address3, "Lucene.Net.Analysis.KeywordAnalyzer");
-            Analyzers.Add(c => c.Phone, "Lucene.Net.Analysis.Standard.StandardAnalyzer");
-#endif
 
             Stores.Add(c => c.Name, FieldStorage.Yes);
             Stores.Add(c => c.Desc, FieldStorage.Yes);

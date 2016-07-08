@@ -15,11 +15,7 @@ namespace Raven.Client.Changes
 {
     public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState>, IDatabaseChanges
     {
-#if !DNXCORE50
         private readonly static ILog log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog log = LogManager.GetLogger(typeof(RemoteDatabaseChanges));
-#endif
 
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();

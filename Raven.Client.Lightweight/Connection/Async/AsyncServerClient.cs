@@ -1569,14 +1569,12 @@ namespace Raven.Client.Connection.Async
             if (convention.EnlistInDistributedTransactions == false)
                 return;
 
-#if !DNXCORE50
             var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
             if (transactionInformation == null)
                 return;
 
             string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
             metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
-#endif
         }
 
         private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -1683,11 +1681,7 @@ namespace Raven.Client.Connection.Async
                             {
                                 throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
                             },
-#if !DNXCORE50
                             Size = int.Parse(request.ResponseHeaders["Content-Length"]),
-#else
-                            Size = int.Parse(request.ResponseHeaders["Raven-Content-Length"]),
-#endif
                             Etag = request.ResponseHeaders.GetEtagHeader(),
                             Metadata = request.ResponseHeaders.FilterHeadersAttachment()
                         };
@@ -1975,11 +1969,7 @@ namespace Raven.Client.Connection.Async
 
                 try
                 {
-#if !DNXCORE50
                     streamReader.Close();
-#else
-                    streamReader.Dispose();
-#endif
                 }
                 catch (Exception)
                 {
@@ -1987,11 +1977,7 @@ namespace Raven.Client.Connection.Async
 
                 try
                 {
-#if !DNXCORE50
                     stream.Close();
-#else
-                    stream.Dispose();
-#endif
                 }
                 catch (Exception)
                 {
@@ -2347,7 +2333,6 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-#if !DNXCORE50
         public Task CommitAsync(string txId, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication("POST", operationMetadata => DirectCommit(txId, operationMetadata, token), token);
@@ -2398,7 +2383,6 @@ namespace Raven.Client.Connection.Async
                 await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
             }
         }
-#endif
 
         private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
         {

@@ -23,7 +23,6 @@ namespace Raven.Client
         /// </summary>
         Guid ResourceManagerId { get; }
 
-#if !DNXCORE50
         /// <summary>
         ///     Commits the specified tx id
         /// </summary>
@@ -40,6 +39,5 @@ namespace Raven.Client
         /// </summary>
         /// <param name="txId">transaction identifier</param>
         Task Rollback(string txId);
-#endif
     }
 }

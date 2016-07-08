@@ -781,7 +781,6 @@ namespace Raven.Client.Document
             return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
         }
 
-#if !DNXCORE50
         /// <summary>
         /// Commits the specified tx id.
         /// </summary>
@@ -810,7 +809,6 @@ namespace Raven.Client.Document
             ClearEnlistment();
             return Task.FromResult(0);
         }
-#endif
 
         /// <summary>
         /// Query RavenDB dynamically using LINQ

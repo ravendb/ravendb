@@ -22,11 +22,7 @@ namespace Raven.Abstractions.Extensions
     /// </summary>
     public static class StreamExtensions
     {
-#if !DNXCORE50
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
-#else
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(StreamExtensions));
-#endif
 
         public static void CopyTo(this Stream stream, Stream other)
         {

@@ -35,11 +35,7 @@ namespace Raven.Client.Document
 
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
-#if !DNXCORE50
         private readonly static ILog logger = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog logger = LogManager.GetLogger(typeof(Subscription<T>));
-#endif
 
         private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
         private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);

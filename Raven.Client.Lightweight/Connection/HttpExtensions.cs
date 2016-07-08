@@ -19,12 +19,10 @@ namespace Raven.Client.Connection
             return EtagHeaderToEtag(headers[Constants.MetadataEtagField]);
         }
 
-#if !DNXCORE50
         public static Etag GetEtagHeader(this HttpWebResponse response)
         {
             return EtagHeaderToEtag(response.GetResponseHeader(Constants.MetadataEtagField));
         }
-#endif
 
         public static Etag GetEtagHeader(this HttpResponseMessage response)
         {

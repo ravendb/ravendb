@@ -58,11 +58,7 @@ namespace Raven.Abstractions.Logging.LogProviders
         {
             try
             {
-#if !DNXCORE50
                 return Assembly.Load("log4net");
-#else
-                return Assembly.Load(new AssemblyName("log4net"));
-#endif
             }
             catch (Exception)
             {

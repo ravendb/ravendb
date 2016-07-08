@@ -41,7 +41,6 @@ namespace Raven.Abstractions.Util.Encryptors
                 get { return 32; }
             }
 
-            #if !DNXCORE50
             private MD5 md5;
 
             public void TransformBlock(byte[] bytes, int offset, int length)
@@ -64,14 +63,11 @@ namespace Raven.Abstractions.Util.Encryptors
                 md5.TransformFinalBlock(new byte[0], 0, 0);
                 return md5.Hash;
             }
-#endif
 
             public void Dispose()
             {
-                #if !DNXCORE50
                 if (md5 != null)
                     md5.Dispose();
-#endif
             }
 
             public byte[] ComputeForStorage(byte[] bytes)
@@ -86,7 +82,7 @@ namespace Raven.Abstractions.Util.Encryptors
                 {
                     if (algorithm != null)
                         this.sha256Pool.Free(algorithm);
-                }                
+                }
             }
 
             public byte[] ComputeForStorage(byte[] bytes, int offset, int length)

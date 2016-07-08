@@ -15,10 +15,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-
-#if !DNXCORE50
 using System.Runtime.Remoting.Messaging;
-#endif
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -133,18 +130,13 @@ namespace Raven.Client.Connection.Implementation
                             credentialsToUse = _credentials.Credentials;
                         }
                     }
-#if !DNXCORE50
+
                     var handler = new WebRequestHandler
                     {
                         UseDefaultCredentials = useDefaultCredentials,
                         Credentials = credentialsToUse
                     };
-#else
-                    var handler = new WinHttpHandler
-                    {
-                        ServerCredentials = useDefaultCredentials ? CredentialCache.DefaultCredentials : credentialsToUse
-                    };
-#endif
+
                     return handler;
                 }
             );
@@ -241,10 +233,8 @@ namespace Raven.Client.Connection.Implementation
 
         private void AssertServerVersionSupported()
         {
-#if !DNXCORE50
-            if ((CallContext.GetData(Constants.Smuggler.CallContext) as bool?) == true) // allow Raven.Smuggler to work against old servers
+            if (CallContext.GetData(Constants.Smuggler.CallContext) as bool? == true) // allow Raven.Smuggler to work against old servers
                 return;
-#endif
 
             var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
             int serverBuild;
@@ -658,12 +648,7 @@ namespace Raven.Client.Connection.Implementation
                 bool isRestricted;
                 try
                 {
-#if !DNXCORE50
                     isRestricted = WebHeaderCollection.IsRestricted(headerName);
-#else
-                    // TODO [ppekrol] Check if this is OK
-                    isRestricted = false;
-#endif
                 }
                 catch (Exception e)
                 {

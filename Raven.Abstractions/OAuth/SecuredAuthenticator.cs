@@ -48,14 +48,11 @@ namespace Raven.Abstractions.OAuth
             {
                 if (e.Client != null)
                     e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
-#if !DNXCORE50
                 if (e.Request != null)
                     e.Request.Headers["Has-Api-Key"] = "true";
-#endif
             }
         }
 
-#if !DNXCORE50
         private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge, string apiKey)
         {
             var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
@@ -173,7 +170,6 @@ namespace Raven.Abstractions.OAuth
                 }
             }
         }
-#endif
 
         public async Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string apiKey)
         {
@@ -193,11 +189,7 @@ namespace Raven.Abstractions.OAuth
             while (true)
             {
                 tries++;
-#if !DNXCORE50
                 var handler = new WebRequestHandler();
-#else
-                var handler = new WinHttpHandler();
-#endif
 
                 using (var httpClient = new HttpClient(handler))
                 {

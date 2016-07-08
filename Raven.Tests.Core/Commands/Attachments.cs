@@ -13,14 +13,6 @@ namespace Raven.Tests.Core.Commands
 {
     public class Attachments : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Attachments(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public async Task CanPutUpdateMetadataAndDeleteAttachment()
         {

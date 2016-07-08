@@ -7,11 +7,7 @@ namespace Raven.Client.Document.SessionOperations
 {
     public class LoadOperation
     {
-#if !DNXCORE50
         private readonly static ILog log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog log = LogManager.GetLogger(typeof(LoadOperation));
-#endif
 
         protected readonly InMemoryDocumentSessionOperations sessionOperations;
         private readonly Func<IDisposable> disableAllCaching;

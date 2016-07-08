@@ -36,13 +36,11 @@ namespace Raven.Abstractions.Exceptions
             get { return invalidDocumentId; }
         }
 
-#if !DNXCORE50
         protected InvalidSpatialShapException(
             SerializationInfo info,
             StreamingContext context)
             : base(info, context)
         {
         }
-#endif
     }
 }

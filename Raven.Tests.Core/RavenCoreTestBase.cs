@@ -12,9 +12,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-#if !DNXCORE50
-using Raven.Client.Embedded;
-#endif
 using Raven.Client.Extensions;
 using System.Linq;
 
@@ -22,48 +19,25 @@ using Raven.Client;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Xunit;
-#if !DNXCORE50
+
 using Raven.Server;
-using Raven.Database;
-using Raven.Database.Server;
 using Authentication = Raven.Database.Server.Security.Authentication;
-#endif
 
 namespace Raven.Tests.Core
 {
-#if DNXCORE50
-    [CollectionDefinition("Core")]
-    public class CoreCollection : ICollectionFixture<TestServerFixture>
-    {
-    }
-
-    [Collection("Core")]
-#endif
-    public abstract class RavenCoreTestBase
-#if !DNXCORE50
-        : IUseFixture<TestServerFixture>, IDisposable
-#else
-        : IDisposable
-#endif
+    public abstract class RavenCoreTestBase : IUseFixture<TestServerFixture>, IDisposable
     {
         private readonly List<string> createdDbs = new List<string>();
         protected readonly List<DocumentStore> createdStores = new List<DocumentStore>();
 
         private readonly IDocumentStore serverDocumentStore;
 
-#if !DNXCORE50
         protected RavenDbServer Server { get; private set; }
 
         public void SetFixture(TestServerFixture fixture)
         {
             Server = fixture.Server;
         }
-#else
-        protected RavenCoreTestBase(TestServerFixture fixture)
-        {
-            serverDocumentStore = fixture.DocumentStore;
-        }
-#endif
 
         protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null,
             Action<DatabaseDocument> modifyDatabaseDocument = null)
@@ -209,9 +183,8 @@ namespace Raven.Tests.Core
 
         public virtual void Dispose()
         {
-#if !DNXCORE50
             Authentication.Disable();
-#endif
+
             foreach (var store in createdStores)
             {
                 store.Dispose();
@@ -225,20 +198,12 @@ namespace Raven.Tests.Core
 
         private DocumentStore CreateDocumentStore(string databaseName)
         {
-#if !DNXCORE50
             var documentStore = new DocumentStore
             {
                 HttpMessageHandlerFactory = Server.DocumentStore.HttpMessageHandlerFactory,
                 Url = Server.SystemDatabase.ServerUrl,
                 DefaultDatabase = databaseName
             };
-#else
-            var documentStore = new DocumentStore
-            {
-                Url = serverDocumentStore.Url,
-                DefaultDatabase = databaseName
-            };
-#endif
 
             documentStore.Initialize();
 
@@ -247,11 +212,7 @@ namespace Raven.Tests.Core
 
         private IDatabaseCommands GetServerCommands()
         {
-#if !DNXCORE50
             return Server.DocumentStore.DatabaseCommands;
-#else
-            return serverDocumentStore.DatabaseCommands;
-#endif
         }
     }
 }

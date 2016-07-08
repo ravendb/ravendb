@@ -17,11 +17,7 @@ namespace Raven.Client.Document.SessionOperations
 {
     public class QueryOperation
     {
-#if !DNXCORE50
         private readonly static ILog log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog log = LogManager.GetLogger(typeof(QueryOperation));
-#endif
 
         private readonly InMemoryDocumentSessionOperations sessionOperations;
         private readonly string indexName;

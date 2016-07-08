@@ -11,14 +11,6 @@ namespace Raven.Tests.Core.Indexing
 {
     public class IndexDefinitionMethods : RavenCoreTestBase
     {
-#if DNXCORE50
-        public IndexDefinitionMethods(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanUseMetadataFor()
         {

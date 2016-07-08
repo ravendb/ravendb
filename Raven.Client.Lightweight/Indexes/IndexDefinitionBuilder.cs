@@ -176,10 +176,8 @@ namespace Raven.Client.Indexes
                     LockMode = LockMode,
                 };
 
-#if !DNXCORE50
                 if (convention.PrettifyGeneratedLinqExpressions)
                     indexDefinition.Reduce = IndexPrettyPrinter.TryFormat(indexDefinition.Reduce);
-#endif
 
                 foreach (var indexesString in IndexesStrings)
                 {
@@ -228,10 +226,8 @@ namespace Raven.Client.Indexes
                     indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
                         Map, convention, querySource, translateIdentityProperty: true);
 
-#if !DNXCORE50
                     if (convention.PrettifyGeneratedLinqExpressions)
                         indexDefinition.Map = IndexPrettyPrinter.TryFormat(indexDefinition.Map);
-#endif
                 }
                 return indexDefinition;
             }
