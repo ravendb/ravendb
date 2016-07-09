@@ -15,9 +15,9 @@ namespace Tryout
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine( i);
-                using (var n = new SlowTests.Tests.Subscriptions())
+                using (var n = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
                 {
-                    n.BasicSusbscriptionTest().Wait();
+                    n.WriteErrors();
                 }
             }
         }
