@@ -39,7 +39,6 @@ namespace SlowTests.Tests
 
                     subscription.Subscribe(x =>
                     {
-                        AsyncHelpers.RunSync(() => Task.Delay(100));
                         bc.Add(x);
                     });
 
@@ -57,11 +56,7 @@ namespace SlowTests.Tests
                     {
                         await CreateDocuments(store, 1);
 
-                        for (var i = 0; i < 5; i++)
-                        {
-                            Assert.True(bc.TryTake(out thing, 1000));
-                        }
-
+                        Assert.True(bc.TryTake(out thing, 500));
                         Assert.False(bc.TryTake(out thing, 50));
                     }
                 }

@@ -15,9 +15,9 @@ namespace Tryout
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine( i);
-                using (var n = new FastTests.Client.Subscriptions.Subscriptions())
+                using (var n = new SlowTests.Tests.Subscriptions())
                 {
-                    n.SubscriptionStrategyConnectIfFree().Wait();
+                    n.BasicSusbscriptionTest().Wait();
                 }
             }
         }
