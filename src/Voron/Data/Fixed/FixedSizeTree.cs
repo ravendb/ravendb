@@ -166,8 +166,7 @@ namespace Voron.Data.Fixed
                 isNew = false;
                 return page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long);
             }
-            var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
-            headerToWrite->NumberOfEntries++;
+            
 
             if (page.LastMatch > 0)
                 page.LastSearchPosition++; // after the last one
@@ -183,6 +182,8 @@ namespace Voron.Data.Fixed
                 return addLargeEntry;
             }
 
+            var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large)); 
+
             ResetStartPosition(page);
 
             var entriesToMove = page.NumberOfEntries - page.LastSearchPosition;
@@ -192,9 +193,15 @@ namespace Voron.Data.Fixed
                     page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize),
                     entriesToMove * _entrySize);
             }
+
             page.NumberOfEntries++;
+            headerToWrite->NumberOfEntries++;
+
             isNew = true;
             *((long*)(page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize))) = key;
+
+            ValidateTree();
+
             return (page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long));
         }
 
@@ -208,6 +215,9 @@ namespace Voron.Data.Fixed
 
             var stack = new Stack<FixedSizeTreePage>();
             stack.Push(_tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber));
+
+            var numberOfEntriesInTree = 0;
+
             while (stack.Count > 0)
             {
                 var cur = stack.Pop();
@@ -216,8 +226,10 @@ namespace Voron.Data.Fixed
                     throw new InvalidOperationException($"Page {cur.PageNumber} has no entries");
 
                 var prev = KeyFor(cur, 0);
-                if(cur.IsBranch)
+                if (cur.IsBranch)
                     stack.Push(_tx.GetReadOnlyFixedSizeTreePage(PageValueFor(cur, 0)));
+                else
+                    numberOfEntriesInTree++;
 
                 for (int i = 1; i < cur.NumberOfEntries; i++)
                 {
@@ -227,7 +239,14 @@ namespace Voron.Data.Fixed
 
                     if (cur.IsBranch)
                         stack.Push(_tx.GetReadOnlyFixedSizeTreePage(PageValueFor(cur, i)));
+                    else
+                        numberOfEntriesInTree++;
                 }
+            }
+
+            if (numberOfEntriesInTree != header->NumberOfEntries)
+            {
+                throw new InvalidOperationException($"Expected number of entries {header->NumberOfEntries}, actual {numberOfEntriesInTree}");
             }
         }
 
@@ -346,6 +365,8 @@ namespace Voron.Data.Fixed
                     AddLeafKey(newPage, 0, key);
 
                     AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, key, newPage.PageNumber);
+
+                    largePtr->NumberOfEntries++;
                 }
                 else // not at end, random inserts, split page 3/4 to 1/4
                 {
@@ -988,6 +1009,8 @@ namespace Voron.Data.Fixed
             {
                 page = RebalancePage(page, largeHeader);
             }
+
+            ValidateTree();
 
             return new DeletionResult { NumberOfEntriesDeleted = 1 };
         }
