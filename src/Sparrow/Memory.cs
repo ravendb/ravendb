@@ -177,10 +177,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void CopyInline(byte* dest, byte* src, int n)
         {
-            if (n < 0)
-                throw new ArgumentOutOfRangeException(nameof(n), "Cannot be less than zero");
-
-            SMALLTABLE:
+        SMALLTABLE:
             switch (n)
             {
                 case 16:
@@ -239,6 +236,9 @@ namespace Sparrow
                 case 0:
                     return;
             }
+
+            if (n < 0)
+                throw new ArgumentOutOfRangeException(nameof(n), "Cannot be less than zero");
 
             if (n <= 512)
             {
