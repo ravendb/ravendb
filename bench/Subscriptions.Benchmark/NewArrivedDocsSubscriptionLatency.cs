@@ -76,7 +76,7 @@ namespace SubscriptionsBenchmark
                 var observer = new CounterObserver(docsCount);
                 subscription.Subscribe(observer);
 
-                subscription.Start();
+                await subscription.StartAsync();
 
                 var commands = Enumerable.Range(0, docsCount).Select(x =>
                 {

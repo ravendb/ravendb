@@ -47,6 +47,7 @@ namespace Raven.Client.Document
         private bool _completed, _started;
         private bool _disposed;
         private Task _subscriptionTask;
+        private NetworkStream _networkStream;
 
         internal Subscription(SubscriptionConnectionOptions options,
             AsyncServerClient commands, DocumentConvention conventions)
@@ -156,16 +157,34 @@ namespace Raven.Client.Document
         /// </summary>
         public event AfterAcknowledgment AfterAcknowledgment = delegate { };
 
-        public void Start()
+        public Task StartAsync()
         {
             if (_started)
-                return;
+                return Task.CompletedTask;
 
             if (_subscribers.Count == 0)
                 throw new InvalidOperationException(
                     "No observers has been registered, did you forget to call Subscribe?");
             _started = true;
-            _subscriptionTask = Task.Run(RunSubscriptionAsync);
+            var tcs = new TaskCompletionSource<object>();
+            _subscriptionTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await RunSubscriptionAsync(tcs);
+                }
+                finally
+                {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    if (_proccessingCts.IsCancellationRequested)
+                    {
+                        Task.Run(() => tcs.TrySetCanceled());
+                    }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                }
+            });
+
+            return tcs.Task;
         }
 
         private async Task<Stream> ConnectToServer()
@@ -176,19 +195,24 @@ namespace Raven.Client.Document
             _tcpClient.NoDelay = true;
             _tcpClient.SendBufferSize = 32 * 1024;
             _tcpClient.ReceiveBufferSize = 4096;
-            var networkStream = _tcpClient.GetStream();
+            _networkStream = _tcpClient.GetStream();
 
-            var buffer = Encoding.UTF8.GetBytes(new RavenJObject
+            var ms = new MemoryStream();
+
+            new RavenJObject
             {
                 ["Database"] = MultiDatabase.GetDatabaseName(_commands.Url),
                 ["Operation"] = "Subscription"
-            }.ToString());
-            await networkStream.WriteAsync(buffer, 0, buffer.Length);
+            }.WriteTo(ms);
 
-            buffer = Encoding.UTF8.GetBytes(RavenJObject.FromObject(_options).ToString());
-            await networkStream.WriteAsync(buffer, 0, buffer.Length);
+            RavenJObject.FromObject(_options).WriteTo(ms);
+            ArraySegment<byte> bytes;
+            ms.TryGetBuffer(out bytes);
 
-            return networkStream;
+            await _networkStream.WriteAsync(bytes.Array, bytes.Offset, bytes.Count);
+
+            await _networkStream.FlushAsync();
+            return _networkStream;
         }
 
         private void InformSubscribersOnError(Exception ex)
@@ -242,9 +266,8 @@ namespace Raven.Client.Document
             }
         }
 
-        private async Task ProccessSubscription()
+        private async Task ProccessSubscription(TaskCompletionSource<object> successfullyConnected)
         {
-            bool succesffullyConnectedToServer = false;
             try
             {
                 _proccessingCts.Token.ThrowIfCancellationRequested();
@@ -254,14 +277,17 @@ namespace Raven.Client.Document
                 using (var jsonReader = new JsonTextReaderAsync(reader))
                 {
                     _proccessingCts.Token.ThrowIfCancellationRequested();
-                    var connectionStatus = (RavenJObject)await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                    var connectionStatus = (RavenJObject)await ReadNextObject(jsonReader).ConfigureAwait(false);
                     AssertConnectionState(connectionStatus);
-                    succesffullyConnectedToServer = true;
+
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    Task.Run(() => successfullyConnected.TrySetResult(null));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
                     var readObjectTask = ReadNextObject(jsonReader);
 
                     var incomingBatch = new List<RavenJObject>();
                     long lastReceivedEtag = 0;
-
 
                     while (_proccessingCts.IsCancellationRequested == false)
                     {
@@ -303,18 +329,7 @@ namespace Raven.Client.Document
             catch (Exception ex)
             {
                 InformSubscribersOnError(ex);
-                try
-                {
-                    ex.Data["SuccesffullyConnectedToServer"] = succesffullyConnectedToServer;
-                }
-                catch (Exception)
-                {
-                }
                 throw;
-            }
-            finally
-            {
-                _proccessingCts.Token.ThrowIfCancellationRequested();
             }
         }
 
@@ -322,11 +337,11 @@ namespace Raven.Client.Document
         {
             do
             {
-                if (_proccessingCts.IsCancellationRequested)
+                if (_proccessingCts.IsCancellationRequested || _tcpClient.Connected == false)
                     return null;
                 jsonReader.ResetState();
-            } while (await jsonReader.ReadAsync() == false);// need to do that to handle the heartbeat whitespace 
-            return await RavenJObject.LoadAsync(jsonReader);
+            } while (await jsonReader.ReadAsync().ConfigureAwait(false) == false);// need to do that to handle the heartbeat whitespace 
+            return await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
         }
 
         private static string AssertAndReturnReceivedMessageType(RavenJObject receivedMessage)
@@ -415,32 +430,27 @@ namespace Raven.Client.Document
             ackJson.WriteTo(networkStream);
         }
 
-        private async Task RunSubscriptionAsync()
+        private async Task RunSubscriptionAsync(TaskCompletionSource<object> firstConnectionCompleted)
         {
-            Exception subscriptionConnectionException = null;
-
-            int retries = 15;
-
-            while (retries-- > 0 && _proccessingCts.Token.IsCancellationRequested == false)
+            while (_proccessingCts.Token.IsCancellationRequested == false)
             {
                 try
                 {
                     CloseTcpClient();
-                    Logger.Debug(string.Format("Subscription #{0}. Connection to server...", _options.SubscriptionId));
+                    Logger.Debug(string.Format("Subscription #{0}. Connecting to server...", _options.SubscriptionId));
 
                     _tcpClient = new TcpClient();
-                    await ProccessSubscription();
+                    await ProccessSubscription(firstConnectionCompleted);
                 }
                 catch (Exception ex)
                 {
-                    subscriptionConnectionException = ex;
                     if (_proccessingCts.Token.IsCancellationRequested)
-                        return;
-
-                    if ((bool?)ex.Data["SuccesffullyConnectedToServer"] == true)
                     {
-                        retries = 15; // we connected to the server, so reset the retries
+                        return;
                     }
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    Task.Run(() =>firstConnectionCompleted.TrySetException(ex));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                     Logger.WarnException(
                         string.Format("Subscription #{0}. Pulling task threw the following exception", _options.SubscriptionId), ex);
@@ -453,14 +463,11 @@ namespace Raven.Client.Document
                         InformSubscribersOnError(ex);
                         return;
                     }
-                    if (retries > 0)
-                        await Task.Delay(_options.TimeToWaitBeforeConnectionRetryMilliseconds);
+                    await Task.Delay(_options.TimeToWaitBeforeConnectionRetryMilliseconds);
                 }
             }
             if (_proccessingCts.Token.IsCancellationRequested)
                 return;
-            if (subscriptionConnectionException != null)
-                InformSubscribersOnError(subscriptionConnectionException);
 
             if (IsErroredBecauseOfSubscriber)
             {
@@ -521,13 +528,25 @@ namespace Raven.Client.Document
 
         private void CloseTcpClient()
         {
+            if (_networkStream != null)
+            {
+                try
+                {
+                    _networkStream.Dispose();
+                    _networkStream = null;
+                }
+                catch (Exception)
+                {
+                }
+            }
             if (_tcpClient != null)
             {
                 try
                 {
                     _tcpClient.Dispose();
+                    _tcpClient = null;
                 }
-                catch
+                catch(Exception)
                 {
 
                 }

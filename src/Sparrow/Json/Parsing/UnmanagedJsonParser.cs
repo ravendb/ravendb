@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Sparrow.Json.Parsing
@@ -47,6 +48,18 @@ namespace Sparrow.Json.Parsing
             _bufSize = size;
             _pos = 0;
             _initialPos = 0;
+        }
+
+        public int BufferSize
+        {
+            [MethodImpl((MethodImplOptions.AggressiveInlining))]
+            get { return _bufSize; }
+        }
+
+        public int BufferOffset
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _pos; }
         }
 
         public void SetBuffer(ArraySegment<byte> segment)
@@ -612,5 +625,17 @@ namespace Sparrow.Json.Parsing
             _stringBuffer?.Dispose();
         }
 
+        public int ReadBuffer(byte[] buffer, int offset, int count)
+        {
+            var toRead = Math.Min(_bufSize - _initialPos, count);
+            Buffer.BlockCopy(_inputBuffer, _initialPos, buffer, offset, toRead);
+            _initialPos += toRead;
+            return toRead;
+        }
+
+        public byte ReadByte()
+        {
+            return _inputBuffer[_initialPos++];
+        }
     }
 }

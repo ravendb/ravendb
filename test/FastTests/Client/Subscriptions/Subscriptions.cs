@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Extensions;
@@ -67,7 +68,7 @@ namespace FastTests.Client.Subscriptions
                     {
                         list.Add(x);
                     });
-                    subscription.Start();
+                    await subscription.StartAsync();
 
                     Thing thing;
                     for (var i = 0; i < 5; i++)
@@ -97,17 +98,17 @@ namespace FastTests.Client.Subscriptions
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
                     {
-                        SubscriptionId = subsId
+                        SubscriptionId = subsId,
+                        TimeToWaitBeforeConnectionRetryMilliseconds = 10000
                     }))
                 {
 
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
-                    var rejectedSusbscriptionList = new BlockingCollection<Thing>();
                     acceptedSubscription.Subscribe(x =>
                     {
                         acceptedSusbscriptionList.Add(x);
                     });
-                    acceptedSubscription.Start();
+                    await acceptedSubscription.StartAsync();
 
                     Thing thing;
 
@@ -124,16 +125,16 @@ namespace FastTests.Client.Subscriptions
                         var rejectedSusbscription =
                             store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
                             {
-                                SubscriptionId = subsId
+                                SubscriptionId = subsId,
+                                Strategy = SubscriptionOpeningStrategy.OpenIfFree,
+                                TimeToWaitBeforeConnectionRetryMilliseconds = 6000
                             }))
                     {
-                        rejectedSusbscription.Subscribe(x =>
-                        {
-                            rejectedSusbscriptionList.Add(x);
-                        });
-                        rejectedSusbscription.Start();
 
-                        Assert.False(rejectedSusbscriptionList.TryTake(out thing, 250));
+                        rejectedSusbscription.Subscribe(thing1 => { });
+
+                        await Assert.ThrowsAsync<SubscriptionInUseException>(async () => await rejectedSusbscription.StartAsync());
+
                     }
                 }
             }
@@ -173,7 +174,7 @@ namespace FastTests.Client.Subscriptions
                         Thread.Sleep(20);
                     });
 
-                    acceptedSubscription.Start();
+                    await acceptedSubscription.StartAsync();
 
                     // wait until we know that connection was established
 
@@ -201,9 +202,11 @@ namespace FastTests.Client.Subscriptions
                         {
                             waitingSubscriptionList.Add(x);
                         });
-                        waitingSubscription.Start();
+                        var taskStarted = waitingSubscription.StartAsync();
+                        var completed = await Task.WhenAny(taskStarted, Task.Delay(250));
 
-                        Assert.False(waitingSubscriptionList.TryTake(out thing, 250));
+
+                        Assert.False(completed == taskStarted);
 
                         Assert.True(await ackSentAmre.WaitAsync(50000));
 
@@ -257,17 +260,17 @@ namespace FastTests.Client.Subscriptions
                     acceptedSubscription.AfterAcknowledgment +=
                         () => batchProccessedByFirstSubscription.SetByAsyncCompletion();
 
-                    acceptedSubscription.Start();
+                    await acceptedSubscription.StartAsync();
 
                     Thing thing;
 
                     // wait until we know that connection was established
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000));
+                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000), "no doc");
                     }
 
-                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(5000));
+                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(5000), "no ack");
 
                     Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 
@@ -279,14 +282,14 @@ namespace FastTests.Client.Subscriptions
                     }))
                     {
                         takingOverSubscription.Subscribe(x => takingOverSubscriptionList.Add(x));
-                        takingOverSubscription.Start();
+                        await takingOverSubscription.StartAsync();
 
                         await CreateDocuments(store, 5);
 
                         // wait until we know that connection was established
                         for (var i = 0; i < 5; i++)
                         {
-                            Assert.True(takingOverSubscriptionList.TryTake(out thing, 5000));
+                            Assert.True(takingOverSubscriptionList.TryTake(out thing, 5000), "no doc takeover");
                         }
                         Assert.False(takingOverSubscriptionList.TryTake(out thing));
                     }

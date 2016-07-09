@@ -228,6 +228,7 @@ namespace Raven.Server
                 ListenToNewTcpConnection();
                 NetworkStream stream = null;
                 JsonOperationContext context = null;
+                JsonOperationContext.MultiDocumentParser multiDocumentParser = null;
                 try
                 {
                     tcpClient.NoDelay = true;
@@ -235,9 +236,10 @@ namespace Raven.Server
                     tcpClient.SendBufferSize = 4096;
                     stream = tcpClient.GetStream();
                     context = new JsonOperationContext(_unmanagedBuffersPool);
+                    multiDocumentParser = context.ParseMultiFrom(stream);
                     try
                     {
-                        var reader = context.ReadForMemory(stream, "tcp command");
+                        var reader = await multiDocumentParser.ParseToMemoryAsync();
                         string db;
                         if (reader.TryGet("Database", out db) == false)
                         {
@@ -263,10 +265,10 @@ namespace Raven.Server
                         switch (operation)
                         {
                             case "BulkInsert":
-                                BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient);
+                                BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
                                 break;
                             case "Subscription":
-                                SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient);
+                                SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
                                 break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + operation);
@@ -275,6 +277,7 @@ namespace Raven.Server
                         tcpClient = null; // the connection handler will dispose this, it is not its responsability
                         stream = null;
                         context = null;
+                        multiDocumentParser = null;
                     }
                     catch (Exception e)
                     {
@@ -304,6 +307,14 @@ namespace Raven.Server
                 }
                 finally
                 {
+                    try
+                    {
+                        multiDocumentParser?.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                        
+                    }
                     try
                     {
                         stream?.Dispose();

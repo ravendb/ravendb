@@ -39,7 +39,7 @@ namespace FastTests.Client.Subscriptions
                     {
                         list.Add(x);
                     });
-                    subscription.Start();
+                    await subscription.StartAsync();
 
                     Thing thing;
                     Assert.True(list.TryTake(out thing, 5000));

@@ -74,7 +74,7 @@ namespace FastTests.Client.Subscriptions
                     var users = new BlockingCollection<PersonWithAddress>();
 
                     subscription.Subscribe(users.Add);
-                    subscription.Start();
+                    await subscription.StartAsync();
 
                     PersonWithAddress userToTake;
                     for (var i = 0; i < 5; i++)

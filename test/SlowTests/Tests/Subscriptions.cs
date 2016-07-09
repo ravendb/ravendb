@@ -43,7 +43,7 @@ namespace SlowTests.Tests
                         bc.Add(x);
                     });
 
-                    subscription.Start();
+                    await subscription.StartAsync();
 
                     Thing thing;
                     for (var i = 0; i < 5; i++)

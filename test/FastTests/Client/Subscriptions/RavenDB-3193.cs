@@ -45,7 +45,7 @@ namespace FastTests.Client.Subscriptions
 
                     subscription.Subscribe(docs.Add);
 
-                    subscription.Start();
+                    await subscription.StartAsync();
 
                     SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
                     Assert.Equal(100, docs.Count);

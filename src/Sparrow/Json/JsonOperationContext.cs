@@ -467,45 +467,91 @@ namespace Sparrow.Json
             }
         }
 
-
-        public  BlittableJsonReaderObject[] ParseMultipleDocuments(Stream stream, int count, BlittableJsonDocumentBuilder.UsageMode mode)
+        public MultiDocumentParser ParseMultiFrom(Stream stream)
         {
-            var state = new JsonParserState();
-            var returnedArray = new BlittableJsonReaderObject[count];
-            var buffer = GetParsingBuffer();
-            using (var parser = new UnmanagedJsonParser(this, state, "many/docs"))
+            return new MultiDocumentParser(this, stream);
+        }
+
+        public class MultiDocumentParser : IDisposable
+        {
+            private readonly JsonOperationContext _context;
+            private readonly Stream _stream;
+            private readonly JsonParserState _state;
+            private readonly byte[] _buffer;
+            private readonly UnmanagedJsonParser _parser;
+
+            public MultiDocumentParser(JsonOperationContext context, Stream stream)
             {
-                for (int i = 0; i < count; i++)
+                _context = context;
+                _stream = stream;
+                _state = new JsonParserState();
+                _buffer = context.GetParsingBuffer();
+                _parser = new UnmanagedJsonParser(context, _state, "parse/multi");
+            }
+
+            public Task<BlittableJsonReaderObject> ParseToMemoryAsync(string debugTag = null)
+            {
+                return ParseAsync(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
+            }
+
+            public Task<int> ReadAsync(byte[] buffer, int offset, int count)
+            {
+                if (_parser.BufferOffset != _parser.BufferSize)
+                    return Task.FromResult(_parser.ReadBuffer(buffer, offset, count));
+                return _stream.ReadAsync(buffer, offset, count);
+            }
+
+            public int Read(byte[] buffer, int offset, int count)
+            {
+                if (_parser.BufferOffset != _parser.BufferSize)
+                    return _parser.ReadBuffer(buffer, offset, count);
+                return _stream.Read(buffer, offset, count);
+            }
+
+            public int ReadByte()
+            {
+                if (_parser.BufferOffset != _parser.BufferSize)
+                    return _parser.ReadByte();
+                return _stream.ReadByte();
+            }
+
+            public async Task<BlittableJsonReaderObject> ParseAsync(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
+            {
+                var writer = new BlittableJsonDocumentBuilder(_context, mode, debugTag, _parser, _state);
+                try
                 {
-                    BlittableJsonReaderObject reader;
-                    var writer = new BlittableJsonDocumentBuilder(this, mode, "many/docs", parser, state);
-                    try
+                    writer.ReadObject();
+                    _context.CachedProperties.NewDocument();
+                    while (true)
                     {
-                        writer.ReadObject();
-                        CachedProperties.NewDocument();
-                        while (true)
+                        if (_parser.BufferOffset == _parser.BufferSize)
                         {
-                            var read = stream.Read(buffer, 0, buffer.Length);
+                            var read = await _stream.ReadAsync(_buffer, 0, _buffer.Length);
                             if (read == 0)
                                 throw new EndOfStreamException("Stream ended without reaching end of json content");
-                            parser.SetBuffer(buffer, read);
-                            if (writer.Read())
-                                break;
+                            _parser.SetBuffer(_buffer, read);
                         }
-                        writer.FinalizeDocument();
-                        _disposables.Add(writer);
-                        reader = writer.CreateReader();
+                        else
+                        {
+                            _parser.SetBuffer(new ArraySegment<byte>(_buffer, _parser.BufferOffset, _parser.BufferSize));
+                        }
+                        if (writer.Read())
+                            break;
                     }
-                    catch (Exception)
-                    {
-                        writer.Dispose();
-                        throw;
-                    }
-                    returnedArray[i] = reader;
+                    writer.FinalizeDocument();
+                    return writer.CreateReader();
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
                 }
             }
 
-            return returnedArray;
+            public void Dispose()
+            {
+                _parser?.Dispose();
+            }
         }
 
 

@@ -11,7 +11,8 @@
       "**/*.json",
       "Voron/Bugs/Data/*.txt",
       "**/*.ravendump"
-    ]
+    ],
+    "define": [ "DEBUG" ]
   },
 
   "configurations": {

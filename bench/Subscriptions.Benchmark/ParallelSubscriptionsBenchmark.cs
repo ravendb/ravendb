@@ -178,7 +178,7 @@ namespace SubscriptionsBenchmark
                                 }))
                             {
                                 subscription.Subscribe(actionObserver);
-                                subscription.Start();
+                                subscription.StartAsync();
 
                                 await tcs.Task;
                                 await subscription.DisposeAsync();

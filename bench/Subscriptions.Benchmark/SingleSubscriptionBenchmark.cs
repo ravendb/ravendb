@@ -120,7 +120,7 @@ namespace SubscriptionsBenchmark
                 var observer = new CounterObserver(docCount);
                 var sp = Stopwatch.StartNew();
                 subscription.Subscribe(observer);
-                subscription.Start();
+                await subscription.StartAsync();
 
                 await observer.Tcs.Task;
 

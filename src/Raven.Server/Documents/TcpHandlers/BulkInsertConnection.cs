@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly Stream _stream;
 
         private readonly Logger _logger;
+        private readonly JsonOperationContext.MultiDocumentParser _multiDocumentParser;
 
         private class BulkInsertDoc
         {
@@ -49,12 +50,13 @@ namespace Raven.Server.Documents.TcpHandlers
         private Task _replyToCustomer;
         private Task _insertDocuments;
 
-        public BulkInsertConnection(DocumentDatabase database, JsonOperationContext context, Stream stream, Logger logger)
+        public BulkInsertConnection(DocumentDatabase database, JsonOperationContext context, Stream stream, Logger logger, JsonOperationContext.MultiDocumentParser multiDocumentParser)
         {
             _database = database;
             _context = context;
             _stream = stream;
             _logger = logger;
+            _multiDocumentParser = multiDocumentParser;
         }
 
         public void Execute()
@@ -357,7 +359,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     while (len > 0)
                     {
-                        var read = _stream.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
+                        var read = _multiDocumentParser.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
                         if (read == 0)
                             throw new EndOfStreamException("Could not read expected document");
                         len -= read;
@@ -387,7 +389,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 if (shift == 35)
                     throw new FormatException("Bad variable size int");
-                int r = _stream.ReadByte();
+                int r = _multiDocumentParser.ReadByte();
                 if (r == -1)
                     return -1;
                 b = (byte)r;
@@ -404,14 +406,14 @@ namespace Raven.Server.Documents.TcpHandlers
             _messagesToClient.Dispose();
         }
 
-        public static void Run(DocumentDatabase documentDatabase, JsonOperationContext context, NetworkStream stream, TcpClient tcpClient)
+        public static void Run(DocumentDatabase documentDatabase, JsonOperationContext context, NetworkStream stream, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
         {
             var bulkInsertThread = new Thread(() =>
             {
                 var logger = documentDatabase.LoggerSetup.GetLogger<BulkInsertConnection>(documentDatabase.Name);
                 try
                 {
-                    using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream, logger))
+                    using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream, logger, multiDocumentParser))
                     {
                         bulkInsert.Execute();
                     }

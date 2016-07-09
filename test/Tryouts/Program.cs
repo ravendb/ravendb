@@ -17,7 +17,7 @@ namespace Tryout
                 Console.WriteLine( i);
                 using (var n = new FastTests.Client.Subscriptions.Subscriptions())
                 {
-                    n.SubscriptionSimpleTakeOverStrategy().Wait();
+                    n.SubscriptionStrategyConnectIfFree().Wait();
                 }
             }
         }

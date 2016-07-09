@@ -58,7 +58,7 @@ namespace FastTests.Client.Subscriptions
 
                         subscription.Subscribe(docs.Add);
 
-                        subscription.Start();
+                        await subscription.StartAsync();
 
 
                         RavenJObject doc;
@@ -136,7 +136,7 @@ namespace FastTests.Client.Subscriptions
 
                         subscription.Subscribe(docs.Add);
 
-                        subscription.Start();
+                        await subscription.StartAsync();
 
                         User doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
@@ -217,7 +217,7 @@ namespace FastTests.Client.Subscriptions
 
                         subscription.Subscribe(docs.Add);
 
-                        subscription.Start();
+                        await subscription.StartAsync();
 
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
@@ -259,7 +259,7 @@ namespace FastTests.Client.Subscriptions
                     var docs = new BlockingCollection<RavenJObject>();
 
                     subscription.Subscribe(o => docs.Add(o));
-                    subscription.Start();
+                    await subscription.StartAsync();
 
                     RavenJObject item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
