@@ -86,6 +86,7 @@ namespace FastTests
                 {
                     if (_globalServer == null)
                     {
+                        Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
                         var globalServer = CreateServer(8080, 9090);
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
