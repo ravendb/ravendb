@@ -617,7 +617,7 @@ task Upload {
 
 task InitNuget {
     if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")) {
-        $global:nugetVersion = "$version-rc-$env:buildlabel"
+        $global:nugetVersion = "$version.4-rc-$env:buildlabel"
     }
     else {
         $global:nugetVersion = "$version.$env:buildlabel"
