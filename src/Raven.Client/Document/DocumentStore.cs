@@ -331,7 +331,6 @@ namespace Raven.Client.Document
 
             try
             {
-
                 if (string.IsNullOrEmpty(ApiKey) == false)
                 {
                     Credentials = null;
@@ -351,6 +350,8 @@ namespace Raven.Client.Document
                     var generator = new AsyncMultiDatabaseHiLoKeyGenerator(32);
                     Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(dbName, commands, Conventions, entity);
                 }
+
+                Smuggler = new DatabaseSmuggler(Url);
 
                 initialized = true;
             }
@@ -665,7 +666,7 @@ namespace Raven.Client.Document
 
         public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
-        public readonly DatabaseSmuggler Smuggler = new DatabaseSmuggler();
+        public DatabaseSmuggler Smuggler { get; private set; }
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {

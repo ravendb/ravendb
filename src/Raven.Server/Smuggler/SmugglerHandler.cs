@@ -15,7 +15,7 @@ namespace Raven.Server.Smuggler
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/smuggler", "POST")]
+        [RavenAction("/databases/*/smuggler/export", "POST")]
         public Task PostExport()
         {
             DocumentsOperationContext context;
@@ -35,6 +35,12 @@ namespace Raven.Server.Smuggler
                 }
             }
 
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/smuggler/import", "POST")]
+        public Task PostImport()
+        {
             return Task.CompletedTask;
         }
     }

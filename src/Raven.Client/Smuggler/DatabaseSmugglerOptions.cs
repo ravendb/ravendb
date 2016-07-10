@@ -36,6 +36,8 @@ namespace Raven.Client.Smuggler
 
         public int MaxStepsForTransformScript { get; set; }
 
+        public string Database { get; set; }
+
         public bool MatchFilters(RavenJObject document)
         {
             foreach (var filter in Filters)

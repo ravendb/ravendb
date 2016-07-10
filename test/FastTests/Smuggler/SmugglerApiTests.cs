@@ -33,30 +33,6 @@ namespace FastTests.Smuggler
         }
 
         [Fact(Skip = "Implement")]
-        public async Task CanImportDirectlyFromRemote()
-        {
-            using (var store1 = await GetDocumentStore("store1"))
-            using (var store2 = await GetDocumentStore("store2"))
-            {
-                using (var session = store1.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User {Name = "Name1", LastName = "LastName1"});
-                    await session.StoreAsync(new User {Name = "Name2", LastName = "LastName2"});
-                    await session.SaveChangesAsync();
-                }
-                
-                await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerRemoteDestination
-                {
-                    Url = store1.Url,
-                    Database = store1.DefaultDatabase,
-                });
-
-                var docs = store2.DatabaseCommands.GetDocuments(0, 10);
-                Assert.Equal(3, docs.Length);
-            }
-        }
-
-        [Fact(Skip = "Implement")]
         public async Task CanExportAndImport()
         {
             var file = Path.GetTempFileName();
@@ -77,10 +53,7 @@ namespace FastTests.Smuggler
                         FilePath = file,
                     });
 
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileDestination
-                    {
-                        FilePath = file,
-                    });
+                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
                     var docs = store2.DatabaseCommands.GetDocuments(0, 10);
                     Assert.Equal(3, docs.Length);
