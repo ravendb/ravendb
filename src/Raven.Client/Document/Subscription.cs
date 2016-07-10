@@ -268,6 +268,10 @@ namespace Raven.Client.Document
                 {
                     _proccessingCts.Token.ThrowIfCancellationRequested();
                     var connectionStatus = await ReadNextObject(jsonReader).ConfigureAwait(false);
+
+                    if (_proccessingCts.IsCancellationRequested)
+                        return;
+
                     AssertConnectionState(connectionStatus);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -276,6 +280,9 @@ namespace Raven.Client.Document
 
                     var readObjectTask = ReadNextObject(jsonReader);
 
+                    if (_proccessingCts.IsCancellationRequested)
+                        return;
+
                     var incomingBatch = new List<RavenJObject>();
                     long lastReceivedEtag = 0;
 
@@ -283,13 +290,16 @@ namespace Raven.Client.Document
                     {
                         BeforeBatch();
                         bool endOfBatch = false;
-                        while (endOfBatch  == false && _proccessingCts.IsCancellationRequested == false)
+                        while (endOfBatch == false && _proccessingCts.IsCancellationRequested == false)
                         {
                             var receivedMessage = await readObjectTask.ConfigureAwait(false);
                             if (_proccessingCts.IsCancellationRequested)
                                 return;
 
                             readObjectTask = ReadNextObject(jsonReader);
+
+                            if (_proccessingCts.IsCancellationRequested)
+                                return;
 
                             switch (receivedMessage.Type)
                             {
@@ -298,7 +308,8 @@ namespace Raven.Client.Document
                                     break;
                                 case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
                                     endOfBatch = true;
-                                    break; ;
+                                    break;
+                                    ;
                                 case SubscriptionConnectionServerMessage.MessageType.Confirm:
                                     AfterAcknowledgment();
                                     AfterBatch(incomingBatch.Count);
@@ -321,9 +332,14 @@ namespace Raven.Client.Document
                     }
                 }
             }
+            catch (OperationCanceledException e)
+            {
+                
+            }
             catch (Exception ex)
             {
-                InformSubscribersOnError(ex);
+                if (_proccessingCts.Token.IsCancellationRequested==false)
+                    InformSubscribersOnError(ex);
                 throw;
             }
         }
@@ -335,7 +351,10 @@ namespace Raven.Client.Document
                 if (_proccessingCts.IsCancellationRequested || _tcpClient.Connected == false)
                     return null;
                 jsonReader.ResetState();
-            } while (await jsonReader.ReadAsync().ConfigureAwait(false) == false);// need to do that to handle the heartbeat whitespace 
+            } while (await jsonReader.ReadAsync().ConfigureAwait(false) == false && 
+            _proccessingCts.Token.IsCancellationRequested);// need to do that to handle the heartbeat whitespace 
+            if (_proccessingCts.Token.IsCancellationRequested)
+                return null;
             return (await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false)).JsonDeserialization<SubscriptionConnectionServerMessage>();
         }
         

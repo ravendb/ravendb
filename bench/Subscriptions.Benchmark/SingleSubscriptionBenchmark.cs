@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -28,17 +29,19 @@ namespace SubscriptionsBenchmark
                 return;
             if (CurCount != MaxCount)
             {
-                Tcs.SetResult(false);
+                Task.Run(() => Tcs.SetResult(false));
+
             }
             else
             {
-                Tcs.SetResult(true);
+                Task.Run(() => Tcs.SetResult(true));
             }
         }
 
         public void OnError(Exception error)
         {
-            Console.WriteLine(error);
+            //if (string.Compare(error.Message, "Stream was not writable.", StringComparison.Ordinal)!= 0)
+                Console.WriteLine(error);
         }
 
         public void OnNext(RavenJObject value)
@@ -90,26 +93,40 @@ namespace SubscriptionsBenchmark
 
         }
 
+        public class Thing
+        {
+            public string Name { get; set; }
+        }
         public void PerformBenchmark()
         {
-            for (var i = _minPowOf10 ?? 1; i < (_maxPowOf10 ?? 6); i++)
-            {
-                for (var j = 0; j < 3; j++)
-                {
-                    var executionTask = SingleTestRun((int)Math.Pow(10, i), _batchSize);
-                    executionTask.Wait();
-                    Console.WriteLine($"{(int)Math.Pow(10, i)}:  {executionTask.Result}");
-                }
-            }
+            // todo: remove this
+            //RavenQueryStatistics stats;
+            //using (var session = _store.OpenSession())
+            //{
+            //    session.Query<Thing>().Statistics(out stats);
+            //}
+            //if (stats.TotalResults < (int)Math.Pow(10, i))
+
+            var runResult = SingleTestRun(100 * 1000, 1024).Result;
+            Console.WriteLine(runResult.DocsProccessed + " " + runResult.DocsRequested + " " + runResult.ElapsedMs);
+            //for (var i = _minPowOf10 ?? 1; i < (_maxPowOf10 ?? 6); i++)
+            //{
+            //    for (var j = 0; j < 3; j++)
+            //    {
+            //        var executionTask = SingleTestRun((int)Math.Pow(10, i), _batchSize);
+            //        executionTask.Wait();
+            //        Console.WriteLine($"{(int)Math.Pow(10, i)}:  {executionTask.Result}");
+            //    }
+            //}
         }
 
 
-        private async Task<RunResult> SingleTestRun(int docCount = 10000, int? batchSize = null)
+        private async Task<RunResult> SingleTestRun(int docCount = 10000, int? batchSize = null, string collectionName="Disks")
         {
 
             var subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
             {
-                Collection = "Disks"
+                Collection = collectionName
             });
             using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
             {

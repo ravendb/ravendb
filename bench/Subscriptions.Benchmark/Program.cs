@@ -5,6 +5,7 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -45,9 +46,37 @@ namespace SubscriptionsBenchmark
         
         public static void Main(string[] args)
         {
-            Console.ReadLine();
-            new SingleSubscriptionBenchmark(new string[] {}).PerformBenchmark();
-            //new NewArrivedDocsSubscriptionLatency(new string[] { }).PerformBenchmark();
+            //  Console.ReadLine();
+            //new SingleSubscriptionBenchmark(new string[] {}).PerformBenchmark();
+            //new ParallelSubscriptionsBenchmark().Run().Wait();
+
+            //Parallel.For(0, 30, x => new SingleSubscriptionBenchmark(new string[] {}).PerformBenchmark());
+            if (args.Length != 0)
+                new SingleSubscriptionBenchmark(new string[] { }).PerformBenchmark();
+            else
+            {
+                var procs = new List<Process>();
+                for (var i = 0; i < 30; i++)
+                {
+                    Console.WriteLine($"Creating Proccess {i}");
+                    var proc = Process.Start(new ProcessStartInfo()
+                    {
+                        Arguments = "bin\\Release\\netcoreapp1.0\\Subscriptions.Benchmark.dll trala",
+                        FileName = "dotnet"
+                    });
+
+                    procs.Add(proc);
+                    Console.WriteLine($"Created Proccess {i}");
+                }
+
+                foreach (var process in procs)
+                {
+                    if (process.HasExited == false)
+                        process.WaitForExit();
+                    Console.WriteLine($"Proccess Finished");
+                }
+            }
+
         }
 
         

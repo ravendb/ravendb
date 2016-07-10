@@ -1,8 +1,7 @@
 {
   "profiles": {
     "Subscriptions.Benchmark": {
-      "commandName": "Project",
-      "commandLineArgs": "\"http://localhost:8080\" subs Apples 50 12"
+      "commandName": "Project"
     }
   }
 }
