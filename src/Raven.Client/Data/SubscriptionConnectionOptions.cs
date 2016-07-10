@@ -8,9 +8,48 @@ using System.Threading;
 using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
+    public class SubscriptionConnectionClientMessage
+    {
+        public enum MessageType
+        {
+            None,
+            Acknowledge
+        }
+
+        public MessageType Type { get; set; }
+        public long Etag { get; set; }
+    }
+
+    public class SubscriptionConnectionServerMessage
+    {
+        public enum MessageType
+        {
+            None,
+            CoonectionStatus,
+            EndOfBatch,
+            Data,
+            Confirm,
+            Terminated
+        }
+
+        public enum ConnectionStatus
+        {
+            None,
+            Accepted,
+            InUse,
+            Closed,
+            NotFound
+        }
+
+        public MessageType Type { get; set; }
+        public ConnectionStatus Status { get; set; }
+        public RavenJObject Data { get; set; }
+    }
+
     public class SubscriptionConnectionOptions
     {
         public long SubscriptionId { get; set; }

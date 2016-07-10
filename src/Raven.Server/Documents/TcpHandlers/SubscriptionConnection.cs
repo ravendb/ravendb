@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     if (DocumentMatchCriteriaScript(patch, dbContext, doc) == false)
                                     {
                                         // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
-                                        if (skipNumber++ % _options.MaxDocsPerBatch == 0)
+                                        if (skipNumber++%_options.MaxDocsPerBatch == 0)
                                         {
                                             await _networkStream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
                                         }
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                         ["Type"] = "Data",
                                         ["Data"] = doc.Data
                                     });
-                                    if (_buffer.Length > (_options.MaxBatchSize ?? 1024 * 32))
+                                    if (_buffer.Length > (_options.MaxBatchSize ?? 1024*32))
                                     {
                                         await FlushBufferToNetwork();
                                     }
@@ -280,40 +280,37 @@ namespace Raven.Server.Documents.TcpHandlers
                                         continue;
                                 }
 
-                                BlittableJsonReaderObject clientReply;
+                                SubscriptionConnectionClientMessage clientReply;
 
                                 while (true)
                                 {
-                                    var result = await Task.WhenAny(replyFromClientTask, Task.Delay(TimeSpan.FromSeconds(5)));
+                                    var result =
+                                        await Task.WhenAny(replyFromClientTask, Task.Delay(TimeSpan.FromSeconds(5)));
                                     if (result == replyFromClientTask)
                                     {
-                                        clientReply = await replyFromClientTask;
+                                        using (var reply = await replyFromClientTask)
+                                        {
+                                            clientReply = JsonDeserialization.SubscriptionConnectionClientMessage(reply);
+                                        }
                                         replyFromClientTask = _multiDocumentParser.ParseToMemoryAsync("client reply");
                                         break;
                                     }
                                     await _networkStream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
                                 }
-                                using (clientReply)
+                                switch (clientReply.Type)
                                 {
-                                    //TODO, strongly type with JsonDeserialization
-
-                                    string type;
-                                    clientReply.TryGet("Type", out type);
-                                    switch (type)
-                                    {
-                                        case "Acknowledge":
-                                            long clientEtag;
-                                            clientReply.TryGet("Etag", out clientEtag);//todo: error handling
-                                            _database.SubscriptionStorage.AcknowledgeBatchProcessed(_options.SubscriptionId,
-                                                clientEtag);
-                                            await WriteJsonAsync(new DynamicJsonValue
-                                            {
-                                                ["Type"] = "Confirm",
-                                                ["Etag"] = clientEtag
-                                            });
-
-                                            break;
-                                    }
+                                    case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
+                                        _database.SubscriptionStorage.AcknowledgeBatchProcessed(_options.SubscriptionId,
+                                            clientReply.Etag);
+                                        await WriteJsonAsync(new DynamicJsonValue
+                                        {
+                                            ["Type"] = "Confirm",
+                                            ["Etag"] = clientReply.Etag
+                                        });
+                                        break;
+                                    default:
+                                        throw new ArgumentException("Unknown message type from client " +
+                                                                    clientReply.Type);
                                 }
                             }
                         }

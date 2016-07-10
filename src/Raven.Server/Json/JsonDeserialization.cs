@@ -17,6 +17,8 @@ namespace Raven.Server.Json
     {
         private static readonly Type[] EmptyTypes = new Type[0];
 
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
+
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationClientConfiguration> ReplicationClientConfiguration = GenerateJsonDeserializationRoutine<ReplicationClientConfiguration>();

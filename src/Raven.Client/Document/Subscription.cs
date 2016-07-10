@@ -232,37 +232,27 @@ namespace Raven.Client.Document
             }
         }
 
-        private void AssertConnectionState(RavenJObject connectionStatus)
+        private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
         {
-            RavenJToken typeToken;
-            if (connectionStatus.TryGetValue("Type", out typeToken) == false)
-                throw new ArgumentException("Type field was not received from server");
-            var messageType = typeToken.Value<string>();
-            if (messageType != "CoonectionStatus")
-                throw new Exception("Server returned illegal status message");
+            if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.CoonectionStatus)
+                throw new Exception("Server returned illegal type message when excpecting connection status, was: " + connectionStatus.Type);
 
-            RavenJToken subscriptionStatusToken;
-            if (connectionStatus.TryGetValue("Status", out subscriptionStatusToken) == false)
-                throw new ArgumentException("Status field was not received from server");
-
-            var subscriptionStatus = subscriptionStatusToken.Value<string>();
-
-            switch (subscriptionStatus)
+            switch (connectionStatus.Status)
             {
-                case "Accepted":
+                case SubscriptionConnectionServerMessage.ConnectionStatus.Accepted:
                     break;
-                case "InUse":
+                case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
                         $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {this._options.Strategy}");
-                case "Closed":
+                case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     throw new SubscriptionClosedException(
                         $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it was closed");
-                case "NotFound":
+                case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
                         $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it does not exist");
                 default:
                     throw new ArgumentException(
-                        $"Subscription {this._options.SubscriptionId} could not be opened, reason: {subscriptionStatus}");
+                        $"Subscription {this._options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
             }
         }
 
@@ -277,7 +267,7 @@ namespace Raven.Client.Document
                 using (var jsonReader = new JsonTextReaderAsync(reader))
                 {
                     _proccessingCts.Token.ThrowIfCancellationRequested();
-                    var connectionStatus = (RavenJObject)await ReadNextObject(jsonReader).ConfigureAwait(false);
+                    var connectionStatus = await ReadNextObject(jsonReader).ConfigureAwait(false);
                     AssertConnectionState(connectionStatus);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -292,28 +282,33 @@ namespace Raven.Client.Document
                     while (_proccessingCts.IsCancellationRequested == false)
                     {
                         BeforeBatch();
-                        while (_proccessingCts.IsCancellationRequested == false)
+                        bool endOfBatch = false;
+                        while (endOfBatch  == false && _proccessingCts.IsCancellationRequested == false)
                         {
-                            var receivedMessage = (RavenJObject)await readObjectTask.ConfigureAwait(false);
+                            var receivedMessage = await readObjectTask.ConfigureAwait(false);
                             if (_proccessingCts.IsCancellationRequested)
                                 return;
 
-                            var messageType = AssertAndReturnReceivedMessageType(receivedMessage);
-
                             readObjectTask = ReadNextObject(jsonReader);
 
-                            if (messageType == "EndOfBatch")
-                                break;
-
-                            if (messageType == "Confirm")
+                            switch (receivedMessage.Type)
                             {
-                                AfterAcknowledgment();
-                                AfterBatch(incomingBatch.Count);
-                                incomingBatch.Clear();
-                            }
-                            else
-                            {
-                                incomingBatch.Add((RavenJObject)receivedMessage["Data"]);
+                                case SubscriptionConnectionServerMessage.MessageType.Data:
+                                    incomingBatch.Add(receivedMessage.Data);
+                                    break;
+                                case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
+                                    endOfBatch = true;
+                                    break; ;
+                                case SubscriptionConnectionServerMessage.MessageType.Confirm:
+                                    AfterAcknowledgment();
+                                    AfterBatch(incomingBatch.Count);
+                                    incomingBatch.Clear();
+                                    break;
+                                case SubscriptionConnectionServerMessage.MessageType.Terminated:
+                                    throw new SubscriptionClosedException("Connection terminated by server");
+                                default:
+                                    throw new ArgumentException(
+                                        $"Unrecognized message '{receivedMessage.Type}' type received from server");
                             }
                         }
 
@@ -333,7 +328,7 @@ namespace Raven.Client.Document
             }
         }
 
-        private async Task<RavenJToken> ReadNextObject(JsonTextReaderAsync jsonReader)
+        private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonTextReaderAsync jsonReader)
         {
             do
             {
@@ -341,30 +336,9 @@ namespace Raven.Client.Document
                     return null;
                 jsonReader.ResetState();
             } while (await jsonReader.ReadAsync().ConfigureAwait(false) == false);// need to do that to handle the heartbeat whitespace 
-            return await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false);
+            return (await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false)).JsonDeserialization<SubscriptionConnectionServerMessage>();
         }
-
-        private static string AssertAndReturnReceivedMessageType(RavenJObject receivedMessage)
-        {
-            RavenJToken messageTypeToken;
-            if (receivedMessage.TryGetValue("Type", out messageTypeToken) == false)
-                throw new ArgumentException(
-                    $"Could not find message type field in data from server");
-
-            var messageType = receivedMessage["Type"].Value<string>();
-            if (messageType == "Data" || messageType == "EndOfBatch" || messageType == "Confirm")
-            {
-                return messageType;
-            }
-
-            if (messageType == "Terminated")
-            {
-                throw new SubscriptionClosedException("Connection terminated by server");
-            }
-
-            throw new ArgumentException(
-                $"Unrecognized message '{messageType}' type received from server");
-        }
+        
 
         private void NotifySubscribers(RavenJObject curDoc, out long lastReceivedEtag)
         {
@@ -421,13 +395,12 @@ namespace Raven.Client.Document
         private void SendAck(long lastReceivedEtag, Stream networkStream)
         {
             BeforeAcknowledgment();
-            var ackJson = new RavenJObject
-            {
-                ["Type"] = "Acknowledge",
-                ["Etag"] = lastReceivedEtag
-            };
 
-            ackJson.WriteTo(networkStream);
+            RavenJObject.FromObject(new SubscriptionConnectionClientMessage
+            {
+                Etag = lastReceivedEtag,
+                Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
+            }).WriteTo(networkStream);
         }
 
         private async Task RunSubscriptionAsync(TaskCompletionSource<object> firstConnectionCompleted)
@@ -449,7 +422,7 @@ namespace Raven.Client.Document
                         return;
                     }
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    Task.Run(() =>firstConnectionCompleted.TrySetException(ex));
+                    Task.Run(() => firstConnectionCompleted.TrySetException(ex));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                     Logger.WarnException(
@@ -546,7 +519,7 @@ namespace Raven.Client.Document
                     _tcpClient.Dispose();
                     _tcpClient = null;
                 }
-                catch(Exception)
+                catch (Exception)
                 {
 
                 }
