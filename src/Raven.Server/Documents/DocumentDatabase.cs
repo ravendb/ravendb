@@ -32,6 +32,7 @@ namespace Raven.Server.Documents
         private Task _indexStoreTask;
         public bool LazyTransactionMode { get; set; }
         public DateTime LazyTransactionExpiration { get; set; }
+        public TransactionOperationsMerger TxMerger;
 
         public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
             LoggerSetup loggerSetup)
@@ -49,6 +50,8 @@ namespace Raven.Server.Documents
             SubscriptionStorage = new SubscriptionStorage(this);
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
+            TxMerger = new TransactionOperationsMerger(this,DatabaseShutdown);
+
         }
 
         public SubscriptionStorage SubscriptionStorage { get; set; }
@@ -95,6 +98,7 @@ namespace Raven.Server.Documents
 
         private void InitializeInternal()
         {
+            TxMerger.Start();
             _indexStoreTask = IndexStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
             DocumentReplicationLoader.Initialize();
@@ -117,7 +121,12 @@ namespace Raven.Server.Documents
         {
             _databaseShutdown.Cancel();
             var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(DocumentDatabase)}");
-            
+
+            exceptionAggregator.Execute(() =>
+            {
+                TxMerger.Dispose();
+            });
+
             exceptionAggregator.Execute(() =>
             {
                 DocumentReplicationLoader.Dispose();
