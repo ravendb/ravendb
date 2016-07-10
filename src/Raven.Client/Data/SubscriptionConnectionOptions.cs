@@ -6,56 +6,64 @@
 using System;
 using System.Threading;
 using Raven.Abstractions.Util;
+using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
+    public class SubscriptionConnectionClientMessage
+    {
+        public enum MessageType
+        {
+            None,
+            Acknowledge
+        }
+
+        public MessageType Type { get; set; }
+        public long Etag { get; set; }
+    }
+
+    public class SubscriptionConnectionServerMessage
+    {
+        public enum MessageType
+        {
+            None,
+            CoonectionStatus,
+            EndOfBatch,
+            Data,
+            Confirm,
+            Terminated
+        }
+
+        public enum ConnectionStatus
+        {
+            None,
+            Accepted,
+            InUse,
+            Closed,
+            NotFound
+        }
+
+        public MessageType Type { get; set; }
+        public ConnectionStatus Status { get; set; }
+        public RavenJObject Data { get; set; }
+    }
+
     public class SubscriptionConnectionOptions
     {
-        private static int _connectionCounter;
-        private string _connectionId;
         public long SubscriptionId { get; set; }
 
         public SubscriptionConnectionOptions()
         {
-            _timeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
-            TimeToWaitBeforeConnectionRetry = _timeToWaitBeforeConnectionRetry.Ticks;
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
             MaxDocsPerBatch = 4096;
         }
 
-        public string ConnectionId
-        {
-            get
-            {
-                if (_connectionId == null)
-                {
-                    _connectionId = Interlocked.Increment(ref _connectionCounter) + "/" + Base62Util.Base62Random();
-                }
-                return _connectionId;
-            }
-            set { _connectionId = value; }
-        }
-
-        private TimeSpan _timeToWaitBeforeConnectionRetry;
-
         [JsonIgnore] public CancellationTokenSource CancellationTokenSource;
         [JsonIgnore] public IDisposable DisposeOnDisconnect;
 
-        [JsonIgnore]
-        public TimeSpan TimeToWaitBeforeConnectionRetryTimespan
-        {
-            get
-            {
-                if (_timeToWaitBeforeConnectionRetry.Ticks != TimeToWaitBeforeConnectionRetry)
-                    _timeToWaitBeforeConnectionRetry = new TimeSpan(TimeToWaitBeforeConnectionRetry);
-                return _timeToWaitBeforeConnectionRetry;
-            }
-        }
-
-        public long TimeToWaitBeforeConnectionRetry { get; set; }
-
-        public long ClientAliveNotificationInterval { get; set; }
+        public int TimeToWaitBeforeConnectionRetryMilliseconds { get; set; } = 5000;
 
         public bool IgnoreSubscribersErrors { get; set; }
 

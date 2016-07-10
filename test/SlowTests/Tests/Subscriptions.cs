@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Data;
@@ -14,82 +13,72 @@ namespace SlowTests.Tests
 {
     public class Subscriptions: RavenTestBase
     {
-        private async Task AsyncSpin(Func<bool> action, int amount)
-        {
-            var sp = Stopwatch.StartNew();
-
-            while (sp.ElapsedMilliseconds < amount && action() == false)
-            {
-                await Task.Delay(50).ConfigureAwait(false);
-            }
-        }
-
         [Fact]
         public async Task BasicSusbscriptionTest()
         {
             using (var store = await GetDocumentStore().ConfigureAwait(false))
-            using (var subscriptionManager = new DocumentSubscriptions(store))
             {
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new FastTests.Client.Subscriptions.Subscriptions.Thing
-                    {
-                        Name = $"Thing"
-                    });
-                    session.SaveChanges();
-                }
+                await CreateDocuments(store, 1);
 
                 var lastEtag = store.GetLastWrittenEtag() ?? 0;
-                using (var session = store.OpenSession())
-                {
-                    for (var i = 0; i < 5; i++)
-                    {
-                        session.Store(new FastTests.Client.Subscriptions.Subscriptions.Thing
-                        {
-                            Name = $"ThingNo{i}"
-                        });
-                    }
-                    session.SaveChanges();
-                }
+                await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
+                var subscriptionCriteria = new SubscriptionCriteria
                 {
                     Collection = "Things",
-                //    FilterJavaScript = " var a = 'c';"                    
                 };
-                var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
-                var subscription = subscriptionManager.Open<FastTests.Client.Subscriptions.Subscriptions.Thing>(subsId, new SubscriptionConnectionOptions());
-                var list = new List<FastTests.Client.Subscriptions.SubscriptionTestBase.Thing>();
-                subscription.Subscribe(x =>
+
+                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
+                using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions
                 {
-                    AsyncHelpers.RunSync(() => Task.Delay(100));
-                    list.Add(x);
-                });
-                
-
-                await AsyncSpin(() => list.Count == 5, 60000).ConfigureAwait(false);
-
-                Assert.Equal(list.Count, 5);
-
-                for (var j = 0; j < 2; j++)
+                    SubscriptionId = subsId
+                }))
                 {
-                    list.Clear();
 
-                    using (var session = store.OpenAsyncSession())
+                    var bc = new BlockingCollection<Thing>();
+
+                    subscription.Subscribe(x =>
                     {
-                        for (var i = 0; i < 5; i++)
-                        {
-                            await session.StoreAsync(new FastTests.Client.Subscriptions.Subscriptions.Thing
-                            {
-                                Name = $"ThingNo{i} Iteration {j}"
-                            }).ConfigureAwait(false);
-                        }
-                        await session.SaveChangesAsync().ConfigureAwait(false);
+                        bc.Add(x);
+                    });
+
+                    await subscription.StartAsync();
+
+                    Thing thing;
+                    for (var i = 0; i < 5; i++)
+                    {
+                        Assert.True(bc.TryTake(out thing, 1000));
                     }
-                    await AsyncSpin(() => list.Count == 5, 60000).ConfigureAwait(false);
-                    Assert.Equal(list.Count, 5);
+
+                    Assert.False(bc.TryTake(out thing, 50));
+
+                    for (var j = 0; j < 2; j++)
+                    {
+                        await CreateDocuments(store, 1);
+
+                        Assert.True(bc.TryTake(out thing, 500));
+                        Assert.False(bc.TryTake(out thing, 50));
+                    }
                 }
+            }
+        }
+
+        public class Thing
+        {
+            public string Name { get; set; }
+        }
+        private async Task CreateDocuments(DocumentStore store, int amount)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                for (var i = 0; i < amount; i++)
+                {
+                    await session.StoreAsync(new Thing
+                    {
+                        Name = $"ThingNo{i}"
+                    });
+                }
+                await session.SaveChangesAsync();
             }
         }
     }

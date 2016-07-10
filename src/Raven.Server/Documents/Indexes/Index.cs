@@ -424,14 +424,15 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 cts.Token.ThrowIfCancellationRequested();
 
-                                DoIndexingWork(scope, cts.Token);
+                                var didWork = DoIndexingWork(scope, cts.Token);
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
                                 DocumentDatabase.Notifications.RaiseNotifications(
                                     new IndexChangeNotification { Name = Name, Type = IndexChangeTypes.BatchCompleted });
 
-                                ResetWriteErrors();
+                                if (didWork)
+                                    ResetWriteErrors();
 
                                 if (Log.IsDebugEnabled) Log.Debug($"Finished indexing for '{Name} ({IndexId})'.'");
                             }
@@ -513,10 +514,12 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public void DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
+        public bool DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
         {
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
+
+            bool mightBeMore = false; ;
 
             using (CultureHelper.EnsureInvariantCulture())
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
@@ -533,7 +536,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         using (var scope = stats.For(work.Name))
                         {
-                            var mightBeMore = work.Execute(databaseContext, indexContext, writeOperation, scope, cancellationToken);
+                            mightBeMore = work.Execute(databaseContext, indexContext, writeOperation, scope, cancellationToken);
 
                             if (mightBeMore)
                                 _mre.Set();
@@ -559,6 +562,8 @@ namespace Raven.Server.Documents.Indexes
                     using (stats.For("Lucene_RecreateSearcher"))
                         IndexPersistence.RecreateSearcher(); // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
                 }
+
+                return mightBeMore;
             }
         }
 

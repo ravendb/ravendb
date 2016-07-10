@@ -83,7 +83,7 @@ namespace FastTests.Sparrow
             fixed (byte* inputPtr = input)
             fixed (byte* encodedOutputPtr = encodedOutput)
             {
-                compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, encodedOutput.Length, 1);
+                compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, encodedOutput.Length);
             }
 
             byte[] output = new byte[size];

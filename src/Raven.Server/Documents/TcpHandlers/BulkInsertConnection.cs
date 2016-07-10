@@ -3,8 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -13,7 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Exceptions;
 
-namespace Raven.Server.Documents.BulkInsert
+namespace Raven.Server.Documents.TcpHandlers
 {
     public unsafe class BulkInsertConnection : IDisposable
     {
@@ -26,6 +29,7 @@ namespace Raven.Server.Documents.BulkInsert
         private readonly Stream _stream;
 
         private readonly Logger _logger;
+        private readonly JsonOperationContext.MultiDocumentParser _multiDocumentParser;
 
         private class BulkInsertDoc
         {
@@ -46,12 +50,13 @@ namespace Raven.Server.Documents.BulkInsert
         private Task _replyToCustomer;
         private Task _insertDocuments;
 
-        public BulkInsertConnection(DocumentDatabase database, JsonOperationContext context, Stream stream)
+        public BulkInsertConnection(DocumentDatabase database, JsonOperationContext context, Stream stream, Logger logger, JsonOperationContext.MultiDocumentParser multiDocumentParser)
         {
             _database = database;
             _context = context;
             _stream = stream;
-            _logger = database.LoggerSetup.GetLogger<BulkInsertConnection>(database.Name);
+            _logger = logger;
+            _multiDocumentParser = multiDocumentParser;
         }
 
         public void Execute()
@@ -74,15 +79,27 @@ namespace Raven.Server.Documents.BulkInsert
                 ReadBulkInsert();
                 _insertDocuments.Wait(); // need to wait until this is completed
                 _messagesToClient.Add(CompletedMessage);
+                _messagesToClient.CompleteAdding();
+                _replyToCustomer.Wait();
+                _stream.Flush(); // make sure that everyting goes to the client
             }
             catch (AggregateException e)
             {
                 _docsToWrite.CompleteAdding();
+                _messagesToClient.CompleteAdding();
                 try
                 {
                     _insertDocuments.Wait();
                 }
-                catch (Exception )
+                catch (Exception)
+                {
+                    // forcing observation of any potential errors
+                }
+                try
+                {
+                    _replyToCustomer.Wait();
+                }
+                catch (Exception)
                 {
                     // forcing observation of any potential errors
                 }
@@ -104,7 +121,7 @@ namespace Raven.Server.Documents.BulkInsert
             {
                 _replyToCustomer.Wait();
             }
-            catch (Exception )
+            catch (Exception)
             {
                 // we don't care about any errors here, we just need to make sure that the thread
                 // isn't sending stuff to the client while we are sending the error
@@ -161,7 +178,7 @@ namespace Raven.Server.Documents.BulkInsert
                         }
 
                         var retry = 60;
-                        while(_docsToWrite.TryTake(out doc, 500) == false)
+                        while (_docsToWrite.TryTake(out doc, 500) == false)
                         {
                             if (_docsToWrite.IsCompleted == false)
                                 break;
@@ -195,13 +212,15 @@ namespace Raven.Server.Documents.BulkInsert
             if (docsToWrite.Count == 0)
                 return;
 
-            int retry = 6;
+            // Three retries : 
+            // 1st - if scratch buff full, 2nd - after asking for new flush, 3rd - waiting for the new flush to end
+            int retry = 3;
             while (true)
             {
                 try
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents to disk using bulk insert, total {totalSize/1024:#,#} kb to write");
+                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents to disk using bulk insert, total {totalSize / 1024:#,#} kb to write");
                     Stopwatch sp = Stopwatch.StartNew();
                     using (var tx = context.OpenWriteTransaction())
                     {
@@ -255,7 +274,34 @@ namespace Raven.Server.Documents.BulkInsert
                             // flush everything
                             tx.Commit();
                         }
-                        context.Environment().ForceLogFlushToDataFile(null, true);
+                        bool lockTaken = false;
+                        var journal = _database.DocumentsStorage.Environment.Journal;
+                        Debug.Assert(journal != null);
+                        using (journal.Applicator.TryTakeFlushingLock(ref lockTaken))
+                        {
+                            if (lockTaken == false)
+                            {
+                                var sp = Stopwatch.StartNew();
+
+                                // lets wait for the flush to end and retry put doc
+                                using (journal.Applicator.TryTakeFlushingLock(ref lockTaken, TimeSpan.FromSeconds(30)))
+                                {
+                                    if (_logger.IsInfoEnabled)
+                                    {
+                                        _logger.Info($"Waiting for flush to complete for {sp.ElapsedMilliseconds:#,#} ms, flush completed: {lockTaken}");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info($"Forcing flush to data file to cleanup the scratch buffer in bulk insert");
+                                }
+                                // there's no flushing but scratch buffer full - let's flush and retry put doc
+                                context.Environment().ForceLogFlushToDataFile(null, true);
+                            }
+                        }
                         // TODO : Measure IO times (RavenDB-4659) - ForceFlush on a retry
                     }
                     catch (TimeoutException)
@@ -271,7 +317,7 @@ namespace Raven.Server.Documents.BulkInsert
 
         private void ReadBulkInsert()
         {
-            var managedBuffer = new byte[1024*32];
+            var managedBuffer = new byte[1024 * 32];
             fixed (byte* managedBufferPointer = managedBuffer)
             {
                 while (true)
@@ -313,7 +359,7 @@ namespace Raven.Server.Documents.BulkInsert
                     }
                     while (len > 0)
                     {
-                        var read = _stream.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
+                        var read = _multiDocumentParser.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
                         if (read == 0)
                             throw new EndOfStreamException("Could not read expected document");
                         len -= read;
@@ -343,7 +389,7 @@ namespace Raven.Server.Documents.BulkInsert
             {
                 if (shift == 35)
                     throw new FormatException("Bad variable size int");
-                int r = _stream.ReadByte();
+                int r = _multiDocumentParser.ReadByte();
                 if (r == -1)
                     return -1;
                 b = (byte)r;
@@ -358,6 +404,71 @@ namespace Raven.Server.Documents.BulkInsert
             _docsToRelease.Dispose();
             _docsToWrite.Dispose();
             _messagesToClient.Dispose();
+        }
+
+        public static void Run(DocumentDatabase documentDatabase, JsonOperationContext context, NetworkStream stream, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
+        {
+            var bulkInsertThread = new Thread(() =>
+            {
+                var logger = documentDatabase.LoggerSetup.GetLogger<BulkInsertConnection>(documentDatabase.Name);
+                try
+                {
+                    using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream, logger, multiDocumentParser))
+                    {
+                        bulkInsert.Execute();
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (logger.IsInfoEnabled)
+                    {
+                        logger.Info("Failed to process bulk insert run", e);
+                    }
+                    try
+                    {
+                        using (var writer = new BlittableJsonTextWriter(context, stream))
+                        {
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Type"] = "Error",
+                                ["Exception"] = e.ToString()
+                            });
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        stream.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        tcpClient.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        context.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "Bulk Insert Operation"
+            };
+            bulkInsertThread.Start();
         }
     }
 }

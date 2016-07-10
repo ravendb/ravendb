@@ -1,12 +1,9 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
-using Raven.Server.Utils.Metrics;
 using Sparrow;
-using Sparrow.Collections;
 
 namespace Raven.Server.Documents
 {
@@ -22,8 +19,6 @@ namespace Raven.Server.Documents
 
         private SubscriptionConnectionOptions _currentConnection;
 
-        private readonly ConcurrentSet<string> _forciblyClosedConnections = new ConcurrentSet<string>();
-
         public SubscriptionConnectionOptions Connection => _currentConnection;
 
 
@@ -33,9 +28,6 @@ namespace Raven.Server.Documents
             SubscriptionConnectionOptions incomingConnection,
             int timeToWait)
         {
-            if (_forciblyClosedConnections.Contains(incomingConnection.ConnectionId))
-                throw new SubscriptionClosedException(
-                    $"Subscription with ID {incomingConnection.SubscriptionId} and connection id {incomingConnection.ConnectionId} was forcibly closed before and therefore cannot be reopened");
             if (await _connectionInUse.WaitAsync(timeToWait) == false)
             {
                 switch (incomingConnection.Strategy)
@@ -61,11 +53,11 @@ namespace Raven.Server.Documents
                                                             incomingConnection.Strategy);
                 }
             }
+
             _connectionInUse.Reset();
             _currentConnection = incomingConnection;
-            return new DisposableAction(() => _connectionInUse.SetByAsyncCompletion());
+            return new DisposableAction(() => { _connectionInUse.SetByAsyncCompletion(); });
         }
-
 
         public void EndConnection()
         {

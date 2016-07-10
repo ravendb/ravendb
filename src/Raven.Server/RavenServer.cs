@@ -12,7 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.BulkInsert;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -226,44 +226,67 @@ namespace Raven.Server
                     return;
                 }
                 ListenToNewTcpConnection();
-
+                NetworkStream stream = null;
+                JsonOperationContext context = null;
+                JsonOperationContext.MultiDocumentParser multiDocumentParser = null;
                 try
                 {
                     tcpClient.NoDelay = true;
-                    tcpClient.ReceiveBufferSize = 32 * 1024;
+                    tcpClient.ReceiveBufferSize = 32*1024;
                     tcpClient.SendBufferSize = 4096;
-                    using (var stream = tcpClient.GetStream())
-                    using (var context = new JsonOperationContext(_unmanagedBuffersPool))
+                    stream = tcpClient.GetStream();
+                    context = new JsonOperationContext(_unmanagedBuffersPool);
+                    multiDocumentParser = context.ParseMultiFrom(stream);
+                    try
                     {
-                        try
+                        var reader = await multiDocumentParser.ParseToMemoryAsync();
+                        string db;
+                        if (reader.TryGet("Database", out db) == false)
                         {
-                            var reader = context.ReadForMemory(stream, "tcp command");
-                            string db;
-                            if (reader.TryGet("Database", out db) == false)
-                            {
-                                throw new InvalidOperationException("Could not read Database property from the tcp command");
-                            }
-                            var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(db);
-                            if (databaseLoadingTask == null)
-                            {
-                                throw new InvalidOperationException("There is no database named " + db);
-                            }
-                            if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
-                            {
-                                throw new InvalidOperationException("Timeout when loading database + " + db + ", try again later");
-                            }
-                            var documentDatabase = await databaseLoadingTask;
-                            using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream))
-                            {
-                                bulkInsert.Execute();
-                            }
+                            throw new InvalidOperationException("Could not read Database property from the tcp command");
                         }
-                        catch (Exception e)
+                        string operation;
+                        if (reader.TryGet("Operation", out operation) == false)
                         {
-                            if (_tcpLogger.IsInfoEnabled)
-                            {
-                                _tcpLogger.Info("Failed to process TCP connection run", e);
-                            }
+                            throw new InvalidOperationException("Could not read Operation property from the tcp command");
+                        }
+                        var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(db);
+                        if (databaseLoadingTask == null)
+                        {
+                            throw new InvalidOperationException("There is no database named " + db);
+                        }
+                        if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
+                        {
+                            throw new InvalidOperationException("Timeout when loading database + " + db +
+                                                                ", try again later");
+                        }
+                        
+                        var documentDatabase = await databaseLoadingTask;
+                        switch (operation)
+                        {
+                            case "BulkInsert":
+                                BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+                                break;
+                            case "Subscription":
+                                SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+                                break;
+                            default:
+                                throw new InvalidOperationException("Unknown operation for tcp " + operation);
+                        }
+
+                        tcpClient = null; // the connection handler will dispose this, it is not its responsability
+                        stream = null;
+                        context = null;
+                        multiDocumentParser = null;
+                    }
+                    catch (Exception e)
+                    {
+                        if (_tcpLogger.IsInfoEnabled)
+                        {
+                            _tcpLogger.Info("Failed to process TCP connection run", e);
+                        }
+                        if (context != null)
+                        {
                             using (var writer = new BlittableJsonTextWriter(context, stream))
                             {
                                 context.Write(writer, new DynamicJsonValue
@@ -286,7 +309,29 @@ namespace Raven.Server
                 {
                     try
                     {
-                        tcpClient.Dispose();
+                        multiDocumentParser?.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                        
+                    }
+                    try
+                    {
+                        stream?.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        tcpClient?.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    try
+                    {
+                        context?.Dispose();
                     }
                     catch (Exception)
                     {

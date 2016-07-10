@@ -30,14 +30,14 @@ namespace Raven.Client.Document
             return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, startEtag, database));
         }
 
-        public Subscription<RavenJObject> Open(long id, SubscriptionConnectionOptions options, string database = null)
+        public Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null)
         {
-            return AsyncHelpers.RunSync(() => innerAsync.OpenAsync(id, options, database));
+            return innerAsync.Open(options, database);
         }
 
-        public Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class
+        public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {
-            return AsyncHelpers.RunSync(() => innerAsync.OpenAsync<T>(id, options, database));
+            return innerAsync.Open<T>(options, database);
         }
 
         public List<SubscriptionConfig> GetSubscriptions(int start, int take, string database = null)

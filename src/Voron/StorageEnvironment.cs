@@ -529,7 +529,7 @@ namespace Voron
         {
             private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
             private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
-            private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(0, MaxConcurrentFlushes);
+            private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(MaxConcurrentFlushes);
             private const int MaxConcurrentFlushes = 10;
 
             public void VoronEnvironmentFlushing()

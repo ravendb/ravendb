@@ -62,12 +62,12 @@ namespace Raven.Client.Document
             }
         }
 
-        public Task<Subscription<RavenJObject>> OpenAsync(long id, SubscriptionConnectionOptions options, string database = null)
+        public Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null)
         {
-            return OpenAsync<RavenJObject>(id, options, database);
+            return Open<RavenJObject>(options, database);
         }
 
-        public async Task<Subscription<T>> OpenAsync<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class
+        public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
@@ -75,11 +75,13 @@ namespace Raven.Client.Document
             if (options.MaxBatchSize.HasValue && options.MaxBatchSize.Value < 16 * 1024)
                 throw new InvalidOperationException("Max size value of batch options cannot be lower than that 16 KB");
 
-            var commands = database == null
+            // todo: treat the sharded connection case..
+            AsyncServerClient commands =
+                 (AsyncServerClient ) (database == null
                 ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
+                : documentStore.AsyncDatabaseCommands.ForDatabase(database));
 
-            var subscription = new Subscription<T>(id, options, commands,
+            var subscription = new Subscription<T>(options, commands,
                 documentStore.Conventions); // to ensure that subscription is open try to call it with the same connection id
 
             subscriptions.Add(subscription);
@@ -175,6 +177,8 @@ namespace Raven.Client.Document
 
         public void Dispose()
         {
+            if (subscriptions.Count == 0)
+                return;
             var tasks = new List<Task>();
 
             foreach (var subscription in subscriptions)
