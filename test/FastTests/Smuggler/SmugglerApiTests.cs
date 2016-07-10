@@ -8,7 +8,7 @@ namespace FastTests.Smuggler
 {
     public class SmugglerApiTests : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Implement")]
         public async Task CanExportDirectlyToRemote()
         {
             using (var store1 = await GetDocumentStore("store1"))
@@ -32,7 +32,7 @@ namespace FastTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Implement")]
         public async Task CanImportDirectlyFromRemote()
         {
             using (var store1 = await GetDocumentStore("store1"))
@@ -56,7 +56,7 @@ namespace FastTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Implement")]
         public async Task CanExportAndImport()
         {
             var file = Path.GetTempFileName();
