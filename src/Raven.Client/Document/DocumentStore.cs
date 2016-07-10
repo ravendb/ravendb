@@ -23,6 +23,7 @@ using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
 using Raven.Client.Metrics;
+using Raven.Client.Smuggler;
 using Raven.Client.Util;
 
 
@@ -663,6 +664,8 @@ namespace Raven.Client.Document
         }
 
         public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
+
+        public readonly DatabaseSmuggler Smuggler = new DatabaseSmuggler();
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {

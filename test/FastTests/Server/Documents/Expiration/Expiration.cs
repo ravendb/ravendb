@@ -26,7 +26,7 @@ namespace FastTests.Server.Documents.Expiration
                 {
                     Active = true,
                     DeleteFrequencySeconds = 100,
-                }, Constants.Expiration.RavenExpirationConfiguration);
+                }, Constants.Expiration.ConfigurationDocumentKey);
 
                 await session.SaveChangesAsync();
             }

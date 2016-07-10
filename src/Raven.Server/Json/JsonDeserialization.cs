@@ -5,8 +5,10 @@ using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
+using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
@@ -14,7 +16,7 @@ using Sparrow.Json;
 namespace Raven.Server.Json
 {
     public static class JsonDeserialization
-    {
+    {	
         private static readonly Type[] EmptyTypes = new Type[0];
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
@@ -45,6 +47,9 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, PeriodicExportConfiguration> PeriodicExportConfiguration = GenerateJsonDeserializationRoutine<PeriodicExportConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, PeriodicExportStatus> PeriodicExportStatus = GenerateJsonDeserializationRoutine<PeriodicExportStatus>();
+        
         public static readonly Func<BlittableJsonReaderObject, SpatialOptions> SpatialOptions = GenerateJsonDeserializationRoutine<SpatialOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
@@ -89,6 +94,9 @@ namespace Raven.Server.Json
                 type == typeof(long) ||
                 type == typeof(int) ||
                 type == typeof(double) ||
+                type == typeof(DateTime) ||
+                type == typeof(DateTimeOffset) ||
+                type == typeof(TimeSpan) ||
                 type.GetTypeInfo().IsEnum)
             {
                 var value = GetParameter(propertyInfo.PropertyType, vars);

@@ -2,9 +2,9 @@ using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -15,6 +15,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _database;
         public VersioningStorage VersioningStorage;
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner;
+        public PeriodicExportRunner PeriodicExportRunner;
 
         public BundleLoader(DocumentDatabase database)
         {
@@ -32,10 +33,18 @@ namespace Raven.Server.Documents
                 if (_log.IsDebugEnabled)
                     _log.Debug($"Versioning configuration was {(VersioningStorage  != null ? "disabled" : "enabled")}");
             }
-            else if(key.Equals(Constants.Expiration.RavenExpirationConfiguration, StringComparison.OrdinalIgnoreCase))
+            else if(key.Equals(Constants.Expiration.ConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
             {
                 ExpiredDocumentsCleaner?.Dispose();
                 ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
+
+                if (_log.IsDebugEnabled)
+                    _log.Debug($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
+            }
+            else if (key.Equals(Constants.PeriodicExport.ConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
+            {
+                PeriodicExportRunner?.Dispose();
+                PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database);
 
                 if (_log.IsDebugEnabled)
                     _log.Debug($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
@@ -46,7 +55,18 @@ namespace Raven.Server.Documents
         {
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
 
-            ExpiredDocumentsCleaner?.Dispose();
+            var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(BundleLoader)}");
+            exceptionAggregator.Execute(() =>
+            {
+                ExpiredDocumentsCleaner?.Dispose();
+                ExpiredDocumentsCleaner = null;
+            });
+            exceptionAggregator.Execute(() =>
+            {
+                PeriodicExportRunner?.Dispose();
+                PeriodicExportRunner = null;
+            });
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

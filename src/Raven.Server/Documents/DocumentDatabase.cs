@@ -8,6 +8,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
