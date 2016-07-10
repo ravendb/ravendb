@@ -16,7 +16,6 @@ namespace SlowTests.Core.Bundles
         [InlineData(10)]
         [InlineData(1000)]
         [InlineData(10000)]
-        [InlineData(100000)]
         public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
         {
             using (var expiration = new Expiration())
