@@ -94,9 +94,6 @@ namespace Raven.Server.Json
                 type == typeof(long) ||
                 type == typeof(int) ||
                 type == typeof(double) ||
-                type == typeof(DateTime) ||
-                type == typeof(DateTimeOffset) ||
-                type == typeof(TimeSpan) ||
                 type.GetTypeInfo().IsEnum)
             {
                 var value = GetParameter(propertyInfo.PropertyType, vars);
@@ -156,6 +153,13 @@ namespace Raven.Server.Json
                 var methodToCall = typeof(JsonDeserialization).GetMethod(nameof(ToObject)).MakeGenericMethod(propertyInfo.PropertyType);
                 var constantExpression = Expression.Constant(converter);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyInfo.Name), constantExpression);
+            }
+
+            if (type == typeof(DateTime) ||
+                type == typeof(DateTimeOffset) ||
+                type == typeof(TimeSpan))
+            {
+                throw new InvalidOperationException($"We weren't able to convert the property '{propertyInfo.Name}' of type '{type}'. We store date using th long format with the ticks only as the value.");
             }
 
             throw new InvalidOperationException($"We weren't able to convert the property '{propertyInfo.Name}' of type '{type}'.");

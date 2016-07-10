@@ -68,7 +68,8 @@ namespace Raven.Server.Documents.PeriodicExport
 
                 if (IsValidTimespanForTimer(IncrementalInterval))
                 {
-                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastExportAt;
+                    var lastExportAt = _status.LastExportAtTicks.HasValue ? new DateTime(_status.LastExportAtTicks.Value, DateTimeKind.Utc) : DateTime.MinValue;
+                    var timeSinceLastExport = SystemTime.UtcNow - lastExportAt ;
                     var nextExport = timeSinceLastExport >= IncrementalInterval ? TimeSpan.Zero : IncrementalInterval - timeSinceLastExport;
 
                     _incrementalExportTimer = new Timer(TimerCallback, false, nextExport, IncrementalInterval);
@@ -90,7 +91,8 @@ namespace Raven.Server.Documents.PeriodicExport
 
                 if (IsValidTimespanForTimer(FullExportInterval))
                 {
-                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastFullExportAt;
+                    var lastFullExportAt = _status.LastFullExportAtTicks.HasValue ? new DateTime(_status.LastFullExportAtTicks.Value, DateTimeKind.Utc) : DateTime.MinValue;
+                    var timeSinceLastExport = SystemTime.UtcNow - lastFullExportAt;
                     var nextExport = timeSinceLastExport >= FullExportInterval ? TimeSpan.Zero : FullExportInterval - timeSinceLastExport;
 
                     _fullExportTimer = new Timer(TimerCallback, true, nextExport, FullExportInterval);
@@ -290,9 +292,9 @@ namespace Raven.Server.Documents.PeriodicExport
 
                     _status.LastDocsEtag = exportResult.LastDocsEtag;
                     if (fullExport)
-                        _status.LastFullExportAt = SystemTime.UtcNow;
+                        _status.LastFullExportAtTicks = SystemTime.UtcNow.Ticks;
                     else
-                        _status.LastExportAt = SystemTime.UtcNow;
+                        _status.LastExportAtTicks = SystemTime.UtcNow.Ticks;
 
                     WriteStatus();
                 }
@@ -315,8 +317,8 @@ namespace Raven.Server.Documents.PeriodicExport
                 var status = new DynamicJsonValue
                 {
                     ["LastDocsEtag"] = _status.LastDocsEtag,
-                    ["LastExportAt"] = _status.LastExportAt,
-                    ["LastFullExportAt"] = _status.LastFullExportAt,
+                    ["LastExportAtTicks"] = _status.LastExportAtTicks,
+                    ["LastFullExportAtTicks"] = _status.LastFullExportAtTicks,
                 };
                 var readerObject = context.ReadObject(status, Constants.PeriodicExport.StatusDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 var putResult = _database.DocumentsStorage.Put(context, Constants.PeriodicExport.StatusDocumentKey, null, readerObject);
