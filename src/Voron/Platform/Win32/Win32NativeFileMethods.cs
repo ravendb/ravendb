@@ -67,7 +67,15 @@ namespace Voron.Platform.Win32
         [return: MarshalAs(UnmanagedType.Bool)]
 
         public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
+                                            IntPtr lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
+
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
+        public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
                                             out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
+
 
 
 

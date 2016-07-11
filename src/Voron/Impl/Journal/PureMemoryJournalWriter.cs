@@ -72,34 +72,6 @@ namespace Voron.Impl.Journal
             return false;
         }
 
-        public unsafe void WriteBuffer(long position, byte* srcPointer, int sizeToWrite)
-        {
-            _locker.EnterWriteLock();
-            try
-            {
-                if (position != _lastPos)
-                    throw new InvalidOperationException("Journal writes must be to the next location in the journal");
-
-                _lastPos += sizeToWrite;
-
-                var handle = Marshal.AllocHGlobal(sizeToWrite);
-
-                var buffer = new Buffer
-                {
-                    Handle = handle,
-                    Pointer = (byte*)handle.ToPointer(),
-                    SizeInPages = sizeToWrite / _options.PageSize
-                };
-                _buffers = _buffers.Append(buffer);
-
-                Memory.Copy(buffer.Pointer, (byte*)srcPointer, sizeToWrite);
-            }
-            finally
-            {
-                _locker.ExitWriteLock();
-            }
-        }
-
         public void Dispose()
         {
             Disposed = true;
@@ -110,7 +82,7 @@ namespace Voron.Impl.Journal
             _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
         }
 
-        public void WriteGather(long position, IntPtr[] pages)
+        public void WritePages(long position, byte* p, int numberOfPages)
         {
             _locker.EnterWriteLock();
             try
@@ -118,7 +90,7 @@ namespace Voron.Impl.Journal
                 if (position != _lastPos)
                     throw new InvalidOperationException("Journal writes must be to the next location in the journal");
 
-                var size = pages.Length * _options.PageSize;
+                var size = numberOfPages*_options.PageSize;
                 _lastPos += size;
 
                 var handle = Marshal.AllocHGlobal(size);
@@ -127,14 +99,11 @@ namespace Voron.Impl.Journal
                 {
                     Handle = handle,
                     Pointer = (byte*)handle.ToPointer(),
-                    SizeInPages = pages.Length
+                    SizeInPages = numberOfPages
                 };
                 _buffers = _buffers.Append(buffer);
 
-                for (int index = 0; index < pages.Length; index++)
-                {
-                    Memory.Copy(buffer.Pointer + (index * _options.PageSize), (byte*)pages[index].ToPointer(), _options.PageSize);
-                }
+                Memory.Copy(buffer.Pointer, p, numberOfPages * _options.PageSize);
             }
             finally
             {

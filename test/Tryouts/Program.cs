@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Server.Documents.Indexing.Auto;
 using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
 using SlowTests.Tests.Sorting;
@@ -17,9 +18,9 @@ namespace Tryout
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine( i);
-                using (var n = new Incremental())
+                using (var n = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
                 {
-                    n.IncrementalBackupShouldCopyJustNewPagesSinceLastBackup();
+                    n.AutoIndexesShouldBeMarkedAsIdleAndDeleted().Wait();
                 }
             }
         }
