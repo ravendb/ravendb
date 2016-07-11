@@ -17,7 +17,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationRequestHandler : DatabaseRequestHandler
     {
-		[RavenAction("/replication/topology", "GET")]
 		[RavenAction("/databases/*/replication/topology", "GET")]
 		public Task GetReplicationTopology()
 		{

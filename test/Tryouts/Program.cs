@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Voron.Backups;
+using FastTests.Voron.Compaction;
 using SlowTests.Tests.Sorting;
 
 namespace Tryout
@@ -15,9 +17,9 @@ namespace Tryout
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine( i);
-                using (var n = new FastTests.Client.Subscriptions.Subscriptions())
+                using (var n = new Incremental())
                 {
-                    n.SubscriptionSimpleTakeOverStrategy().Wait();
+                    n.IncrementalBackupShouldCopyJustNewPagesSinceLastBackup();
                 }
             }
         }
