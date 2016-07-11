@@ -227,7 +227,7 @@ namespace Raven.Client.Document
                 {
                     Logger.WarnException(
                         string.Format(
-                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError", _options.SubscriptionId), ex);
+                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError " + e, _options.SubscriptionId), ex);
                 }
             }
         }
