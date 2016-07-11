@@ -854,7 +854,7 @@ namespace Voron.Impl.Journal
                 var current = _waj._files.First();
 
                 if (current.Number != _lastSyncedJournal)
-                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
+                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastSyncedJournal));
 
               
                 if(_waj._env.NextWriteTransactionId - 2 /* we also need to count write tx created for flushing purposes */ != _lastSyncedTransactionId)
