@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -28,6 +29,8 @@ namespace Raven.Server.Documents
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public readonly PatchDocument Patch;
+
+		private readonly HttpJsonRequestFactory _httpJsonRequestFactory = new HttpJsonRequestFactory(16);
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
@@ -84,8 +87,13 @@ namespace Raven.Server.Documents
 
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
+	    public HttpJsonRequestFactory HttpRequestFactory
+	    {
+		    get { return _httpJsonRequestFactory; }
+	    }
 
-        public void Initialize()
+
+	    public void Initialize()
         {
             DocumentsStorage.Initialize();
             InitializeInternal();
@@ -102,7 +110,6 @@ namespace Raven.Server.Documents
             TxMerger.Start();
             _indexStoreTask = IndexStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
-            DocumentReplicationLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
