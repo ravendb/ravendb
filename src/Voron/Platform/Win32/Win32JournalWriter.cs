@@ -22,10 +22,11 @@ namespace Voron.Platform.Win32
     {
         private readonly StorageEnvironmentOptions _options;
         private readonly string _filename;
-        private readonly SafeFileHandle _handle;
+        private SafeFileHandle _handle;
         private SafeFileHandle _readHandle;
         private NativeOverlapped* _nativeOverlapped;
         private readonly int _maxNumberOfPages;
+        private volatile bool _disposed;
 
         public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
         {
@@ -144,10 +145,15 @@ namespace Voron.Platform.Win32
 
         public void Dispose()
         {
-            Disposed = true;
+            if (_disposed)
+                return;
+
+            _disposed = true;
             GC.SuppressFinalize(this);
             _readHandle?.Dispose();
-            _handle.Dispose();
+            _readHandle = null;
+            _handle?.Dispose();
+            _handle = null;
             if (_nativeOverlapped != null)
             {
                 Marshal.FreeHGlobal((IntPtr) _nativeOverlapped);
@@ -167,7 +173,7 @@ namespace Voron.Platform.Win32
             }
         }
 
-        public bool Disposed { get; private set; }
+        public bool Disposed => _disposed;
 
 
         ~Win32FileJournalWriter()

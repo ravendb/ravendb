@@ -17,7 +17,7 @@ namespace Voron.Impl.Journal
 {
     public unsafe class JournalFile : IDisposable
     {
-        private readonly IJournalWriter _journalWriter;
+        private IJournalWriter _journalWriter;
         private long _writePage;
         private bool _disposed;
         private int _refs;
@@ -95,6 +95,7 @@ namespace Voron.Impl.Journal
         {
             DisposeWithoutClosingPager();
             _journalWriter?.Dispose();
+            _journalWriter = null;
         }
 
         public JournalSnapshot GetSnapshot()
