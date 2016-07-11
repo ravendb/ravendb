@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         using (var scope = stats.For(work.Name))
                         {
-                            mightBeMore = work.Execute(databaseContext, indexContext, writeOperation, scope, cancellationToken);
+                            mightBeMore |= work.Execute(databaseContext, indexContext, writeOperation, scope, cancellationToken);
 
                             if (mightBeMore)
                                 _mre.Set();
