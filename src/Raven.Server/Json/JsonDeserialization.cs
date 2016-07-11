@@ -5,7 +5,6 @@ using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
-using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
@@ -18,8 +17,14 @@ namespace Raven.Server.Json
     public static class JsonDeserialization
     {	
         private static readonly Type[] EmptyTypes = new Type[0];
+		
+		public static readonly Func<BlittableJsonReaderObject, ReplicationBatchReply> ReplicationBatchReply = GenerateJsonDeserializationRoutine<ReplicationBatchReply>();
 
-        public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
+		public static readonly Func<BlittableJsonReaderObject, ReplicationEtagReply> ReplicationEtagReply = GenerateJsonDeserializationRoutine<ReplicationEtagReply>();
+
+		public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderMessage> TcpConnectionHeaderMessage = GenerateJsonDeserializationRoutine<TcpConnectionHeaderMessage>();
+
+		public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
 
