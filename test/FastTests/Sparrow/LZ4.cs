@@ -101,7 +101,6 @@ namespace FastTests.Sparrow
             Assert.Equal(input.Length, uncompressedSize);
             for (int i = 0; i < input.Length; i++)
             {
-                Console.WriteLine($"{i} - {input[i]},{output[i]}");
                 Assert.Equal(input[i], output[i]);
             }
         }
