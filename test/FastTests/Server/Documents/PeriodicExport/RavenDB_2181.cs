@@ -80,19 +80,19 @@ namespace FastTests.Server.Documents.PeriodicExport
         }
 
         [Fact(Skip = "Requires Amazon AWS Credentials")]
-        public void PutObject()
+        public async Task PutObject()
         {
             var bucketName = "ravendb";
             var key = "testKey";
 
             using (var client = new RavenAwsS3Client("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
             {
-                client.PutObject(bucketName, key, new MemoryStream(Encoding.UTF8.GetBytes("321")), new Dictionary<string, string>
+                await client.PutObject(bucketName, key, new MemoryStream(Encoding.UTF8.GetBytes("321")), new Dictionary<string, string>
                 {
                     {"property1", "value1"},
                     {"property2", "value2"}
-                }, 60*60);
-                var @object = client.GetObject(bucketName, key);
+                }, 60*60).ConfigureAwait(false);
+                var @object = await client.GetObject(bucketName, key).ConfigureAwait(false);
                 Assert.NotNull(@object);
 
                 using (var reader = new StreamReader(@object.Data))
@@ -107,13 +107,13 @@ namespace FastTests.Server.Documents.PeriodicExport
         }
 
         [Fact(Skip = "Requires Amazon AWS Credentials")]
-        public void UploadArchive()
+        public async Task UploadArchive()
         {
             var glacierVaultName = "ravendb";
 
             using (var client = new RavenAwsGlacierClient("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
             {
-                var archiveId = client.UploadArchive(glacierVaultName, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60*60);
+                var archiveId = await client.UploadArchive(glacierVaultName, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60*60);
 
                 Assert.NotNull(archiveId);
             }

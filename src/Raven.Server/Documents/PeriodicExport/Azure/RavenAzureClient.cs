@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             //open http client for each task
             //we have different authorization header for each request
             var client = GetClient(TimeSpan.FromHours(1));
-            var task = Task.Run(async () =>
+            return Task.Run(async () =>
             {
                 while (true)
                 {
@@ -277,8 +277,6 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
                     }
                 }
             });
-
-            return task;
         }
 
         private class ByteArrayWithBlockId

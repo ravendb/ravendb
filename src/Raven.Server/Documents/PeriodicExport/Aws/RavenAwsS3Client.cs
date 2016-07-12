@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
@@ -18,12 +19,12 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
 {
     public class RavenAwsS3Client : RavenAwsClient
     {
-        public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionEndpoint)
-            : base(awsAccessKey, awsSecretKey, awsRegionEndpoint)
+        public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionName)
+            : base(awsAccessKey, awsSecretKey, awsRegionName)
         {
         }
 
-        public void PutObject(string bucketName, string key, Stream stream, Dictionary<string, string> metadata, int timeoutInSeconds)
+        public async Task PutObject(string bucketName, string key, Stream stream, Dictionary<string, string> metadata, int timeoutInSeconds)
         {
             var url = GetUrl(bucketName) + "/" + key;
 
@@ -49,15 +50,16 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
-            var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
+            var response = await client.PutAsync(url, content).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
                 return;
 
             throw ErrorResponseException.FromResponseMessage(response);
         }
 
-        public Blob GetObject(string bucketName, string key)
+        public async Task<Blob> GetObject(string bucketName, string key)
         {
+            await ValidateAwsRegion();
             var url = GetUrl(bucketName) + "/" + key;
 
             var now = SystemTime.UtcNow;
@@ -78,14 +80,14 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
 
-            var response = AsyncHelpers.RunSync(() => client.SendAsync(requestMessage));
+            var response = await client.SendAsync(requestMessage).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
 
             if (response.IsSuccessStatusCode == false)
                 throw ErrorResponseException.FromResponseMessage(response);
 
-            var data = AsyncHelpers.RunSync(() => response.Content.ReadAsStreamAsync());
+            var data = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var metadataHeaders = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
             return new Blob(data, metadataHeaders);
@@ -96,9 +98,9 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
         public override string GetHost(string bucketName)
         {
             if (AwsRegion == "us-east-1")
-                return string.Format("{0}.s3.amazonaws.com", bucketName);
+                return $"{bucketName}.s3.amazonaws.com";
 
-            return string.Format("{0}.s3-{1}.amazonaws.com", bucketName, AwsRegion);
+            return $"{bucketName}.s3-{AwsRegion}.amazonaws.com";
         }
     }
 }

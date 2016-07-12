@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.PeriodicExport
         public readonly TimeSpan FullExportInterval;
         public readonly TimeSpan IncrementalInterval;
 
-        private readonly object _locker = new object();
         private int? _exportLimit;
 
         //interval can be 2^32-2 milliseconds at most
@@ -154,18 +153,23 @@ namespace Raven.Server.Documents.PeriodicExport
 
         private void TimerCallback(object fullExport)
         {
-            if (_database.DatabaseShutdown.IsCancellationRequested)
+            if (_runningTask != null || _database.DatabaseShutdown.IsCancellationRequested)
                 return;
 
-            if (Monitor.TryEnter(_locker) == false)
-                return;
-
-            _runningTask = RunPeriodicExport((bool)fullExport);
-            _runningTask.ContinueWith(task =>
+            // we have shared lock for both incremental and full backup.
+            lock (this)
             {
-                _runningTask = null;
-                Monitor.Exit(_locker);
-            });
+                if (_runningTask != null)
+                    return;
+                _runningTask = Task.Run(async () =>
+                {
+                    await RunPeriodicExport((bool)fullExport);
+                });
+                _runningTask.ContinueWith(task =>
+                {
+                    _runningTask = null;
+                });
+            }
         }
 
         private async Task RunPeriodicExport(bool fullExport)
@@ -332,11 +336,11 @@ namespace Raven.Server.Documents.PeriodicExport
         {
             if (!string.IsNullOrWhiteSpace(_configuration.GlacierVaultName))
             {
-                UploadToGlacier(exportPath, fileName, isFullExport);
+                await UploadToGlacier(exportPath, fileName, isFullExport).ConfigureAwait(false);
             }
             else if (!string.IsNullOrWhiteSpace(_configuration.S3BucketName))
             {
-                UploadToS3(exportPath, fileName, isFullExport);
+                await UploadToS3(exportPath, fileName, isFullExport).ConfigureAwait(false);
             }
             else if (!string.IsNullOrWhiteSpace(_configuration.AzureStorageContainer))
             {
@@ -344,7 +348,7 @@ namespace Raven.Server.Documents.PeriodicExport
             }
         }
 
-        private void UploadToS3(string exportPath, string fileName, bool isFullExport)
+        private async Task UploadToS3(string exportPath, string fileName, bool isFullExport)
         {
             if (_awsAccessKey == Constants.DataCouldNotBeDecrypted ||
                 _awsSecretKey == Constants.DataCouldNotBeDecrypted)
@@ -352,20 +356,20 @@ namespace Raven.Server.Documents.PeriodicExport
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
 
-            using (var client = new RavenAwsS3Client(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+            using (var client = new RavenAwsS3Client(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(exportPath))
             {
                 var key = CombinePathAndKey(_configuration.S3RemoteFolderName, fileName);
-                client.PutObject(_configuration.S3BucketName, key, fileStream, new Dictionary<string, string>
+                await client.PutObject(_configuration.S3BucketName, key, fileStream, new Dictionary<string, string>
                 {
                     {"Description", GetArchiveDescription(isFullExport)}
-                }, 60*60);
+                }, 60*60).ConfigureAwait(false);
 
                 Log.Info(string.Format("Successfully uploaded export {0} to S3 bucket {1}, with key {2}", fileName, _configuration.S3BucketName, key));
             }
         }
 
-        private void UploadToGlacier(string exportPath, string fileName, bool isFullExport)
+        private async Task UploadToGlacier(string exportPath, string fileName, bool isFullExport)
         {
             if (_awsAccessKey == Constants.DataCouldNotBeDecrypted ||
                 _awsSecretKey == Constants.DataCouldNotBeDecrypted)
@@ -376,7 +380,7 @@ namespace Raven.Server.Documents.PeriodicExport
             using (var client = new RavenAwsGlacierClient(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(exportPath))
             {
-                var archiveId = client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60*60);
+                var archiveId = await client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60*60).ConfigureAwait(false);
                 Log.Info($"Successfully uploaded export {fileName} to Glacier, archive ID: {archiveId}");
             }
         }
