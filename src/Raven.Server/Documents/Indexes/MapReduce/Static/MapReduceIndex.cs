@@ -19,10 +19,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly StaticIndexBase _compiled;
         private readonly Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper>();
 
+        private int _maxNumberOfIndexOutputs;
+        private int _actualMaxNumberOfIndexOutputs;
+
         private MapReduceIndex(int indexId, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.MapReduce, definition)
         {
             _compiled = compiled;
+        }
+
+        protected override void InitializeInternal()
+        {
+            _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument;
         }
 
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
@@ -61,6 +69,33 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             wrapper.InitializeForEnumeration(mapResults, indexContext);
 
             PutMapResults(key, wrapper, indexContext);
+        }
+
+        public override int? ActualMaxNumberOfIndexOutputs
+        {
+            get
+            {
+                if (_actualMaxNumberOfIndexOutputs <= 1)
+                    return null;
+
+                return _actualMaxNumberOfIndexOutputs;
+            }
+        }
+        public override int MaxNumberOfIndexOutputs => _maxNumberOfIndexOutputs;
+        protected override bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
+        {
+            if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
+                return false;
+
+            if (Definition.IndexDefinition.MaxIndexOutputsPerDocument != null)
+            {
+                // user has specifically configured this value, but we don't trust it.
+
+                if (_actualMaxNumberOfIndexOutputs < numberOfAlreadyProducedOutputs)
+                    _actualMaxNumberOfIndexOutputs = numberOfAlreadyProducedOutputs;
+            }
+
+            return true;
         }
 
         private class AnonymusObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>

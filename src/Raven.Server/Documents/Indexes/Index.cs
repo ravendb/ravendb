@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes
             IndexId = indexId;
             Type = type;
             Definition = definition;
-            IndexPersistence = new LuceneIndexPersistence(indexId, definition, type);
+            IndexPersistence = new LuceneIndexPersistence(this);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -208,6 +208,8 @@ namespace Raven.Server.Documents.Indexes
 
                     _indexWorkers = CreateIndexWorkExecutors();
 
+                    InitializeInternal();
+
                     _initialized = true;
                 }
                 catch (Exception)
@@ -216,6 +218,10 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
+        }
+
+        protected virtual void InitializeInternal()
+        {
         }
 
         private void LoadValues()
@@ -974,5 +980,14 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch);
+
+        public abstract int? ActualMaxNumberOfIndexOutputs { get; }
+
+        public abstract int MaxNumberOfIndexOutputs { get; }
+
+        protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
+        {
+            return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
+        }
     }
 }

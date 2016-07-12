@@ -28,6 +28,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
         {
+            ActualMaxNumberOfIndexOutputs = null;
+            MaxNumberOfIndexOutputs = 1;
         }
 
         public static AutoMapReduceIndex CreateNew(int indexId, AutoMapReduceIndexDefinition definition,
@@ -169,5 +171,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }
+
+        public override int? ActualMaxNumberOfIndexOutputs { get; }
+        public override int MaxNumberOfIndexOutputs { get; }
     }
 }
