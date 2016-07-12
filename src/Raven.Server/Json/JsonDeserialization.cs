@@ -17,14 +17,14 @@ namespace Raven.Server.Json
     public static class JsonDeserialization
     {	
         private static readonly Type[] EmptyTypes = new Type[0];
-		
-		public static readonly Func<BlittableJsonReaderObject, ReplicationBatchReply> ReplicationBatchReply = GenerateJsonDeserializationRoutine<ReplicationBatchReply>();
+        
+        public static readonly Func<BlittableJsonReaderObject, ReplicationBatchReply> ReplicationBatchReply = GenerateJsonDeserializationRoutine<ReplicationBatchReply>();
 
-		public static readonly Func<BlittableJsonReaderObject, ReplicationEtagReply> ReplicationEtagReply = GenerateJsonDeserializationRoutine<ReplicationEtagReply>();
+        public static readonly Func<BlittableJsonReaderObject, ReplicationEtagReply> ReplicationEtagReply = GenerateJsonDeserializationRoutine<ReplicationEtagReply>();
 
-		public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderMessage> TcpConnectionHeaderMessage = GenerateJsonDeserializationRoutine<TcpConnectionHeaderMessage>();
+        public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderMessage> TcpConnectionHeaderMessage = GenerateJsonDeserializationRoutine<TcpConnectionHeaderMessage>();
 
-		public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
 
@@ -99,7 +99,8 @@ namespace Raven.Server.Json
                 type == typeof(long) ||
                 type == typeof(int) ||
                 type == typeof(double) ||
-                type.GetTypeInfo().IsEnum)
+                type.GetTypeInfo().IsEnum ||
+                type == typeof(DateTime))
             {
                 var value = GetParameter(propertyInfo.PropertyType, vars);
 
@@ -158,13 +159,6 @@ namespace Raven.Server.Json
                 var methodToCall = typeof(JsonDeserialization).GetMethod(nameof(ToObject)).MakeGenericMethod(propertyInfo.PropertyType);
                 var constantExpression = Expression.Constant(converter);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyInfo.Name), constantExpression);
-            }
-
-            if (type == typeof(DateTime) ||
-                type == typeof(DateTimeOffset) ||
-                type == typeof(TimeSpan))
-            {
-                throw new InvalidOperationException($"We weren't able to convert the property '{propertyInfo.Name}' of type '{type}'. We store date using th long format with the ticks only as the value.");
             }
 
             throw new InvalidOperationException($"We weren't able to convert the property '{propertyInfo.Name}' of type '{type}'.");

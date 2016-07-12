@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -249,32 +250,30 @@ namespace Sparrow.Json
             }
             else
             {
+                var type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
                 try
                 {
-                    var nullableType = Nullable.GetUnderlyingType(typeof(T));
-                    if (nullableType != null)
+                    if (type.GetTypeInfo().IsEnum)
                     {
-                        if (nullableType.GetTypeInfo().IsEnum)
+                        obj = (T)Enum.Parse(type, result.ToString());
+                    }
+                    else if(type == typeof(DateTime) && result is string)
+                    {
+                        DateTime time;
+                        if (DateTime.TryParseExact((string)result, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
                         {
-                            obj = (T)Enum.Parse(nullableType, result.ToString());
-                            return;
+                            obj = (T)(object)time;
                         }
-
-                        obj = (T)Convert.ChangeType(result, nullableType);
-                        return;
+                        throw new FormatException($"Could not convert '{result}' to DateTime");
                     }
-
-                    if (typeof(T).GetTypeInfo().IsEnum)
+                    else
                     {
-                        obj = (T)Enum.Parse(typeof(T), result.ToString());
-                        return;
+                        obj = (T)Convert.ChangeType(result, type);
                     }
-
-                    obj = (T)Convert.ChangeType(result, typeof(T));
                 }
                 catch (Exception e)
                 {
-                    throw new FormatException($"Could not convert {result.GetType().FullName} to {typeof(T).FullName}", e);
+                    throw new FormatException($"Could not convert {result.GetType().FullName} to {type.FullName}", e);
                 }
             }
         }
