@@ -419,7 +419,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (processedDocuments % 64 == 0)
                 {
                     token.ThrowIfCancellationRequested();
-                    progress($"Scanned {processedDocuments} documents");
+                    progress($"Scanned {$"{processedDocuments:#,#;;0}"} documents");
                 }
 
                 var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
