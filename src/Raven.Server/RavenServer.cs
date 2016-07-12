@@ -145,37 +145,8 @@ namespace Raven.Server
             }
 
             var uri = new Uri(Configuration.Core.TcpServerUrl);
-            IPAddress ipAddress;
 
-            switch (uri.DnsSafeHost)
-            {
-                case "+":
-                    ipAddress = IPAddress.Any;
-                    break;
-                case "localhost":
-                    ipAddress = IPAddress.Loopback;
-                    break;
-                default:
-                    try
-                    {
-                        var ipHostEntry = await Dns.GetHostEntryAsync(uri.DnsSafeHost);
-
-                        if (ipHostEntry.AddressList.Length == 0)
-                            throw new InvalidOperationException("The specified tcp server hostname has no entries: " +
-                                                                uri.DnsSafeHost);
-                        ipAddress = ipHostEntry.AddressList[0];
-                    }
-                    catch (Exception e)
-                    {
-                        if (_tcpLogger.IsOperationsEnabled)
-                        {
-                            _tcpLogger.Operations(
-                                $"Failed to resolve ip address to bind to for {Configuration.Core.TcpServerUrl}, tcp listening disabled", e);
-                        }
-                        throw;
-                    }
-                    break;
-            }
+            var ipAddress = await GetTcpListenAddress(uri);
 
             var port = uri.IsDefaultPort ? 9090 : uri.Port;
             if (Log.IsDebugEnabled)
@@ -200,6 +171,43 @@ namespace Raven.Server
                         $"Failed to start tcp server on {Configuration.Core.TcpServerUrl}, tcp listening disabled", e);
                 }
                 throw;
+            }
+        }
+
+        private async Task<IPAddress> GetTcpListenAddress(Uri uri)
+        {
+            IPAddress ipAddress;
+
+            if (IPAddress.TryParse(uri.DnsSafeHost, out ipAddress))
+                return ipAddress;
+
+            switch (uri.DnsSafeHost)
+            {
+                case "*":
+                case "+":
+                    return IPAddress.Any;
+                case "localhost":
+                    return IPAddress.Loopback;
+                default:
+                    try
+                    {
+                        var ipHostEntry = await Dns.GetHostEntryAsync(uri.DnsSafeHost);
+
+                        if (ipHostEntry.AddressList.Length == 0)
+                            throw new InvalidOperationException("The specified tcp server hostname has no entries: " +
+                                                                uri.DnsSafeHost);
+                        return ipHostEntry.AddressList[0]; // TODO: bind to all of the entries
+                    }
+                    catch (Exception e)
+                    {
+                        if (_tcpLogger.IsOperationsEnabled)
+                        {
+                            _tcpLogger.Operations(
+                                $"Failed to resolve ip address to bind to for {Configuration.Core.TcpServerUrl}, tcp listening disabled",
+                                e);
+                        }
+                        throw;
+                    }
             }
         }
 
