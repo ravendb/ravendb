@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = await client.PutAsync(url, content).ConfigureAwait(false);
+            var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (stream.Length > MaxUploadPutBlobInBytes)
             {
                 //for blobs over 64MB
-                await PutBlockApi(key, stream, metadata).ConfigureAwait(false);
+                await PutBlockApi(key, stream, metadata);
                 return;
             }
 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             var client = GetClient(TimeSpan.FromHours(1));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = await client.PutAsync(url, content).ConfigureAwait(false);
+            var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -140,10 +140,10 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             try
             {
                 //wait for all tasks to complete
-                await Task.WhenAll(tasks).ConfigureAwait(false);
+                await Task.WhenAll(tasks);
 
                 //put block list
-                await PutBlockList(baseUrl, blockIds, metadata).ConfigureAwait(false);
+                await PutBlockList(baseUrl, blockIds, metadata);
             }
             catch (Exception)
             {
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
                     try
                     {
                         await PutBlock(byteArrayWithBlockId.StreamAsByteArray,
-                            client, url, cts, retryRequest: true).ConfigureAwait(false);
+                            client, url, cts, retryRequest: true);
                     }
                     catch (Exception)
                     {
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             HttpResponseMessage response = null;
             try
             {
-                response = await client.PutAsync(url, content, cts.Token).ConfigureAwait(false);
+                response = await client.PutAsync(url, content, cts.Token);
                 if (response.IsSuccessStatusCode)
                     return;
             }
@@ -325,8 +325,8 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
 
             //wait for one second before trying again to send the request
             //maybe there was a network issue?
-            await Task.Delay(1000).ConfigureAwait(false);
-            await PutBlock(streamAsByteArray, client, url, cts, retryRequest: false).ConfigureAwait(false);
+            await Task.Delay(1000);
+            await PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
         }
 
         private async Task PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             var client = GetClient(TimeSpan.FromHours(1));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = await client.PutAsync(url, content).ConfigureAwait(false);
+            var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -396,14 +396,14 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("GET", url, requestMessage.Headers);
 
-            var response = await client.SendAsync(requestMessage).ConfigureAwait(false);
+            var response = await client.SendAsync(requestMessage);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
 
             if (response.IsSuccessStatusCode == false)
                 throw ErrorResponseException.FromResponseMessage(response);
 
-            var data = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            var data = await response.Content.ReadAsStreamAsync();
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
             return new Blob(data, headers);

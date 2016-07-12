@@ -144,19 +144,19 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             if (_endpointsLoaded)
                 throw new InvalidOperationException("Given endpoint is invalid: " + _awsRegionName);
 
-            await LoadEndpoints().ConfigureAwait(false);
+            await LoadEndpoints();
 
-            await ValidateAwsRegion().ConfigureAwait(false);
+            await ValidateAwsRegion();
         }
 
         private async Task LoadEndpoints()
         {
             AwsRegionNames.Clear();
 
-            var response = await GetClient().GetAsync("http://aws-sdk-configurations.amazonwebservices.com/endpoints.xml").ConfigureAwait(false);
+            var response = await GetClient().GetAsync("http://aws-sdk-configurations.amazonwebservices.com/endpoints.xml");
             if (response.IsSuccessStatusCode)
             {
-                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var stream = await response.Content.ReadAsStreamAsync())
                 using (var reader = new StreamReader(stream))
                     LoadEndpointsFromReader(reader);
 

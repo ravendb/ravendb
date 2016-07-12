@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
-            var response = await client.PostAsync(url, content).ConfigureAwait(false);
+            var response = await client.PostAsync(url, content);
             if (response.IsSuccessStatusCode)
                 return ReadArchiveId(response);
 

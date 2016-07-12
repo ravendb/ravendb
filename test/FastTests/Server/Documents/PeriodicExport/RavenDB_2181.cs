@@ -91,8 +91,8 @@ namespace FastTests.Server.Documents.PeriodicExport
                 {
                     {"property1", "value1"},
                     {"property2", "value2"}
-                }, 60*60).ConfigureAwait(false);
-                var @object = await client.GetObject(bucketName, key).ConfigureAwait(false);
+                }, 60*60);
+                var @object = await client.GetObject(bucketName, key);
                 Assert.NotNull(@object);
 
                 using (var reader = new StreamReader(@object.Data))

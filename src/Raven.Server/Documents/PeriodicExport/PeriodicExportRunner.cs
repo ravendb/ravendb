@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
@@ -159,15 +160,21 @@ namespace Raven.Server.Documents.PeriodicExport
             // we have shared lock for both incremental and full backup.
             lock (this)
             {
-                if (_runningTask != null)
+                if (_runningTask != null || _database.DatabaseShutdown.IsCancellationRequested)
                     return;
                 _runningTask = Task.Run(async () =>
                 {
-                    await RunPeriodicExport((bool)fullExport);
-                });
-                _runningTask.ContinueWith(task =>
-                {
-                    _runningTask = null;
+                    try
+                    {
+                        await RunPeriodicExport((bool)fullExport);
+                    }
+                    finally
+                    {
+                        lock (this)
+                        {
+                            _runningTask = null;
+                        }
+                    }
                 });
             }
         }
@@ -267,7 +274,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
                         try
                         {
-                            await UploadToServer(exportFilePath, fileName, fullExport).ConfigureAwait(false);
+                            await UploadToServer(exportFilePath, fileName, fullExport);
                         }
                         finally
                         {
@@ -291,6 +298,14 @@ namespace Raven.Server.Documents.PeriodicExport
 
                     _exportLimit = null;
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // shutting down, probably
+            }
+            catch (ObjectDisposedException)
+            {
+                // shutting down, probably
             }
             catch (Exception e)
             {
@@ -336,15 +351,15 @@ namespace Raven.Server.Documents.PeriodicExport
         {
             if (!string.IsNullOrWhiteSpace(_configuration.GlacierVaultName))
             {
-                await UploadToGlacier(exportPath, fileName, isFullExport).ConfigureAwait(false);
+                await UploadToGlacier(exportPath, fileName, isFullExport);
             }
             else if (!string.IsNullOrWhiteSpace(_configuration.S3BucketName))
             {
-                await UploadToS3(exportPath, fileName, isFullExport).ConfigureAwait(false);
+                await UploadToS3(exportPath, fileName, isFullExport);
             }
             else if (!string.IsNullOrWhiteSpace(_configuration.AzureStorageContainer))
             {
-                await UploadToAzure(exportPath, fileName, isFullExport).ConfigureAwait(false);
+                await UploadToAzure(exportPath, fileName, isFullExport);
             }
         }
 
@@ -363,7 +378,7 @@ namespace Raven.Server.Documents.PeriodicExport
                 await client.PutObject(_configuration.S3BucketName, key, fileStream, new Dictionary<string, string>
                 {
                     {"Description", GetArchiveDescription(isFullExport)}
-                }, 60*60).ConfigureAwait(false);
+                }, 60*60);
 
                 Log.Info(string.Format("Successfully uploaded export {0} to S3 bucket {1}, with key {2}", fileName, _configuration.S3BucketName, key));
             }
@@ -377,10 +392,10 @@ namespace Raven.Server.Documents.PeriodicExport
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
 
-            using (var client = new RavenAwsGlacierClient(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+            using (var client = new RavenAwsGlacierClient(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(exportPath))
             {
-                var archiveId = await client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60*60).ConfigureAwait(false);
+                var archiveId = await client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60*60);
                 Log.Info($"Successfully uploaded export {fileName} to Glacier, archive ID: {archiveId}");
             }
         }
@@ -395,14 +410,14 @@ namespace Raven.Server.Documents.PeriodicExport
 
             using (var client = new RavenAzureClient(_azureStorageAccount, _azureStorageKey, _configuration.AzureStorageContainer))
             {
-                await client.PutContainer().ConfigureAwait(false);
+                await client.PutContainer();
                 using (var fileStream = File.OpenRead(exportPath))
                 {
                     var key = CombinePathAndKey(_configuration.AzureRemoteFolderName, fileName);
                     await client.PutBlob(key, fileStream, new Dictionary<string, string>
                     {
                         {"Description", GetArchiveDescription(isFullExport)}
-                    }).ConfigureAwait(false);
+                    });
 
                     Log.Info($"Successfully uploaded export {fileName} to Azure container {_configuration.AzureStorageContainer}, with key {key}");
                 }
@@ -425,7 +440,23 @@ namespace Raven.Server.Documents.PeriodicExport
             _incrementalExportTimer?.Dispose();
             _fullExportTimer?.Dispose();
             var task = _runningTask;
-            task?.Wait();
+
+            try
+            {
+                task?.Wait();
+            }
+            catch (ObjectDisposedException)
+            {
+                // shutting down, probably
+            }
+            catch (OperationCanceledException)
+            {
+                // shutting down, probably
+            }
+            catch (Exception e)
+            {
+                 Log.ErrorException("Error when disposing periodic export runner task", e);
+            }
         }
 
         public static PeriodicExportRunner LoadConfigurations(DocumentDatabase database)
