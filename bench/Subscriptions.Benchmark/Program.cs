@@ -22,58 +22,119 @@ namespace SubscriptionsBenchmark
 
     public class Program
     {
-        //public static void Main(string[] args)
-        //{
-        //    Console.WriteLine();
-        //    Console.ReadLine();
-        //    if (args.Length == 0 || args[0] == "?" || args[0] == "-help" || args[0] == "--help")
-        //    {
-        //        Console.WriteLine("Usage:");
-        //        Console.WriteLine("(M) - Mandatory; (O) - Optional");
-        //        Console.WriteLine("Subscriptions.Benchmark (M)[URL] (M)[Database Name] (M)[Collection Name] v[Parallelism Amount] (O)[Max Items]");
-        //    }
-        //    var url = args[0];
-        //    var defaultDatabase = args[1];
-        //    var collectionName = args[2];
-
-        //    var parallelism = Int32.Parse(args[3]);
-        //    int maxItems = 0;
-        //    if (args.Length == 5)
-        //        maxItems = Int32.Parse(args[4]);
-        //    var benchmark = new ParallelSubscriptionsBenchmark();
-        //    AsyncHelpers.RunSync(()=>ParallelSubscriptionsBenchmark(url, defaultDatabase, maxItems, collectionName,parallelism));
-        //}
-        
         public static void Main(string[] args)
         {
-            //  Console.ReadLine();
-            //new SingleSubscriptionBenchmark(new string[] {}).PerformBenchmark();
-            //new ParallelSubscriptionsBenchmark().Run().Wait();
-
-            //Parallel.For(0, 30, x => new SingleSubscriptionBenchmark(new string[] {}).PerformBenchmark());
-            if (args.Length != 0)
-                new SingleSubscriptionBenchmark(new string[] { }).PerformBenchmark();
-            else
+            var paramDictionary = new Dictionary<string, string>();
+            foreach (var arg in args)
             {
-                var procs = new List<Process>();
-                for (var i = 0; i < 30; i++)
-                {
-                    Console.WriteLine($"Creating Proccess {i}");
-                    var proc = Process.Start(new ProcessStartInfo()
-                    {
-                        Arguments = "bin\\Release\\netcoreapp1.0\\Subscriptions.Benchmark.dll trala",
-                        FileName = "dotnet"
-                    });
+                var keyValue = arg.Split('=');
+                paramDictionary.Add(keyValue[0], keyValue[1]);
+            }
 
-                    procs.Add(proc);
-                    Console.WriteLine($"Created Proccess {i}");
+            if (paramDictionary.Count== 5)
+            {
+                
+                string url = paramDictionary["url"];
+                int batchSize = Int32.Parse(paramDictionary["batch"]);
+                int innerParallelism = Int32.Parse(paramDictionary["ipar"]);
+
+                var canProcceedToStressMre = paramDictionary["procceed"];
+                var canProcceedToStressHandle = new EventWaitHandle(false,EventResetMode.ManualReset,canProcceedToStressMre);
+                
+                var proccessStartedMre = paramDictionary["started"];
+                var proccessStartedHandle = new EventWaitHandle(false,EventResetMode.ManualReset,proccessStartedMre);
+
+                proccessStartedHandle.Set();
+                canProcceedToStressHandle.WaitOne();
+                Parallel.For(0, innerParallelism,new ParallelOptions()
+                {
+                    MaxDegreeOfParallelism = innerParallelism
+                } , x =>
+                {
+                    int retries = 0;
+                    int successfullAttempts = 0;
+                    while (true)
+                    {
+                        try
+                        {
+                            new SingleSubscriptionBenchmark(url, batchSize).PerformBenchmark();
+                            Console.Write($"Attempt {successfullAttempts} succeeded");
+                        }
+                        catch (Exception e)
+                        {
+                            retries++;
+                            Console.WriteLine($"Operation Failed, retries: {retries}, Exception: {e}");
+                            Thread.Sleep(100);
+                        }
+                    }
+                    
+
+                });
+
+            }
+            else if (args.Length <5)
+            {
+                string url;
+                string parallelism;
+                string innerParallelism;
+                string batchSize;
+                if (paramDictionary.TryGetValue("url", out url) == false)
+                {
+                    url = "http://localhost:8080";
+                }
+                if (paramDictionary.TryGetValue("par", out parallelism) == false)
+                {
+                    parallelism= "100";
+                }
+                if (paramDictionary.TryGetValue("ipar", out innerParallelism) == false)
+                {
+                    innerParallelism = "8";
+                }
+                if (paramDictionary.TryGetValue("batch", out batchSize) == false)
+                {
+                    batchSize = "1024";
                 }
 
-                foreach (var process in procs)
+                var canProcceedToStressMre = "SubsStress.CanStart";
+                var canProcceedToStressHandle = new EventWaitHandle(false,EventResetMode.ManualReset,canProcceedToStressMre);
+                var procs = new List<Tuple<Process,EventWaitHandle>>();
+
+                try
                 {
-                    if (process.HasExited == false)
-                        process.WaitForExit();
-                    Console.WriteLine($"Proccess Finished");
+                    for (var i = 0; i < Int32.Parse(parallelism); i++)
+                    {
+                        Console.WriteLine($"Creating Proccess {i}");
+                        string hasProccessBeganMreName= $"SubsStress.ProccessStarted{ i}";
+                        var hasProccessBegan = new EventWaitHandle(false,EventResetMode.ManualReset,hasProccessBeganMreName);
+                        var proc = Process.Start(new ProcessStartInfo()
+                        {
+                            Arguments = $"Subscriptions.Benchmark.dll url={url} batch={batchSize} ipar={innerParallelism} procceed={canProcceedToStressMre} started={hasProccessBeganMreName}",
+                            FileName = "dotnet"
+                        });
+
+                        procs.Add(Tuple.Create(proc, hasProccessBegan));
+                        Console.WriteLine($"Created Proccess {i}");
+                    }
+
+                    foreach (var process in procs)
+                    {
+                        process.Item2.WaitOne();
+                    }
+
+                    canProcceedToStressHandle.Set();
+
+                    canProcceedToStressHandle.Dispose();
+                }
+                finally
+                {
+                    foreach (var process in procs)
+                    {
+                        if (process.Item1.HasExited == false)
+                            process.Item1.WaitForExit();
+                        process.Item2.Dispose();
+                        Console.WriteLine($"Proccess Finished");
+                    }
+                    canProcceedToStressHandle.Dispose();
                 }
             }
 

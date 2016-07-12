@@ -69,21 +69,11 @@ namespace SubscriptionsBenchmark
     public class SingleSubscriptionBenchmark : IDisposable
     {
         private int? _batchSize;
-        private int? _minPowOf10;
-        private int? _maxPowOf10;
         private DocumentStore _store;
 
-        public SingleSubscriptionBenchmark(string[] args, string url = "http://localhost:8080", string databaseName = "freeDB")
+        public SingleSubscriptionBenchmark(string url = "http://localhost:8080", int? batchSize = null, string databaseName = "freeDB")
         {
-            if (args.Length > 0)
-            {
-                _batchSize = Int32.Parse(args[0]);
-                if (args.Length > 2)
-                {
-                    _minPowOf10 = Int32.Parse(args[1]);
-                    _maxPowOf10 = Int32.Parse(args[2]);
-                }
-            }
+            _batchSize = batchSize;
             _store = new DocumentStore()
             {
                 DefaultDatabase = databaseName,
@@ -99,29 +89,12 @@ namespace SubscriptionsBenchmark
         }
         public void PerformBenchmark()
         {
-            // todo: remove this
-            //RavenQueryStatistics stats;
-            //using (var session = _store.OpenSession())
-            //{
-            //    session.Query<Thing>().Statistics(out stats);
-            //}
-            //if (stats.TotalResults < (int)Math.Pow(10, i))
-
-            var runResult = SingleTestRun(100 * 1000, 1024).Result;
+            var runResult = SingleTestRun(100 * 1000).Result;
             Console.WriteLine(runResult.DocsProccessed + " " + runResult.DocsRequested + " " + runResult.ElapsedMs);
-            //for (var i = _minPowOf10 ?? 1; i < (_maxPowOf10 ?? 6); i++)
-            //{
-            //    for (var j = 0; j < 3; j++)
-            //    {
-            //        var executionTask = SingleTestRun((int)Math.Pow(10, i), _batchSize);
-            //        executionTask.Wait();
-            //        Console.WriteLine($"{(int)Math.Pow(10, i)}:  {executionTask.Result}");
-            //    }
-            //}
         }
 
 
-        private async Task<RunResult> SingleTestRun(int docCount = 10000, int? batchSize = null, string collectionName="Disks")
+        private async Task<RunResult> SingleTestRun(int docCount = 10000, string collectionName="Disks")
         {
 
             var subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
@@ -130,7 +103,7 @@ namespace SubscriptionsBenchmark
             });
             using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
             {
-                MaxDocsPerBatch = batchSize ?? docCount,
+                MaxDocsPerBatch = _batchSize ?? docCount,
                 SubscriptionId = subscriptionId
             }))
             {
