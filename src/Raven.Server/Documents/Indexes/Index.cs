@@ -752,9 +752,16 @@ namespace Raven.Server.Documents.Indexes
                             var skippedResults = new Reference<int>();
 
                             var fieldsToFetch = new FieldsToFetch(query, Definition);
-                            var documents = string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false
-                                ? reader.Query(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token)
-                                : reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                            IEnumerable<Document> documents;
+
+                            if (string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false)
+                            {
+                                documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                            }
+                            else
+                            {
+                                documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                            }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
                             foreach (var document in documents)

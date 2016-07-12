@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInReduce(new ReduceFunctionProcessor(ResultsVariableNameRetriever.MethodSyntax, null /*TODO arek */), invocationExpression);
+                    return HandleSyntaxInReduce(new ReduceFunctionProcessor(ResultsVariableNameRetriever.MethodSyntax, GroupByFieldsRetriever.MethodSyntax), invocationExpression);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
