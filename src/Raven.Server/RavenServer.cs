@@ -110,9 +110,9 @@ namespace Raven.Server
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services => services.AddSingleton(Router))
                     // ReSharper disable once AccessToDisposedClosure
-                    .Build();
-
-                Log.Info("Initialized Server...");
+                    .Build();				
+								
+				Log.Info("Initialized Server...");
             }
             catch (Exception e)
             {
@@ -229,16 +229,16 @@ namespace Raven.Server
                 ListenToNewTcpConnection();
                 NetworkStream stream = null;
                 JsonOperationContext context = null;
-                JsonOperationContext.MultiDocumentParser multiDocumentParser = null;
-                try
+                JsonOperationContext.MultiDocumentParser multiDocumentParser = null;	            
+				try
                 {
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = 32*1024;
                     tcpClient.SendBufferSize = 4096;
                     stream = tcpClient.GetStream();
                     context = new JsonOperationContext(_unmanagedBuffersPool);
-                    multiDocumentParser = context.ParseMultiFrom(stream);
-                    try
+                    multiDocumentParser = context.ParseMultiFrom(stream);					
+					try
                     {
 						var header = JsonDeserialization.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
 
@@ -262,8 +262,8 @@ namespace Raven.Server
 							case TcpConnectionHeaderMessage.OperationTypes.Subscription:
 								SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
 								break;
-							case TcpConnectionHeaderMessage.OperationTypes.Replication:
-								documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(header,stream);
+							case TcpConnectionHeaderMessage.OperationTypes.Replication:								
+								documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(header, multiDocumentParser, stream);
 								break;
 							default:
 								throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
@@ -282,9 +282,9 @@ namespace Raven.Server
                         }
                         if (context != null)
                         {
-                            using (var writer = new BlittableJsonTextWriter(context, stream))
+                            using (var errorWriter = new BlittableJsonTextWriter(context, stream))
                             {
-                                context.Write(writer, new DynamicJsonValue
+                                context.Write(errorWriter, new DynamicJsonValue
                                 {
                                     ["Type"] = "Error",
                                     ["Exception"] = e.ToString()
