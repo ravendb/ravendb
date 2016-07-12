@@ -3,8 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Linq;
+
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -18,6 +18,8 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
+using Sparrow.Json.Parsing;
+
 //using SubscriptionTable = Raven.Server.Documents.SubscriptionStorage.Schema.SubscriptionTable;
 
 namespace Raven.Server.Documents
@@ -299,45 +301,109 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe void WriteSubscriptionTableValues(BlittableJsonTextWriter writer,
-            DocumentsOperationContext context, List<TableValueReader> subscriptions)
+        public void DropSubscriptionConnection(long subscriptionId)
         {
-            writer.WriteStartArray();
-            for (var i = 0; i < subscriptions.Count; i++)
+            SubscriptionConnectionState connectionState;
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out connectionState))
             {
-                var tvr = subscriptions[i];
-                writer.WriteStartObject();
-                int size;
-                var subscriptionId =
-                    Bits.SwapBytes(*(long*)tvr.Read(Schema.SubscriptionTable.IdIndex, out size));
-                var ackEtag =
-                    *(long*)tvr.Read(Schema.SubscriptionTable.AckEtagIndex, out size);
-                var timeOfSendingLastBatch =
-                    *(long*)tvr.Read(Schema.SubscriptionTable.TimeOfSendingLastBatch, out size);
-                var timeOfLastClientActivity =
-                    *(long*)tvr.Read(Schema.SubscriptionTable.TimeOfLastActivityIndex, out size);
-                var criteria = new BlittableJsonReaderObject(tvr.Read(Schema.SubscriptionTable.CriteriaIndex, out size), size, context);
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("SubscriptionId"));
-                writer.WriteInteger(subscriptionId);
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Criteria"));
-                context.Write(writer, criteria);
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("AckEtag"));
-                writer.WriteInteger(ackEtag);
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("TimeOfSendingLastBatch"));
-                writer.WriteInteger(timeOfSendingLastBatch);
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("TimeOfLastClientActivity"));
-                writer.WriteInteger(timeOfLastClientActivity);
-                writer.WriteEndObject();
-
-                if (i != subscriptions.Count - 1)
-                    writer.WriteComma();
+                connectionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
+                connectionState.Connection.CancellationTokenSource.Cancel();
             }
-            writer.WriteEndArray();
+        }
+
+        public class SubscriptionDynamicValue: DynamicJsonValue,IDisposable
+        {
+            private readonly BlittableJsonReaderObject _criteria;
+
+            public SubscriptionDynamicValue(long id, BlittableJsonReaderObject criteria, long ackEtag, long timeOfSendingLastBatch, long timeOfLastClientActivity)
+            {
+                _criteria = criteria;
+                this["SubscriptionId"] = id;
+                this["Criteria"] = criteria;
+                this["AckEtag"] = ackEtag;
+                this["TimeOfSendingLastBatch"] = timeOfSendingLastBatch;
+                this["TimeOfLastClientActivity"] = timeOfLastClientActivity;
+            }
+            public void Dispose()
+            {
+                _criteria?.Dispose();
+            }
+        }
+
+        private unsafe SubscriptionDynamicValue ExtractSubscriptionConfigValue(TableValueReader tvr, DocumentsOperationContext context)
+        {
+            int size;
+            var subscriptionId =
+                Bits.SwapBytes(*(long*)tvr.Read(Schema.SubscriptionTable.IdIndex, out size));
+            var ackEtag =
+                *(long*)tvr.Read(Schema.SubscriptionTable.AckEtagIndex, out size);
+            var timeOfSendingLastBatch =
+                *(long*)tvr.Read(Schema.SubscriptionTable.TimeOfSendingLastBatch, out size);
+            var timeOfLastClientActivity =
+                *(long*)tvr.Read(Schema.SubscriptionTable.TimeOfLastActivityIndex, out size);
+            var criteria = new BlittableJsonReaderObject(tvr.Read(Schema.SubscriptionTable.CriteriaIndex, out size), size, context);
+
+            return new SubscriptionDynamicValue(subscriptionId,
+                criteria,
+                ackEtag,
+                timeOfSendingLastBatch,
+                timeOfLastClientActivity);
+        }
+
+        public void WriteSubscriptionTableValues(BlittableJsonTextWriter writer,
+            DocumentsOperationContext context, int start, int take)
+        {
+            using (var tx = _environment.WriteTransaction())
+            {
+                var subscriptions = new List<SubscriptionDynamicValue>();
+                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
+                var seen = 0;
+                var taken = 0;
+                foreach (var subscriptionForKey in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                {
+                    if (seen < start)
+                    {
+                        seen++;
+                        continue;
+                    }
+
+                    subscriptions.Add(ExtractSubscriptionConfigValue(subscriptionForKey,context));
+
+                    if (taken > take)
+                        break;
+                }
+                context.Write(writer, new DynamicJsonArray(subscriptions));
+                writer.Flush();
+                foreach (var subscription in subscriptions)
+                {
+                    subscription.Dispose();
+                }
+            }
+        }
+
+        public void WriteRunningSubscriptions(BlittableJsonTextWriter writer,
+           DocumentsOperationContext context, int start, int take)
+        {
+            using (var tx = _environment.ReadTransaction())
+            {
+                var connections =
+                    _subscriptionConnectionStates.
+                    Where(x => x.Value.Connection != null).
+                    Select(x =>
+                    {
+                        var config = ExtractSubscriptionConfigValue(GetSubscriptionConfig(x.Key, tx), context);
+                        config["ClientUri"] = x.Value.Connection.ClientEndpoint.ToString();
+                        return config;
+                    });
+
+
+                context.Write(writer, new DynamicJsonArray(connections));
+                writer.Flush();
+                foreach (var connection in connections)
+                {
+                    connection.Dispose();
+                }
+            }
         }
 
         // ReSharper disable once ClassNeverInstantiated.Local
@@ -358,5 +424,7 @@ namespace Raven.Server.Documents
 #pragma warning restore 169
             }
         }
+
+       
     }
 }

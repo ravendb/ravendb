@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Net;
 using System.Threading;
+using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
@@ -33,7 +35,7 @@ namespace Raven.Abstractions.Data
             EndOfBatch,
             Data,
             Confirm,
-            Terminated
+            Error
         }
 
         public enum ConnectionStatus
@@ -48,6 +50,7 @@ namespace Raven.Abstractions.Data
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
         public RavenJObject Data { get; set; }
+        public string FreeText { get; set; }
     }
 
     public class SubscriptionConnectionOptions
@@ -62,6 +65,8 @@ namespace Raven.Abstractions.Data
 
         [JsonIgnore] public CancellationTokenSource CancellationTokenSource;
         [JsonIgnore] public IDisposable DisposeOnDisconnect;
+        [JsonIgnore] public EndPoint ClientEndpoint;
+        [JsonIgnore] public SubscriptionException ConnectionException;
 
         public int TimeToWaitBeforeConnectionRetryMilliseconds { get; set; } = 5000;
 

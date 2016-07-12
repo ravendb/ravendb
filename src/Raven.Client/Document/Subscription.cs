@@ -315,8 +315,15 @@ namespace Raven.Client.Document
                                     AfterBatch(incomingBatch.Count);
                                     incomingBatch.Clear();
                                     break;
-                                case SubscriptionConnectionServerMessage.MessageType.Terminated:
-                                    throw new SubscriptionClosedException("Connection terminated by server");
+                                case SubscriptionConnectionServerMessage.MessageType.CoonectionStatus:
+                                    switch (receivedMessage.Status)
+                                    {
+                                        case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
+                                            throw new SubscriptionClosedException(receivedMessage.FreeText??string.Empty);
+                                        default:
+                                            throw new Exception($"Connection terminated by server. Exception: {receivedMessage.FreeText??"None"}");
+                                    }
+                                    
                                 default:
                                     throw new ArgumentException(
                                         $"Unrecognized message '{receivedMessage.Type}' type received from server");
@@ -452,7 +459,6 @@ namespace Raven.Client.Document
                     {
                         if (Logger.IsDebugEnabled)
                             Logger.Debug(string.Format("Subscription #{0}.", _options.SubscriptionId));
-                        InformSubscribersOnError(ex);
                         return;
                     }
                     await Task.Delay(_options.TimeToWaitBeforeConnectionRetryMilliseconds);

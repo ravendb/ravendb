@@ -23,9 +23,12 @@ namespace Raven.Server.Utils
         public MeterMetric DocPutsPerSecond { get; private set; }
         public MeterMetric IndexedPerSecond { get; private set; }
 
+        public MeterMetric SubscriptionDocsPerSecond { get; set; }
+
         public MeterMetric MapReduceMappedPerSecond { get; private set; }
         public MeterMetric MapReduceReducedPerSecond { get; private set; }
         public MeterMetric SqlReplicationBatchSizeMeter { get; private set; }
+        
 
         public long ConcurrentRequestsCount;
 
@@ -44,6 +47,7 @@ namespace Raven.Server.Utils
             MapReduceMappedPerSecond?.Dispose();
             MapReduceReducedPerSecond?.Dispose();
             SqlReplicationBatchSizeMeter?.Dispose();
+            SubscriptionDocsPerSecond?.Dispose();
         }
 
         public void Reset()
@@ -59,6 +63,7 @@ namespace Raven.Server.Utils
             RequestsPerSecondCounter = new MeterMetric(_metricsScheduler);
 
             DocPutsPerSecond = new MeterMetric(_metricsScheduler);
+            SubscriptionDocsPerSecond = new MeterMetric(_metricsScheduler);
 
             IndexedPerSecond = new MeterMetric(_metricsScheduler);
             MapReduceMappedPerSecond = new MeterMetric(_metricsScheduler);
@@ -78,10 +83,12 @@ namespace Raven.Server.Utils
                 ["IndexedPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
                 ["RequestDuationMetric"] = self.DocPutsPerSecond.CreateMeterData(),
                 ["RequestsMeter "] = self.RequestsMeter.CreateMeterData(),
+                ["SubscriptionDocsPerSecond"] = self.SubscriptionDocsPerSecond.CreateMeterData(),
                 ["RequestsPerSecondCounter"] = self.RequestsPerSecondCounter.CreateMeterData(),
                 ["MapReduceMappedPerSecond"] = self.MapReduceMappedPerSecond.CreateMeterData(),
                 ["MapReduceReducedPerSecond"] = self.MapReduceReducedPerSecond.CreateMeterData(),
-                ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount
+                ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount,
+                
             };
             return metricsStatsJsonValue;
         }

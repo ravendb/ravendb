@@ -21,6 +21,9 @@ namespace Raven.Server.Documents
 
         public SubscriptionConnectionOptions Connection => _currentConnection;
 
+        
+
+        
 
         // we should have two locks: one lock for a connection and one lock for operations
         // remember to catch ArgumentOutOfRangeException for timeout problems
@@ -43,10 +46,14 @@ namespace Raven.Server.Documents
                         if (_currentConnection?.Strategy == SubscriptionOpeningStrategy.ForceAndKeep)
                             throw new SubscriptionInUseException(
                                 $"Subscription {incomingConnection.SubscriptionId} is occupied by a ForceAndKeep connection, connectionId cannot be opened");
+                        _currentConnection.ConnectionException = new SubscriptionClosedException("Closed by Takeover");
                         _currentConnection?.CancellationTokenSource.Cancel();
+                        
                         throw new TimeoutException();
                     case SubscriptionOpeningStrategy.ForceAndKeep:
+                        _currentConnection.ConnectionException = new SubscriptionClosedException("Closed by ForceAndKeep");
                         _currentConnection?.CancellationTokenSource.Cancel();
+                        
                         throw new TimeoutException();
                     default:
                         throw new InvalidOperationException("Unknown subscription open strategy: " +
@@ -56,7 +63,10 @@ namespace Raven.Server.Documents
 
             _connectionInUse.Reset();
             _currentConnection = incomingConnection;
-            return new DisposableAction(() => { _connectionInUse.SetByAsyncCompletion(); });
+            return new DisposableAction(() => {
+                _connectionInUse.SetByAsyncCompletion();
+                _currentConnection = null;
+            });
         }
 
         public void EndConnection()
