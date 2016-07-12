@@ -309,7 +309,6 @@ namespace Raven.Client.Document
                                 case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
                                     endOfBatch = true;
                                     break;
-                                    ;
                                 case SubscriptionConnectionServerMessage.MessageType.Confirm:
                                     AfterAcknowledgment();
                                     AfterBatch(incomingBatch.Count);
