@@ -1,102 +1,509 @@
-﻿#region LZ4 original
-
-/*
-   LZ4 - Fast LZ compression algorithm
-   Copyright (C) 2011-2012, Yann Collet.
-   BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
-
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are
-   met:
-
-       * Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
-       * Redistributions in binary form must reproduce the above
-   copyright notice, this list of conditions and the following disclaimer
-   in the documentation and/or other materials provided with the
-   distribution.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-   You can contact the author at :
-   - LZ4 homepage : http://fastcompression.blogspot.com/p/lz4.html
-   - LZ4 source repository : http://code.google.com/p/lz4/
-*/
-
-#endregion
-
-#region LZ4 port
-
-/*
-Copyright (c) 2013, Milosz Krajewski
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, are permitted provided
-that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this list of conditions
-  and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice, this list of conditions
-  and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-#endregion
-
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Sparrow.Global;
 using System.Runtime.InteropServices;
-
-// ReSharper disable InconsistentNaming
-// ReSharper disable TooWideLocalVariableScope
-// ReSharper disable JoinDeclarationAndInitializer
+using Sparrow.Binary;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Compression
 {
-    public unsafe class LZ4 : IDisposable
+    public unsafe class LZ4
     {
-        private readonly ushort* _hashtable64K;
-        private readonly uint* _hashtable;
+        public const int ACCELERATION_DEFAULT = 1;
 
-        public LZ4()
+        private const int COPYLENGTH = 8;
+        private const int LASTLITERALS = 5;
+        private const int MINMATCH = 4;
+        private const int MFLIMIT = COPYLENGTH + MINMATCH;
+        private const int LZ4_minLength = MFLIMIT + 1;
+
+        private const int MAXD_LOG = 16;
+        private const int MAX_DISTANCE = ((1 << MAXD_LOG) - 1);
+
+        private const int LZ4_64Klimit = (64 * Constants.Size.Kilobyte) + (MFLIMIT - 1);
+        private const int LZ4_skipTrigger = 6;  // Increase this value ==> compression run slower on incompressible data
+
+        private const byte ML_BITS = 4;
+        private const byte ML_MASK = ((1 << ML_BITS) - 1);
+        private const byte RUN_BITS = (8 - ML_BITS);
+        private const byte RUN_MASK = ((1 << RUN_BITS) - 1);
+
+        private const uint LZ4_MAX_INPUT_SIZE = 0x7E000000;  /* 2 113 929 216 bytes */
+
+        /// <summary>
+        /// LZ4_MEMORY_USAGE :
+        /// Memory usage formula : N->2^N Bytes(examples : 10 -> 1KB; 12 -> 4KB ; 16 -> 64KB; 20 -> 1MB; etc.)
+        /// Increasing memory usage improves compression ratio
+        /// Reduced memory usage can improve speed, due to cache effect
+        /// Default value is 14, for 16KB, which nicely fits into Intel x86 L1 cache
+        /// </summary>
+        private const int LZ4_MEMORY_USAGE = 14;
+        private const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
+        private const int HASH_SIZE_U32 = 1 << LZ4_HASHLOG;
+
+
+        private interface ILimitedOutputDirective { };
+        private struct NotLimited : ILimitedOutputDirective { };
+        private struct LimitedOutput : ILimitedOutputDirective { };
+
+        private interface IDictionaryTypeDirective { };
+        private struct NoDict : IDictionaryTypeDirective { };
+        private struct WithPrefix64K : IDictionaryTypeDirective { };
+        private struct UsingExtDict : IDictionaryTypeDirective { };
+
+        private interface IDictionaryIssueDirective { };
+        private struct NoDictIssue : IDictionaryIssueDirective { };
+        private struct DictSmall : IDictionaryIssueDirective { };
+
+        private interface ITableTypeDirective { };
+        private struct ByU32 : ITableTypeDirective { };
+        private struct ByU16 : ITableTypeDirective { };
+
+        private interface IEndConditionDirective { };
+        private struct EndOnOutputSize : IEndConditionDirective { };
+        private struct EndOnInputSize : IEndConditionDirective { };
+
+        private interface IEarlyEndDirective { };
+        private struct Full : IEarlyEndDirective { };
+        private struct Partial : IEarlyEndDirective { };
+
+        [StructLayout(LayoutKind.Sequential)]
+        protected struct LZ4_stream_t_internal
         {
-            _hashtable64K = (ushort*)Marshal.AllocHGlobal(HASH64K_TABLESIZE * sizeof(ushort)).ToPointer();
-            _hashtable = (uint*)Marshal.AllocHGlobal(HASH_TABLESIZE * sizeof(uint)).ToPointer();
+            public fixed int hashTable[HASH_SIZE_U32];
+            public uint dictSize;
+            public uint currentOffset;
+            public byte* dictionary;
+            public uint initCheck;
         }
 
         public int Encode64(
                 byte* input,
                 byte* output,
                 int inputLength,
-                int outputLength)
+                int outputLength,
+                int acceleration = ACCELERATION_DEFAULT)
         {
-            if (inputLength < LZ4_64KLIMIT)
+            if (acceleration < 1)
+                acceleration = ACCELERATION_DEFAULT;
+
+            LZ4_stream_t_internal ctx = new LZ4_stream_t_internal();
+
+            if (outputLength >= MaximumOutputLength(inputLength))
             {
-                UnmanagedMemory.Set((byte*)_hashtable64K, 0, HASH64K_TABLESIZE * sizeof(ushort));
-                return LZ4_compress64kCtx_64(_hashtable64K, input, output, inputLength, outputLength);
+                if (inputLength < LZ4_64Klimit)
+                    return LZ4_compress_generic<NotLimited, ByU16, NoDict, NoDictIssue>(&ctx, input, output, inputLength, 0, acceleration);
+                else
+                    return LZ4_compress_generic<NotLimited, ByU32, NoDict, NoDictIssue>(&ctx, input, output, inputLength, 0, acceleration);
+            }
+            else
+            {
+                if (inputLength < LZ4_64Klimit)
+                    return LZ4_compress_generic<LimitedOutput, ByU16, NoDict, NoDictIssue>(&ctx, input, output, inputLength, outputLength, acceleration);
+                else
+                    return LZ4_compress_generic<LimitedOutput, ByU32, NoDict, NoDictIssue>(&ctx, input, output, inputLength, outputLength, acceleration);
+            }
+        }
+
+        /// <summary>Gets maximum the length of the output.</summary>
+        /// <param name="size">Length of the input.</param>
+        /// <returns>Maximum number of bytes needed for compressed buffer.</returns>
+        public static int MaximumOutputLength(int size)
+        {
+            return size > LZ4_MAX_INPUT_SIZE ? 0 : size + (size / 255) + 16;
+        }
+
+        private int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
+            where TLimited : ILimitedOutputDirective
+            where TTableType : ITableTypeDirective
+            where TDictionaryType : IDictionaryTypeDirective
+            where TDictionaryIssue : IDictionaryIssueDirective
+        {
+
+            LZ4_stream_t_internal* ctx = dictPtr;
+
+            byte* op = dest;
+            byte* ip = source;
+            byte* anchor = source;
+
+            byte* dictionary = ctx->dictionary;
+            byte* dictEnd = dictionary + ctx->dictSize;
+            byte* lowRefLimit = ip - ctx->dictSize;
+
+            long dictDelta = (long)dictEnd - (long)source;
+
+            byte* iend = ip + inputSize;
+            byte* mflimit = iend - MFLIMIT;
+            byte* matchlimit = iend - LASTLITERALS;
+
+            byte* olimit = op + maxOutputSize;
+
+            // Init conditions
+            if (inputSize > LZ4_MAX_INPUT_SIZE) return 0;   // Unsupported input size, too large (or negative)
+
+            byte* @base;
+            byte* lowLimit;
+
+            if (typeof(TDictionaryType) == typeof(NoDict))
+            {
+                @base = source;
+                lowLimit = source;
+            }
+            else if (typeof(TDictionaryType) == typeof(WithPrefix64K))
+            {
+                @base = source - ctx->currentOffset;
+                lowLimit = source - ctx->dictSize;
+            }
+            else if (typeof(TDictionaryType) == typeof(UsingExtDict))
+            {
+                @base = source - ctx->currentOffset;
+                lowLimit = source;
+            }
+            else throw new NotSupportedException("Unsupported IDictionaryTypeDirective.");
+
+            if ((typeof(TTableType) == typeof(ByU16)) && (inputSize >= LZ4_64Klimit)) // Size too large (not within 64K limit)
+                return 0;
+
+            if (inputSize < LZ4_minLength) // Input too small, no compression (all literals)
+                goto _last_literals;
+
+            // First Byte
+            LZ4_putPosition<TTableType>(ip, ctx, @base);
+            ip++;
+            int forwardH = LZ4_hashPosition<TTableType>(ip);
+
+            // Main Loop
+            long refDelta = 0;
+            for (;;)
+            {
+                byte* match;
+                {
+                    byte* forwardIp = ip;
+
+                    int step = 1;
+                    int searchMatchNb = acceleration << LZ4_skipTrigger;
+
+                    do
+                    {
+                        int h = forwardH;
+                        ip = forwardIp;
+                        forwardIp += step;
+                        step = (searchMatchNb++ >> LZ4_skipTrigger);
+
+                        if (forwardIp > mflimit)
+                            goto _last_literals;
+
+                        match = LZ4_getPositionOnHash<TTableType>(h, ctx, @base);
+                        if (typeof(TDictionaryType) == typeof(UsingExtDict))
+                        {
+                            if (match < source)
+                            {
+                                refDelta = dictDelta;
+                                lowLimit = dictionary;
+                            }
+                            else
+                            {
+                                refDelta = 0;
+                                lowLimit = source;
+                            }
+                        }
+
+                        if (typeof(TTableType) == typeof(ByU16))
+                        {
+                            ulong value = *((ulong*)forwardIp) * prime5bytes >> (40 - ByU16HashLog);
+                            forwardH = (int)(value & ByU16HashMask);
+                            ((ushort*)ctx->hashTable)[h] = (ushort)(ip - @base);
+                        }
+                        else if (typeof(TTableType) == typeof(ByU32))
+                        {
+                            ulong value = (*((ulong*)forwardIp) * prime5bytes >> (40 - ByU32HashLog));
+                            forwardH = (int)(value & ByU32HashMask);
+                            ctx->hashTable[h] = (int)(ip - @base);
+                        }
+                        else throw new NotSupportedException("TTableType directive is not supported.");
+                    }
+                    while (((typeof(TDictionaryType) == typeof(DictSmall)) ? (match < lowRefLimit) : false) ||
+                           ((typeof(TTableType) == typeof(ByU16)) ? false : (match + MAX_DISTANCE < ip)) ||
+                           (*(uint*)(match + refDelta) != *((uint*)ip)));
+                }
+
+                // Catch up
+                while ((ip > anchor) && (match + refDelta > lowLimit) && (ip[-1] == match[refDelta - 1]))
+                {
+                    ip--;
+                    match--;
+                }
+
+
+                // Encode Literal length
+                byte* token;
+                {
+                    int litLength = (int)(ip - anchor);
+                    token = op++;
+
+                    if ((typeof(TLimited) == typeof(LimitedOutput)) && (op + litLength + (2 + 1 + LASTLITERALS) + (litLength / 255) > olimit))
+                        return 0;   /* Check output limit */
+
+                    if (litLength >= RUN_MASK)
+                    {
+                        int len = litLength - RUN_MASK;
+                        *token = RUN_MASK << ML_BITS;
+
+                        for (; len >= 255; len -= 255)
+                            *op++ = 255;
+
+                        *op++ = (byte)len;
+                    }
+                    else
+                    {
+                        *token = (byte)(litLength << ML_BITS);
+                    }
+
+                    /* Copy Literals */
+                    WildCopy(op, anchor, (op + litLength));
+                    op += litLength;
+                }
+
+                _next_match:
+
+                // Encode Offset                
+                *((ushort*)op) = (ushort)(ip - match);
+                op += sizeof(ushort);
+
+                // Encode MatchLength
+                {
+                    int matchLength;
+
+                    if ((typeof(TDictionaryType) == typeof(UsingExtDict)) && (lowLimit == dictionary))
+                    {
+                        match += refDelta;
+
+                        byte* limit = ip + (dictEnd - match);
+                        if (limit > matchlimit) limit = matchlimit;
+                        matchLength = LZ4_count(ip + MINMATCH, match + MINMATCH, limit);
+                        ip += MINMATCH + matchLength;
+                        if (ip == limit)
+                        {
+                            int more = LZ4_count(ip, source, matchlimit);
+                            matchLength += more;
+                            ip += more;
+                        }
+                    }
+                    else
+                    {
+                        matchLength = LZ4_count(ip + MINMATCH, match + MINMATCH, matchlimit);
+                        ip += MINMATCH + matchLength;
+                    }
+
+                    if ((typeof(TLimited) == typeof(LimitedOutput)) && ((op + (1 + LASTLITERALS) + (matchLength >> 8)) > olimit))
+                        return 0;    /* Check output limit */
+
+                    if (matchLength >= ML_MASK)
+                    {
+                        *token += ML_MASK;
+                        matchLength -= ML_MASK;
+
+                        for (; matchLength >= 510; matchLength -= 510)
+                        {
+                            *op++ = 255;
+                            *op++ = 255;
+                        }
+
+                        if (matchLength >= 255)
+                        {
+                            matchLength -= 255;
+                            *op++ = 255;
+                        }
+
+                        *op++ = (byte)matchLength;
+                    }
+                    else
+                    {
+                        *token += (byte)(matchLength);
+                    }
+                }
+
+
+                anchor = ip;
+
+                // Test end of chunk
+                if (ip > mflimit) break;
+
+                // Fill table
+                LZ4_putPosition<TTableType>(ip - 2, ctx, @base);
+
+                /* Test next position */
+                match = LZ4_getPosition<TTableType>(ip, ctx, @base);
+                if (typeof(TDictionaryType) == typeof(UsingExtDict))
+                {
+                    if (match < source)
+                    {
+                        refDelta = dictDelta;
+                        lowLimit = dictionary;
+                    }
+                    else
+                    {
+                        refDelta = 0;
+                        lowLimit = source;
+                    }
+                }
+
+                LZ4_putPosition<TTableType>(ip, ctx, @base);
+                if (((typeof(TDictionaryType) == typeof(DictSmall)) ? (match >= lowRefLimit) : true) && (match + MAX_DISTANCE >= ip) && (*(uint*)(match + refDelta) == *(uint*)(ip)))
+                {
+                    token = op++; *token = 0;
+                    goto _next_match;
+                }
+
+                /* Prepare next loop */
+                forwardH = LZ4_hashPosition<TTableType>(++ip);
             }
 
-            UnmanagedMemory.Set((byte*)_hashtable, 0, HASH_TABLESIZE * sizeof(uint));
-            return LZ4_compressCtx_64(_hashtable, input, output, inputLength, outputLength);
+            _last_literals:
+
+            /* Encode Last Literals */
+            {
+                int lastRun = (int)(iend - anchor);
+                if ((typeof(TLimited) == typeof(LimitedOutput)) && ((op - dest) + lastRun + 1 + ((lastRun + 255 - RUN_MASK) / 255) > maxOutputSize))
+                    return 0;   // Check output limit;
+
+                if (lastRun >= RUN_MASK)
+                {
+                    int accumulator = lastRun - RUN_MASK;
+                    *op++ = RUN_MASK << ML_BITS;
+
+                    for (; accumulator >= 255; accumulator -= 255)
+                        *op++ = 255;
+
+                    *op++ = (byte)accumulator;
+                }
+                else
+                {
+                    *op++ = (byte)(lastRun << ML_BITS);
+                }
+
+                UnmanagedMemory.Copy(op, anchor, lastRun);
+                op += lastRun;
+            }
+
+            return (int)(op - dest);
         }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int LZ4_count(byte* pInPtr, byte* pMatchPtr, byte* pInLimitPtr)
+        {
+            // JIT: We make local copies of the parameters because the JIT will not be able to figure out yet that it can safely inline
+            //      the method cloning the parameters. As the arguments are modified the JIT will not be able to inline it.
+            //      This wont be needed anymore when https://github.com/dotnet/coreclr/issues/6014 is resolved.
+            byte* pIn = pInPtr;
+            byte* pMatch = pMatchPtr;
+            byte* pInLimit = pInLimitPtr;
+
+            byte* pStart = pIn;
+
+            while (pIn < pInLimit - (sizeof(ulong) - 1))
+            {
+                ulong diff = *((ulong*)pMatch) ^ *((ulong*)pIn);
+                if (diff == 0)
+                {
+                    pIn += sizeof(ulong);
+                    pMatch += sizeof(ulong);
+                    continue;
+                }
+
+                pIn += Bits.TrailingZeroes(diff);
+                return (int)(pIn - pStart);
+            }
+
+            if ((pIn < (pInLimit - 3)) && (*((uint*)pMatch) == *((uint*)(pIn)))) { pIn += sizeof(uint); pMatch += sizeof(uint); }
+            if ((pIn < (pInLimit - 1)) && (*((ushort*)pMatch) == *((ushort*)pIn))) { pIn += sizeof(ushort); pMatch += sizeof(ushort); }
+            if ((pIn < pInLimit) && (*pMatch == *pIn)) pIn++;
+
+            return (int)(pIn - pStart);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void LZ4_putPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
+        {
+            int h = LZ4_hashPosition<TTableType>(p);
+            LZ4_putPositionOnHash<TTableType>(p, h, ctx, srcBase);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private byte* LZ4_getPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
+        {
+            int h = LZ4_hashPosition<TTableType>(p);
+            return LZ4_getPositionOnHash<TTableType>(h, ctx, srcBase);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void LZ4_putPositionOnHash<TTableType>(byte* p, int h, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
+        {
+            if (typeof(TTableType) == typeof(ByU32))
+                ctx->hashTable[h] = (int)(p - srcBase);
+            else if (typeof(TTableType) == typeof(ByU16))
+                ((ushort*)ctx->hashTable)[h] = (ushort)(p - srcBase);
+            else
+                ThrowException(new NotSupportedException("TTableType directive is not supported."));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private byte* LZ4_getPositionOnHash<TTableType>(int h, LZ4_stream_t_internal* ctx, byte* srcBase)
+            where TTableType : ITableTypeDirective
+        {
+            if (typeof(TTableType) == typeof(ByU32))
+                return srcBase + ctx->hashTable[h];
+            else if (typeof(TTableType) == typeof(ByU16))
+                return srcBase + ((ushort*)ctx->hashTable)[h];
+
+            ThrowException(new NotSupportedException("TTableType directive is not supported."));
+            return default(byte*);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int LZ4_hashPosition<TTableType>(byte* sequence)
+            where TTableType : ITableTypeDirective
+        {
+            if (typeof(TTableType) == typeof(ByU16))
+            {
+                ulong value = *((ulong*)sequence) * prime5bytes >> (40 - ByU16HashLog);
+                return (int)(value & ByU16HashMask);
+            }
+            else if (typeof(TTableType) == typeof(ByU32))
+            {
+                ulong value = (*((ulong*)sequence) * prime5bytes >> (40 - ByU32HashLog));
+                return (int)(value & ByU32HashMask);
+            }
+
+            return ThrowException<int>(new NotSupportedException("TTableType directive is not supported."));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ThrowException(Exception e)
+        {
+            throw e;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static TResult ThrowException<TResult>(Exception e)
+        {
+            throw e;
+        }
+
+        private const int ByU16HashLog = LZ4_HASHLOG + 1;
+        private const ulong ByU16HashMask = (1 << ByU16HashLog) - 1;
+
+        private const int ByU32HashLog = LZ4_HASHLOG;
+        private const ulong ByU32HashMask = (1 << ByU32HashLog) - 1;
+
+        private const ulong prime5bytes = 889523592379UL;
 
         public static int Decode64(
             byte* input,
@@ -107,861 +514,241 @@ namespace Sparrow.Compression
         {
             if (knownOutputLength)
             {
-                var length = LZ4_uncompress_64(input, output, outputLength);
-                if (length != inputLength)
-                    throw new ArgumentException("LZ4 block is corrupted, or invalid length has been given.");
+                var length = LZ4_decompress_generic<EndOnInputSize, Full, NoDict>(input, output, inputLength, outputLength, 0, output, null, 0);
+                if (length != outputLength)
+                    ThrowException(new ArgumentException("LZ4 block is corrupted, or invalid length has been given."));
                 return outputLength;
             }
             else
             {
-                var length = LZ4_uncompress_unknownOutputSize_64(input, output, inputLength, outputLength);
+                var length = LZ4_decompress_generic<EndOnOutputSize, Full, WithPrefix64K>(input, output, inputLength, outputLength, 0, output - (64 * Constants.Size.Kilobyte), null, 64 * Constants.Size.Kilobyte);
                 if (length < 0)
-                    throw new ArgumentException("LZ4 block is corrupted, or invalid length has been given.");
+                    ThrowException(new ArgumentException("LZ4 block is corrupted, or invalid length has been given."));
+
                 return length;
             }
         }
 
-        #region configuration
+        private readonly static int[] dec32table = new int[] { 4, 1, 2, 1, 4, 4, 4, 4 };
+        private readonly static int[] dec64table = new int[] { 0, 0, 0, -1, 0, 1, 2, 3 };
 
-        /// <summary>
-        /// Memory usage formula : N->2^N Bytes (examples : 10 -> 1KB; 12 -> 4KB ; 16 -> 64KB; 20 -> 1MB; etc.)
-        /// Increasing memory usage improves compression ratio
-        /// Reduced memory usage can improve speed, due to cache effect
-        /// Default value is 14, for 16KB, which nicely fits into Intel x86 L1 cache
-        /// </summary>
-        private const int MEMORY_USAGE = 14;
-
-        /// <summary>
-        /// Decreasing this value will make the algorithm skip faster data segments considered "incompressible"
-        /// This may decrease compression ratio dramatically, but will be faster on incompressible data
-        /// Increasing this value will make the algorithm search more before declaring a segment "incompressible"
-        /// This could improve compression a bit, but will be slower on incompressible data
-        /// The default value (6) is recommended
-        /// </summary>
-        private const int NOTCOMPRESSIBLE_DETECTIONLEVEL = 6;
-
-        #endregion
-
-        #region consts
-
-        private const int MINMATCH = 4;
-#pragma warning disable 162
-        private const int SKIPSTRENGTH = NOTCOMPRESSIBLE_DETECTIONLEVEL > 2 ? NOTCOMPRESSIBLE_DETECTIONLEVEL : 2;
-#pragma warning restore 162
-        private const int COPYLENGTH = 8;
-        private const int LASTLITERALS = 5;
-        private const int MFLIMIT = COPYLENGTH + MINMATCH;
-        private const int MINLENGTH = MFLIMIT + 1;
-        private const int MAXD_LOG = 16;
-        private const int MAXD = 1 << MAXD_LOG;
-        private const int MAXD_MASK = MAXD - 1;
-        private const int MAX_DISTANCE = (1 << MAXD_LOG) - 1;
-        private const int ML_BITS = 4;
-        private const int ML_MASK = (1 << ML_BITS) - 1;
-        private const int RUN_BITS = 8 - ML_BITS;
-        private const int RUN_MASK = (1 << RUN_BITS) - 1;
-        private const int STEPSIZE_64 = 8;
-        private const int STEPSIZE_32 = 4;
-
-        private const int LZ4_64KLIMIT = (1 << 16) + (MFLIMIT - 1);
-
-        private const int HASH_LOG = MEMORY_USAGE - 2;
-        private const int HASH_TABLESIZE = 1 << HASH_LOG;
-        private const int HASH_ADJUST = (MINMATCH * 8) - HASH_LOG;
-
-        private const int HASH64K_LOG = HASH_LOG + 1;
-        private const int HASH64K_TABLESIZE = 1 << HASH64K_LOG;
-        private const int HASH64K_ADJUST = (MINMATCH * 8) - HASH64K_LOG;
-
-        private const int HASHHC_LOG = MAXD_LOG - 1;
-        private const int HASHHC_TABLESIZE = 1 << HASHHC_LOG;
-        private const int HASHHC_ADJUST = (MINMATCH * 8) - HASHHC_LOG;
-        //private const int HASHHC_MASK = HASHHC_TABLESIZE - 1;
-
-        private static readonly int[] DECODER_TABLE_32 = { 0, 3, 2, 3, 0, 0, 0, 0 };
-        private static readonly int[] DECODER_TABLE_64 = { 0, 0, 0, -1, 0, 1, 2, 3 };
-
-        private static readonly int[] DEBRUIJN_TABLE_32 =
+        private static int LZ4_decompress_generic<TEndCondition, TEarlyEnd, TDictionaryType>(byte* source, byte* dest, int inputSize, int outputSize, int targetOutputSize, byte* lowPrefix, byte* dictStart, int dictSize)
+            where TEndCondition : IEndConditionDirective
+            where TEarlyEnd : IEarlyEndDirective
+            where TDictionaryType : IDictionaryTypeDirective
         {
-            0, 0, 3, 0, 3, 1, 3, 0, 3, 2, 2, 1, 3, 2, 0, 1,
-            3, 3, 1, 2, 2, 2, 2, 0, 3, 1, 2, 0, 1, 0, 1, 1
-        };
+            /* Local Variables */
+            byte* ip = source;
+            byte* iend = ip + inputSize;
 
-        private static readonly int[] DEBRUIJN_TABLE_64 =
-        {
-            0, 0, 0, 0, 0, 1, 1, 2, 0, 3, 1, 3, 1, 4, 2, 7,
-            0, 2, 3, 6, 1, 5, 3, 5, 1, 3, 4, 4, 2, 5, 6, 7,
-            7, 0, 1, 2, 3, 3, 4, 6, 2, 6, 5, 5, 3, 4, 5, 6,
-            7, 1, 2, 4, 6, 4, 4, 5, 7, 2, 6, 5, 7, 6, 7, 7
-        };
+            byte* op = dest;
+            byte* oend = op + outputSize;
 
-        private const int MAX_NB_ATTEMPTS = 256;
-        private const int OPTIMAL_ML = (ML_MASK - 1) + MINMATCH;
+            byte* oexit = op + targetOutputSize;
+            byte* lowLimit = lowPrefix - dictSize;
 
-        #endregion
+            byte* dictEnd = dictStart + dictSize;
 
-        #region public interface (common)
+            bool checkOffset = ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (dictSize < 64 * Constants.Size.Kilobyte));
 
-        /// <summary>Gets maximum the length of the output.</summary>
-        /// <param name="inputLength">Length of the input.</param>
-        /// <returns>Maximum number of bytes needed for compressed buffer.</returns>
-        public static int MaximumOutputLength(int inputLength)
-        {
-            return inputLength + (inputLength / 255) + 16;
-        }
+            // Special Cases
+            if ((typeof(TEarlyEnd) == typeof(Partial)) && (oexit > oend - MFLIMIT)) oexit = oend - MFLIMIT;                          // targetOutputSize too high => decode everything
+            if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (outputSize == 0))
+                return ((inputSize == 1) && (*ip == 0)) ? 0 : -1;  // Empty output buffer
+            if ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (outputSize == 0))
+                return (*ip == 0 ? 1 : -1);
 
-        #endregion
-
-        #region LZ4_compressCtx_64
-
-        private static unsafe int LZ4_compressCtx_64(
-            uint* hash_table,
-            byte* src,
-            byte* dst,
-            int src_len,
-            int dst_maxlen)
-        {
-            byte* _p;
-
-            fixed (int* debruijn64 = &DEBRUIJN_TABLE_64[0])
+            // Main Loop
+            while (true)
             {
-                // r93
-                var src_p = src;
-                var src_base = src_p;
-                var src_anchor = src_p;
-                var src_end = src_p + src_len;
-                var src_mflimit = src_end - MFLIMIT;
-
-                var dst_p = dst;
-                var dst_end = dst_p + dst_maxlen;
-
-                var src_LASTLITERALS = src_end - LASTLITERALS;
-                var src_LASTLITERALS_1 = src_LASTLITERALS - 1;
-
-                var src_LASTLITERALS_3 = src_LASTLITERALS - 3;
-                var src_LASTLITERALS_STEPSIZE_1 = src_LASTLITERALS - (STEPSIZE_64 - 1);
-                var dst_LASTLITERALS_1 = dst_end - (1 + LASTLITERALS);
-                var dst_LASTLITERALS_3 = dst_end - (2 + 1 + LASTLITERALS);
-
                 int length;
-                uint h, h_fwd;
 
-                // Init
-                if (src_len < MINLENGTH) goto _last_literals;
-
-                // First Byte
-                hash_table[((((*(uint*)(src_p))) * 2654435761u) >> HASH_ADJUST)] = (uint)(src_p - src_base);
-                src_p++;
-                h_fwd = ((((*(uint*)(src_p))) * 2654435761u) >> HASH_ADJUST);
-
-                // Main Loop
-                while (true)
+                /* get literal length */
+                byte token = *ip++;
+                if ((length = (token >> ML_BITS)) == RUN_MASK)
                 {
-                    var findMatchAttempts = (1 << SKIPSTRENGTH) + 3;
-                    var src_p_fwd = src_p;
-                    byte* src_ref;
-                    byte* dst_token;
-
-                    // Find a match
+                    byte s;
                     do
                     {
-                        h = h_fwd;
-                        var step = findMatchAttempts++ >> SKIPSTRENGTH;
-                        src_p = src_p_fwd;
-                        src_p_fwd = src_p + step;
-
-                        if (src_p_fwd > src_mflimit) goto _last_literals;
-
-                        h_fwd = ((((*(uint*)(src_p_fwd))) * 2654435761u) >> HASH_ADJUST);
-                        src_ref = src_base + hash_table[h];
-                        hash_table[h] = (uint)(src_p - src_base);
-                    } while ((src_ref < src_p - MAX_DISTANCE) || ((*(uint*)(src_ref)) != (*(uint*)(src_p))));
-
-                    // Catch up
-                    while ((src_p > src_anchor) && (src_ref > src) && (src_p[-1] == src_ref[-1]))
-                    {
-                        src_p--;
-                        src_ref--;
+                        s = *ip++;
+                        length += s;
                     }
+                    while (((typeof(TEndCondition) == typeof(EndOnInputSize)) ? ip < iend - RUN_MASK : true) && (s == 255));
 
-                    // Encode Literal length
-                    length = (int)(src_p - src_anchor);
-                    dst_token = dst_p++;
-
-                    if (dst_p + length + (length >> 8) > dst_LASTLITERALS_3) return 0; // Check output limit
-
-                    if (length >= RUN_MASK)
-                    {
-                        var len = length - RUN_MASK;
-                        *dst_token = (RUN_MASK << ML_BITS);
-                        if (len > 254)
-                        {
-                            do
-                            {
-                                *dst_p++ = 255;
-                                len -= 255;
-                            } while (len > 254);
-                            *dst_p++ = (byte)len;
-                            BlockCopy(src_anchor, dst_p, (length));
-                            dst_p += length;
-                            goto _next_match;
-                        }
-                        *dst_p++ = (byte)len;
-                    }
-                    else
-                    {
-                        *dst_token = (byte)(length << ML_BITS);
-                    }
-
-                    // Copy Literals
-                    _p = dst_p + (length);
-                    {
-                        do
-                        {
-                            *(ulong*)dst_p = *(ulong*)src_anchor;
-                            dst_p += 8;
-                            src_anchor += 8;
-                        } while (dst_p < _p);
-                    }
-                    dst_p = _p;
-
-                    _next_match:
-
-                    // Encode Offset
-                    *(ushort*)dst_p = (ushort)(src_p - src_ref);
-                    dst_p += 2;
-
-                    // Start Counting
-                    src_p += MINMATCH;
-                    src_ref += MINMATCH; // MinMatch already verified
-                    src_anchor = src_p;
-
-                    while (src_p < src_LASTLITERALS_STEPSIZE_1)
-                    {
-                        var diff = (*(long*)(src_ref)) ^ (*(long*)(src_p));
-                        if (diff == 0)
-                        {
-                            src_p += STEPSIZE_64;
-                            src_ref += STEPSIZE_64;
-                            continue;
-                        }
-                        src_p += debruijn64[(((ulong)((diff) & -(diff)) * 0x0218A392CDABBD3FL)) >> 58];
-                        goto _endCount;
-                    }
-
-                    if ((src_p < src_LASTLITERALS_3) && ((*(uint*)(src_ref)) == (*(uint*)(src_p))))
-                    {
-                        src_p += 4;
-                        src_ref += 4;
-                    }
-                    if ((src_p < src_LASTLITERALS_1) && ((*(ushort*)(src_ref)) == (*(ushort*)(src_p))))
-                    {
-                        src_p += 2;
-                        src_ref += 2;
-                    }
-                    if ((src_p < src_LASTLITERALS) && (*src_ref == *src_p)) src_p++;
-
-                    _endCount:
-
-                    // Encode MatchLength
-                    length = (int)(src_p - src_anchor);
-
-                    if (dst_p + (length >> 8) > dst_LASTLITERALS_1) return 0; // Check output limit
-
-                    if (length >= ML_MASK)
-                    {
-                        *dst_token += ML_MASK;
-                        length -= ML_MASK;
-                        for (; length > 509; length -= 510)
-                        {
-                            *dst_p++ = 255;
-                            *dst_p++ = 255;
-                        }
-                        if (length > 254)
-                        {
-                            length -= 255;
-                            *dst_p++ = 255;
-                        }
-                        *dst_p++ = (byte)length;
-                    }
-                    else
-                    {
-                        *dst_token += (byte)length;
-                    }
-
-                    // Test end of chunk
-                    if (src_p > src_mflimit)
-                    {
-                        src_anchor = src_p;
-                        break;
-                    }
-
-                    // Fill table
-                    hash_table[((((*(uint*)(src_p - 2))) * 2654435761u) >> HASH_ADJUST)] = (uint)(src_p - 2 - src_base);
-
-                    // Test next position
-
-                    h = ((((*(uint*)(src_p))) * 2654435761u) >> HASH_ADJUST);
-                    src_ref = src_base + hash_table[h];
-                    hash_table[h] = (uint)(src_p - src_base);
-
-                    if ((src_ref > src_p - (MAX_DISTANCE + 1)) && ((*(uint*)(src_ref)) == (*(uint*)(src_p))))
-                    {
-                        dst_token = dst_p++;
-                        *dst_token = 0;
-                        goto _next_match;
-                    }
-
-                    // Prepare next loop
-                    src_anchor = src_p++;
-                    h_fwd = ((((*(uint*)(src_p))) * 2654435761u) >> HASH_ADJUST);
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (op + length) < op) goto _output_error;   /* overflow detection */
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip + length) < ip) goto _output_error;   /* overflow detection */
                 }
 
-                _last_literals:
-
-                // Encode Last Literals
-                var lastRun = (int)(src_end - src_anchor);
-                if (dst_p + lastRun + 1 + ((lastRun + 255 - RUN_MASK) / 255) > dst_end) return 0;
-                if (lastRun >= RUN_MASK)
+                // copy literals
+                byte* cpy = op + length;
+                if (((typeof(TEndCondition) == typeof(EndOnInputSize)) && ((cpy > (typeof(TEarlyEnd) == typeof(Partial) ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS))))
+                    || ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (cpy > oend - COPYLENGTH)))
                 {
-                    *dst_p++ = (RUN_MASK << ML_BITS);
-                    lastRun -= RUN_MASK;
-                    for (; lastRun > 254; lastRun -= 255) *dst_p++ = 255;
-                    *dst_p++ = (byte)lastRun;
-                }
-                else *dst_p++ = (byte)(lastRun << ML_BITS);
-                BlockCopy(src_anchor, dst_p, (int)(src_end - src_anchor));
-                dst_p += src_end - src_anchor;
+                    if (typeof(TEarlyEnd) == typeof(Partial))
+                    {
+                        if (cpy > oend)
+                            goto _output_error;                           /* Error : write attempt beyond end of output buffer */
 
-                // End
-                return (int)(dst_p - dst);
+                        if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip + length > iend))
+                            goto _output_error;   /* Error : read attempt beyond end of input buffer */
+                    }
+                    else
+                    {
+                        if ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (cpy != oend))
+                            goto _output_error;       /* Error : block decoding must stop exactly there */
+
+                        if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && ((ip + length != iend) || (cpy > oend)))
+                            goto _output_error;   /* Error : input must be consumed */
+                    }
+
+                    UnmanagedMemory.Copy(op, ip, length);
+                    ip += length;
+                    op += length;
+                    break;     /* Necessarily EOF, due to parsing restrictions */
+                }
+
+                WildCopy(op, ip, cpy);
+                ip += length; op = cpy;
+
+                /* get offset */
+                byte* match = cpy - *((ushort*)ip); ip += sizeof(ushort);
+                if ((checkOffset) && (match < lowLimit))
+                    goto _output_error;   /* Error : offset outside destination buffer */
+
+                /* get matchlength */
+                if ((length = (token & ML_MASK)) == ML_MASK)
+                {
+                    byte s;
+                    do
+                    {
+                        if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip > iend - LASTLITERALS))
+                            goto _output_error;
+
+                        s = *ip++;
+                        length += s;
+                    }
+                    while (s == 255);
+
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (op + length) < op)
+                        goto _output_error;   /* overflow detection */
+                }
+
+                length += MINMATCH;
+
+                /* check external dictionary */
+                if ((typeof(TDictionaryType) == typeof(UsingExtDict)) && (match < lowPrefix))
+                {
+                    if (op + length > oend - LASTLITERALS)
+                        goto _output_error;   /* doesn't respect parsing restriction */
+
+                    if (length <= (int)(lowPrefix - match))
+                    {
+                        /* match can be copied as a single segment from external dictionary */
+                        match = dictEnd - (lowPrefix - match);
+                        UnmanagedMemory.Move(op, match, length); // TODO: Check if move is required.
+                        op += length;
+                    }
+                    else
+                    {
+                        /* match encompass external dictionary and current segment */
+                        int copySize = (int)(lowPrefix - match);
+                        UnmanagedMemory.Copy(op, dictEnd - copySize, copySize);
+                        op += copySize;
+
+                        copySize = length - copySize;
+                        if (copySize > (int)(op - lowPrefix))   /* overlap within current segment */
+                        {
+                            byte* endOfMatch = op + copySize;
+                            byte* copyFrom = lowPrefix;
+                            while (op < endOfMatch)
+                                *op++ = *copyFrom++;
+                        }
+                        else
+                        {
+                            UnmanagedMemory.Copy(op, lowPrefix, copySize);
+                            op += copySize;
+                        }
+                    }
+                    continue;
+                }
+
+                /* copy repeated sequence */
+                cpy = op + length;
+                if ((op - match) < 8)
+                {
+                    int dec64 = dec64table[op - match];
+                    op[0] = match[0];
+                    op[1] = match[1];
+                    op[2] = match[2];
+                    op[3] = match[3];
+
+                    match += dec32table[op - match];
+                    *((uint*)(op + 4)) = *(uint*)match;
+                    op += 8;
+                    match -= dec64;
+                }
+                else
+                {
+                    *((ulong*)op) = *(ulong*)match;
+                    op += sizeof(ulong);
+                    match += sizeof(ulong);
+                }
+
+                if (cpy > oend - 12)
+                {
+                    if (cpy > oend - LASTLITERALS)
+                        goto _output_error;    /* Error : last LASTLITERALS bytes must be literals */
+
+                    if (op < oend - 8)
+                    {
+                        WildCopy(op, match, (oend - 8));
+                        match += (oend - 8) - op;
+                        op = oend - 8;
+                    }
+
+                    while (op < cpy)
+                        *op++ = *match++;
+                }
+                else
+                {
+                    WildCopy(op, match, cpy);
+                }
+
+                op = cpy;   /* correction */
             }
+
+            /* end of decoding */
+            if (typeof(TEndCondition) == typeof(EndOnInputSize))
+                return (int)(op - dest);     /* Nb of output bytes decoded */
+            else
+                return (int)(ip - source);   /* Nb of input bytes read */
+
+            /* Overflow error detected */
+            _output_error:
+            return (int)(-(ip - source)) - 1;
         }
 
-        #endregion
-
-        #region LZ4_compress64kCtx_64
-
-        private static unsafe int LZ4_compress64kCtx_64(
-            ushort* hash_table,
-            byte* src,
-            byte* dst,
-            int src_len,
-            int dst_maxlen)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void WildCopy(byte* destPtr, byte* srcPtr, byte* destEndPtr)
         {
-            byte* _p;
+            // JIT: We make local copies of the parameters because the JIT will not be able to figure out yet that it can safely inline
+            //      the method cloning the parameters. As the arguments are modified the JIT will not be able to inline it.
+            //      This wont be needed anymore when https://github.com/dotnet/coreclr/issues/6014 is resolved.
 
-            fixed (int* debruijn64 = &DEBRUIJN_TABLE_64[0])
+            byte* dest = destPtr;
+            byte* src = srcPtr;
+            byte* destEnd = destEndPtr;
+
+            // This copy will use the same data that has already being copied as source
+            // It is more of a repeater than a copy per-se. 
+
+            do
             {
-                // r93
-                var src_p = src;
-                var src_anchor = src_p;
-                var src_base = src_p;
-                var src_end = src_p + src_len;
-                var src_mflimit = src_end - MFLIMIT;
-
-                var dst_p = dst;
-                var dst_end = dst_p + dst_maxlen;
-
-                var src_LASTLITERALS = src_end - LASTLITERALS;
-                var src_LASTLITERALS_1 = src_LASTLITERALS - 1;
-
-                var src_LASTLITERALS_3 = src_LASTLITERALS - 3;
-
-                var src_LASTLITERALS_STEPSIZE_1 = src_LASTLITERALS - (STEPSIZE_64 - 1);
-                var dst_LASTLITERALS_1 = dst_end - (1 + LASTLITERALS);
-                var dst_LASTLITERALS_3 = dst_end - (2 + 1 + LASTLITERALS);
-
-                int len, length;
-
-                uint h, h_fwd;
-
-                // Init
-                if (src_len < MINLENGTH) goto _last_literals;
-
-                // First Byte
-                src_p++;
-                h_fwd = ((((*(uint*)(src_p))) * 2654435761u) >> HASH64K_ADJUST);
-
-                // Main Loop
-                while (true)
-                {
-                    var findMatchAttempts = (1 << SKIPSTRENGTH) + 3;
-                    var src_p_fwd = src_p;
-                    byte* src_ref;
-                    byte* dst_token;
-
-                    // Find a match
-                    do
-                    {
-                        h = h_fwd;
-                        var step = findMatchAttempts++ >> SKIPSTRENGTH;
-                        src_p = src_p_fwd;
-                        src_p_fwd = src_p + step;
-
-                        if (src_p_fwd > src_mflimit) goto _last_literals;
-
-                        h_fwd = ((((*(uint*)(src_p_fwd))) * 2654435761u) >> HASH64K_ADJUST);
-                        src_ref = src_base + hash_table[h];
-                        hash_table[h] = (ushort)(src_p - src_base);
-                    } while ((*(uint*)(src_ref)) != (*(uint*)(src_p)));
-
-                    // Catch up
-                    while ((src_p > src_anchor) && (src_ref > src) && (src_p[-1] == src_ref[-1]))
-                    {
-                        src_p--;
-                        src_ref--;
-                    }
-
-                    // Encode Literal length
-                    length = (int)(src_p - src_anchor);
-                    dst_token = dst_p++;
-
-                    if (dst_p + length + (length >> 8) > dst_LASTLITERALS_3) return 0; // Check output limit
-
-                    if (length >= RUN_MASK)
-                    {
-                        len = length - RUN_MASK;
-                        *dst_token = (RUN_MASK << ML_BITS);
-                        if (len > 254)
-                        {
-                            do
-                            {
-                                *dst_p++ = 255;
-                                len -= 255;
-                            } while (len > 254);
-                            *dst_p++ = (byte)len;
-                            BlockCopy(src_anchor, dst_p, (length));
-                            dst_p += length;
-                            goto _next_match;
-                        }
-                        *dst_p++ = (byte)len;
-                    }
-                    else
-                    {
-                        *dst_token = (byte)(length << ML_BITS);
-                    }
-
-                    // Copy Literals
-                    {
-                        _p = dst_p + (length);
-                        {
-                            do
-                            {
-                                *(ulong*)dst_p = *(ulong*)src_anchor;
-                                dst_p += 8;
-                                src_anchor += 8;
-                            } while (dst_p < _p);
-                        }
-                        dst_p = _p;
-                    }
-
-                    _next_match:
-
-                    // Encode Offset
-                    *(ushort*)dst_p = (ushort)(src_p - src_ref);
-                    dst_p += 2;
-
-                    // Start Counting
-                    src_p += MINMATCH;
-                    src_ref += MINMATCH; // MinMatch verified
-                    src_anchor = src_p;
-
-                    while (src_p < src_LASTLITERALS_STEPSIZE_1)
-                    {
-                        var diff = (*(long*)(src_ref)) ^ (*(long*)(src_p));
-                        if (diff == 0)
-                        {
-                            src_p += STEPSIZE_64;
-                            src_ref += STEPSIZE_64;
-                            continue;
-                        }
-                        src_p += debruijn64[(((ulong)((diff) & -(diff)) * 0x0218A392CDABBD3FL)) >> 58];
-                        goto _endCount;
-                    }
-
-                    if ((src_p < src_LASTLITERALS_3) && ((*(uint*)(src_ref)) == (*(uint*)(src_p))))
-                    {
-                        src_p += 4;
-                        src_ref += 4;
-                    }
-                    if ((src_p < src_LASTLITERALS_1) && ((*(ushort*)(src_ref)) == (*(ushort*)(src_p))))
-                    {
-                        src_p += 2;
-                        src_ref += 2;
-                    }
-                    if ((src_p < src_LASTLITERALS) && (*src_ref == *src_p)) src_p++;
-
-                    _endCount:
-
-                    // Encode MatchLength
-                    len = (int)(src_p - src_anchor);
-
-                    if (dst_p + (len >> 8) > dst_LASTLITERALS_1) return 0; // Check output limit
-
-                    if (len >= ML_MASK)
-                    {
-                        *dst_token += ML_MASK;
-                        len -= ML_MASK;
-                        for (; len > 509; len -= 510)
-                        {
-                            *dst_p++ = 255;
-                            *dst_p++ = 255;
-                        }
-                        if (len > 254)
-                        {
-                            len -= 255;
-                            *dst_p++ = 255;
-                        }
-                        *dst_p++ = (byte)len;
-                    }
-                    else
-                    {
-                        *dst_token += (byte)len;
-                    }
-
-                    // Test end of chunk
-                    if (src_p > src_mflimit)
-                    {
-                        src_anchor = src_p;
-                        break;
-                    }
-
-                    // Fill table
-                    hash_table[((((*(uint*)(src_p - 2))) * 2654435761u) >> HASH64K_ADJUST)] = (ushort)(src_p - 2 - src_base);
-
-                    // Test next position
-
-                    h = ((((*(uint*)(src_p))) * 2654435761u) >> HASH64K_ADJUST);
-                    src_ref = src_base + hash_table[h];
-                    hash_table[h] = (ushort)(src_p - src_base);
-
-                    if ((*(uint*)(src_ref)) == (*(uint*)(src_p)))
-                    {
-                        dst_token = dst_p++;
-                        *dst_token = 0;
-                        goto _next_match;
-                    }
-
-                    // Prepare next loop
-                    src_anchor = src_p++;
-                    h_fwd = ((((*(uint*)(src_p))) * 2654435761u) >> HASH64K_ADJUST);
-                }
-
-                _last_literals:
-
-                // Encode Last Literals
-                var lastRun = (int)(src_end - src_anchor);
-                if (dst_p + lastRun + 1 + (lastRun - RUN_MASK + 255) / 255 > dst_end) return 0;
-                if (lastRun >= RUN_MASK)
-                {
-                    *dst_p++ = (RUN_MASK << ML_BITS);
-                    lastRun -= RUN_MASK;
-                    for (; lastRun > 254; lastRun -= 255) *dst_p++ = 255;
-                    *dst_p++ = (byte)lastRun;
-                }
-                else *dst_p++ = (byte)(lastRun << ML_BITS);
-                BlockCopy(src_anchor, dst_p, (int)(src_end - src_anchor));
-                dst_p += src_end - src_anchor;
-
-                // End
-                return (int)(dst_p - dst);
+                *((ulong*)dest) = *((ulong*)src);
+                dest += sizeof(ulong);
+                src += sizeof(ulong);
             }
-        }
-
-        private unsafe static void BlockCopy(byte* src, byte* dest, int len)
-        {
-            Memory.Copy(dest, src, len);
-        }
-
-        #endregion
-
-        #region LZ4_uncompress_64
-
-        private static unsafe int LZ4_uncompress_64(
-            byte* src,
-            byte* dst,
-            int dst_len)
-        {
-            fixed (int* dec32table = &DECODER_TABLE_32[0])
-            fixed (int* dec64table = &DECODER_TABLE_64[0])
-            {
-                // r93
-                var src_p = src;
-                byte* dst_ref;
-
-                var dst_p = dst;
-                var dst_end = dst_p + dst_len;
-                byte* dst_cpy;
-
-                var dst_LASTLITERALS = dst_end - LASTLITERALS;
-                var dst_COPYLENGTH = dst_end - COPYLENGTH;
-                var dst_COPYLENGTH_STEPSIZE_4 = dst_end - COPYLENGTH - (STEPSIZE_64 - 4);
-
-                byte token;
-
-                // Main Loop
-                while (true)
-                {
-                    int length;
-
-                    // get runlength
-                    token = *src_p++;
-                    if ((length = (token >> ML_BITS)) == RUN_MASK)
-                    {
-                        int len;
-                        for (; (len = *src_p++) == 255; length += 255)
-                        {
-                            /* do nothing */
-                        }
-                        length += len;
-                    }
-
-                    // copy literals
-                    dst_cpy = dst_p + length;
-
-                    if (dst_cpy > dst_COPYLENGTH)
-                    {
-                        if (dst_cpy != dst_end) goto _output_error; // Error : not enough place for another match (min 4) + 5 literals
-                        BlockCopy(src_p, dst_p, (length));
-                        src_p += length;
-                        break; // EOF
-                    }
-                    do
-                    {
-                        *(ulong*)dst_p = *(ulong*)src_p;
-                        dst_p += 8;
-                        src_p += 8;
-                    } while (dst_p < dst_cpy);
-                    src_p -= (dst_p - dst_cpy);
-                    dst_p = dst_cpy;
-
-                    // get offset
-                    dst_ref = (dst_cpy) - (*(ushort*)(src_p));
-                    src_p += 2;
-                    if (dst_ref < dst) goto _output_error; // Error : offset outside destination buffer
-
-                    // get matchlength
-                    if ((length = (token & ML_MASK)) == ML_MASK)
-                    {
-                        for (; *src_p == 255; length += 255) src_p++;
-                        length += *src_p++;
-                    }
-
-                    // copy repeated sequence
-                    if ((dst_p - dst_ref) < STEPSIZE_64)
-                    {
-                        var dec64 = dec64table[dst_p - dst_ref];
-
-                        dst_p[0] = dst_ref[0];
-                        dst_p[1] = dst_ref[1];
-                        dst_p[2] = dst_ref[2];
-                        dst_p[3] = dst_ref[3];
-                        dst_p += 4;
-                        dst_ref += 4;
-                        dst_ref -= dec32table[dst_p - dst_ref];
-                        (*(uint*)(dst_p)) = (*(uint*)(dst_ref));
-                        dst_p += STEPSIZE_64 - 4;
-                        dst_ref -= dec64;
-                    }
-                    else
-                    {
-                        *(ulong*)dst_p = *(ulong*)dst_ref;
-                        dst_p += 8;
-                        dst_ref += 8;
-                    }
-                    dst_cpy = dst_p + length - (STEPSIZE_64 - 4);
-
-                    if (dst_cpy > dst_COPYLENGTH_STEPSIZE_4)
-                    {
-                        if (dst_cpy > dst_LASTLITERALS) goto _output_error; // Error : last 5 bytes must be literals
-                        while (dst_p < dst_COPYLENGTH)
-                        {
-                            *(ulong*)dst_p = *(ulong*)dst_ref;
-                            dst_p += 8;
-                            dst_ref += 8;
-                        }
-
-                        while (dst_p < dst_cpy) *dst_p++ = *dst_ref++;
-                        dst_p = dst_cpy;
-                        continue;
-                    }
-
-                    {
-                        do
-                        {
-                            *(ulong*)dst_p = *(ulong*)dst_ref;
-                            dst_p += 8;
-                            dst_ref += 8;
-                        } while (dst_p < dst_cpy);
-                    }
-                    dst_p = dst_cpy; // correction
-                }
-
-                // end of decoding
-                return (int)((src_p) - src);
-
-                // write overflow error detected
-                _output_error:
-                return (int)(-((src_p) - src));
-            }
-        }
-
-        #endregion
-
-        #region LZ4_uncompress_unknownOutputSize_64
-
-        private static unsafe int LZ4_uncompress_unknownOutputSize_64(
-            byte* src,
-            byte* dst,
-            int src_len,
-            int dst_maxlen)
-        {
-            fixed (int* dec32table = &DECODER_TABLE_32[0])
-            fixed (int* dec64table = &DECODER_TABLE_64[0])
-            {
-                // r93
-                var src_p = src;
-                var src_end = src_p + src_len;
-                byte* dst_ref;
-
-                var dst_p = dst;
-                var dst_end = dst_p + dst_maxlen;
-                byte* dst_cpy;
-
-                var src_LASTLITERALS_3 = (src_end - (2 + 1 + LASTLITERALS));
-                var src_LASTLITERALS_1 = (src_end - (LASTLITERALS + 1));
-                var dst_COPYLENGTH = (dst_end - COPYLENGTH);
-                var dst_COPYLENGTH_STEPSIZE_4 = (dst_end - (COPYLENGTH + (STEPSIZE_64 - 4)));
-                var dst_LASTLITERALS = (dst_end - LASTLITERALS);
-                var dst_MFLIMIT = (dst_end - MFLIMIT);
-
-                // Special case
-                if (src_p == src_end) goto _output_error; // A correctly formed null-compressed LZ4 must have at least one byte (token=0)
-
-                // Main Loop
-                while (true)
-                {
-                    byte token;
-                    int length;
-
-                    // get runlength
-                    token = *src_p++;
-                    if ((length = (token >> ML_BITS)) == RUN_MASK)
-                    {
-                        var s = 255;
-                        while ((src_p < src_end) && (s == 255))
-                        {
-                            s = *src_p++;
-                            length += s;
-                        }
-                    }
-
-                    // copy literals
-                    dst_cpy = dst_p + length;
-
-                    if ((dst_cpy > dst_MFLIMIT) || (src_p + length > src_LASTLITERALS_3))
-                    {
-                        if (dst_cpy > dst_end) goto _output_error; // Error : writes beyond output buffer
-                        if (src_p + length != src_end) goto _output_error; // Error : LZ4 format requires to consume all input at this stage (no match within the last 11 bytes, and at least 8 remaining input bytes for another match+literals)
-                        BlockCopy(src_p, dst_p, (length));
-                        dst_p += length;
-                        break; // Necessarily EOF, due to parsing restrictions
-                    }
-                    do
-                    {
-                        *(ulong*)dst_p = *(ulong*)src_p;
-                        dst_p += 8;
-                        src_p += 8;
-                    } while (dst_p < dst_cpy);
-                    src_p -= (dst_p - dst_cpy);
-                    dst_p = dst_cpy;
-
-                    // get offset
-                    dst_ref = (dst_cpy) - (*(ushort*)(src_p));
-                    src_p += 2;
-                    if (dst_ref < dst) goto _output_error; // Error : offset outside of destination buffer
-
-                    // get matchlength
-                    if ((length = (token & ML_MASK)) == ML_MASK)
-                    {
-                        while (src_p < src_LASTLITERALS_1) // Error : a minimum input bytes must remain for LASTLITERALS + token
-                        {
-                            int s = *src_p++;
-                            length += s;
-                            if (s == 255) continue;
-                            break;
-                        }
-                    }
-
-                    // copy repeated sequence
-                    if (dst_p - dst_ref < STEPSIZE_64)
-                    {
-                        var dec64 = dec64table[dst_p - dst_ref];
-
-                        dst_p[0] = dst_ref[0];
-                        dst_p[1] = dst_ref[1];
-                        dst_p[2] = dst_ref[2];
-                        dst_p[3] = dst_ref[3];
-                        dst_p += 4;
-                        dst_ref += 4;
-                        dst_ref -= dec32table[dst_p - dst_ref];
-                        (*(uint*)(dst_p)) = (*(uint*)(dst_ref));
-                        dst_p += STEPSIZE_64 - 4;
-                        dst_ref -= dec64;
-                    }
-                    else
-                    {
-                        *(ulong*)dst_p = *(ulong*)dst_ref;
-                        dst_p += 8;
-                        dst_ref += 8;
-                    }
-                    dst_cpy = dst_p + length - (STEPSIZE_64 - 4);
-
-                    if (dst_cpy > dst_COPYLENGTH_STEPSIZE_4)
-                    {
-                        if (dst_cpy > dst_LASTLITERALS) goto _output_error; // Error : last 5 bytes must be literals
-                        while (dst_p < dst_COPYLENGTH)
-                        {
-                            *(ulong*)dst_p = *(ulong*)dst_ref;
-                            dst_p += 8;
-                            dst_ref += 8;
-                        }
-
-                        while (dst_p < dst_cpy) *dst_p++ = *dst_ref++;
-                        dst_p = dst_cpy;
-                        continue;
-                    }
-
-                    do
-                    {
-                        *(ulong*)dst_p = *(ulong*)dst_ref;
-                        dst_p += 8;
-                        dst_ref += 8;
-                    } while (dst_p < dst_cpy);
-                    dst_p = dst_cpy; // correction
-                }
-
-                // end of decoding
-                return (int)(dst_p - dst);
-
-                _output_error:
-
-                // write overflow error detected
-                return (int)-(src_p - src);
-            }
-        }
-
-        #endregion
-
-        public void Dispose()
-        {
-            Marshal.FreeHGlobal(new IntPtr(_hashtable64K));
-            Marshal.FreeHGlobal(new IntPtr(_hashtable));
+            while (dest < destEnd);
         }
     }
 }
-
-// ReSharper restore JoinDeclarationAndInitializer
-// ReSharper restore TooWideLocalVariableScope
-// ReSharper restore InconsistentNaming

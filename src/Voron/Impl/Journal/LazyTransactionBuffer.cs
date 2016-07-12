@@ -25,19 +25,16 @@ namespace Voron.Impl.Journal
             _lazyTransactionPager.EnsureContinuous(0, sizeInPages);
         }
 
-        public void AddToBuffer(long position, IntPtr[] pages, int uncompressedPageCount)
+        public void AddToBuffer(long position, CompressedPagesResult pages, int uncompressedPageCount)
         {
             NumberOfPages += uncompressedPageCount;
             if (_firstPositionInJournalFile == null)
             {
                 _firstPositionInJournalFile = position; // first lazy tx saves position to all lazy tx that comes afterwards
             }
+            _lazyTransactionPager.WriteDirect(pages.Base, _lastUsedPage, pages.NumberOfPages);
 
-            foreach (var page in pages)
-            {
-                _lazyTransactionPager.WriteDirect((byte*)page, _lastUsedPage, 1);
-                _lastUsedPage++;
-            }
+            _lastUsedPage += pages.NumberOfPages;
         }
 
         public void EnsureHasExistingReadTransaction(LowLevelTransaction tx)
@@ -54,8 +51,8 @@ namespace Voron.Impl.Journal
         {
             if (_firstPositionInJournalFile != null)
             {
-                journalFile.WriteBuffer(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),
-                    _lastUsedPage * _options.DataPager.PageSize);
+                journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),
+                    _lastUsedPage);
             }
 
             if (tx != null)

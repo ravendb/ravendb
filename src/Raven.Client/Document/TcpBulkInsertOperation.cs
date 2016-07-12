@@ -92,11 +92,11 @@ namespace Raven.Client.Document
             _tcpClient.ReceiveBufferSize = 4096;
             var networkStream = _tcpClient.GetStream();
 
-            var buffer = Encoding.UTF8.GetBytes(new RavenJObject
+            var buffer = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
             {
-                ["Database"] = MultiDatabase.GetDatabaseName(asyncServerClient.Url),
-                ["Operation"] = "BulkInsert"
-            }.ToString());
+                DatabaseName = MultiDatabase.GetDatabaseName(asyncServerClient.Url),
+                Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
+            }).ToString());
             await networkStream.WriteAsync(buffer,0, buffer.Length);
 
             return networkStream;

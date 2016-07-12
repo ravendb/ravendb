@@ -35,7 +35,8 @@
     "System.Linq.Queryable": "4.0.1",
     "System.Security.Cryptography.Cng": "4.2.0",
     "System.Diagnostics.Process": "4.1.0",
-    "System.Net.NameResolution": "4.0.0"
+    "System.Net.NameResolution": "4.0.0",
+    "System.Collections.Specialized": "4.0.1"
   },
 
   "frameworks": {

@@ -7,12 +7,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -239,42 +240,36 @@ namespace Raven.Server
                     multiDocumentParser = context.ParseMultiFrom(stream);
                     try
                     {
-                        var reader = await multiDocumentParser.ParseToMemoryAsync();
-                        string db;
-                        if (reader.TryGet("Database", out db) == false)
-                        {
-                            throw new InvalidOperationException("Could not read Database property from the tcp command");
-                        }
-                        string operation;
-                        if (reader.TryGet("Operation", out operation) == false)
-                        {
-                            throw new InvalidOperationException("Could not read Operation property from the tcp command");
-                        }
-                        var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(db);
-                        if (databaseLoadingTask == null)
-                        {
-                            throw new InvalidOperationException("There is no database named " + db);
-                        }
-                        if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
-                        {
-                            throw new InvalidOperationException("Timeout when loading database + " + db +
-                                                                ", try again later");
-                        }
-                        
-                        var documentDatabase = await databaseLoadingTask;
-                        switch (operation)
-                        {
-                            case "BulkInsert":
-                                BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
-                                break;
-                            case "Subscription":
-                                SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
-                                break;
-                            default:
-                                throw new InvalidOperationException("Unknown operation for tcp " + operation);
-                        }
+						var header = JsonDeserialization.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
 
-                        tcpClient = null; // the connection handler will dispose this, it is not its responsability
+						var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
+						if (databaseLoadingTask == null)
+						{
+							throw new InvalidOperationException("There is no database named " + header.DatabaseName);
+						}
+						if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
+						{
+							throw new InvalidOperationException("Timeout when loading database + " + header.DatabaseName +
+																", try again later");
+						}
+
+						var documentDatabase = await databaseLoadingTask;
+						switch (header.Operation)
+						{
+							case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
+								BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+								break;
+							case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+								SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+								break;
+							case TcpConnectionHeaderMessage.OperationTypes.Replication:
+								documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(header,stream);
+								break;
+							default:
+								throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
+						}
+
+						tcpClient = null; // the connection handler will dispose this, it is not its responsability
                         stream = null;
                         context = null;
                         multiDocumentParser = null;

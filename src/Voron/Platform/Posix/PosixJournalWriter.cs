@@ -30,7 +30,7 @@ namespace Voron.Platform.Posix
 
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | OpenFlags.O_DIRECT | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
-            
+
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
@@ -47,7 +47,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
 
-            NumberOfAllocatedPages = (int)(journalSize/_options.PageSize);
+            NumberOfAllocatedPages = (int)(journalSize / _options.PageSize);
         }
 
         public void Dispose()
@@ -55,7 +55,7 @@ namespace Voron.Platform.Posix
             Disposed = true;
             GC.SuppressFinalize(this);
             if (_fdReads != -1)
-            {                
+            {
                 Syscall.close(_fdReads);
                 _fdReads = -1;
             }
@@ -79,52 +79,16 @@ namespace Voron.Platform.Posix
             Dispose();
         }
 
-        public unsafe void WriteGather(long position, IntPtr[] pages)
+        public unsafe void WritePages(long position, byte* p, int numberOfPages)
         {
-            if (pages.Length == 0)
+            if (numberOfPages == 0)
                 return; // nothing to do
 
-            var start = 0;
-            const int IOV_MAX = 1024;
-            while (start < pages.Length)
+            var result = Syscall.pwrite(_fd, p, (ulong)numberOfPages * (ulong)_options.PageSize, position);
+            if (result == -1)
             {
-                var byteLen = 0L;
-                var locs = new List<Iovec>
-                {
-                    new Iovec
-                    {
-                        iov_base = pages[start],
-                        iov_len = (ulong)_options.PageSize
-                    }
-                };
-                start++;
-                byteLen += _options.PageSize;
-                for (int i = 1; i < pages.Length && locs.Count < IOV_MAX; i++, start++)
-                {
-                    byteLen += _options.PageSize;
-                    var cur = locs[locs.Count - 1];
-                    if (((byte*)cur.iov_base.ToPointer() + cur.iov_len) == (byte*)pages[i].ToPointer())
-                    {
-                        cur.iov_len = cur.iov_len + (ulong)_options.PageSize;
-                        locs[locs.Count - 1] = cur;
-                    } 
-                    else
-                    {
-                        locs.Add(new Iovec
-                        {
-                            iov_base = pages[i],
-                            iov_len = (ulong)_options.PageSize
-                        });
-                    }
-                }
-                
-                var result = Syscall.pwritev(_fd, locs.ToArray(), position);
-                position += byteLen;
-                if (result == -1)
-                {
-                    var err = Marshal.GetLastWin32Error();
-                    PosixHelper.ThrowLastError(err);
-                }
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
             }
         }
 
@@ -136,14 +100,14 @@ namespace Voron.Platform.Posix
 
         public AbstractPager CreatePager()
         {
-            return new PosixMemoryMapPager(_options.PageSize,_filename);
+            return new PosixMemoryMapPager(_options.PageSize, _filename);
         }
 
         public unsafe bool Read(long pageNumber, byte* buffer, int count)
         {
             if (_fdReads == -1)
             {
-                _fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY,FilePermissions.S_IRUSR);
+                _fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
                 if (_fdReads == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
@@ -162,19 +126,6 @@ namespace Voron.Platform.Posix
                 position += result;
             }
             return true;
-        }
-
-        public unsafe void WriteBuffer(long position, byte* srcPosition, int sizeToWrite)
-        {
-            var offset = Convert.ToUInt64(sizeToWrite);
-
-            var result = Syscall.pwrite(_fd, srcPosition, (ulong)sizeToWrite, (long)offset);
-
-            if (result == -1)
-            {
-                var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
-            }
         }
     }
 }

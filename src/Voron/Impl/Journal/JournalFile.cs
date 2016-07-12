@@ -17,7 +17,7 @@ namespace Voron.Impl.Journal
 {
     public unsafe class JournalFile : IDisposable
     {
-        private readonly IJournalWriter _journalWriter;
+        private IJournalWriter _journalWriter;
         private long _writePage;
         private bool _disposed;
         private int _refs;
@@ -95,6 +95,7 @@ namespace Voron.Impl.Journal
         {
             DisposeWithoutClosingPager();
             _journalWriter?.Dispose();
+            _journalWriter = null;
         }
 
         public JournalSnapshot GetSnapshot()
@@ -127,7 +128,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal. returns write page position
         /// </summary>
-        public long Write(LowLevelTransaction tx, IntPtr[] pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
+        public long Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var unused = new HashSet<PagePosition>();
@@ -137,7 +138,7 @@ namespace Voron.Impl.Journal
 
             lock (_locker)
             {
-                _writePage += pages.Length;
+                _writePage += pages.NumberOfPages;
                 _pageTranslationTable.SetItems(tx, ptt);
 
                 Debug.Assert(!_unusedPages.Any(unused.Contains));
@@ -148,7 +149,7 @@ namespace Voron.Impl.Journal
 
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
-                _journalWriter.WriteGather(position, pages);
+                _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
             }
             else
             {
@@ -277,11 +278,6 @@ namespace Voron.Impl.Journal
 
                 tx.Environment.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx.Id);
             }
-        }
-
-        public void WriteBuffer(long destPosition, byte* srcPointer, int sizeToWrite)
-        {
-            _journalWriter.WriteBuffer(destPosition, srcPointer, sizeToWrite);
         }
     }
 }

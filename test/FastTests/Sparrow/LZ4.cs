@@ -32,11 +32,13 @@ namespace FastTests.Sparrow
                      new object[] { 100000, 7 }
                 };
             }
-        }
+        }        
 
         [Theory, MemberData("Sizes")]
         public void CompressAndDecompress(int size, int bits)
         {
+            uint marker = 0xDEADBEEF;
+
             int threshold = 1 << bits;
             var rnd = new Random(size * bits);
 
@@ -47,57 +49,63 @@ namespace FastTests.Sparrow
             LZ4 lz4 = new LZ4();
 
             var maximumOutputLength = LZ4.MaximumOutputLength(input.Length);
-            byte* encodeOutput = (byte*)Marshal.AllocHGlobal(maximumOutputLength);
+            byte[] output = new byte[size + sizeof(uint)];            
+            byte[] encodeOutput = new byte[maximumOutputLength + sizeof(uint)];
 
-            int compressedSize = 0;
-            fixed (byte* pb = input)
+            fixed (byte* inputPtr = input)
+            fixed (byte* encodedOutputPtr = encodeOutput)
+            fixed (byte* outputPtr = output)
             {
-                compressedSize = lz4.Encode64(pb, encodeOutput, input.Length, maximumOutputLength);
-            }
+                // Setup buffer overrun markers.
+                *(uint*)(encodedOutputPtr + maximumOutputLength) = marker;
+                *(uint*)(outputPtr + size) = marker;
 
-            byte[] output = new byte[size];
-            int uncompressedSize = 0;
-            fixed (byte* pb = output)
-            {
-                uncompressedSize = LZ4.Decode64(encodeOutput, compressedSize, pb, input.Length, true);
-            }
+                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, size, maximumOutputLength);
+                int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, size, true);
 
-            Assert.Equal(input.Length, uncompressedSize);
-            for (int i = 0; i < size; i++)
-                Assert.Equal(input[i], output[i]);
-        
-            Marshal.FreeHGlobal((IntPtr)encodeOutput);
+                Assert.True(compressedSize <= maximumOutputLength);
+                Assert.Equal(size, uncompressedSize);
+                for (int i = 0; i < size; i++)
+                    Assert.Equal(input[i], output[i]);
+
+                // Check buffer overruns didn't happen.
+                Assert.Equal(marker, *(uint*)(encodedOutputPtr + maximumOutputLength));
+                Assert.Equal(marker, *(uint*)(outputPtr + size));
+            }
         }
 
         [Fact]
         public void Compress()
         {
+            uint marker = 0xDEADBEEF;
             int size = 40;
 
             LZ4 lz4 = new LZ4();
 
             byte[] input = new byte[] { 3, 3, 2, 2, 3, 0, 2, 0, 2, 1, 0, 1, 3, 1, 3, 0, 3, 0, 2, 0, 2, 1, 3, 1, 0, 3, 0, 0, 2, 0, 1, 2, 2, 2, 3, 2, 0, 0, 2, 1, 2, 2, 0, 3, 0, 0, 3, 2, 0, 2, 1, 2, 3, 2, 2, 1, 3, 0, 1, 0, 3, 1, 1, 2, 0, 2, 2, 1, 2, 1, 0, 3, 2, 0, 2, 0, 1, 3, 1, 3, 3, 2, 3, 0, 2, 2, 2, 0, 3, 2, 2, 0, 2, 2, 2, 0, 0, 1, 3, 1 };
-            byte[] encodedOutput = new byte[LZ4.MaximumOutputLength(input.Length)];
+            int maximumOutputLength = LZ4.MaximumOutputLength(input.Length);            
+            byte[] encodedOutput = new byte[maximumOutputLength + sizeof(uint)];
+            byte[] output = new byte[size + sizeof(uint)];
 
-            int compressedSize = 0;
             fixed (byte* inputPtr = input)
             fixed (byte* encodedOutputPtr = encodedOutput)
-            {
-                compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, encodedOutput.Length);
-            }
-
-            byte[] output = new byte[size];
-            int uncompressedSize = 0;
             fixed (byte* outputPtr = output)
-            fixed (byte* encodedOutputPtr = encodedOutput)
             {
-                uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, input.Length, true);
-            }
+                // Setup buffer overrun markers.
+                *(uint*)(encodedOutputPtr + maximumOutputLength) = marker;
+                *(uint*)(outputPtr + size) = marker;
 
-            Assert.Equal(input.Length, uncompressedSize);
-            for (int i = 0; i < size; i++)
-            {
-                Assert.Equal(input[i], output[i]);
+                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, size, maximumOutputLength);
+                int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, size, true);
+
+                Assert.True(compressedSize <= maximumOutputLength);
+                Assert.Equal(size, uncompressedSize);
+                for (int i = 0; i < size; i++)
+                    Assert.Equal(input[i], output[i]);
+
+                // Check buffer overruns didn't happen.
+                Assert.Equal(marker, *(uint*)(encodedOutputPtr + maximumOutputLength));
+                Assert.Equal(marker, *(uint*)(outputPtr + size));
             }
         }        
     }

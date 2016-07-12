@@ -199,11 +199,11 @@ namespace Raven.Client.Document
 
             var ms = new MemoryStream();
 
-            new RavenJObject
+            RavenJObject.FromObject(new TcpConnectionHeaderMessage
             {
-                ["Database"] = MultiDatabase.GetDatabaseName(_commands.Url),
-                ["Operation"] = "Subscription"
-            }.WriteTo(ms);
+                Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
+                DatabaseName = MultiDatabase.GetDatabaseName(_commands.Url)
+            }).WriteTo(ms);
 
             RavenJObject.FromObject(_options).WriteTo(ms);
             ArraySegment<byte> bytes;
@@ -227,7 +227,7 @@ namespace Raven.Client.Document
                 {
                     Logger.WarnException(
                         string.Format(
-                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError", _options.SubscriptionId), ex);
+                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError " + e, _options.SubscriptionId), ex);
                 }
             }
         }

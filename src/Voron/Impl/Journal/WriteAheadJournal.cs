@@ -324,7 +324,6 @@ namespace Voron.Impl.Journal
                 _lazyTransactionBuffer.Dispose();
             }
             _compressionPager.Dispose();
-            _lz4.Dispose();
 
             _journalApplicator.Dispose();
             if (_env.Options.OwnsPagers)
@@ -854,7 +853,7 @@ namespace Voron.Impl.Journal
                 var current = _waj._files.First();
 
                 if (current.Number != _lastSyncedJournal)
-                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
+                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastSyncedJournal));
 
               
                 if(_waj._env.NextWriteTransactionId - 2 /* we also need to count write tx created for flushing purposes */ != _lastSyncedTransactionId)
@@ -879,10 +878,10 @@ namespace Voron.Impl.Journal
                 _lazyTransactionBuffer = new LazyTransactionBuffer(_env.Options);
             }
 
-            if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
+            if (CurrentFile == null || CurrentFile.AvailablePages < pages.NumberOfPages)
             {
                 _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
-                CurrentFile = NextFile(pages.Length);
+                CurrentFile = NextFile(pages.NumberOfPages);
             }
 
             CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
@@ -894,7 +893,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, AbstractPager compressionPager)
+        private CompressedPagesResult CompressPages(LowLevelTransaction tx, int numberOfPages, AbstractPager compressionPager)
         {
             // numberOfPages include the tx header page, which we don't compress
             var dataPagesCount = numberOfPages - 1;
@@ -951,11 +950,11 @@ namespace Voron.Impl.Journal
             // Copy the transaction header to the output buffer. 
             Memory.Copy(outputBuffer, txHeaderBase, sizeof(TransactionHeader));
             
-            var pages = new IntPtr[compressedPages];
-            for (int index = 0; index < compressedPages; index++)
-                pages[index] = new IntPtr(outputBuffer + (index * pageSize));
-
-            return pages;
+            return new CompressedPagesResult
+            {
+                Base = outputBuffer,
+                NumberOfPages = compressedPages
+            };
         }
 
 
@@ -970,4 +969,12 @@ namespace Voron.Impl.Journal
             return doCompression;
         }
     }
+
+
+    public unsafe struct CompressedPagesResult
+    {
+        public byte* Base;
+        public int NumberOfPages;
+    }
+
 }

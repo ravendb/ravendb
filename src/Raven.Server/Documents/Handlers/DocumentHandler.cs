@@ -252,14 +252,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                PutResult putResult;
-                using (context.OpenWriteTransaction())
-                {
-                    Database.Metrics.DocPutsPerSecond.Mark();
-                    putResult = Database.DocumentsStorage.Put(context, id, etag, doc);
-                    context.Transaction.Commit();
-                    // we want to release the transaction before we write to the network
-                }
+                var putResult = await Database.TxMerger.EnqueuePut(id, etag, doc);
 
                 HttpContext.Response.StatusCode = 201;
 
