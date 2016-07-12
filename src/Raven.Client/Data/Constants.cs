@@ -276,13 +276,7 @@ namespace Raven.Abstractions.Data
         public const string MessageType = "MessageType";
 
         public class Replication
-        {
-            public class MessageTypes
-            {
-                public const string ReplicationBatch = "ReplicationBatch";
-                public const string GetLastEtag = "GetLastEtag";
-            }
-
+        {       
             public class PropertyNames
             {
                 public const string LastSentEtag = "LastSentEtag";

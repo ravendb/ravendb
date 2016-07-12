@@ -8,6 +8,8 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -21,6 +23,8 @@ namespace Raven.Server.Documents
     public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
         public event Action<string> OnDatabaseLoaded = delegate { };
+		private readonly HttpJsonRequestFactory _httpJsonRequestFactory = new HttpJsonRequestFactory(64);
+		private readonly DocumentConvention _convention = new DocumentConvention();
 
         public override Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName)
         {
@@ -90,7 +94,7 @@ namespace Raven.Server.Documents
             {
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, LoggerSetup);
-                documentDatabase.Initialize();
+                documentDatabase.Initialize(_httpJsonRequestFactory,_convention);
 
                 if (Log.IsInfoEnabled)
                 {

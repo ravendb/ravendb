@@ -4,7 +4,7 @@
     {
 		public enum ReplyType
 		{
-            None,
+			None,
 			Success,
 			Failure
 		}

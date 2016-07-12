@@ -1,10 +1,16 @@
 ﻿using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Json.Linq;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -30,20 +36,28 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public readonly PatchDocument Patch;
 
-		private readonly HttpJsonRequestFactory _httpJsonRequestFactory = new HttpJsonRequestFactory(16);
+		private HttpJsonRequestFactory _httpJsonRequestFactory;
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         public bool LazyTransactionMode { get; set; }
         public DateTime LazyTransactionExpiration { get; set; }
         public TransactionOperationsMerger TxMerger;
+	    private DocumentConvention _convention;
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
+	    public string Url { get; private set; }
+
+	    public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
             LoggerSetup loggerSetup)
         {
             Name = name;
             Configuration = configuration;
             LoggerSetup = loggerSetup;
+
+	        var hostName = Dns.GetHostName();
+	        Url = Configuration.Core.ServerUrl.ToLower()
+											  .Replace("localhost", hostName)
+											  .Replace("127.0.0.1", hostName);
 
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
@@ -87,25 +101,38 @@ namespace Raven.Server.Documents
 
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
-	    public HttpJsonRequestFactory HttpRequestFactory
+	    public HttpJsonRequestFactory HttpRequestFactory => _httpJsonRequestFactory;
+
+
+	    public void Initialize(HttpJsonRequestFactory httpRequestFactory, DocumentConvention convention)
 	    {
-		    get { return _httpJsonRequestFactory; }
-	    }
-
-
-	    public void Initialize()
-        {
+		    _convention = convention;
+		    _httpJsonRequestFactory = httpRequestFactory;
             DocumentsStorage.Initialize();
             InitializeInternal();
         }
 
-        public void Initialize(StorageEnvironmentOptions options)
+        public void Initialize(StorageEnvironmentOptions options, HttpJsonRequestFactory httpRequestFactory, DocumentConvention convention)
         {
-            DocumentsStorage.Initialize(options);
+			_httpJsonRequestFactory = httpRequestFactory;
+			_convention = convention;
+			DocumentsStorage.Initialize(options);
             InitializeInternal();
         }
 
-        private void InitializeInternal()
+	    public TcpConnectionInfo GetTcpInfo(string url, string apiKey)
+		{
+			using (var request = HttpRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
+				MultiDatabase.GetRootDatabaseUrl(url)),
+				HttpMethod.Get,
+				new OperationCredentials(apiKey, CredentialCache.DefaultCredentials),_convention)))
+			{
+				var result = request.ReadResponseJson();
+				return _convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+			}
+		}
+
+		private void InitializeInternal()
         {
             TxMerger.Start();
             _indexStoreTask = IndexStore.InitializeAsync();

@@ -181,7 +181,34 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
         }
 
-        public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
+		public ChangeVectorEntry[] GetDatabaseChangeVector(DocumentsOperationContext context)
+		{
+			AssertTransaction(context);
+
+			var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
+			var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
+			using (var iter = tree.Iterate(false))
+			{
+				if (iter.Seek(Slices.BeforeAllKeys) == false)
+					return changeVector;
+				const int GuidSizeInBytes = 16;
+				var buffer = new byte[GuidSizeInBytes];
+				int index = 0;
+				do
+				{
+					var read = iter.CurrentKey.CreateReader().Read(buffer, 0, GuidSizeInBytes);
+					if (read != GuidSizeInBytes)
+						throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
+
+					changeVector[index].DbId = new Guid(buffer);
+					changeVector[index].Etag = iter.CreateReaderForCurrent().ReadBigEndianInt64();
+					index++;
+				} while (iter.MoveNext());
+			}
+			return changeVector;
+		}
+
+		public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
         {
             AssertTransaction(context);
 

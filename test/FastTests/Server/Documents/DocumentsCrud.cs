@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using NuGet.Packaging;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
@@ -30,7 +30,7 @@ namespace FastTests.Server.Documents
             _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
 
             _documentDatabase = new DocumentDatabase("foo", _configuration, new MetricsScheduler(), new LoggerSetup(Path.GetTempPath(), LogMode.None));
-            _documentDatabase.Initialize();
+            _documentDatabase.Initialize(new HttpJsonRequestFactory(1),new DocumentConvention());
 
             _unmanagedBuffersPool = new UnmanagedBuffersPool("test");
         }
@@ -278,7 +278,7 @@ namespace FastTests.Server.Documents
             _configuration.Initialize();
 
             _documentDatabase = new DocumentDatabase("test", _configuration, new MetricsScheduler(), new LoggerSetup(Path.GetTempPath(),LogMode.None));
-            _documentDatabase.Initialize(options);
+            _documentDatabase.Initialize(options, new HttpJsonRequestFactory(16),new DocumentConvention());
         }
 
         [Fact]
