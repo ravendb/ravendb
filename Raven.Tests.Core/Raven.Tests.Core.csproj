@@ -163,6 +163,7 @@
     <Compile Include="Commands\Querying.cs" />
     <Compile Include="Commands\Transformers.cs" />
     <Compile Include="Configuration\ConfigurationTests.cs" />
+    <Compile Include="Indexing\IndexCreationTests.cs" />
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />

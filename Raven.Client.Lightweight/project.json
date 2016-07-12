@@ -23,7 +23,7 @@
 
   "frameworks": {
     "netstandard1.6": {
-      "imports": "dnxcore50",
+      "imports": [ "dnxcore50", "portable-net45+win8+wp8+wpa81" ],
       "buildOptions": {
         "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
       },
@@ -35,7 +35,8 @@
         "System.IO.FileSystem.Primitives": "4.0.1",
         "System.IO.IsolatedStorage": "4.0.1",
         "System.Net.Http": "4.1.0",
-        "System.Net.NameResolution": "4.0.0"
+        "System.Net.NameResolution": "4.0.0",
+        "Microsoft.Composition": "1.0.30"
       }
     }
   }
