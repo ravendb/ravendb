@@ -397,6 +397,12 @@ interface replicationStatsDto {
     LastError: string;
 }
 
+interface documentCountDto {
+    Count: number;
+    Type: string;
+    IsEtl: boolean;
+}
+
 interface indexMergeSuggestionsDto {
     Suggestions: suggestionDto[];
     Unmergables: Object;
@@ -1306,6 +1312,7 @@ interface replicationTopologyDto {
     Servers: string[];
     Connections: replicationTopologyConnectionDto[];
     SkippedResources: string[];
+    LocalDatabaseIds: string[];
 }
 
 interface synchronizationTopologyDto {

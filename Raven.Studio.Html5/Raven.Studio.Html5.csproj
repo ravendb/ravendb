@@ -201,6 +201,7 @@
     <Content Include="App\commands\database\cluster\changeNodeVotingModeCommand.ts" />
     <Content Include="App\commands\database\replication\resolveAllConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\sqlReplication\toggleDisable.ts" />
+    <TypeScriptCompile Include="App\commands\database\replication\getDocumentsLeftToReplicate.ts" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <Content Include="App\views\common\deleteDocuments.html" />

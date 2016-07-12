@@ -19,6 +19,7 @@ namespace Raven.Database.Bundles.Replication.Data
             Servers = new HashSet<string>();
             Connections = new HashSet<ReplicationTopologyConnection>();
             SkippedResources = new HashSet<string>();
+            LocalDatabaseIds = new List<Guid>();
         }
 
         public HashSet<string> Servers { get; set; }
@@ -26,6 +27,9 @@ namespace Raven.Database.Bundles.Replication.Data
         public HashSet<ReplicationTopologyConnection> Connections { get; set; }
 
         public HashSet<string> SkippedResources { get; set; }
+
+        public List<Guid> LocalDatabaseIds { get; set; }
+
         public ReplicationTopologyConnection GetConnection(string fromUrl, string toUrl)
         {
             return Connections.SingleOrDefault(x => x.Source == fromUrl && x.Destination == toUrl);

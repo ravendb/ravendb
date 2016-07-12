@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -340,8 +339,55 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 lastProcessedDocument(lastDocEtag);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null,
-            Reference<bool> earlyExit = null)
+        public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
+            Func<string, RavenJObject, bool> filterDocument, Reference<bool> earlyExit,
+            CancellationToken cancellationToken, HashSet<string> entityNames = null)
+        {
+            earlyExit.Value = false;
+
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+            Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+                yield break;
+
+            long fetchedDocumentCount = 0;
+
+            do
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (++fetchedDocumentCount >= maxTake)
+                {
+                    earlyExit.Value = true;
+                    break;
+                }
+
+                var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+                var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
+                var metadata = metadataBuffer.ToJObject();
+
+                if (filterDocument(key, metadata) == false)
+                    continue;
+
+                var returnDocumentKey = entityNames == null;
+                if (entityNames != null)
+                {
+                    var entityName = metadata.Value<string>("Raven-Entity-Name");
+                    if (entityName != null && entityNames.Contains(entityName))
+                    {
+                        returnDocumentKey = true;
+                    }
+                }
+
+                if (returnDocumentKey == false)
+                    continue;
+
+                yield return key;
+
+            } while (Api.TryMoveNext(session, Documents));
+        }
+
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
         {
             return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
         }
@@ -482,7 +528,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
         public Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped)
         {
-            
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)

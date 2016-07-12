@@ -678,7 +678,7 @@ namespace Raven.Database.Actions
             var docsToIndex = new List<JsonDocument>();
             TransactionalStorage.Batch(actions =>
             {
-                var query = GetQueryForAllMatchingDocumentsForIndex(generator);
+                var query = QueryBuilder.GetQueryForAllMatchingDocumentsForIndex(Database, generator.ForEntityNames);
 
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
@@ -768,39 +768,6 @@ namespace Raven.Database.Actions
                 }
             }
 
-        }
-
-        private string GetQueryForAllMatchingDocumentsForIndex(AbstractViewGenerator generator)
-        {
-            var terms = new TermsQueryRunner(Database)
-                .GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
-
-            var sb = new StringBuilder();
-
-            foreach (var entityName in generator.ForEntityNames)
-            {
-                bool added = false;
-                foreach (var term in terms)
-                {
-                    if (string.Equals(entityName, term, StringComparison.OrdinalIgnoreCase))
-                    {
-                        AppendTermToQuery(term, sb);
-                        added = true;
-                    }
-                }
-                if (added == false)
-                    AppendTermToQuery(entityName, sb);
-            }
-
-            return sb.ToString();
-        }
-
-        private static void AppendTermToQuery(string term, StringBuilder sb)
-        {
-            if (sb.Length != 0)
-                sb.Append(" OR ");
-
-            sb.Append("Tag:[[").Append(term).Append("]]");
         }
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)

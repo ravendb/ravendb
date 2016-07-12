@@ -265,6 +265,69 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 lastProcessedDocument(lastDocEtag);
         }
 
+        public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
+            Func<string, RavenJObject, bool> filterDocument, Reference<bool> earlyExit,
+            CancellationToken cancellationToken, HashSet<string> entityNames = null)
+        {
+            if (string.IsNullOrEmpty(etag))
+                throw new ArgumentNullException("etag");
+
+            earlyExit.Value = false;
+
+            using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+                .Iterate(Snapshot, writeBatch.Value))
+            {
+                var slice = (Slice)etag.ToString();
+                if (iterator.Seek(slice) == false)
+                    yield break;
+
+                if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+                {
+                    if (iterator.MoveNext() == false)
+                        yield break;
+                }
+
+                long fetchedDocumentCount = 0;
+
+                do
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (++fetchedDocumentCount >= maxTake)
+                    {
+                        earlyExit.Value = true;
+                        break;
+                    }
+
+                    var key = GetKeyFromCurrent(iterator);
+                    var normalizedKey = CreateKey(key);
+                    var sliceKey = (Slice)normalizedKey;
+
+                    int metadataSize;
+                    var metadata = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize).Metadata;
+
+                    if (filterDocument(key, metadata) == false)
+                        continue;
+
+                    var returnDocumentKey = entityNames == null;
+                    if (entityNames != null)
+                    {
+                        var entityName = metadata.Value<string>("Raven-Entity-Name");
+                        if (entityName != null && entityNames.Contains(entityName))
+                        {
+                            returnDocumentKey = true;
+                        }
+                    }
+
+                    if (returnDocumentKey == false)
+                        continue;
+
+                    yield return key;
+
+                } while (iterator.MoveNext());
+            }
+        }
+
         public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
         {
             return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
@@ -372,7 +435,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (metadataDocument == null)
             {
                 if (logger.IsDebugEnabled)
-                logger.Debug("Document with key='{0}' was not found", key);
+                    logger.Debug("Document with key='{0}' was not found", key);
                 return null;
             }
 
@@ -681,7 +744,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
             catch (Exception e)
             {
-
                 throw new InvalidDataException("Failed to de-serialize metadata of document " + normalizedKey, e);
             }
         }

@@ -415,6 +415,21 @@ namespace Raven.Database.Server.Tenancy
             return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
         }
 
+        public Guid? GetDatabaseId(string tenantName)
+        {
+            if (tenantName == Constants.SystemDatabase)
+                return null;
+
+            Task<DocumentDatabase> dbTask;
+            if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
+                return null;
+
+            if (dbTask == null || dbTask.Status != TaskStatus.RanToCompletion)
+                return null;
+
+            return dbTask.Result.Statistics.DatabaseId;
+        }
+
         private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
         {
             try
