@@ -55,6 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 case IndexType.AutoMap:
                 case IndexType.AutoMapReduce:
+                case IndexType.MapReduce:
                     _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: _index.Type.IsMapReduce());
                     break;
                 case IndexType.Map:
