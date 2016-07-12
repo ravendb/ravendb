@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
@@ -15,9 +16,11 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -220,8 +223,28 @@ namespace Raven.Server.Documents.Handlers
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }
 
+        private class MergedDeleteCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public string Key;
+            public long? ExepctedEtag;
+            public DocumentDatabase Database;
+            public ExceptionDispatchInfo ExceptionDispatchInfo;
+
+            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            {
+                try
+                {
+                    Database.DocumentsStorage.Delete(context, Key, ExepctedEtag);
+                }
+                catch (ConcurrencyException e)
+                {
+                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
+                }
+            }
+        }
+
         [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
-        public Task Delete()
+        public async Task Delete()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -230,13 +253,40 @@ namespace Raven.Server.Documents.Handlers
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                context.OpenWriteTransaction();
-                Database.DocumentsStorage.Delete(context, id, etag);
-                context.Transaction.Commit();
+                var cmd = new MergedDeleteCommand
+                {
+                    Key = id,
+                    Database = Database,
+                    ExepctedEtag = etag
+                };
+
+                await Database.TxMerger.Enqueue(cmd);
+
+                cmd.ExceptionDispatchInfo?.Throw();
 
                 HttpContext.Response.StatusCode = 204; // NoContent
+            }
+        }
 
-                return Task.CompletedTask;
+        private class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public string Key;
+            public long? ExepctedEtag;
+            public BlittableJsonReaderObject Document;
+            public DocumentDatabase Database;
+            public ExceptionDispatchInfo ExceptionDispatchInfo;
+            public PutResult PutResult;
+
+            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            {
+                try
+                {
+                    PutResult = Database.DocumentsStorage.Put(context, Key, ExepctedEtag, Document);
+                }
+                catch (ConcurrencyException e)
+                {
+                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
+                }
             }
         }
 
@@ -252,7 +302,17 @@ namespace Raven.Server.Documents.Handlers
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                var putResult = await Database.TxMerger.EnqueuePut(id, etag, doc);
+                var cmd = new MergedPutCommand
+                {
+                    Database = Database,
+                    ExepctedEtag = etag,
+                    Key = id,
+                    Document = doc
+                };
+
+                await Database.TxMerger.Enqueue(cmd);
+
+                cmd.ExceptionDispatchInfo?.Throw();
 
                 HttpContext.Response.StatusCode = 201;
 
@@ -261,11 +321,11 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName(context.GetLazyString("Key"));
-                    writer.WriteString(context.GetLazyString(putResult.Key));
+                    writer.WriteString(context.GetLazyString(cmd.PutResult.Key));
                     writer.WriteComma();
 
                     writer.WritePropertyName(context.GetLazyString("Etag"));
-                    writer.WriteInteger(putResult.ETag.Value);
+                    writer.WriteInteger(cmd.PutResult.ETag ?? -1);
 
                     writer.WriteEndObject();
                 }
@@ -295,6 +355,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     patchIfMissing = PatchRequest.Parse(patchCmd);
                 }
+
+                // TODO: In order to properly move this to the transaction merger, we need
+                // TODO: move a lot of the costs (such as script parsing) out, so we create
+                // TODO: an object that we'll apply, otherwise we'll slow down a lot the transactions
+                // TODO: just by doing the javascript parsing and preparing the engine
 
                 PatchResultData patchResult;
                 using (context.OpenWriteTransaction())

@@ -5,9 +5,8 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -17,7 +16,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _parent;
         private readonly CancellationToken _shutdown;
         private bool _runTransactions = true;
-        private readonly ConcurrentQueue<QueuedOperation> _operations = new ConcurrentQueue<QueuedOperation>();
+        private readonly ConcurrentQueue<MergedTransactionCommand> _operations = new ConcurrentQueue<MergedTransactionCommand>();
         private readonly ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private ExceptionDispatchInfo _edi;
         private readonly Logger _log;
@@ -40,32 +39,20 @@ namespace Raven.Server.Documents
             _txMergingThread.Start();
         }
 
-        private class QueuedOperation
+        public abstract class MergedTransactionCommand
         {
-            public string Key;
-            public long? ExpectedEtag;
-            public BlittableJsonReaderObject Document;
-            public PutResult PutResult;
-            public TaskCompletionSource<PutResult> Task;
-
+            public abstract void Execute(DocumentsOperationContext context, RavenTransaction tx);
+            public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
         }
-
-        public Task<PutResult> EnqueuePut(string key, long? expectedEtag, BlittableJsonReaderObject document)
+        
+        public Task Enqueue(MergedTransactionCommand cmd)
         {
             _edi?.Throw();
-
-
-            var op = new QueuedOperation
-            {
-                Document = document,
-                ExpectedEtag = expectedEtag,
-                Key = key,
-                Task = new TaskCompletionSource<PutResult>()
-            };
-            _operations.Enqueue(op);
+            
+            _operations.Enqueue(cmd);
             _waitHandle.Set();
 
-            return op.Task.Task;
+            return cmd.TaskCompletionSource.Task;
         }
 
         private void MergeOperationThreadProc()
@@ -74,49 +61,21 @@ namespace Raven.Server.Documents
             {
                 while (_runTransactions)
                 {
-                    _waitHandle.Wait(_shutdown);
-                    _waitHandle.Reset();
+                    if (_operations.Count == 0)
+                    {
+                        _waitHandle.Wait(_shutdown);
+                        _waitHandle.Reset();
+                    }
 
-                    var pending = new List<QueuedOperation>();
-                    QueuedOperation op;
-                    if (_operations.TryDequeue(out op) == false)
-                        continue;
-                    pending.Add(op);
+                    var pendingOps = new List<MergedTransactionCommand>();
                     try
                     {
-                        DocumentsOperationContext context;
-                        using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                        {
-                            using (var tx = context.OpenWriteTransaction())
-                            {
-                                var sp = Stopwatch.StartNew();
-                                do
-                                {
-                                    _parent.Metrics.DocPutsPerSecond.Mark();
-                                    op.PutResult = _parent.DocumentsStorage.Put(context, op.Key, op.ExpectedEtag, op.Document);
-                                } while (
-                                    sp.ElapsedMilliseconds < 150 &&
-                                    _operations.TryDequeue(out op));
-                                tx.Commit();
-                            }
-                        }
-                        Task.Factory.StartNew(state =>
-                        {
-                            foreach (var completedOp in ((List<QueuedOperation>)state))
-                            {
-                                completedOp.Task.TrySetResult(completedOp.PutResult);
-                            }
-                        },pending, _shutdown);
+                        if(MergeTransactionsOnce(pendingOps))
+                            NotifySuccessfulTransaction(pendingOps);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
-                        Task.Factory.StartNew(state =>
-                        {
-                            foreach (var completedOp in ((List<QueuedOperation>)state))
-                            {
-                                completedOp.Task.TrySetException(e);
-                            }
-                        }, pending, _shutdown);
+                        NotifyAboutErrorInTransaction(e, pendingOps);
                     }
                 }
             }
@@ -132,6 +91,94 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void NotifyAboutErrorInTransaction(Exception e, List<MergedTransactionCommand> pendingOps)
+        {
+            Task.Factory.StartNew(state =>
+            {
+                foreach (var completedOp in ((List<MergedTransactionCommand>)state))
+                {
+                    completedOp.TaskCompletionSource.TrySetException(e);
+                }
+            }, pendingOps, _shutdown);
+        }
+
+        private void NotifySuccessfulTransaction(List<MergedTransactionCommand> pendingOps)
+        {
+            Task.Factory.StartNew(state =>
+            {
+                foreach (var completedOp in (List<MergedTransactionCommand>)state)
+                {
+                    completedOp.TaskCompletionSource.TrySetResult(null);
+                }
+            }, pendingOps, _shutdown);
+        }
+
+        private bool MergeTransactionsOnce(List<MergedTransactionCommand> pendingOps)
+        {
+            try
+            {
+                DocumentsOperationContext context;
+                using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                {
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        var sp = Stopwatch.StartNew();
+                        do
+                        {
+                            MergedTransactionCommand op;
+                            if (_operations.TryDequeue(out op) == false)
+                                break;
+                            pendingOps.Add(op);
+                            op.Execute(context, tx);
+                        } while (sp.ElapsedMilliseconds < 150);
+                        tx.Commit();
+                    }
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                if (pendingOps.Count == 1)
+                {
+                    NotifyAboutErrorInTransaction(e, pendingOps);
+                    return false;
+                }
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Error when merging {0} transactions, will try running independently", e);
+                }
+                RunEachOperationIndependently(pendingOps);
+                return false;
+            }
+        }
+
+        private void RunEachOperationIndependently(List<MergedTransactionCommand> pendingOps)
+        {
+            var single = new List<MergedTransactionCommand>(1);
+            foreach (var op in pendingOps)
+            {
+                single.Clear();
+                single.Add(op);
+                try
+                {
+                    DocumentsOperationContext context;
+                    using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    {
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            op.Execute(context, tx);
+                            tx.Commit();
+                        }
+                    }
+                    NotifySuccessfulTransaction(single);
+
+                }
+                catch (Exception e)
+                {
+                    NotifyAboutErrorInTransaction(e, single);
+                }
+            }
+        }
 
         public void Dispose()
         {
@@ -139,5 +186,6 @@ namespace Raven.Server.Documents
             _waitHandle.Set();
             _txMergingThread?.Join();
         }
+
     }
 }

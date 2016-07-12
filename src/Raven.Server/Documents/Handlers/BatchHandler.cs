@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -48,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidDataException("Could not parse json", ioe);
                 }
 
-                var parsedCommands = new CommandData[commands.Length];
+                CommandData[] parsedCommands = new CommandData[commands.Length];
 
                 for (int i = 0; i < commands.Length; i++)
                 {
@@ -94,71 +96,87 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
 
-                var reply = new DynamicJsonArray();
-
-                using (context.OpenWriteTransaction())
+                var mergedCmd = new MergedBatchCommand
                 {
-                    for (int i = 0; i < parsedCommands.Length; i++)
-                    {
-                        var cmd = parsedCommands[i];
-                        switch (cmd.Method)
-                        {
-                            case "PUT":
-                                var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag,
-                                    cmd.Document);
+                    Database = Database,
+                    ParsedCommands = parsedCommands,
+                    Reply = new DynamicJsonArray()
+                };
 
-                                BlittableJsonReaderObject metadata;
-                                cmd.Document.TryGet(Constants.Metadata, out metadata);
-
-                                reply.Add(new DynamicJsonValue
-                                {
-                                    ["Key"] = putResult.Key,
-                                    ["Etag"] = putResult.ETag,
-                                    ["Method"] = "PUT",
-                                    ["AdditionalData"] = cmd.AdditionalData,
-                                    ["Metadata"] = metadata
-                                });
-                                break;
-                            case "PATCH":
-                                var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null, cmd.IsDebugMode);
-                                var additionalData = new DynamicJsonValue
-                                {
-                                    ["Debug"] = patchResult.DebugInfo,
-                                };
-                                if (cmd.IsDebugMode)
-                                {
-                                    additionalData["Document"] = patchResult.ModifiedDocument;
-                                    additionalData["Actions"] = patchResult.DebugActions;
-                                }
-                                reply.Add(new DynamicJsonValue
-                                {
-                                    ["Key"] = cmd.Key,
-                                    ["Etag"] = cmd.Etag,
-                                    ["Method"] = "PATCH",
-                                    ["AdditionalData"] = additionalData,
-                                    ["PatchResult"] = patchResult.PatchResult.ToString(),
-                                });
-                                break;
-                            case "DELETE":
-                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
-                                reply.Add(new DynamicJsonValue
-                                {
-                                    ["Key"] = cmd.Key,
-                                    ["Method"] = "DELETE",
-                                    ["AdditionalData"] = cmd.AdditionalData,
-                                    ["Deleted"] = deleted
-                                });
-                                break;
-                        }
-                    }
-
-                    context.Transaction.Commit();
-                }
+                await Database.TxMerger.Enqueue(mergedCmd);
 
                 HttpContext.Response.StatusCode = 201;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, reply);
+                    context.Write(writer, mergedCmd.Reply);
+            }
+        }
+
+        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public DynamicJsonArray Reply;
+            public CommandData[] ParsedCommands;
+            public DocumentDatabase Database;
+
+            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            {
+                for (int i = 0; i < ParsedCommands.Length; i++)
+                {
+                    var cmd = ParsedCommands[i];
+                    switch (cmd.Method)
+                    {
+                        case "PUT":
+                            var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag,
+                                cmd.Document);
+
+                            BlittableJsonReaderObject metadata;
+                            cmd.Document.TryGet(Constants.Metadata, out metadata);
+
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                ["Key"] = putResult.Key,
+                                ["Etag"] = putResult.ETag,
+                                ["Method"] = "PUT",
+                                ["AdditionalData"] = cmd.AdditionalData,
+                                ["Metadata"] = metadata
+                            });
+                            break;
+                        case "PATCH":
+                            // TODO: Move this code out of the merged transaction
+                            // TODO: We should have an object that handles this externally, 
+                            // TODO: and apply it there
+                            var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null, cmd.IsDebugMode);
+                            var additionalData = new DynamicJsonValue
+                            {
+                                ["Debug"] = patchResult.DebugInfo,
+                            };
+                            if (cmd.IsDebugMode)
+                            {
+                                additionalData["Document"] = patchResult.ModifiedDocument;
+                                additionalData["Actions"] = patchResult.DebugActions;
+                            }
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                ["Key"] = cmd.Key,
+                                ["Etag"] = cmd.Etag,
+                                ["Method"] = "PATCH",
+                                ["AdditionalData"] = additionalData,
+                                ["PatchResult"] = patchResult.PatchResult.ToString(),
+                            });
+                            break;
+                        case "DELETE":
+                            var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                ["Key"] = cmd.Key,
+                                ["Method"] = "DELETE",
+                                ["AdditionalData"] = cmd.AdditionalData,
+                                ["Deleted"] = deleted
+                            });
+                            break;
+                    }
+                }
+
             }
         }
     }
