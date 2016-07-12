@@ -243,17 +243,14 @@ namespace Raven.Server
 						var header = JsonDeserialization.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
 
 						var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
-						if (databaseLoadingTask == null)
-						{
-							throw new InvalidOperationException("There is no database named " + header.DatabaseName);
-						}
-						if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
-						{
-							throw new InvalidOperationException("Timeout when loading database + " + header.DatabaseName +
-																", try again later");
-						}
+	                    if (databaseLoadingTask == null)
+		                    throw new InvalidOperationException("There is no database named " + header.DatabaseName);
 
-						var documentDatabase = await databaseLoadingTask;
+	                    if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
+		                    throw new InvalidOperationException(
+			                    $"Timeout when loading database {header.DatabaseName}, try again later");
+
+	                    var documentDatabase = await databaseLoadingTask;
 						switch (header.Operation)
 						{
 							case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:

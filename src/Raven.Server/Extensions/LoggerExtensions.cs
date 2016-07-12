@@ -13,7 +13,7 @@ namespace Raven.Server
 	    }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void OperaitonsIfEnabled(this Sparrow.Logging.Logger log, string message, Exception ex = null)
+		public static void OperationsIfEnabled(this Sparrow.Logging.Logger log, string message, Exception ex = null)
 		{
 			if (log.IsOperationsEnabled)
 				log.Operations(message, ex);

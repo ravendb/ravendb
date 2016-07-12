@@ -10,13 +10,13 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using System.Linq;
+using Raven.Abstractions.Replication;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
     public class IncomingReplicationHandler : IDisposable
     {
-	    private readonly IncomingConnectionInfo _connectionInfo;
 	    private readonly TcpConnectionHeaderMessage _incomingMessageHeader;
 	    private readonly JsonOperationContext.MultiDocumentParser _multiDocumentParser;
 	    private readonly DocumentDatabase _database;
@@ -25,21 +25,22 @@ namespace Raven.Server.Documents.Replication
 	    private Thread _incomingThread;
 	    private readonly CancellationTokenSource _cts;
 	    private readonly Logger _log;
-	    private readonly BlittableJsonTextWriter _writer;
+	    private readonly IDisposable _contextDisposable;
 		public event Action<Exception, IncomingReplicationHandler> Failed;
 
-		public IncomingReplicationHandler(IncomingConnectionInfo connectionInfo, 
-			TcpConnectionHeaderMessage incomingMessageHeader, 
+		public IncomingReplicationHandler(TcpConnectionHeaderMessage incomingMessageHeader, 
 			JsonOperationContext.MultiDocumentParser multiDocumentParser, 
 			DocumentDatabase database, 
 			NetworkStream stream)
 	    {
-		    _connectionInfo = connectionInfo;
+		   
 		    _incomingMessageHeader = incomingMessageHeader;
 		    _multiDocumentParser = multiDocumentParser;
 		    _database = database;
 		    _stream = stream;
-		    _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+			_contextDisposable = _database.DocumentsStorage
+										  .ContextPool
+										  .AllocateOperationContext(out _context);
 			
 			_log = _database.LoggerSetup.GetLogger<IncomingReplicationHandler>(_database.Name);
 			_cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
@@ -58,7 +59,8 @@ namespace Raven.Server.Documents.Replication
 		//TODO : do not forget to add logging and code to record stats
 	    private void ReceiveReplicatedDocuments()
 	    {
-			using (_context)
+			using (_contextDisposable)
+			using (_stream)
 			using (var writer = new BlittableJsonTextWriter(_context, _stream))
 			using (_multiDocumentParser)
 			{
@@ -77,12 +79,13 @@ namespace Raven.Server.Documents.Replication
 							switch (messageType)
 							{
 								case "GetLastEtag":
-									_context.Write(_writer, new DynamicJsonValue
+									_context.Write(writer, new DynamicJsonValue
 									{
-										[Constants.Replication.PropertyNames.LastSentEtag] = GetLastReceivedEtag(Guid.Parse(_incomingMessageHeader.SourceDatabaseId), _context),
+										["LastSentEtag"] = GetLastReceivedEtag(Guid.Parse(_incomingMessageHeader.SourceDatabaseId), _context),
 										[Constants.MessageType] = "GetLastEtag"
 									});
-									_writer.Flush();
+									writer.Flush();
+
 									break;
 								case "ReplicationBatch":
 
@@ -91,12 +94,34 @@ namespace Raven.Server.Documents.Replication
 										throw new InvalidDataException(
 											$"Expected the message to have a field with replicated document array, named {Constants.Replication.PropertyNames.ReplicationBatch}. The property wasn't found");
 
-									using (_context.OpenWriteTransaction())
+									try
 									{
-										ReceiveDocuments(_context, replicatedDocs);
-										_context.Transaction.Commit();
-									}
+										long lastReceivedEtag;
+										using (_context.OpenWriteTransaction())
+										{
+											lastReceivedEtag = ReceiveDocuments(_context, replicatedDocs);
+											_context.Transaction.Commit();
+										}
 
+										//return positive ack
+										_context.Write(writer, new DynamicJsonValue
+										{
+											["Type"] = ReplicationBatchReply.ReplyType.Success,
+											["LastEtagAccepted"] = lastReceivedEtag,
+											["Error"] = string.Empty
+										});
+									}
+									catch (Exception e)
+									{
+										//return negative ack
+										_context.Write(writer, new DynamicJsonValue
+										{
+											["Type"] = ReplicationBatchReply.ReplyType.Failure,
+											["LastEtagAccepted"] = -1,
+											["Error"] = e.ToString()
+										});
+									}
+									writer.Flush();
 									break;
 								default:
 									throw new InvalidOperationException("Unrecognized replication message type.");
@@ -116,7 +141,8 @@ namespace Raven.Server.Documents.Replication
 			}
 	    }
 
-	    public string FromToString => $"from {_connectionInfo.SourceDatabaseName} at {_connectionInfo.SourceUrl} (into database {_database.Name})";
+	    public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
+	    public IncomingConnectionInfo ConnectionInfo => IncomingConnectionInfo.FromIncomingHeader(_incomingMessageHeader);	
 
 	    private long GetLastReceivedEtag(Guid srcDbId, DocumentsOperationContext context)
 	    {
@@ -125,7 +151,7 @@ namespace Raven.Server.Documents.Replication
 		    return vectorEntry.Etag;
 	    }
 
-		private void ReceiveDocuments(DocumentsOperationContext context, BlittableJsonReaderArray docs)
+		private long ReceiveDocuments(DocumentsOperationContext context, BlittableJsonReaderArray docs)
 		{
 			var dbChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(context);
 			var changeVectorUpdated = false;
@@ -178,6 +204,8 @@ namespace Raven.Server.Documents.Replication
 
 			if (changeVectorUpdated)
 				_database.DocumentsStorage.SetChangeVector(context, dbChangeVector);
+
+			return dbChangeVector.FirstOrDefault(x => x.DbId == Guid.Parse(_incomingMessageHeader.SourceDatabaseId)).Etag;
 		}
 
 		private void WriteReceivedDocument(DocumentsOperationContext context, BlittableJsonReaderObject doc)
@@ -197,10 +225,7 @@ namespace Raven.Server.Documents.Replication
 	    {		
 			_cts.Cancel();
 			_incomingThread?.Join();
-
-			//precaution, those should be null by this point
-			_context?.Dispose();
-			_stream?.Dispose();
+		    _incomingThread = null;
 	    }
 
 	    protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(exception, instance);

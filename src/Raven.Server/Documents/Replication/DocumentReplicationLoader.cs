@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.Sockets;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -32,9 +34,9 @@ namespace Raven.Server.Documents.Replication
 			_incoming.GetOrAdd(IncomingConnectionInfo.FromIncomingHeader(incomingMessageHeader), 
 				key =>
 				{
-					var newIncoming = new IncomingReplicationHandler(key, incomingMessageHeader, multiDocumentParser, _database, stream);
+					var newIncoming = new IncomingReplicationHandler(incomingMessageHeader, multiDocumentParser, _database, stream);
 					newIncoming.Failed += IncomingReplicationHandlerFailed;
-					newIncoming.Start();					
+					newIncoming.Start();
 					_log.InfoIfEnabled($"Initialized document replication connection with {key.SourceDatabaseName} from {key.SourceUrl}");
 					return newIncoming;
 				});
@@ -42,9 +44,26 @@ namespace Raven.Server.Documents.Replication
 
 		private void IncomingReplicationHandlerFailed(Exception exception, IncomingReplicationHandler incomingReplicationHandler)
 		{
+			IncomingReplicationHandler _;
+			_incoming.TryRemove(incomingReplicationHandler.ConnectionInfo, out _);
 			incomingReplicationHandler.Failed -= IncomingReplicationHandlerFailed;
-			_log.OperaitonsIfEnabled($"Incoming replication handler has thrown an unhandled exception. ({incomingReplicationHandler.FromToString})",exception);
+			_log.OperationsIfEnabled($"Incoming replication handler has thrown an unhandled exception. ({incomingReplicationHandler.FromToString})",exception);
 			incomingReplicationHandler.Dispose();
+		}
+
+		private ReplicationDocument GetReplicationDocument()
+		{
+			DocumentsOperationContext context;
+			using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+			using (context.OpenReadTransaction())
+			{
+				var configurationDocument = _database.DocumentsStorage.Get(context,
+					Constants.Replication.DocumentReplicationConfiguration);
+
+				return configurationDocument == null ? 
+					null : 
+					JsonDeserialization.ReplicationDocument(configurationDocument.Data);
+			}
 		}
 
 		public void Dispose()
