@@ -351,7 +351,7 @@ namespace Raven.Client.Document
                     Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(dbName, commands, Conventions, entity);
                 }
 
-                Smuggler = new DatabaseSmuggler(Url);
+                Smuggler = new DatabaseSmuggler(this);
 
                 initialized = true;
             }

@@ -5,16 +5,17 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 
 namespace Raven.Client.Smuggler
 {
     public class DatabaseSmuggler
     {
-        private readonly string _url;
+        private readonly DocumentStore _store;
 
-        public DatabaseSmuggler(string url)
+        public DatabaseSmuggler(DocumentStore store)
         {
-            _url = url;
+            _store = store;
         }
 
         public Task ExportAsync(DatabaseSmugglerOptions options, IDatabaseSmugglerDestination destination)
@@ -60,7 +61,8 @@ namespace Raven.Client.Smuggler
                 {
                     var content = new MultipartFormDataContent($"smuggler-import: {SystemTime.UtcNow:O}");
                     content.Add(new StreamContent(fileStream), Path.GetFileName(filePath), filePath);
-                    await httpClient.PostAsync(_url + "/databases/" + options.Database + "/smuggler/import", content).ConfigureAwait(false);
+                    var database = options.Database ?? _store.DefaultDatabase;
+                    await httpClient.PostAsync($"{_store.Url}/databases/{database}/smuggler/import", content).ConfigureAwait(false);
                 }
                 filePath = $"{filePath}.part{++countOfFileParts:D3}";
             } while (File.Exists(filePath));
