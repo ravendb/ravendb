@@ -297,7 +297,7 @@ namespace FastTests.Blittable
             {
                 var reader = new BlittableJsonReaderObject(ptr, 0x16, null);
                 var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
-                Assert.Equal(message.Message, "Float not valid");
+                Assert.Equal(message.Message, "Double not valid (1.3.5)");
             }
         }
 
@@ -544,6 +544,36 @@ namespace FastTests.Blittable
                     reader.BlittableValidation();
                 }
             }
+        }
+
+        [Fact]
+        public unsafe void Invalid_Props_Offset()
+        {
+            int size;
+            var reader = InitSimpleBlittable(out size);
+            var basePointer = reader.BasePointer;
+
+            *(basePointer + size - 2) = 0xbc;
+            var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
+            Assert.Equal(message.Message, "Properties names offset not valid");
+
+            *(basePointer + size - 2) = 0x00;
+            message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
+            Assert.Equal(message.Message, "Properties names offset not valid");
+
+        }
+
+        [Fact]
+        public unsafe void Invalid_Root_Metadata_Offset()
+        {
+            int size;
+            var reader = InitSimpleBlittable(out size);
+            var basePointer = reader.BasePointer;
+
+            *(basePointer + size - 3) = 0x40;
+            var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
+            Assert.Equal(message.Message, "Root metadata offset not valid");
+
         }
     }
 }
