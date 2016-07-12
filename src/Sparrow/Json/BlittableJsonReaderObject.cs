@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -587,7 +588,7 @@ namespace Sparrow.Json
                 if (offsetCounter + stringLength != nameOffset)
                     throw new InvalidDataException("Properties names offset not valid");
                 offsetCounter = nameOffset;
-                currentSize -= (stringLength);
+                currentSize -= stringLength;
             }
             return currentSize;
         }
@@ -696,14 +697,10 @@ namespace Sparrow.Json
                                 pChars[j] = (char)ReadNumber((_mem + objStartOffset - propOffset + 1 + j), sizeof(byte));
                             }
                         }
-                        try
-                        {
-                            float.Parse(floatStringBuffer);
-                        }
-                        catch (Exception)
-                        {
-                            throw new InvalidDataException("Float not valid");
-                        }
+                        double _double;
+                        var result = double.TryParse(floatStringBuffer,NumberStyles.Float,CultureInfo.InvariantCulture, out _double);
+                        if (!(result))
+                            throw new InvalidDataException("Double not valid (" + floatStringBuffer + ")");
                         break;
                     case BlittableJsonToken.String:
                         StringValidation(propValueOffset);

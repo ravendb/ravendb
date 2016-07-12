@@ -18,9 +18,9 @@ namespace Tryout
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine( i);
-                using (var n = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+                using (var n = new FastTests.Server.Documents.ModifyExistingDocument())
                 {
-                    n.AutoIndexesShouldBeMarkedAsIdleAndDeleted().Wait();
+                    n.ShouldThrowIfChangeRavenEntityName().Wait();
                 }
             }
         }
