@@ -9,7 +9,6 @@ using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Smuggler
 {
@@ -22,19 +21,8 @@ namespace Raven.Server.Smuggler
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(context.GetLazyString("Docs"));
-                    int? maxNumberOfDocumentsToExport = null;
-                    var documents = Database.DocumentsStorage.GetDocumentsAfter(context, 0, 0, maxNumberOfDocumentsToExport ?? int.MaxValue);
-                    writer.WriteDocuments(context, documents, false);
-
-                    writer.WriteEndObject();
-                }
+                new DatabaseDataExporter(Database).Export(context, ResponseBodyStream());
             }
-
             return Task.CompletedTask;
         }
 
