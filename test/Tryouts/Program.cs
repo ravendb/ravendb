@@ -15,14 +15,14 @@ namespace Tryout
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            Parallel.For(0, 1000, i =>
             {
-                Console.WriteLine( i);
-                using (var n = new FastTests.Server.Documents.ModifyExistingDocument())
+                Console.WriteLine(i);
+                using (var n = new FastTests.Server.Documents.DocumentsCrud())
                 {
-                    n.ShouldThrowIfChangeRavenEntityName().Wait();
+                    n.EtagsArePersistedWithDeletes();
                 }
-            }
+            });
         }
     }
 }

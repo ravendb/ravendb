@@ -291,18 +291,21 @@ namespace Voron
             try
             {
                 // if there is a pending flush operation, we need to wait for it
-                bool lockTaken = false;
-                using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
+                if (_journal != null) // error during ctor
                 {
-                    if (lockTaken == false)
+                    bool lockTaken = false;
+                    using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                     {
-                        // if we are here, then we didn't get the flush lock, so it is currently being run
-                        // we need to wait for it to complete (so we won't be shutting down the db while we 
-                        // are flushing and maybe access in valid memory.
-                        using (_journal.Applicator.TakeFlushingLock())
+                        if (lockTaken == false)
                         {
-                            // when we are here, we know that we aren't flushing, and we can dispose, 
-                            // any future calls to flush will abort because we are marked as disposed
+                            // if we are here, then we didn't get the flush lock, so it is currently being run
+                            // we need to wait for it to complete (so we won't be shutting down the db while we 
+                            // are flushing and maybe access in valid memory.
+                            using (_journal.Applicator.TakeFlushingLock())
+                            {
+                                // when we are here, we know that we aren't flushing, and we can dispose, 
+                                // any future calls to flush will abort because we are marked as disposed
+                            }
                         }
                     }
                 }

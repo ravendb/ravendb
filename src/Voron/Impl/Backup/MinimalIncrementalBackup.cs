@@ -180,6 +180,7 @@ namespace Voron.Impl.Backup
                             txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
                             txHeader->Compressed = false;
                             txHeader->UncompressedSize = txHeader->CompressedSize = totalNumberOfPages * env.Options.PageSize;
+                            txHeader->TimeStampTicksUtc = DateTime.UtcNow.Ticks;
                             txHeader->Hash = Hashing.XXHash64.Calculate(finalPager.AcquirePagePointer(null, 1), totalNumberOfPages * env.Options.PageSize);
 
                             var entry = package.CreateEntry(string.Format("{0:D19}.merged-journal", nextJournalNum), compression);

@@ -139,7 +139,6 @@ namespace Voron.Impl.Journal
             var journalFiles = new List<JournalFile>();
             long lastSyncedTxId = -1;
             long lastSyncedJournal = logInfo.LastSyncedJournal;
-            ulong lastShippedTxCrc = 0;
             for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
                 using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
@@ -166,7 +165,6 @@ namespace Voron.Impl.Journal
 
                         *txHeader = *lastReadHeaderPtr;
                         lastSyncedTxId = txHeader->TransactionId;
-                        lastShippedTxCrc = txHeader->Hash;
                         lastSyncedJournal = journalNumber;
                     }
 
@@ -945,6 +943,10 @@ namespace Voron.Impl.Journal
             txHeader->Compressed = true;
             txHeader->CompressedSize = len;
             txHeader->UncompressedSize = sizeInBytes;
+            if (new DateTime(txHeader->TimeStampTicksUtc).Year != 2016)
+            {
+                Console.WriteLine(new DateTime(txHeader->TimeStampTicksUtc));
+            }
             txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, len);
 
             // Copy the transaction header to the output buffer. 
