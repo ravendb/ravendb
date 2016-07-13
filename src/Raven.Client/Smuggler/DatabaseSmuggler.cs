@@ -18,7 +18,12 @@ namespace Raven.Client.Smuggler
             _store = store;
         }
 
-        public Task ExportAsync(DatabaseSmugglerOptions options, IDatabaseSmugglerDestination destination)
+        public Task ExportAsync(DatabaseSmugglerOptions options, string destinationFilePath)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public Task ExportAsync(DatabaseSmugglerOptions options, Stream destinationStream)
         {
             throw new System.NotImplementedException();
         }

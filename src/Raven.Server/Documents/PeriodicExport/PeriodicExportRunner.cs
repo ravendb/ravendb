@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.PeriodicExport
                             }
                         }
 
-                        var exportResult = dataExporter.Export(context, new DatabaseSmugglerFileDestination {FilePath = exportFilePath});
+                        var exportResult = dataExporter.Export(context, exportFilePath);
 
                         if (fullExport == false)
                         {

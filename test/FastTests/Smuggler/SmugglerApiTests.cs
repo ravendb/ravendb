@@ -21,11 +21,11 @@ namespace FastTests.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerRemoteDestination
+                /*await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerRemoteDestination
                 {
                     Url = store2.Url,
                     Database = store2.DefaultDatabase,
-                });
+                });*/
 
                 var docs = store2.DatabaseCommands.GetDocuments(0, 10);
                 Assert.Equal(3, docs.Length);
@@ -48,10 +48,7 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileDestination
-                    {
-                        FilePath = file,
-                    });
+                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
