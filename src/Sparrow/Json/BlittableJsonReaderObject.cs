@@ -649,7 +649,7 @@ namespace Sparrow.Json
         {
             byte offset;
             var numberOfProperties = ReadVariableSizeInt(_mem + objStartOffset, 0, out offset);
-            var current = objStartOffset + 1;
+            var current = objStartOffset + offset;
 
             if (numberOfProperties < 0)
                 throw new InvalidDataException("Number of properties not valid");
