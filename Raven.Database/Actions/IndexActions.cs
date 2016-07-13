@@ -680,6 +680,7 @@ namespace Raven.Database.Actions
             {
                 var query = QueryBuilder.GetQueryForAllMatchingDocumentsForIndex(Database, generator.ForEntityNames);
 
+                using (DocumentCacher.SkipSetDocumentsInDocumentCache())
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
                 {
