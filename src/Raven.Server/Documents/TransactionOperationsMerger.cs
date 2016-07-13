@@ -43,12 +43,13 @@ namespace Raven.Server.Documents
         {
             public abstract void Execute(DocumentsOperationContext context, RavenTransaction tx);
             public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
+            public Exception Exception;
         }
-        
+
         public Task Enqueue(MergedTransactionCommand cmd)
         {
             _edi?.Throw();
-            
+
             _operations.Enqueue(cmd);
             _waitHandle.Set();
 
@@ -59,6 +60,7 @@ namespace Raven.Server.Documents
         {
             try
             {
+                var pendingOps = new List<MergedTransactionCommand>();
                 while (_runTransactions)
                 {
                     if (_operations.Count == 0)
@@ -67,17 +69,30 @@ namespace Raven.Server.Documents
                         _waitHandle.Reset();
                     }
 
-                    var pendingOps = new List<MergedTransactionCommand>();
                     try
                     {
-                        if(MergeTransactionsOnce(pendingOps))
-                            NotifySuccessfulTransaction(pendingOps);
+                        if (MergeTransactionsOnce(pendingOps))
+                        {
+                            foreach (var op in pendingOps)
+                            {
+                                NotifyOnThreadPool(op);
+                            }
+                        }
                     }
                     catch (Exception e)
                     {
-                        NotifyAboutErrorInTransaction(e, pendingOps);
+                        foreach (var op in pendingOps)
+                        {
+                            op.Exception = e;
+                            NotifyOnThreadPool(op);
+                        }
+                    }
+                    finally
+                    {
+                        pendingOps.Clear();
                     }
                 }
+                
             }
             catch (Exception e)
             {
@@ -91,26 +106,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyAboutErrorInTransaction(Exception e, List<MergedTransactionCommand> pendingOps)
+        private void DoCommandNotification(object op)
         {
-            Task.Factory.StartNew(state =>
+            var cmd = (MergedTransactionCommand)op;
+            if (cmd.Exception != null)
             {
-                foreach (var completedOp in ((List<MergedTransactionCommand>)state))
-                {
-                    completedOp.TaskCompletionSource.TrySetException(e);
-                }
-            }, pendingOps, _shutdown);
-        }
-
-        private void NotifySuccessfulTransaction(List<MergedTransactionCommand> pendingOps)
-        {
-            Task.Factory.StartNew(state =>
+                cmd.TaskCompletionSource.TrySetException(cmd.Exception);
+            }
+            else
             {
-                foreach (var completedOp in (List<MergedTransactionCommand>)state)
-                {
-                    completedOp.TaskCompletionSource.TrySetResult(null);
-                }
-            }, pendingOps, _shutdown);
+                cmd.TaskCompletionSource.TrySetResult(null);
+            }
         }
 
         private bool MergeTransactionsOnce(List<MergedTransactionCommand> pendingOps)
@@ -140,7 +146,8 @@ namespace Raven.Server.Documents
             {
                 if (pendingOps.Count == 1)
                 {
-                    NotifyAboutErrorInTransaction(e, pendingOps);
+                    pendingOps[0].Exception = e;
+                    NotifyOnThreadPool(pendingOps[0]);
                     return false;
                 }
                 if (_log.IsInfoEnabled)
@@ -152,13 +159,19 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void NotifyOnThreadPool(MergedTransactionCommand cmd)
+        {
+            if (ThreadPool.QueueUserWorkItem(DoCommandNotification, cmd) == false)
+            {
+                // if we can't schedule it, run it inline
+                DoCommandNotification(cmd);
+            }
+        }
+
         private void RunEachOperationIndependently(List<MergedTransactionCommand> pendingOps)
         {
-            var single = new List<MergedTransactionCommand>(1);
             foreach (var op in pendingOps)
             {
-                single.Clear();
-                single.Add(op);
                 try
                 {
                     DocumentsOperationContext context;
@@ -170,12 +183,12 @@ namespace Raven.Server.Documents
                             tx.Commit();
                         }
                     }
-                    NotifySuccessfulTransaction(single);
-
+                    DoCommandNotification(op);
                 }
                 catch (Exception e)
                 {
-                    NotifyAboutErrorInTransaction(e, single);
+                    op.Exception = e;
+                    NotifyOnThreadPool(op);
                 }
             }
         }
