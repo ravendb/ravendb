@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition>
     {
-        private readonly StaticIndexBase _compiled;
+        internal readonly StaticIndexBase _compiled;
         private readonly Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper>();
 
         private int _maxNumberOfIndexOutputs;
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument;
         }
 
-        public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
+        public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.GroupByFields);

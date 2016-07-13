@@ -1,64 +1,49 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
-    public class ReduceMapResultsOfStaticIndex : ReduceMapResultsBase
+    public class ReduceMapResultsOfStaticIndex : ReduceMapResultsBase<MapReduceIndexDefinition>
     {
         private readonly DynamicIterationOfAggregationBatchWrapper _blittableToDynamicWrapper = new DynamicIterationOfAggregationBatchWrapper();
         private readonly IndexingFunc _reducingFunc;
         private PropertyAccessor _propertyAccessor;
 
-        public ReduceMapResultsOfStaticIndex(IndexingFunc reducingFunc, IndexDefinitionBase indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
+        public ReduceMapResultsOfStaticIndex(IndexingFunc reducingFunc, MapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
             : base(indexDefinition, indexStorage, metrics, mapReduceContext)
         {
             _reducingFunc = reducingFunc;
         }
         
-        protected override unsafe BlittableJsonReaderObject AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, long modifiedPage, 
-                                                                                  int aggregatedEntries, Table table, TransactionOperationContext indexContext)
+        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext)
         {
             _blittableToDynamicWrapper.InitializeForEnumeration(aggregationBatch);
-
-            var djv = new DynamicJsonValue();
+            
+            var resultObjects = new List<BlittableJsonReaderObject>();
 
             foreach (var output in _reducingFunc(_blittableToDynamicWrapper))
             {
                 if (_propertyAccessor == null)
                     _propertyAccessor = PropertyAccessor.Create(output.GetType());
 
+                var djv = new DynamicJsonValue();
+
                 foreach (var property in _propertyAccessor.Properties)
                 {
                     djv[property.Key] = property.Value(output);
                 }
 
-                break;
+                resultObjects.Add(indexContext.ReadObject(djv, "map/reduce"));
             }
 
-            aggregationBatch.Clear();
-
-            var resultObj = indexContext.ReadObject(djv, "map/reduce");
-
-            var pageNumber = IPAddress.HostToNetworkOrder(modifiedPage);
-
-            table.Set(new TableValueBuilder
-            {
-                {(byte*)&pageNumber, sizeof(long)},
-                {resultObj.BasePointer, resultObj.Size},
-                {(byte*)&aggregatedEntries, sizeof(int)}
-            });
-
-            return resultObj;
+            return new AggregationResult(resultObjects);
         }
 
         private class DynamicIterationOfAggregationBatchWrapper : IEnumerable<DynamicBlittableJson>
@@ -82,9 +67,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             private class Enumerator : IEnumerator<DynamicBlittableJson>
             {
-                private readonly DynamicBlittableJson _dynamicJson = new DynamicBlittableJson(null);
                 private IEnumerator<BlittableJsonReaderObject> _items;
-                private BlittableJsonReaderObject _previous = null;
+                private BlittableJsonReaderObject _previous;
 
                 public void Initialize(IEnumerator<BlittableJsonReaderObject> items)
                 {
@@ -98,9 +82,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     _previous?.Dispose();
 
-                    _dynamicJson.Set(_items.Current);
-
-                    Current = _dynamicJson;
+                    Current = new DynamicBlittableJson(_items.Current); // we have to create new instance to properly GroupBy
 
                     _previous = _items.Current;
 

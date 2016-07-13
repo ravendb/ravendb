@@ -17,12 +17,12 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public abstract unsafe class ReduceMapResultsBase : IIndexingWork
+    public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
-        protected readonly ILog Log = LogManager.GetLogger(typeof(ReduceMapResultsBase));
+        protected readonly ILog Log = LogManager.GetLogger(typeof(ReduceMapResultsBase<T>));
 
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
-        protected readonly IndexDefinitionBase _indexDefinition;
+        protected readonly T _indexDefinition;
         private readonly IndexStorage _indexStorage;
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _mapReduceContext;
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-        protected ReduceMapResultsBase(IndexDefinitionBase indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
+        protected ReduceMapResultsBase(T indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
         {
             _indexDefinition = indexDefinition;
             _indexStorage = indexStorage;
@@ -104,11 +104,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 writer.DeleteReduceResult(reduceKeyHash, stats);
 
-                                writer.IndexDocument(reduceKeyHash, new Document
+                                foreach (var output in result.Outputs)
                                 {
-                                    Key = reduceKeyHash,
-                                    Data = result
-                                }, stats);
+                                    writer.IndexDocument(reduceKeyHash, new Document
+                                    {
+                                        Key = reduceKeyHash,
+                                        Data = output
+                                    }, stats);
+                                }
 
                                 _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
 
@@ -172,13 +175,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 if (parentPage == -1)
                                 {
                                     writer.DeleteReduceResult(reduceKeyHash, stats);
-
-                                    writer.IndexDocument(reduceKeyHash, new Document
+                                    foreach (var output in result.Outputs)
                                     {
-                                        Key = reduceKeyHash,
-                                        Data = result
-                                    }, stats);
-
+                                        writer.IndexDocument(reduceKeyHash, new Document
+                                        {
+                                            Key = reduceKeyHash,
+                                            Data = output
+                                        }, stats);
+                                    }
                                     _metrics.MapReduceReducedPerSecond.Mark(aggregatedEntries);
 
                                     stats.RecordReduceSuccesses(aggregatedEntries);
@@ -216,7 +220,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        private BlittableJsonReaderObject AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext)
+        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext)
         {
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
@@ -229,7 +233,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return AggregateBatchResults(_aggregationBatch, page.PageNumber, page.NumberOfEntries, table, indexContext);
         }
 
-        private BlittableJsonReaderObject AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, out int aggregatedEntries)
+        private AggregationResult AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, out int aggregatedEntries)
         {
             aggregatedEntries = 0;
 
@@ -241,17 +245,64 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     throw new InvalidOperationException("Couldn't find pre-computed results for existing page " + childPageNumber);
                 }
-
+                
                 int size;
-                _aggregationBatch.Add(new BlittableJsonReaderObject(tvr.Read(1, out size), size, indexContext));
+                aggregatedEntries += *(int*)tvr.Read(1, out size);
 
-                aggregatedEntries += *(int*)tvr.Read(2, out size);
+                var numberOfResults = *(int*)tvr.Read(2, out size);
+
+                for (int j = 0; j < numberOfResults; j++)
+                {
+                    _aggregationBatch.Add(new BlittableJsonReaderObject(tvr.Read(3 + j, out size), size, indexContext));
+                }
             }
 
             return AggregateBatchResults(_aggregationBatch, page.PageNumber, aggregatedEntries, table, indexContext);
         }
 
-        protected abstract BlittableJsonReaderObject AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, long modifiedPage, int aggregatedEntries,
-            Table table, TransactionOperationContext indexContext);
+        private AggregationResult AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, long modifiedPage, int aggregatedEntries,
+            Table table, TransactionOperationContext indexContext)
+        {
+            AggregationResult result;
+
+            try
+            {
+                result = AggregateOn(aggregationBatch, indexContext);
+            }
+            catch (Exception)
+            {
+                foreach (var item in aggregationBatch)
+                {
+                    item.Dispose();
+                }
+
+                throw;
+            }
+            finally
+            {
+                aggregationBatch.Clear();
+            }
+            
+            var pageNumber = IPAddress.HostToNetworkOrder(modifiedPage);
+            var numberOfOutputs = result.Outputs.Count;
+
+            var tvb = new TableValueBuilder
+            {
+                {(byte*) &pageNumber, sizeof(long)},
+                {(byte*) &aggregatedEntries, sizeof (int)},
+                {(byte*) &numberOfOutputs, sizeof (int)}
+            };
+
+            foreach (var output in result.Outputs)
+            {
+                tvb.Add(output.BasePointer, output.Size);
+            }
+
+            table.Set(tvb);
+
+            return result;
+        }
+
+        protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext);
     }
 }

@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly ILog Log = LogManager.GetLogger(typeof(Index));
 
-        protected readonly LuceneIndexPersistence IndexPersistence;
+        internal readonly LuceneIndexPersistence IndexPersistence;
 
         private readonly object _locker = new object();
 
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironment _environment;
 
-        protected TransactionContextPool _contextPool;
+        internal TransactionContextPool _contextPool;
 
         private bool _disposed;
 

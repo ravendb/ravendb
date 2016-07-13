@@ -1,33 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public unsafe class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase
+    public unsafe class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
     {
-        public ReduceMapResultsOfAutoIndex(IndexDefinitionBase indexDefinition, IndexStorage indexStorage,
+        public ReduceMapResultsOfAutoIndex(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage,
             MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
             : base(indexDefinition, indexStorage, metrics, mapReduceContext)
         {
         }
 
-        protected override BlittableJsonReaderObject AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, long modifiedPage, int aggregatedEntries, 
-                                                                           Table table, TransactionOperationContext indexContext)
+        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext)
         {
-            var aggregatedResult = new Dictionary<string, PropertyResult>();
+            var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 
             foreach (var obj in aggregationBatch)
             {
                 using (obj)
                 {
+                    var aggregatedResult = new Dictionary<string, PropertyResult>();
+
                     foreach (var propertyName in obj.GetPropertyNames())
                     {
                         string stringValue;
@@ -39,100 +39,144 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             {
                                 case FieldMapReduceOperation.Count:
                                 case FieldMapReduceOperation.Sum:
-                                    object value;
 
+                                    object value;
                                     if (obj.TryGetMember(propertyName, out value) == false)
-                                        throw new InvalidOperationException(
-                                            $"Could not read numeric value of '{propertyName}' property");
+                                        throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
 
                                     double doubleValue;
                                     long longValue;
 
                                     var numberType = BlittableNumber.Parse(value, out doubleValue, out longValue);
+                                    
+                                    var aggregate = new PropertyResult(numberType);
 
-                                    PropertyResult aggregate;
-                                    if (aggregatedResult.TryGetValue(propertyName, out aggregate) == false)
+                                    switch (numberType)
                                     {
-                                        var propertyResult = new PropertyResult();
-
-                                        switch (numberType)
-                                        {
-                                            case NumberParseResult.Double:
-                                                propertyResult.ResultValue = doubleValue;
-                                                propertyResult.DoubleSumValue = doubleValue;
-                                                break;
-                                            case NumberParseResult.Long:
-                                                propertyResult.ResultValue = longValue;
-                                                propertyResult.LongSumValue = longValue;
-                                                break;
-                                        }
-
-                                        aggregatedResult[propertyName] = propertyResult;
+                                        case NumberParseResult.Double:
+                                            aggregate.ResultValue = aggregate.DoubleValue = doubleValue;
+                                            break;
+                                        case NumberParseResult.Long:
+                                            aggregate.ResultValue = aggregate.LongValue = longValue;
+                                            break;
+                                        default:
+                                            throw new ArgumentOutOfRangeException($"Unknown number type: {numberType}");
                                     }
-                                    else
-                                    {
-                                        switch (numberType)
-                                        {
-                                            case NumberParseResult.Double:
-                                                aggregate.ResultValue = aggregate.DoubleSumValue += doubleValue;
-                                                break;
-                                            case NumberParseResult.Long:
-                                                aggregate.ResultValue = aggregate.LongSumValue += longValue;
-                                                break;
-                                        }
-                                        ;
-                                    }
+
+                                    aggregatedResult[propertyName] = aggregate;
                                     break;
                                 //case FieldMapReduceOperation.None:
                                 default:
-                                    throw new ArgumentOutOfRangeException(
-                                        $"Unhandled field type '{indexField.MapReduceOperation}' to aggregate on");
+                                    throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.MapReduceOperation}' to aggregate on");
                             }
                         }
                         else if (obj.TryGet(propertyName, out stringValue))
                         {
-                            if (aggregatedResult.ContainsKey(propertyName) == false)
+                            aggregatedResult[propertyName] = new PropertyResult
                             {
-                                aggregatedResult[propertyName] = new PropertyResult
-                                {
-                                    ResultValue = stringValue
-                                };
-                            }
+                                ResultValue = stringValue
+                            };
+                        }
+
+                        if (_indexDefinition.GroupByFields.ContainsKey(propertyName) == false)
+                        {
+                            // we want to reuse existing entry to get a reduce key
+
+                            if (obj.Modifications == null)
+                                obj.Modifications = new DynamicJsonValue(obj);
+
+                            obj.Modifications.Remove(propertyName);
+                        }
+                    }
+
+                    var reduceKey = indexContext.ReadObject(obj, "reduce key");
+
+                    Dictionary<string, PropertyResult> existingAggregate;
+                    if (aggregatedResultsByReduceKey.TryGetValue(reduceKey, out existingAggregate) == false)
+                    {
+                        aggregatedResultsByReduceKey.Add(reduceKey, aggregatedResult);
+                    }
+                    else
+                    {
+                        reduceKey.Dispose();
+
+                        foreach (var propertyResult in existingAggregate)
+                        {
+                            propertyResult.Value.Aggregate(aggregatedResult[propertyResult.Key]);
                         }
                     }
                 }
             }
+            
+            var resultObjects = new List<BlittableJsonReaderObject>(aggregatedResultsByReduceKey.Count);
 
-            aggregationBatch.Clear();
-
-            var djv = new DynamicJsonValue();
-
-            foreach (var aggregate in aggregatedResult)
+            foreach (var aggregationResult in aggregatedResultsByReduceKey)
             {
-                djv[aggregate.Key] = aggregate.Value.ResultValue;
-            }
+                aggregationResult.Key.Dispose();
 
-            var resultObj = indexContext.ReadObject(djv, "map/reduce");
+                var djv = new DynamicJsonValue();
 
-            var pageNumber = IPAddress.HostToNetworkOrder(modifiedPage);
-
-            table.Set(new TableValueBuilder
+                foreach (var aggregate in aggregationResult.Value)
                 {
-                    {(byte*) &pageNumber, sizeof (long)},
-                    {resultObj.BasePointer, resultObj.Size},
-                    {(byte*) &aggregatedEntries, sizeof (int)}
-                });
+                    djv[aggregate.Key] = aggregate.Value.ResultValue;
+                }
 
-            return resultObj;
+                resultObjects.Add(indexContext.ReadObject(djv, "map/reduce"));
+            }
+            
+            return new AggregationResult(resultObjects);
         }
 
         private class PropertyResult
         {
+            private readonly NumberParseResult? _numberType;
+
             public object ResultValue;
 
-            public long LongSumValue = 0;
+            public long LongValue = 0;
 
-            public double DoubleSumValue = 0;
+            public double DoubleValue = 0;
+
+            public PropertyResult(NumberParseResult? numberType = null)
+            {
+                _numberType = numberType;
+            }
+
+            public void Aggregate(PropertyResult other)
+            {
+                if (_numberType != null)
+                {
+                    switch (_numberType.Value)
+                    {
+                        case NumberParseResult.Double:
+                            ResultValue = DoubleValue += other.DoubleValue;
+                            break;
+                        case NumberParseResult.Long:
+                            ResultValue = LongValue += other.LongValue;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"Unknown number type: {_numberType.Value}");
+                    }
+                } 
+            }
+        }
+
+        private class ReduceKeyComparer : IEqualityComparer<BlittableJsonReaderObject>
+        {
+            public static readonly ReduceKeyComparer Instance = new ReduceKeyComparer();
+
+            public bool Equals(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
+            {
+                if (x.Size != y.Size)
+                    return false;
+
+                return Memory.Compare(x.BasePointer, y.BasePointer, x.Size) == 0;
+            }
+
+            public int GetHashCode(BlittableJsonReaderObject obj)
+            {
+                return 1; // calculated hash of a reduce key is the same for all entries in a tree, we have to force Equals method to be called
+            }
         }
     }
 }
