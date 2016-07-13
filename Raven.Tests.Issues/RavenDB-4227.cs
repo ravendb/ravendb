@@ -3,11 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Tests.Common;
 using Xunit;
 using Xunit.Extensions;
@@ -419,20 +416,6 @@ namespace Raven.Tests.Issues
             public string Id { get; set; }
             public string Ref { get; set; }
             public string Name { get; set; }
-        }
-
-        private static
-            int GetCachedItemsCount(DocumentStore store)
-        {
-            var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null,
-                    store.Url + string.Format("/databases/{0}/debug/cache-details", store.DefaultDatabase),
-                    "GET",
-                    store.DatabaseCommands.PrimaryCredentials,
-                    store.Conventions));
-
-            var response = request.ReadResponseJson();
-            return response.Value<int>("CachedItems");
         }
 
         public class Order
