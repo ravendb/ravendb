@@ -44,7 +44,7 @@ namespace FastTests.Server.Documents.PeriodicExport
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Implement server side import"), Trait("Category", "Smuggler")]
         public async Task PeriodicExport_should_work_with_long_intervals()
         {
             var exportPath = NewDataPath(suffix: "ExportFolder");
