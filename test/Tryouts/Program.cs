@@ -1,28 +1,59 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests.Blittable;
-using FastTests.Server.Documents.Indexing.Auto;
-using FastTests.Voron.Backups;
-using FastTests.Voron.Compaction;
-using SlowTests.Tests.Sorting;
+using System.IO;
+using System.Text;
+using Sparrow.Logging;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Tryout
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private unsafe static void Main(string[] args)
         {
-            Parallel.For(0, 1000, i =>
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly(),
+                    new LoggerSetup(Path.GetTempPath(), LogMode.None)))
             {
-                Console.WriteLine(i);
-                using (var n = new SlowTests.Voron.RecoveryMultipleJournals())
+                var tableSchema = new TableSchema
                 {
-                    n.CorruptingOneTransactionWillKillAllFutureTransactions();
+                    AllowNoIndexesOrPrimaryKey = true
+                };
+
+                using (var tx = env.WriteTransaction())
+                {
+                    tableSchema.Create(tx, "Nodes");
+
+                    tableSchema.Create(tx, "Edges");
+
+                    tx.Commit();
                 }
-            });
+
+                long id;
+
+                using (var tx = env.WriteTransaction())
+                {
+                    var table = new Table(tableSchema, "Nodes", tx);
+                    var bytes = Encoding.UTF8.GetBytes("Oren");
+                    fixed (byte* b = bytes)
+                    {
+                        id = table.Insert(new TableValueBuilder
+                        {
+                            {b, bytes.Length}
+                        });
+                    }
+                    tx.Commit();
+                }
+
+                using (var tx = env.ReadTransaction())
+                {
+                    var table = new Table(tableSchema, "Nodes", tx);
+                    int size;
+                    var reader = new TableValueReader(table.DirectRead(id, out size), size);
+                    var data = reader.Read(0, out size);
+                    Console.WriteLine(Encoding.UTF8.GetString(data, size));
+                    tx.Commit();
+                }
+            }
         }
     }
 }
