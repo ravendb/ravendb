@@ -22,8 +22,7 @@ namespace Raven.Server.Smuggler
         {
             long lastDocsEtag = 0;
 
-            var stream = destination.CreateStream();
-
+            using (var stream = destination.CreateStream())
             using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
                 using (var writer = new BlittableJsonTextWriter(context, gZipStream))
             {
