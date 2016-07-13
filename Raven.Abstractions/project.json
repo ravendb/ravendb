@@ -36,7 +36,6 @@
         "System.Collections.Specialized": "4.0.1",
         "Microsoft.Extensions.Configuration": "1.0.0",
         "System.IO.Compression": "4.1.0",
-        "System.Net.Http.WinHttpHandler": "4.0.0",
         "System.Net.WebHeaderCollection": "4.0.1",
         "System.Reflection.TypeExtensions": "4.1.0",
         "System.Security.Cryptography.Csp": "4.0.0",
