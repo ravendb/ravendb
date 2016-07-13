@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -108,10 +106,16 @@ namespace Raven.Server.Documents.Indexes.Static
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
         {
             var statements = new List<StatementSyntax>();
-            statements.AddRange(definition.Maps.SelectMany(HandleMap));
+            var maps = definition.Maps.ToList();
+            var fieldNamesValidator = new FieldNamesValidator();
+            for (var i = 0; i < maps.Count; i++)
+            {
+                var map = maps[i];
+                statements.AddRange(HandleMap(map, fieldNamesValidator));
+            }
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
-                statements.Add(HandleReduce(definition.Reduce));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator));
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
@@ -121,11 +125,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        private static List<StatementSyntax> HandleMap(string map)
+        private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator)
         {
             try
             {
                 var expression = SyntaxFactory.ParseExpression(map);
+
+                fieldNamesValidator.Validate(map, expression);
+
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                     return HandleSyntaxInMap(new QuerySyntaxMapRewriter(), queryExpression);
@@ -146,11 +153,14 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator)
         {
             try
             {
                 var expression = SyntaxFactory.ParseExpression(reduce);
+
+                fieldNamesValidator.Validate(reduce, expression);
+
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                     return HandleSyntaxInReduce(new ReduceFunctionProcessor(ResultsVariableNameRetriever.QuerySyntax, GroupByFieldsRetriever.QuerySyntax), queryExpression);
