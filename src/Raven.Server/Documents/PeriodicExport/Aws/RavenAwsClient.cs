@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
         {
             _awsAccessKey = awsAccessKey;
             _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + awsSecretKey);
-            _awsRegionName = awsRegionName;
+            AwsRegion = _awsRegionName = awsRegionName;
         }
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
