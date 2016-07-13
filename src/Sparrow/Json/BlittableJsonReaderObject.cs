@@ -257,14 +257,15 @@ namespace Sparrow.Json
                     {
                         obj = (T)Enum.Parse(type, result.ToString());
                     }
-                    else if(type == typeof(DateTime) && result is string)
+                    else if(type == typeof(DateTime))
                     {
+                        string dateTimeString;
+                        if (ChangeTypeToString(result, out dateTimeString) == false)
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
                         DateTime time;
-                        if (DateTime.TryParseExact((string)result, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
-                        {
-                            obj = (T)(object)time;
-                        }
-                        throw new FormatException($"Could not convert '{result}' to DateTime");
+                        if (DateTime.TryParseExact(dateTimeString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time) == false)
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to DateTime");
+                        obj = (T)(object)time;
                     }
                     else
                     {
