@@ -183,12 +183,13 @@ namespace Voron.Data.Tables
             var prevIsSmall = id % _pageSize != 0;
             if (size < ActiveDataSmallSection.MaxItemSize)
             {
+                // We must read before we call TryWriteDirect, because it will modify the size
+                int oldDataSize;
+                var oldData = ActiveDataSmallSection.DirectRead(id, out oldDataSize);
+
                 byte* pos;
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
                 {
-                    int oldDataSize;
-                    var oldData = ActiveDataSmallSection.DirectRead(id, out oldDataSize);
-
                     DeleteValueFromIndex(id, new TableValueReader(oldData, oldDataSize));
 
                     // MemoryCopy into final position.

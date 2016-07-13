@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 
 using FastTests;
-
+using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -32,6 +32,22 @@ namespace Raven.Tests.Core
                     Assert.NotNull(user);
                     Assert.Equal("Arek", user.Name);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanOverwriteDocumentWithSmallerValue()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                await store.AsyncDatabaseCommands.PutAsync("users/1", null, RavenJObject.FromObject(new User {Name = "Fitzchak", LastName = "Very big value here, so can reproduce the issue"}),
+                    RavenJObject.FromObject(new
+                    {
+                        SomeMoreData = "Make this object bigger",
+                        SomeMoreData2 = "Make this object bigger",
+                        SomeMoreData3 = "Make this object bigger",
+                    }));
+                await store.AsyncDatabaseCommands.PutAsync("users/1", null, RavenJObject.FromObject(new User {Name = "Fitzchak" }), null);
             }
         }
     }
