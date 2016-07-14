@@ -29,11 +29,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly HashSet<string> _alreadySeenDocumentKeysInPreviousPage = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        //private bool _hasMultipleIndexOutputs;
-
         private int _alreadyScannedForDuplicates;
 
-        public IndexQueryingScope(IndexType indexType, IndexQuery query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever)
+        public bool HasMultipleIndexOutputs { get; private set; }
+
+        public int MaxNumberOfIndexOutputs { get; }
+
+        public IndexQueryingScope(IndexType indexType, IndexQuery query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever, int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument)
         {
             _indexType = indexType;
             _query = query;
@@ -44,6 +46,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_fieldsToFetch.IsDistinct)
                 _alreadySeenProjections = new HashSet<ulong>();
+
+            if (actualMaxIndexOutputsPerDocument.HasValue)
+            {
+                HasMultipleIndexOutputs = true;
+                MaxNumberOfIndexOutputs = actualMaxIndexOutputsPerDocument.Value;
+            }
+            else
+            {
+                MaxNumberOfIndexOutputs = maxIndexOutputsPerDocument;
+
+                if (MaxNumberOfIndexOutputs == -1) // configuration was set to disable output count check, probably because there exist fanout indexes
+                    MaxNumberOfIndexOutputs = 50;
+            }
         }
 
         public void Dispose()
@@ -73,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var alreadyPagedKey = document.Get(Constants.DocumentIdFieldName);
 
                         _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
-                        //_hasMultipleIndexOutputs = true;
+                        HasMultipleIndexOutputs = true;
                     }
                 }
                 else
@@ -84,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var alreadyPagedKey = document.Get(Constants.DocumentIdFieldName);
 
                     _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
-                    //_hasMultipleIndexOutputs = true;
+                    HasMultipleIndexOutputs = true;
                 }
             }
 
@@ -114,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_alreadySeenDocumentKeysInPreviousPage.Add(document.Key) == false)
             {
-                //_hasMultipleIndexOutputs = true;
+                HasMultipleIndexOutputs = true;
                 return false;
             }
 

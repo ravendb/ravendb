@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -9,6 +10,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         public string[] GroupByFields { get; protected set; }
 
         public static GroupByFieldsRetriever QuerySyntax => new QuerySyntaxRetriever();
+
+        public static GroupByFieldsRetriever MethodSyntax => new MethodSyntaxRetriever();
 
         public class QuerySyntaxRetriever : GroupByFieldsRetriever
         {
@@ -33,6 +36,20 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 }
 
                 return base.VisitGroupClause(node);
+            }
+        }
+
+        private class MethodSyntaxRetriever : GroupByFieldsRetriever
+        {
+            // TODO arek
+            //public override SyntaxNode VisitGroupClause(GroupClauseSyntax node)
+            //{
+            //    return base.VisitGroupClause(node);
+            //}
+
+            public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+            {
+                throw new NotImplementedException("TODO arek");
             }
         }
     }

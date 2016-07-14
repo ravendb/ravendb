@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -34,11 +35,19 @@ namespace Raven.Server.Documents.Indexes
         {
             writer.Delete(key, stats);
 
+            var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)
             {
                 writer.IndexDocument(key, mapResult, stats);
+                numberOfOutputs++;
+
+                if (EnsureValidNumberOfOutputsForDocument(numberOfOutputs))
+                    continue;
+
+                writer.Delete(key, stats); // TODO [ppekrol] we want to delete invalid doc from index?
+                throw new InvalidOperationException($"Index '{Name}' has already produced {numberOfOutputs} map results for a source document '{key}', while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. Please verify this index definition and consider a re-design of your entities or index.");
             }
-            
+
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }
 

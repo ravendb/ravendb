@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract class MapReduceIndexBase<T> : Index<T> where T : IndexDefinitionBase
     {
-        private readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
+        protected readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
 
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -27,16 +27,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _mapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
 
             return _mapReduceWorkContext;
-        }
-
-        protected override IIndexingWork[] CreateIndexWorkExecutors()
-        {
-            return new IIndexingWork[]
-            {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new ReduceMapResults(Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext)
-            };
         }
 
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
