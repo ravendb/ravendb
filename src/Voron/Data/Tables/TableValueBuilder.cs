@@ -36,7 +36,7 @@ namespace Voron.Data.Tables
 
         public void Add(byte* ptr, int size)
         {
-            if (size <= 0)
+            if (size < 0)
                 throw new ArgumentException("cannot be zero or negative", nameof(size));
 
             _values.Add(new PtrSize
