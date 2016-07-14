@@ -16,6 +16,7 @@ using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
 
@@ -23,6 +24,14 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public static class IndexAndTransformerCompiler
     {
+        private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
+
+        private const string TransformerNamespace = "Raven.Server.Documents.Transformers.Generated";
+
+        private const string IndexExtension = ".index.dll";
+
+        private const string TransformerExtension = ".transformer.dll";
+
         private static readonly UsingDirectiveSyntax[] Usings =
         {
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
@@ -46,16 +55,39 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static TransformerBase Compile(TransformerDefinition definition)
         {
-            throw new NotImplementedException();
+            var cSharpSafeName = GetCSharpSafeName(definition.Name);
+
+            var @class = CreateClass(cSharpSafeName, definition);
+
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, isIndex: false);
+            var type = compilationResult.Type;
+
+            var transformer = (TransformerBase)Activator.CreateInstance(type);
+            transformer.Source = compilationResult.Code;
+
+            return transformer;
         }
 
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
-            var cSharpSafeName = GetCSharpSafeName(definition);
+            var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
             var @class = CreateClass(cSharpSafeName, definition);
 
-            var @namespace = RoslynHelper.CreateNamespace("Raven.Server.Documents.Indexes.Static.Generated")
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, isIndex: true);
+            var type = compilationResult.Type;
+
+            var index = (StaticIndexBase)Activator.CreateInstance(type);
+            index.Source = compilationResult.Code;
+
+            return index;
+        }
+
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex)
+        {
+            var assemblyName = cSharpSafeName + "." + Guid.NewGuid() + (isIndex ? IndexExtension : TransformerExtension);
+
+            var @namespace = RoslynHelper.CreateNamespace(isIndex ? IndexNamespace : TransformerNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
@@ -66,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace());
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: cSharpSafeName + "." + Guid.NewGuid() + ".index.dll",
+                assemblyName: assemblyName,
                 syntaxTrees: new[] { SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString()) }, // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
                 references: References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
@@ -82,12 +114,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (result.Success == false)
             {
-                IEnumerable<Diagnostic> failures = result.Diagnostics.Where(diagnostic =>
-                 diagnostic.IsWarningAsError ||
-                 diagnostic.Severity == DiagnosticSeverity.Error);
+                IEnumerable<Diagnostic> failures = result.Diagnostics
+                    .Where(diagnostic => diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error);
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"Failed to compile index {definition.Name}");
+                sb.AppendLine($"Failed to compile {(isIndex ? "index" : "transformer")} {originalName}");
                 sb.AppendLine();
                 sb.AppendLine(code);
                 sb.AppendLine();
@@ -101,14 +132,23 @@ namespace Raven.Server.Documents.Indexes.Static
             asm.Position = 0;
             //pdb.Position = 0;
             //var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
-            var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm);
+            var assembly = AssemblyLoadContext.Default.LoadFromStream(asm);
 
-            var type = indexAssembly.GetType("Raven.Server.Documents.Indexes.Static.Generated." + cSharpSafeName);
+            return new CompilationResult
+            {
+                Code = code,
+                Type = assembly.GetType($"{(isIndex ? IndexNamespace : TransformerNamespace)}.{cSharpSafeName}")
+            };
+        }
 
-            var index = (StaticIndexBase)Activator.CreateInstance(type);
-            index.Source = code;
+        private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)
+        {
+            var ctor = RoslynHelper.PublicCtor(name)
+                .AddBodyStatements(new [] { HandleTransformResults(definition.TransformResults) });
 
-            return index;
+            return RoslynHelper.PublicClass(name)
+                .WithBaseClass<StaticIndexBase>()
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
@@ -131,6 +171,32 @@ namespace Raven.Server.Documents.Indexes.Static
             return RoslynHelper.PublicClass(name)
                 .WithBaseClass<StaticIndexBase>()
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
+        }
+
+        private static StatementSyntax HandleTransformResults(string transformResults)
+        {
+            try
+            {
+                var expression = SyntaxFactory.ParseExpression(transformResults);
+
+                var queryExpression = expression as QueryExpressionSyntax;
+                if (queryExpression != null)
+                    return HandleSyntaxInTransformResults(new QuerySyntaxTransformResultsRewriter(), queryExpression);
+
+                var invocationExpression = expression as InvocationExpressionSyntax;
+                if (invocationExpression != null)
+                    return HandleSyntaxInTransformResults(new MethodSyntaxTransformResultsRewriter(), invocationExpression);
+
+                throw new InvalidOperationException("Not supported expression type.");
+            }
+            catch (Exception ex)
+            {
+                throw new IndexCompilationException(ex.Message, ex)
+                {
+                    IndexDefinitionProperty = "TransformResults",
+                    ProblematicText = transformResults
+                };
+            }
         }
 
         private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator)
@@ -189,6 +255,11 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        private static StatementSyntax HandleSyntaxInTransformResults(TransformResultsRewriterBase transformResultsRewriter, ExpressionSyntax expression)
+        {
+            throw new NotImplementedException();
+        }
+
         private static List<StatementSyntax> HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
@@ -243,9 +314,15 @@ namespace Raven.Server.Documents.Indexes.Static
                 .Invoke(indexingFunction, groupByFields).AsExpressionStatement();
         }
 
-        private static string GetCSharpSafeName(IndexDefinition definition)
+        private static string GetCSharpSafeName(string name)
         {
-            return $"Index_{Regex.Replace(definition.Name, @"[^\w\d]", "_")}";
+            return $"Index_{Regex.Replace(name, @"[^\w\d]", "_")}";
+        }
+
+        private class CompilationResult
+        {
+            public Type Type { get; set; }
+            public string Code { get; set; }
         }
     }
 }
