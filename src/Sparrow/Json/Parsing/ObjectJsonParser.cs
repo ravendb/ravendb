@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Raven.Abstractions.Extensions;
 
 namespace Sparrow.Json.Parsing
 {
@@ -314,6 +315,15 @@ namespace Sparrow.Json.Parsing
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
+                    return;
+                }
+                if (current is DateTime)
+                {
+                    var dateTime = (DateTime)current;
+                    var s = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
+
+                    SetStringBuffer(s);
+                    _state.CurrentTokenType = JsonParserToken.String;
                     return;
                 }
                 if (current == null)
