@@ -8,7 +8,7 @@ namespace FastTests.Smuggler
 {
     public class SmugglerApiTests : RavenTestBase
     {
-        [Fact(Skip = "Implement")]
+        [Fact]
         public async Task CanExportDirectlyToRemote()
         {
             using (var store1 = await GetDocumentStore("store1"))
@@ -21,18 +21,14 @@ namespace FastTests.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                /*await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerRemoteDestination
-                {
-                    Url = store2.Url,
-                    Database = store2.DefaultDatabase,
-                });*/
+                await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), store2.Url, store2.DefaultDatabase);
 
-                var docs = store2.DatabaseCommands.GetDocuments(0, 10);
+                var docs = await store2.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
                 Assert.Equal(3, docs.Length);
             }
         }
 
-        [Fact(Skip = "Implement")]
+        [Fact]
         public async Task CanExportAndImport()
         {
             var file = Path.GetTempFileName();
@@ -52,7 +48,7 @@ namespace FastTests.Smuggler
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
-                    var docs = store2.DatabaseCommands.GetDocuments(0, 10);
+                    var docs = await store2.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
                     Assert.Equal(3, docs.Length);
                 }
             }

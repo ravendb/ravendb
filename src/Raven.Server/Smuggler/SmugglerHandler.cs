@@ -34,14 +34,14 @@ namespace Raven.Server.Smuggler
         [RavenAction("/databases/*/smuggler/import", "POST")]
         public async Task PostImport()
         {
-            var fileName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("fileName");
+            // var fileName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("fileName");
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             //TODO: detect gzip or not based on query string param
             using (var stream = new GZipStream(HttpContext.Request.Body, CompressionMode.Decompress))
             {
                 var state = new JsonParserState();
-                using (var parser = new UnmanagedJsonParser(context, state, fileName))
+                using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
                 {
                     var buffer = context.GetParsingBuffer();
                     int objectDepth = 0;
