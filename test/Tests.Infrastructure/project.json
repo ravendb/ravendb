@@ -1,19 +1,5 @@
-{
-  "version": "4.0.0-*",
-
-  "buildOptions": {
-    "allowUnsafe": true,
-    "warningsAsErrors": true,
-    "compile": {
-      "include": [ "**/*.cs" ]
-    },
-    "embed": [
-      "**/*.json",
-      "Voron/Bugs/Data/*.txt",
-      "**/*.ravendump"
-    ],
-    "define": [ "DEBUG" ]
-  },
+﻿{
+  "version": "1.0.0-*",
 
   "configurations": {
     "Release": {
@@ -22,8 +8,6 @@
       }
     }
   },
-
-  "testRunner": "xunit",
 
   "frameworks": {
     "netcoreapp1.0": {
@@ -34,7 +18,6 @@
   },
 
   "dependencies": {
-    "dotnet-test-xunit": "2.2.0-preview2-build1029",
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.0.0"
@@ -42,7 +25,6 @@
     "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*",
     "Sparrow": "4.0.0-*",
-    "Tests.Infrastructure": "1.0.0-*",
     "Voron": "4.0.0-*",
     "xunit": "2.2.0-beta2-build3300"
   }
