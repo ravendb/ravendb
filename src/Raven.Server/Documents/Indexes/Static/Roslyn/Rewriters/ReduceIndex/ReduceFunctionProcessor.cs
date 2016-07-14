@@ -26,6 +26,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 _groupByFields
             })
             {
+                if (rewriter == _groupByFields)
+                    _groupByFields.Initialize(_resultsVariable.ResultsVariableName);
+
                 node = rewriter.Visit(node);
             }
 
