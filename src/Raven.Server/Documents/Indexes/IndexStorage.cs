@@ -311,12 +311,12 @@ namespace Raven.Server.Documents.Indexes
                         var e = context.GetLazyString(error.Error);
 
                         var tvb = new TableValueBuilder
-                                      {
-                                          { (byte*)&ticksBigEndian, sizeof(long) },
-                                          { document.Buffer, document.Size },
-                                          { action.Buffer, action.Size },
-                                          { e.Buffer, e.Size }
-                                      };
+                        {
+                            {(byte*)&ticksBigEndian, sizeof(long)},
+                            {document.Buffer, document.Size},
+                            {action.Buffer, action.Size},
+                            {e.Buffer, e.Size}
+                        };
 
                         table.Insert(tvb);
                     }
