@@ -1,5 +1,5 @@
+using System.IO;
 using System.IO.Compression;
-using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -18,14 +18,20 @@ namespace Raven.Server.Smuggler
             _database = database;
         }
 
-        public ExportResult Export(DocumentsOperationContext context, IDatabaseSmugglerDestination destination)
+        public ExportResult Export(DocumentsOperationContext context, string destinationFilePath)
+        {
+            using (var stream = File.Create(destinationFilePath))
+            {
+                return Export(context, stream);
+            }
+        }
+
+        public ExportResult Export(DocumentsOperationContext context, Stream destinationStream)
         {
             long lastDocsEtag = 0;
 
-            var stream = destination.CreateStream();
-
-            using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
-                using (var writer = new BlittableJsonTextWriter(context, gZipStream))
+            using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, leaveOpen: true))
+            using (var writer = new BlittableJsonTextWriter(context, gZipStream))
             {
                 writer.WriteStartObject();
 

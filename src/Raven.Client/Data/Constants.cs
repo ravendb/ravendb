@@ -313,6 +313,8 @@ namespace Raven.Abstractions.Data
             public const string AzureStorageAccount = "Raven/AzureStorageAccount";
 
             public const string AzureStorageKey = "Raven/AzureStorageKey";
+
+            public const string IncrementalExportExtension = ".ravendb-incremental-export";
         }
 
         public static class Smuggler

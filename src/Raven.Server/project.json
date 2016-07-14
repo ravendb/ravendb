@@ -17,8 +17,7 @@
     },
     "embed": {
       "include": [
-        "Documents/Patch/*.js",
-        "Documents/PeriodicExport/Aws/Amazon.AWS.endpoints.xml"
+        "Documents/Patch/*.js"
       ]
     }
   },

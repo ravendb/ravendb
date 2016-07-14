@@ -250,32 +250,31 @@ namespace Sparrow.Json
             }
             else
             {
+                var type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
                 try
                 {
-                    var nullableType = Nullable.GetUnderlyingType(typeof(T));
-                    if (nullableType != null)
+                    if (type.GetTypeInfo().IsEnum)
                     {
-                        if (nullableType.GetTypeInfo().IsEnum)
-                        {
-                            obj = (T)Enum.Parse(nullableType, result.ToString());
-                            return;
-                        }
-
-                        obj = (T)Convert.ChangeType(result, nullableType);
-                        return;
+                        obj = (T)Enum.Parse(type, result.ToString());
                     }
-
-                    if (typeof(T).GetTypeInfo().IsEnum)
+                    else if(type == typeof(DateTime))
                     {
-                        obj = (T)Enum.Parse(typeof(T), result.ToString());
-                        return;
+                        string dateTimeString;
+                        if (ChangeTypeToString(result, out dateTimeString) == false)
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
+                        DateTime time;
+                        if (DateTime.TryParseExact(dateTimeString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time) == false)
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to DateTime");
+                        obj = (T)(object)time;
                     }
-
-                    obj = (T)Convert.ChangeType(result, typeof(T));
+                    else
+                    {
+                        obj = (T)Convert.ChangeType(result, type);
+                    }
                 }
                 catch (Exception e)
                 {
-                    throw new FormatException($"Could not convert {result.GetType().FullName} to {typeof(T).FullName}", e);
+                    throw new FormatException($"Could not convert {result.GetType().FullName} to {type.FullName}", e);
                 }
             }
         }
