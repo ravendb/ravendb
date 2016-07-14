@@ -27,6 +27,7 @@ namespace SlowTests.Voron
         {
             var tempFileName = Path.GetTempFileName();
             File.Delete(tempFileName);
+            tempFileName += "_dir";//avoid another concurrent call to GetTempFileName also creating it
             Directory.CreateDirectory(tempFileName);
             return tempFileName;
         }

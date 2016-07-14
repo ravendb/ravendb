@@ -1,4 +1,4 @@
-dotnet test  -xml test-timings.xml
+dotnet test  -xml test-timings.xml -verbose
 
 [xml]$tests = Get-Content test-timings.xml
 $tests.assemblies.assembly.collection.test | 
