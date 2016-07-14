@@ -2,8 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 
@@ -18,14 +18,36 @@ namespace Raven.Client.Smuggler
             _store = store;
         }
 
-        public Task ExportAsync(DatabaseSmugglerOptions options, string destinationFilePath)
+        public async Task ExportAsync(DatabaseSmugglerOptions options, string destinationFilePath, CancellationToken token = default(CancellationToken))
         {
-            throw new System.NotImplementedException();
+            using (var stream = await ExportAsync(options, token))
+            using (var file = File.OpenWrite(destinationFilePath))
+            {
+                await stream.CopyToAsync(file, 8192, token);
+                await file.FlushAsync(token);
+            }
         }
 
-        public Task ExportAsync(DatabaseSmugglerOptions options, Stream destinationStream)
+        private async Task<Stream> ExportAsync(DatabaseSmugglerOptions options, CancellationToken token)
         {
-            throw new System.NotImplementedException();
+            // TODO: Use HttpClientCache and support api-key
+            var httpClient = new HttpClient();
+
+            ShowProgress("Starting to export file");
+            var database = options.Database ?? _store.DefaultDatabase;
+            var url = $"{_store.Url}/databases/{database}/smuggler/export";
+            // todo: send the options here
+            var response = await httpClient.PostAsync(url, new StringContent(""), token).ConfigureAwait(false);
+            var stream = await response.Content.ReadAsStreamAsync();
+            return stream;
+        }
+
+        public async Task ExportAsync(DatabaseSmugglerOptions options, string serverUrl, string databaseName, CancellationToken token = default(CancellationToken))
+        {
+            using (var stream = await ExportAsync(options, token))
+            {
+                await ImportAsync(options, stream, serverUrl, databaseName);
+            }
         }
 
         public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options,  string directoryPath)
@@ -55,22 +77,31 @@ namespace Raven.Client.Smuggler
 
         public async Task ImportAsync(DatabaseSmugglerOptions options, string filePath)
         {
-            // TODO: Use HttpClientCache and support api-key
-            var httpClient = new HttpClient();
-
             var countOfFileParts = 0;
             do
             {
                 ShowProgress($"Starting to import file: {filePath}");
                 using (var fileStream = File.OpenRead(filePath))
                 {
-                    var content = new MultipartFormDataContent($"smuggler-import: {SystemTime.UtcNow:O}");
-                    content.Add(new StreamContent(fileStream), Path.GetFileName(filePath), filePath);
-                    var database = options.Database ?? _store.DefaultDatabase;
-                    await httpClient.PostAsync($"{_store.Url}/databases/{database}/smuggler/import", content).ConfigureAwait(false);
+                    await ImportAsync(options, fileStream, _store.Url, options.Database ?? _store.DefaultDatabase).ConfigureAwait(false);
                 }
                 filePath = $"{filePath}.part{++countOfFileParts:D3}";
             } while (File.Exists(filePath));
+        }
+
+        private async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, string url, string database)
+        {
+            // TODO: Use HttpClientCache and support api-key
+            var httpClient = new HttpClient();
+            using (var content = new StreamContent(stream))
+            {
+                var uri = $"{url}/databases/{database}/smuggler/import";
+                var response = await httpClient.PostAsync(uri, content).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    var x = await response.Content.ReadAsStringAsync();
+                }
+            }
         }
 
         private void ShowProgress(string message)
