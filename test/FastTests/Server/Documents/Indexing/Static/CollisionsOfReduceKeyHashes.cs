@@ -28,7 +28,6 @@ namespace FastTests.Server.Documents.Indexing.Static
         [Theory]
         [InlineData(5, new[] { "Israel", "Poland" })]
         [InlineData(100, new[] { "Israel", "Poland", "USA" })]
-        [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
         public async Task Auto_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
         {
             using (var database = CreateDocumentDatabase())
@@ -61,7 +60,6 @@ namespace FastTests.Server.Documents.Indexing.Static
         [Theory]
         [InlineData(5, new[] { "Israel", "Poland" })]
         [InlineData(100, new[] { "Israel", "Poland", "USA" })]
-        [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
         public async Task Static_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
         {
             using (var database = CreateDocumentDatabase())
