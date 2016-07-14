@@ -807,7 +807,7 @@ namespace Raven.Database.Prefetching
             // ensure we don't do TOO much future caching
             if (MemoryStatistics.AvailableMemoryInMb < context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
             {
-                log.Info("Skipping background prefetching because we have {0}mb of availiable memory and the availiable memory for raising the batch size limit is: {1}mb",
+                log.Info("Skipping background prefetching because we have {0}mb of available memory and the available memory for raising the batch size limit is: {1}mb",
                         MemoryStatistics.AvailableMemoryInMb, context.Configuration.AvailableMemoryForRaisingBatchSizeLimit / 1024 / 1024);
                 return;
             }
