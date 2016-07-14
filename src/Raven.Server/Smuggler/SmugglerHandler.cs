@@ -4,12 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Net.Http;
+using System;
+using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler
 {
@@ -28,10 +32,103 @@ namespace Raven.Server.Smuggler
         }
 
         [RavenAction("/databases/*/smuggler/import", "POST")]
-        public Task PostImport()
+        public async Task PostImport()
         {
-            /*TODO: Implement*/
-            return Task.CompletedTask;
+            var fileName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("fileName");
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            //TODO: detect gzip or not based on query string param
+            using (var stream = new GZipStream(HttpContext.Request.Body, CompressionMode.Decompress))
+            {
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(context, state, fileName))
+                {
+                    var buffer = context.GetParsingBuffer();
+                    int objectDepth = 0;
+                    string operateOnType;
+                    while (true)
+                    {
+                        if (parser.Read() == false)
+                        {
+                            var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                            if (read == 0)
+                            {
+                                if (state.CurrentTokenType != JsonParserToken.EndObject)
+                                    throw new EndOfStreamException("Stream ended without reaching end of json content");
+                                break;
+                            }
+                            parser.SetBuffer(buffer, read);
+                            continue;
+                        }
+
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                break;
+                            case JsonParserToken.False:
+                                break;
+                            case JsonParserToken.True:
+                                break;
+                            case JsonParserToken.String:
+                                if (objectDepth == 1)
+                                    unsafe
+                                    {
+                                        operateOnType = new LazyStringValue(null, state.StringBuffer, state.StringSize, context).ToString();
+                                    }
+                                break;
+                            case JsonParserToken.Float:
+                                break;
+                            case JsonParserToken.Integer:
+                                break;
+                            case JsonParserToken.Separator:
+                                break;
+                            case JsonParserToken.StartObject:
+                                if (objectDepth == 1)
+                                {
+                                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "f", parser, state))
+                                    {
+                                        builder.ReadNestedObject();
+                                        while (builder.Read() == false)
+                                        {
+                                            var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                                            if (read == 0)
+                                                throw new EndOfStreamException("Stream ended without reaching end of json content");
+                                            parser.SetBuffer(buffer, read);
+                                        }
+                                        builder.FinalizeDocument();
+                                        using (var reader = builder.CreateReader())
+                                        using (var tx = context.OpenWriteTransaction())
+                                        {
+                                            BlittableJsonReaderObject metadata;
+                                            if (reader.TryGet(Constants.Metadata, out metadata) == false)
+                                                throw new InvalidOperationException("A document must have a metadata");
+                                            // We are using the @id here and not @key in order to be backward compatiable with old export files.
+                                            string key;
+                                            if (metadata.TryGet(Constants.MetadataDocId, out key) == false)
+                                                throw new InvalidOperationException("Document's metadata must include the document's key.");
+                                            Database.DocumentsStorage.Put(context, key, null, reader);
+                                            tx.Commit();
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    objectDepth++;
+                                }
+                                break;
+                            case JsonParserToken.StartArray:
+                                break;
+                            case JsonParserToken.EndArray:
+                                break;
+                            case JsonParserToken.EndObject:
+                                objectDepth--;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                }
+            }
         }
     }
 }
