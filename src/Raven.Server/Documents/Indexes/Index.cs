@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly ILog Log = LogManager.GetLogger(typeof(Index));
 
-        protected readonly LuceneIndexPersistence IndexPersistence;
+        internal readonly LuceneIndexPersistence IndexPersistence;
 
         private readonly object _locker = new object();
 
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironment _environment;
 
-        protected TransactionContextPool _contextPool;
+        internal TransactionContextPool _contextPool;
 
         private bool _disposed;
 
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes
             IndexId = indexId;
             Type = type;
             Definition = definition;
-            IndexPersistence = new LuceneIndexPersistence(indexId, definition, type);
+            IndexPersistence = new LuceneIndexPersistence(this);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -208,6 +208,8 @@ namespace Raven.Server.Documents.Indexes
 
                     _indexWorkers = CreateIndexWorkExecutors();
 
+                    InitializeInternal();
+
                     _initialized = true;
                 }
                 catch (Exception)
@@ -216,6 +218,10 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
+        }
+
+        protected virtual void InitializeInternal()
+        {
         }
 
         private void LoadValues()
@@ -752,9 +758,16 @@ namespace Raven.Server.Documents.Indexes
                             var skippedResults = new Reference<int>();
 
                             var fieldsToFetch = new FieldsToFetch(query, Definition);
-                            var documents = string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false
-                                ? reader.Query(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token)
-                                : reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                            IEnumerable<Document> documents;
+
+                            if (string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false)
+                            {
+                                documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                            }
+                            else
+                            {
+                                documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                            }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
                             foreach (var document in documents)
@@ -967,5 +980,14 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch);
+
+        public abstract int? ActualMaxNumberOfIndexOutputs { get; }
+
+        public abstract int MaxNumberOfIndexOutputs { get; }
+
+        protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
+        {
+            return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
+        }
     }
 }

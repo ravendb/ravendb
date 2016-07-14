@@ -15,6 +15,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
@@ -117,7 +118,8 @@ namespace Raven.Server.Documents.Indexes
                         index = StaticMapIndex.CreateNew(indexId, definition, _documentDatabase);
                         break;
                     case IndexType.MapReduce:
-                        throw new NotSupportedException();
+                        index = MapReduceIndex.CreateNew(indexId, definition, _documentDatabase);
+                        break;
                     default:
                         throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
                 }

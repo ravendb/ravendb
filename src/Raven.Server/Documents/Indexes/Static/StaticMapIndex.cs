@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -20,6 +21,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private HandleReferences _handleReferences;
 
+        private int _actualMaxNumberOfIndexOutputs;
+
+        private int _maxNumberOfIndexOutputs;
+
         private StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.Map, definition)
         {
@@ -33,6 +38,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var referencedCollection in collection.Value)
                     _referencedCollections.Add(referencedCollection);
             }
+        }
+
+        protected override void InitializeInternal()
+        {
+            _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapIndexOutputsPerDocument;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
@@ -143,6 +153,34 @@ namespace Raven.Server.Documents.Indexes.Static
                     return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
                 }
             }
+        }
+
+        public override int? ActualMaxNumberOfIndexOutputs
+        {
+            get
+            {
+                if (_actualMaxNumberOfIndexOutputs <= 1)
+                    return null;
+
+                return _actualMaxNumberOfIndexOutputs;
+            }
+        }
+
+        public override int MaxNumberOfIndexOutputs => _maxNumberOfIndexOutputs;
+        protected override bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
+        {
+            if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
+                return false;
+
+            if (Definition.IndexDefinition.MaxIndexOutputsPerDocument != null)
+            {
+                // user has specifically configured this value, but we don't trust it.
+
+                if (_actualMaxNumberOfIndexOutputs < numberOfAlreadyProducedOutputs)
+                    _actualMaxNumberOfIndexOutputs = numberOfAlreadyProducedOutputs;
+            }
+
+            return true;
         }
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)

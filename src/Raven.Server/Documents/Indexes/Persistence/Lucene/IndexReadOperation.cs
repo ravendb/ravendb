@@ -41,17 +41,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly string _indexName;
 
         private readonly IndexType _indexType;
+        private readonly int? _actualMaxIndexOutputsPerDocument;
+        private readonly int _maxIndexOutputsPerDocument;
 
         private readonly IndexSearcher _searcher;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
 
-        public IndexReadOperation(string indexName, IndexType indexType, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public IndexReadOperation(string indexName, IndexType indexType, int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
         {
             _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
             _indexName = indexName;
             _indexType = indexType;
+            _actualMaxIndexOutputsPerDocument = actualMaxIndexOutputsPerDocument;
+            _maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher);
         }
@@ -70,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var sort = GetSort(query.SortedFields);
             var returnedResults = 0;
 
-            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
+            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _maxIndexOutputsPerDocument, _actualMaxIndexOutputsPerDocument))
             {
                 while (true)
                 {
@@ -103,10 +107,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             yield break;
                     }
 
-                    //if (hasMultipleIndexOutputs)
-                    //    docsToGet += (pageSize - returnedResults) * maxNumberOfIndexOutputs;
-                    //else
-                    docsToGet += query.PageSize - returnedResults;
+                    if (scope.HasMultipleIndexOutputs)
+                        docsToGet += (query.PageSize - returnedResults) * scope.MaxNumberOfIndexOutputs;
+                    else
+                        docsToGet += query.PageSize - returnedResults;
 
                     if (search.TotalHits == search.ScoreDocs.Length)
                         break;
@@ -132,7 +136,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query);
             var sort = GetSort(query.SortedFields);
 
-            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
+            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _maxIndexOutputsPerDocument, _actualMaxIndexOutputsPerDocument))
             {
                 //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
                 var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);

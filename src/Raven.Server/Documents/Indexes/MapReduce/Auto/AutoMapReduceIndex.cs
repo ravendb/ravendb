@@ -6,6 +6,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -27,6 +28,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
         {
+            ActualMaxNumberOfIndexOutputs = null;
+            MaxNumberOfIndexOutputs = 1;
         }
 
         public static AutoMapReduceIndex CreateNew(int indexId, AutoMapReduceIndexDefinition definition,
@@ -46,6 +49,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             instance.Initialize(environment, documentDatabase);
 
             return instance;
+        }
+
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
+        {
+            return new IIndexingWork[]
+            {
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
+                new ReduceMapResultsOfAutoIndex(Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext), 
+            };
         }
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
@@ -158,5 +171,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }
+
+        public override int? ActualMaxNumberOfIndexOutputs { get; }
+        public override int MaxNumberOfIndexOutputs { get; }
     }
 }
