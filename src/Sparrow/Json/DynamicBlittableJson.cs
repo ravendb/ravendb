@@ -135,10 +135,10 @@ namespace Sparrow.Json
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
-            return TryGet(binder.Name, out result);
+            return TryGetByName(binder.Name, out result);
         }
 
-        private bool TryGet(string name, out object result)
+        public bool TryGetByName(string name, out object result)
         {
             if (!BlittableJsonReaderObject.TryGetMember(name, out result))
                 return false;
@@ -157,7 +157,7 @@ namespace Sparrow.Json
 
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
         {
-            return TryGet((string)indexes[0], out result);
+            return TryGetByName((string)indexes[0], out result);
         }
     }
 }

@@ -1,6 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Abstractions.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -22,6 +26,8 @@ namespace FastTests.Server.Documents.Indexing.Static
         [Fact]
         public void Can_get_simple_values()
         {
+            var now = SystemTime.UtcNow;
+
             var doc = create_doc(new DynamicJsonValue
             {
                 ["Name"] = "Arek",
@@ -42,6 +48,11 @@ namespace FastTests.Server.Documents.Indexing.Static
                     {
                         ["Name"] = "John"
                     }
+                },
+                [Constants.Metadata] = new DynamicJsonValue
+                {
+                    [Constants.Headers.RavenEntityName] = "Users",
+                    [Constants.Headers.RavenLastModified] = now.GetDefaultRavenFormat(true)
                 }
             }, "users/1");
 
@@ -54,6 +65,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             Assert.Equal(22.0, user.Age);
             Assert.Equal("Arek", user.LazyName);
             Assert.Equal(2, user.Friends.Length);
+            Assert.Equal("Users", user[Constants.Metadata][Constants.Headers.RavenEntityName]);
+            Assert.Equal(now, user[Constants.Metadata].Value<DateTime>(Constants.Headers.RavenLastModified));
         }
 
         public Document create_doc(DynamicJsonValue document, string id)
