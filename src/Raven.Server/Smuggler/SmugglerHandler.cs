@@ -45,7 +45,7 @@ namespace Raven.Server.Smuggler
                 {
                     var buffer = context.GetParsingBuffer();
                     int objectDepth = 0;
-                    string operateOnType;
+                    string operateOnType = null;
                     while (true)
                     {
                         if (parser.Read() == false)
@@ -64,10 +64,13 @@ namespace Raven.Server.Smuggler
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
-                                break;
                             case JsonParserToken.False:
-                                break;
                             case JsonParserToken.True:
+                            case JsonParserToken.Float:
+                            case JsonParserToken.Integer:
+                            case JsonParserToken.Separator:
+                            case JsonParserToken.StartArray:
+                            case JsonParserToken.EndArray:
                                 break;
                             case JsonParserToken.String:
                                 if (objectDepth == 1)
@@ -76,49 +79,55 @@ namespace Raven.Server.Smuggler
                                         operateOnType = new LazyStringValue(null, state.StringBuffer, state.StringSize, context).ToString();
                                     }
                                 break;
-                            case JsonParserToken.Float:
-                                break;
-                            case JsonParserToken.Integer:
-                                break;
-                            case JsonParserToken.Separator:
-                                break;
                             case JsonParserToken.StartObject:
                                 if (objectDepth == 1)
                                 {
-                                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "f", parser, state))
+                                    switch (operateOnType)
                                     {
-                                        builder.ReadNestedObject();
-                                        while (builder.Read() == false)
-                                        {
-                                            var read = await stream.ReadAsync(buffer, 0, buffer.Length);
-                                            if (read == 0)
-                                                throw new EndOfStreamException("Stream ended without reaching end of json content");
-                                            parser.SetBuffer(buffer, read);
-                                        }
-                                        builder.FinalizeDocument();
-                                        using (var reader = builder.CreateReader())
-                                        using (var tx = context.OpenWriteTransaction())
-                                        {
-                                            BlittableJsonReaderObject metadata;
-                                            if (reader.TryGet(Constants.Metadata, out metadata) == false)
-                                                throw new InvalidOperationException("A document must have a metadata");
-                                            // We are using the @id here and not @key in order to be backward compatiable with old export files.
-                                            string key;
-                                            if (metadata.TryGet(Constants.MetadataDocId, out key) == false)
-                                                throw new InvalidOperationException("Document's metadata must include the document's key.");
-                                            Database.DocumentsStorage.Put(context, key, null, reader);
-                                            tx.Commit();
-                                        }
+                                        case "Docs":
+                                            using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "f", parser, state))
+                                            {
+                                                builder.ReadNestedObject();
+                                                while (builder.Read() == false)
+                                                {
+                                                    var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                                                    if (read == 0)
+                                                        throw new EndOfStreamException("Stream ended without reaching end of json content");
+                                                    parser.SetBuffer(buffer, read);
+                                                }
+                                                builder.FinalizeDocument();
+                                                using (var reader = builder.CreateReader())
+                                                /*Use longer write trasactions*/
+                                                using (var tx = context.OpenWriteTransaction())
+                                                {
+                                                    BlittableJsonReaderObject metadata;
+                                                    if (reader.TryGet(Constants.Metadata, out metadata) == false)
+                                                        throw new InvalidOperationException("A document must have a metadata");
+                                                    // We are using the @id here and not @key in order to be backward compatiable with old export files.
+                                                    string key;
+                                                    if (metadata.TryGet(Constants.MetadataDocId, out key) == false)
+                                                        throw new InvalidOperationException("Document's metadata must include the document's key.");
+                                                    Database.DocumentsStorage.Put(context, key, null, reader);
+                                                    tx.Commit();
+                                                }
+                                            }
+                                            break;
+                                        case "Attachments":
+                                            /*TODO:Should we warn here or write to log*/
+                                            break;
+                                        case "Indexes":
+                                        case "Transformers":
+                                            /*TODO:Implement*/
+                                            break;
+                                        case "Identities":
+                                            /*TODO: should we override identieies values?*/
+                                            break;
                                     }
                                 }
                                 else
                                 {
                                     objectDepth++;
                                 }
-                                break;
-                            case JsonParserToken.StartArray:
-                                break;
-                            case JsonParserToken.EndArray:
                                 break;
                             case JsonParserToken.EndObject:
                                 objectDepth--;
