@@ -11,15 +11,17 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
+using Raven.Server.Documents.Transformers;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public static class StaticIndexCompiler
+    public static class IndexAndTransformerCompiler
     {
         private static readonly UsingDirectiveSyntax[] Usings =
         {
@@ -34,13 +36,18 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(StaticIndexCompiler).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(DynamicAttribute).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
         };
+
+        public static TransformerBase Compile(TransformerDefinition definition)
+        {
+            throw new NotImplementedException();
+        }
 
         public static StaticIndexBase Compile(IndexDefinition definition)
         {

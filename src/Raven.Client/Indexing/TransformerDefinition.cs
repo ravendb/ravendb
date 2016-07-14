@@ -39,7 +39,7 @@ namespace Raven.Abstractions.Indexing
 
         public override int GetHashCode()
         {
-            return (TransformResults != null ? TransformResults.GetHashCode() : 0);
+            return TransformResults?.GetHashCode() ?? 0;
         }
 
         public TransformerDefinition Clone()

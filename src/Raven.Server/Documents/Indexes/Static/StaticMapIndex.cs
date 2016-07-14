@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -190,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
             var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray());
             var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             instance.Initialize(documentDatabase);
@@ -201,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var staticMapIndexDefinition = StaticMapIndexDefinition.Load(environment);
-            var staticIndex = IndexCompilationCache.GetIndexInstance(staticMapIndexDefinition.IndexDefinition);
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(staticMapIndexDefinition.IndexDefinition);
 
             var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             instance.Initialize(environment, documentDatabase);
