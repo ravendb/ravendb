@@ -61,13 +61,14 @@ namespace Raven.Client.Smuggler
             var countOfFileParts = 0;
             do
             {
+                var fileName = Path.GetFileName(filePath);
                 ShowProgress($"Starting to import file: {filePath}");
                 using (var fileStream = File.OpenRead(filePath))
+                using (var content = new StreamContent(fileStream))
                 {
-                    var content = new MultipartFormDataContent($"smuggler-import: {SystemTime.UtcNow:O}");
-                    content.Add(new StreamContent(fileStream), Path.GetFileName(filePath), filePath);
                     var database = options.Database ?? _store.DefaultDatabase;
-                    await httpClient.PostAsync($"{_store.Url}/databases/{database}/smuggler/import", content).ConfigureAwait(false);
+                    var url = $"{_store.Url}/databases/{database}/smuggler/import?fileName={fileName}";
+                    await httpClient.PostAsync(url, content).ConfigureAwait(false);
                 }
                 filePath = $"{filePath}.part{++countOfFileParts:D3}";
             } while (File.Exists(filePath));
