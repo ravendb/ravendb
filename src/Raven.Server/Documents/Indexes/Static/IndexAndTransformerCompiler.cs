@@ -25,14 +25,15 @@ namespace Raven.Server.Documents.Indexes.Static
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexAndTransformerCompiler
     {
+        private const bool EnableDebugging = false; // for debugging purposes
+
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
         private const string TransformerNamespace = "Raven.Server.Documents.Transformers.Generated";
-        private const bool EnableDebugging = false; // for debugging purposes
+        
+        private const string IndexExtension = ".index";
 
-        private const string IndexExtension = ".index.dll";
-
-        private const string TransformerExtension = ".transformer.dll";
+        private const string TransformerExtension = ".transformer";
 
         private static readonly UsingDirectiveSyntax[] Usings =
         {
@@ -87,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex)
         {
-            var assemblyName = cSharpSafeName + "." + Guid.NewGuid() + (isIndex ? IndexExtension : TransformerExtension);
+            var name = cSharpSafeName + "." + Guid.NewGuid() + (isIndex ? IndexExtension : TransformerExtension);
 
             var @namespace = RoslynHelper.CreateNamespace(isIndex ? IndexNamespace : TransformerNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
@@ -99,8 +100,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace()); // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
 
-            var name = cSharpSafeName + "." + Guid.NewGuid() + ".index";
-
             string sourceFile = null;
 
             if (EnableDebugging)
@@ -110,7 +109,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: assemblyName + ".dll",
+                assemblyName: name + ".dll",
                 syntaxTrees: new[]
                 {
                     EnableDebugging ?
@@ -148,16 +147,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
             asm.Position = 0;
 
-            Assembly indexAssembly;
+            Assembly assembly;
 
             if (EnableDebugging)
             {
                 pdb.Position = 0;
-                indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
+                assembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
             }
             else
             {
-                indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm);
+                assembly = AssemblyLoadContext.Default.LoadFromStream(asm);
             }
 
             return new CompilationResult

@@ -197,7 +197,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
-            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(staticMapIndexDefinition.IndexDefinition);
             var definition = StaticMapIndexDefinition.Load(environment);
             var instance = CreateIndexInstance(indexId, definition);
 
@@ -208,7 +207,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static StaticMapIndex CreateIndexInstance(int indexId, IndexDefinition definition)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(),
                 staticIndex.OutputFields);
