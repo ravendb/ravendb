@@ -48,6 +48,9 @@ task Init -depends Verify40, Clean, NuGetRestore {
     Write-Host "Start Init"
     
     $informationalVersion = Get-InformationalVersion $version $global:buildlabel $global:uploadCategory 
+    
+    Write-Host "##teamcity[setParameter name='env.informationalVersion' value='$informationalVersion']"
+    
     $commit = Get-Git-Commit
 
     if($global:buildlabel -ne $CUSTOM_BUILD_NUMBER) {
