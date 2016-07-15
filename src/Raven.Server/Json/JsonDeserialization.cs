@@ -59,6 +59,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
 
+        public static readonly Func<BlittableJsonReaderObject, TransformerDefinition> TransformerDefinition = GenerateJsonDeserializationRoutine<TransformerDefinition>();
         public static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -136,6 +137,11 @@ namespace Raven.Server.Documents.Transformers
         public void DeleteTransformer(int id)
         {
             DeleteTransformerInternal(id);
+        }
+
+        public IEnumerable<Transformer> GetTransformers()
+        {
+            return _transformers;
         }
 
         private void DeleteTransformerInternal(int id)

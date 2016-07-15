@@ -16,7 +16,6 @@ using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
-using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
 
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static TransformerBase Compile(TransformerDefinition definition)
         {
-            var cSharpSafeName = GetCSharpSafeName(definition.Name);
+            var cSharpSafeName = GetCSharpSafeName(definition.Name, isIndex: false);
 
             var @class = CreateClass(cSharpSafeName, definition);
 
@@ -70,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
-            var cSharpSafeName = GetCSharpSafeName(definition.Name);
+            var cSharpSafeName = GetCSharpSafeName(definition.Name, isIndex: true);
 
             var @class = CreateClass(cSharpSafeName, definition);
 
@@ -144,10 +143,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)
         {
             var ctor = RoslynHelper.PublicCtor(name)
-                .AddBodyStatements(new [] { HandleTransformResults(definition.TransformResults) });
+                .AddBodyStatements(HandleTransformResults(definition.TransformResults));
 
             return RoslynHelper.PublicClass(name)
-                .WithBaseClass<StaticIndexBase>()
+                .WithBaseClass<TransformerBase>()
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
@@ -257,7 +256,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static StatementSyntax HandleSyntaxInTransformResults(TransformResultsRewriterBase transformResultsRewriter, ExpressionSyntax expression)
         {
-            throw new NotImplementedException();
+            var rewrittenExpression = (CSharpSyntaxNode)transformResultsRewriter.Visit(expression);
+
+            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("results")), rewrittenExpression);
+
+            return RoslynHelper
+                .This(nameof(TransformerBase.TransformResults))
+                .Assign(indexingFunction)
+                .AsExpressionStatement();
         }
 
         private static List<StatementSyntax> HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
@@ -314,9 +320,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 .Invoke(indexingFunction, groupByFields).AsExpressionStatement();
         }
 
-        private static string GetCSharpSafeName(string name)
+        private static string GetCSharpSafeName(string name, bool isIndex)
         {
-            return $"Index_{Regex.Replace(name, @"[^\w\d]", "_")}";
+            return $"{(isIndex ? "Index" : "Transformer")}_{Regex.Replace(name, @"[^\w\d]", "_")}";
         }
 
         private class CompilationResult

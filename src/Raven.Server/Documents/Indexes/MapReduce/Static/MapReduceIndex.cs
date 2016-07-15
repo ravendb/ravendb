@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
         public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

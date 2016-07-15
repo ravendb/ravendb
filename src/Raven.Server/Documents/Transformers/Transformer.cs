@@ -6,6 +6,7 @@ using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Voron.Platform.Posix;
 
@@ -110,6 +111,11 @@ namespace Raven.Server.Documents.Transformers
                 path = PosixHelper.FixLinuxPath(path);
 
             return path;
+        }
+
+        public TransformationScope OpenTransformationScope(DocumentDatabase documentDatabase, DocumentsOperationContext context)
+        {
+            return new TransformationScope(_transformer.TransformResults, documentDatabase, context);
         }
     }
 }

@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
