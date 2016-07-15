@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,11 +22,13 @@ using Raven.Server.Documents.Transformers;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
+    [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexAndTransformerCompiler
     {
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
         private const string TransformerNamespace = "Raven.Server.Documents.Transformers.Generated";
+        private const bool EnableDebugging = false; // for debugging purposes
 
         private const string IndexExtension = ".index.dll";
 
@@ -94,11 +97,26 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
 
-            var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace());
+            var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace()); // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
+
+            var name = cSharpSafeName + "." + Guid.NewGuid() + ".index";
+
+            string sourceFile = null;
+
+            if (EnableDebugging)
+            {
+                sourceFile = Path.Combine(Path.GetTempPath(), name + ".cs");
+                File.WriteAllText(sourceFile, formatedCompilationUnit.ToFullString(), Encoding.UTF8);
+            }
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: assemblyName,
-                syntaxTrees: new[] { SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString()) }, // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
+                assemblyName: assemblyName + ".dll",
+                syntaxTrees: new[]
+                {
+                    EnableDebugging ?
+                    SyntaxFactory.ParseSyntaxTree(File.ReadAllText(sourceFile), path: sourceFile, encoding: Encoding.UTF8) :
+                    SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString())
+                },
                 references: References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(OptimizationLevel.Release)
@@ -107,10 +125,10 @@ namespace Raven.Server.Documents.Indexes.Static
             var code = formatedCompilationUnit.SyntaxTree.ToString();
 
             var asm = new MemoryStream();
-            //var pdb = new MemoryStream();
+            var pdb = new MemoryStream();
 
-            var result = compilation.Emit(asm);
-
+            var result = compilation.Emit(asm, EnableDebugging ? pdb : null);
+            
             if (result.Success == false)
             {
                 IEnumerable<Diagnostic> failures = result.Diagnostics
@@ -129,9 +147,18 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             asm.Position = 0;
-            //pdb.Position = 0;
-            //var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
-            var assembly = AssemblyLoadContext.Default.LoadFromStream(asm);
+
+            Assembly indexAssembly;
+
+            if (EnableDebugging)
+            {
+                pdb.Position = 0;
+                indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
+            }
+            else
+            {
+                indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm);
+            }
 
             return new CompilationResult
             {
