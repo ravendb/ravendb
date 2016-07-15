@@ -2,10 +2,6 @@
 using System.Diagnostics;
 
 using Lucene.Net.Documents;
-
-using Raven.Abstractions.Data;
-using Raven.Server.Documents.Queries.Sorting;
-
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents

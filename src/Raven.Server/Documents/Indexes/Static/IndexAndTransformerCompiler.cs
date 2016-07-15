@@ -161,12 +161,21 @@ namespace Raven.Server.Documents.Indexes.Static
                 statements.AddRange(HandleMap(map, fieldNamesValidator));
             }
 
+            var outputFieldsArray = GetArrayCreationExpression(fieldNamesValidator.Fields);
+            statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
+
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator));
+            {
+                string[] groupByFields;
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, out groupByFields));
+
+                var groupByFieldsArray = GetArrayCreationExpression(groupByFields);
+                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
+            }
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
-
+            
             return RoslynHelper.PublicClass(name)
                 .WithBaseClass<StaticIndexBase>()
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
@@ -226,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, out string[] groupByFields)
         {
             try
             {
@@ -236,11 +245,21 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInReduce(new ReduceFunctionProcessor(ResultsVariableNameRetriever.QuerySyntax, GroupByFieldsRetriever.QuerySyntax), queryExpression);
+                {
+                    return
+                        HandleSyntaxInReduce(
+                            new ReduceFunctionProcessor(ResultsVariableNameRetriever.QuerySyntax,
+                                GroupByFieldsRetriever.QuerySyntax), queryExpression, out groupByFields);
+                }
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInReduce(new ReduceFunctionProcessor(ResultsVariableNameRetriever.MethodSyntax, GroupByFieldsRetriever.MethodSyntax), invocationExpression);
+                {
+                    return
+                        HandleSyntaxInReduce(
+                            new ReduceFunctionProcessor(ResultsVariableNameRetriever.MethodSyntax,
+                                GroupByFieldsRetriever.MethodSyntax), invocationExpression, out groupByFields);
+                }
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -290,13 +309,21 @@ namespace Raven.Server.Documents.Indexes.Static
             return results;
         }
 
-        private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, ExpressionSyntax expression)
+        private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, ExpressionSyntax expression, out string[] groupByFields)
         {
             var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
 
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(reduceFunctionProcessor.ResultsVariableName)), rewrittenExpression);
 
-            var groupByFields = SyntaxFactory.ArrayCreationExpression(SyntaxFactory.ArrayType(
+            groupByFields = reduceFunctionProcessor.GroupByFields;
+
+            return RoslynHelper.This("SetReduce")
+                .Invoke(indexingFunction).AsExpressionStatement();
+        }
+
+        private static ArrayCreationExpressionSyntax GetArrayCreationExpression(IEnumerable<string> items)
+        {
+            return SyntaxFactory.ArrayCreationExpression(SyntaxFactory.ArrayType(
                         SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)))
                     .WithRankSpecifiers(
                         SyntaxFactory.SingletonList<ArrayRankSpecifierSyntax>(
@@ -309,15 +336,12 @@ namespace Raven.Server.Documents.Indexes.Static
                                 .WithCloseBracketToken(SyntaxFactory.Token(SyntaxKind.CloseBracketToken)))))
                 .WithNewKeyword(SyntaxFactory.Token(SyntaxKind.NewKeyword))
                 .WithInitializer(SyntaxFactory.InitializerExpression(SyntaxKind.ArrayInitializerExpression,
-                        SyntaxFactory.SeparatedList<ExpressionSyntax>(reduceFunctionProcessor.GroupByFields.Select(
+                        SyntaxFactory.SeparatedList<ExpressionSyntax>(items.Select(
                             x =>
                                 SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
                                     SyntaxFactory.Literal(x)))))
                     .WithOpenBraceToken(SyntaxFactory.Token(SyntaxKind.OpenBraceToken))
                     .WithCloseBraceToken(SyntaxFactory.Token(SyntaxKind.CloseBraceToken)));
-
-            return RoslynHelper.This("SetReduce")
-                .Invoke(indexingFunction, groupByFields).AsExpressionStatement();
         }
 
         private static string GetCSharpSafeName(string name, bool isIndex)

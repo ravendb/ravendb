@@ -28,12 +28,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
                     // TODO arek Reduce = "results.GroupBy(x => x.City).Select(g => new { City = g.Key, Count = g.Sum(x => x.Count) })",
-                    Type = IndexType.MapReduce,
-                    Fields =
-                    {
-                        { "Location", new IndexFieldOptions { Storage = FieldStorage.Yes } },
-                        { "Count", new IndexFieldOptions { Storage = FieldStorage.Yes, Sort = SortOptions.NumericDefault } }
-                    }
                 }, database))
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
@@ -122,12 +116,9 @@ select new
     Count = g.Sum(x=> (int)x.Count),
     Total = g.Sum(x=> (int)x.Total)
 }",
-                    Type = IndexType.MapReduce,
                     Fields =
                     {
-                        { "Product", new IndexFieldOptions { Storage = FieldStorage.Yes} },
-                        { "Count", new IndexFieldOptions { Storage = FieldStorage.Yes, Sort = SortOptions.NumericDefault } },
-                        { "Total", new IndexFieldOptions { Storage = FieldStorage.Yes, Sort = SortOptions.NumericDefault } }
+                        { "Product", new IndexFieldOptions { Storage = FieldStorage.Yes} }
                     }
                 }, database))
                 {

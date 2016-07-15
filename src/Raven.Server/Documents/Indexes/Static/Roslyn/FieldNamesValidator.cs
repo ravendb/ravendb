@@ -42,5 +42,7 @@ Additional fields		: {string.Join(", ", _visitor.Fields.Except(_baseFields))}";
 
             throw new InvalidOperationException(message);
         }
+
+        public string[] Fields => _baseFields.ToArray();
     }
 }

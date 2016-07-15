@@ -36,6 +36,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
+
+            if (definition.Fields.Count != staticIndex.OutputFields.Length)
+            {
+                foreach (var outputField in staticIndex.OutputFields)
+                {
+                    if (definition.Fields.ContainsKey(outputField))
+                        continue;
+                    
+                    definition.Fields.Add(outputField, new IndexFieldOptions());
+                }
+            }
+
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.GroupByFields);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
             instance.Initialize(documentDatabase);
