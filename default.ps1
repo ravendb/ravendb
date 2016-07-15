@@ -422,8 +422,9 @@ task CopyInstaller {
 }
 
 task SignInstaller {
-
-  $installerFile = "$release_dir\$global:uploadCategory-Build-$global:buildlabel.Setup.exe"
+  $informationalVersion = Get-InformationalVersion $version $global:buildlabel $global:uploadCategory 
+  $name = "RavenDB-$informationalVersion"
+  $installerFile = "$release_dir\$name.Setup.exe"
   SignFile($installerFile)
 }
 
