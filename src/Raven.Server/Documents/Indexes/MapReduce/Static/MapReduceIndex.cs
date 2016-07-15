@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
@@ -35,22 +36,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
+            var instance = CreateIndexInstance(indexId, definition);
+            instance.Initialize(documentDatabase);
+
+            return instance;
+        }
+
+        public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            var definition = StaticMapIndexDefinition.Load(environment);
+            var instance = CreateIndexInstance(indexId, definition);
+
+            instance.Initialize(environment, documentDatabase);
+
+            return instance;
+        }
+
+        private static MapReduceIndex CreateIndexInstance(int indexId, IndexDefinition definition)
+        {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            if (definition.Fields.Count != staticIndex.OutputFields.Length)
-            {
-                foreach (var outputField in staticIndex.OutputFields)
-                {
-                    if (definition.Fields.ContainsKey(outputField))
-                        continue;
-                    
-                    definition.Fields.Add(outputField, new IndexFieldOptions());
-                }
-            }
-
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.GroupByFields);
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
-            instance.Initialize(documentDatabase);
 
             return instance;
         }

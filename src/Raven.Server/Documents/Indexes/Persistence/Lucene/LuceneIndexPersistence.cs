@@ -5,9 +5,11 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -45,21 +47,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _index = index;
 
-            IEnumerable<IndexField> fields = index.Definition.MapFields.Values;
-
-            var mapReduceDef = _index.Definition as AutoMapReduceIndexDefinition;
-            if (mapReduceDef != null)
-                fields = fields.Union(mapReduceDef.GroupByFields.Values);
+            var fields = index.Definition.MapFields.Values.ToList();
 
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
                 case IndexType.AutoMapReduce:
                 case IndexType.MapReduce:
-                    _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: _index.Type.IsMapReduce());
+                    if (_index.Type == IndexType.AutoMapReduce)
+                    {
+                        var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
+                        fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
+                    }
+                    
+                    _converter = new LuceneDocumentConverter(fields, reduceOutput: _index.Type.IsMapReduce());
                     break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields.ToArray(), reduceOutput: _index.Type.IsMapReduce());
+                    _converter = new AnonymousLuceneDocumentConverter(fields, reduceOutput: false);
                     break;
                 case IndexType.Faulty:
                     _converter = null;

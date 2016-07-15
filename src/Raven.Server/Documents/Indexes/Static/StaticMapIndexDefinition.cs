@@ -16,24 +16,31 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         public readonly IndexDefinition IndexDefinition;
 
-        public StaticMapIndexDefinition(IndexDefinition definition, string[] collections)
-            : base(definition.Name, collections, definition.LockMode, GetFields(definition))
+        public StaticMapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields)
+            : base(definition.Name, collections, definition.LockMode, GetFields(definition, outputFields))
         {
             IndexDefinition = definition;
         }
 
-        private static IndexField[] GetFields(IndexDefinition definition)
+        private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
         {
-            if (definition.Fields == null || definition.Fields.Count == 0)
-                return new IndexField[0];
-
             IndexFieldOptions allFields;
             definition.Fields.TryGetValue(Constants.AllFields, out allFields);
 
-            return definition
-                .Fields
-                .Select(x => IndexField.Create(x.Key, x.Value, allFields))
-                .ToArray();
+            var result = definition.Fields.Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
+
+            if (definition.Fields.Count < outputFields.Length)
+            {
+                foreach (var outputField in outputFields)
+                {
+                    if (definition.Fields.ContainsKey(outputField))
+                        continue;
+
+                    result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields));
+                }
+            }
+            
+            return result.ToArray();
         }
 
         protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
@@ -61,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return IndexDefinition.Equals(indexDefinition, compareIndexIds: false, ignoreFormatting: ignoreFormatting, ignoreMaxIndexOutput: ignoreMaxIndexOutputs);
         }
 
-        public static StaticMapIndexDefinition Load(StorageEnvironment environment)
+        public static IndexDefinition Load(StorageEnvironment environment)
         {
             using (var pool = new UnmanagedBuffersPool(nameof(StaticMapIndexDefinition)))
             using (var context = new JsonOperationContext(pool))
@@ -74,16 +81,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
                 {
-                    var lockMode = ReadLockMode(reader);
-                    var collections = ReadCollections(reader);
-
                     var definition = ReadIndexDefinition(reader);
                     definition.Name = ReadName(reader);
+                    definition.LockMode = ReadLockMode(reader);
 
-                    return new StaticMapIndexDefinition(definition, collections)
-                    {
-                        LockMode = lockMode
-                    };
+                    return definition;
                 }
             }
         }

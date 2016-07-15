@@ -106,7 +106,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 indexDefinition2 = new IndexDefinition
                 {
                     Name = "Users_ByAge",
-                    Maps = { "from user in docs.Users select new { user.Age }" },
+                    Maps = { "from user in docs.Users select new { CustomAge = user.Age }" },
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(indexDefinition2));
             }
@@ -124,7 +124,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal("Users_ByName", indexes[0].Name);
                 Assert.Equal(1, indexes[0].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[0].Definition.Collections[0]);
-                Assert.Equal(0, indexes[0].Definition.MapFields.Count);
+                Assert.Equal(1, indexes[0].Definition.MapFields.Count);
+                Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
                 Assert.True(indexes[0].Definition.Equals(indexDefinition1, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
@@ -135,7 +136,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal("Users_ByAge", indexes[1].Name);
                 Assert.Equal(1, indexes[1].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[1].Definition.Collections[0]);
-                Assert.Equal(0, indexes[1].Definition.MapFields.Count);
+                Assert.Equal(1, indexes[1].Definition.MapFields.Count);
+                Assert.Contains("CustomAge", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Normal, indexes[1].Priority);
                 Assert.True(indexes[1].Definition.Equals(indexDefinition2, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
