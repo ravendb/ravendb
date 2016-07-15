@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Transformers;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -13,10 +15,11 @@ namespace Raven.Server.Documents.Indexes.Static
     /// will build up and tear down a server frequently, so we can still reduce the cost of compiling 
     /// the indexes.
     /// </summary>
-    public static class IndexCompilationCache
+    public static class IndexAndTransformerCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> Cache
-           = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> IndexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
+
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<TransformerBase>> TransformerCache = new ConcurrentDictionary<CacheKey, Lazy<TransformerBase>>();
 
         public static StaticIndexBase GetIndexInstance(IndexDefinition definition)
         {
@@ -28,8 +31,21 @@ namespace Raven.Server.Documents.Indexes.Static
             // TODO [ppekrol] add field options
 
             var key = new CacheKey(list);
-            Func<StaticIndexBase> createIndex = () => StaticIndexCompiler.Compile(definition);
-            var result = Cache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));
+            Func<StaticIndexBase> createIndex = () => IndexAndTransformerCompiler.Compile(definition);
+            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));
+            return result.Value;
+        }
+
+        public static TransformerBase GetTransformerInstance(TransformerDefinition definition)
+        {
+            var list = new List<string>
+            {
+                definition.TransformResults
+            };
+
+            var key = new CacheKey(list);
+            Func<TransformerBase> createTransformer = () => IndexAndTransformerCompiler.Compile(definition);
+            var result = TransformerCache.GetOrAdd(key, _ => new Lazy<TransformerBase>(createTransformer));
             return result.Value;
         }
 
@@ -38,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static
             private readonly int _hash;
             private readonly List<string> _items;
 
-            public unsafe CacheKey(List<string> items )
+            public unsafe CacheKey(List<string> items)
             {
                 _items = items;
                 var ctx = Hashing.Streamed.XXHash32.BeginProcess();
@@ -52,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         {
                             if (toProcess < Hashing.Streamed.XXHash32.Alignment)
                                 break; // TODO [ppekrol] This is bad, fix me
-                            
+
                             ctx = Hashing.Streamed.XXHash32.Process(ctx, (byte*)current, Hashing.Streamed.XXHash32.Alignment);
                             toProcess -= Hashing.Streamed.XXHash32.Alignment;
                             current += Hashing.Streamed.XXHash32.Alignment;

@@ -26,6 +26,59 @@ namespace SlowTests.Core.Indexing
 {
     public class ResultTransformers : RavenTestBase
     {
+        [Fact]
+        public async Task BasicTransformer()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                var transformer = new Companies_NameTransformer();
+                transformer.Execute(store);
+
+                var transformerDefinition = transformer.CreateTransformerDefinition();
+                var serverDefinition = store.DatabaseCommands.GetTransformer(transformer.TransformerName);
+
+                Assert.True(transformerDefinition.Equals(serverDefinition));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Name = "Amazing",
+                        Type = Company.CompanyType.Public,
+                        Address1 = "221 B Baker St",
+                        Address2 = "London",
+                        Address3 = "England"
+                    });
+
+                    session.Store(new Company
+                    {
+                        Name = "Brilliant",
+                        Type = Company.CompanyType.Public,
+                        Address1 = "Buckingham Palace",
+                        Address2 = "London"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Load<Companies_NameTransformer.Result>("companies/1", typeof(Companies_NameTransformer));
+
+                    Assert.Equal("Amazing", result.Name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Load<Companies_NameTransformer.Result>(new[] { "companies/1", "companies/2" }, typeof(Companies_NameTransformer));
+
+                    Assert.Equal(2, results.Length);
+                    Assert.Equal("Amazing", results[0].Name);
+                    Assert.Equal("Brilliant", results[1].Name);
+                }
+            }
+        }
+
         [Fact(Skip = "Missing feature: Transformers")]
         public async Task CanApplyTransformerOnQueryResults()
         {

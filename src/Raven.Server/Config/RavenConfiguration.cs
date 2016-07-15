@@ -13,10 +13,9 @@ namespace Raven.Server.Config
 {
     public class RavenConfiguration
     {
-        public bool Initialized { get; private set; }
-        private bool allowChanges = false;
-
         private readonly IConfigurationBuilder _configBuilder;
+
+        public bool Initialized { get; private set; }
 
         public CoreConfiguration Core { get; }
 
@@ -133,7 +132,7 @@ namespace Raven.Server.Config
 
         public void SetSetting(string key, string value)
         {
-            if (Initialized && allowChanges == false)
+            if (Initialized)
                 throw new InvalidOperationException("Configuration already initialized. You cannot specify an already initialized setting.");
 
             Settings[key] = value;

@@ -2,13 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-
 using Lucene.Net.Documents;
-
-using Raven.Abstractions.Data;
-using Raven.Client.Linq;
-using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 
@@ -32,24 +26,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             foreach (var property in accessor.Properties)
             {
                 var value = property.Value(document);
-                var field = GetField(property.Key);
+                var field = _fields[property.Key];
                 foreach (var luceneField in GetRegularFields(field, value))
                     yield return luceneField;
             }
-        }
-
-        private IndexField GetField(string key)
-        {
-            IndexField field;
-            if (_fields.TryGetValue(key, out field))
-                return field;
-
-            if (_fields.TryGetValue(Constants.AllFields, out field)) // TODO [ppekrol] check this
-                return field;
-
-            _fields[key] = field = new IndexField { Name = key };
-
-            return field;
         }
 
         private PropertyAccessor GetPropertyAccessor(object document)

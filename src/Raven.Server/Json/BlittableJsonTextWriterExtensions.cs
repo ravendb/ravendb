@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
-
+using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -24,7 +25,7 @@ namespace Raven.Server.Json
             for (int i = 0; i < changeVector.Length; i++)
             {
                 var entry = changeVector[i];
-                writer.WriteChangeVectorEntry(context,entry);
+                writer.WriteChangeVectorEntry(context, entry);
                 writer.WriteComma();
             }
             writer.WriteEndArray();
@@ -521,6 +522,32 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteTransformerDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, TransformerDefinition transformerDefinition)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.Name)));
+            writer.WriteString(context.GetLazyString(transformerDefinition.Name));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.TransformResults)));
+            writer.WriteString(context.GetLazyString(transformerDefinition.TransformResults));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.LockMode)));
+            writer.WriteString(context.GetLazyString(transformerDefinition.LockMode.ToString()));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.Temporary)));
+            writer.WriteBool(transformerDefinition.Temporary);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.TransfomerId)));
+            writer.WriteInteger(transformerDefinition.TransfomerId);
+            writer.WriteComma();
+
+            writer.WriteEndObject();
+        }
 
         public static void WriteIndexDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition)
         {
@@ -827,14 +854,13 @@ namespace Raven.Server.Json
             return lastDocument?.Etag ?? 0;
         }
 
-        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, List<Document> documents, bool metadataOnly, int start, int count)
+        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, int start, int count)
         {
             writer.WriteStartArray();
 
-            bool first = true;
-            for (int index = start, written = 0; written < count; index++, written++)
+            var first = true;
+            foreach (var document in documents.Skip(start).Take(count))
             {
-                var document = documents[index];
                 if (document == null)
                     continue;
 

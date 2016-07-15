@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -185,14 +184,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
-            var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray());
-            var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
+            var instance = CreateIndexInstance(indexId, definition);
             instance.Initialize(documentDatabase);
 
             return instance;
@@ -200,12 +197,21 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
-            var staticMapIndexDefinition = StaticMapIndexDefinition.Load(environment);
-            var staticIndex = IndexCompilationCache.GetIndexInstance(staticMapIndexDefinition.IndexDefinition);
+            var definition = StaticMapIndexDefinition.Load(environment);
+            var instance = CreateIndexInstance(indexId, definition);
 
-            var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             instance.Initialize(environment, documentDatabase);
 
+            return instance;
+        }
+
+        private static StaticMapIndex CreateIndexInstance(int indexId, IndexDefinition definition)
+        {
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
+
+            var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(),
+                staticIndex.OutputFields);
+            var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             return instance;
         }
     }
