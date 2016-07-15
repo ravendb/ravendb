@@ -65,13 +65,19 @@ namespace Raven.Server.Documents.Transformers
 
             lock (_locker)
             {
-                foreach (var transformerFile in new DirectoryInfo(_path).GetFiles("*.transformer"))
+                foreach (var transformerFile in new DirectoryInfo(_path).GetFiles())
                 {
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                         return;
 
+                    if (string.Equals(transformerFile.Extension, Transformer.FileExtension, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    var indexOfFileExtension = transformerFile.Name.IndexOf(Transformer.FileExtension, StringComparison.OrdinalIgnoreCase);
+                    var name = transformerFile.Name.Substring(0, indexOfFileExtension);
+
                     int transformerId;
-                    if (int.TryParse(transformerFile.Name, out transformerId) == false)
+                    if (int.TryParse(name, out transformerId) == false)
                         continue;
 
                     var transformer = Transformer.Open(transformerId, _documentDatabase.Configuration.Indexing);
