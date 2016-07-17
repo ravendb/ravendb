@@ -29,7 +29,7 @@ namespace Raven.Server.Smuggler
             using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
             {
                 var buffer = context.GetParsingBuffer();
-                string operateOnType = null;
+                string operateOnType = "__top_start_object";
                 var batchPutCommand = new MergedBatchPutCommand(_database);
                 var identities = new Dictionary<string, long>();
                 while (true)
@@ -138,6 +138,9 @@ namespace Raven.Server.Smuggler
                                             }
                                         }
                                     }
+                                    break;
+                                case "__top_start_object":
+                                    operateOnType = null;
                                     break;
                                 default:
                                     result.Warnings.Add($"The following type is not recognized: '{operateOnType}'. Skipping.");
