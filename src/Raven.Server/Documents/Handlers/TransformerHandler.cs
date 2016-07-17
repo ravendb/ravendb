@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var json = await context.ReadForDiskAsync(RequestBodyStream(), name);
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), name);
                 var transformerDefinition = JsonDeserialization.TransformerDefinition(json);
                 transformerDefinition.Name = name;
 
