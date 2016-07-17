@@ -4,13 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
 
 using Raven.Abstractions.Data;
-
+using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
 
@@ -31,11 +32,19 @@ namespace SlowTests.Core.Indexing
         {
             using (var store = await GetDocumentStore())
             {
-                var transformer = new Companies_NameTransformer();
-                transformer.Execute(store);
+                var transformer1 = new Companies_NameTransformer();
+                transformer1.Execute(store);
 
-                var transformerDefinition = transformer.CreateTransformerDefinition();
-                var serverDefinition = store.DatabaseCommands.GetTransformer(transformer.TransformerName);
+                var transformerDefinition = transformer1.CreateTransformerDefinition();
+                var serverDefinition = store.DatabaseCommands.GetTransformer(transformer1.TransformerName);
+
+                Assert.True(transformerDefinition.Equals(serverDefinition));
+
+                var transformer2 = new Companies_ContactsTransformer();
+                transformer2.Execute(store);
+
+                transformerDefinition = transformer2.CreateTransformerDefinition();
+                serverDefinition = store.DatabaseCommands.GetTransformer(transformer2.TransformerName);
 
                 Assert.True(transformerDefinition.Equals(serverDefinition));
 
@@ -47,7 +56,12 @@ namespace SlowTests.Core.Indexing
                         Type = Company.CompanyType.Public,
                         Address1 = "221 B Baker St",
                         Address2 = "London",
-                        Address3 = "England"
+                        Address3 = "England",
+                        Contacts = new List<Contact>
+                        {
+                            new Contact { Email = "email1@email.com" },
+                            new Contact { Email = "email2@email.com" }
+                        }
                     });
 
                     session.Store(new Company
@@ -55,7 +69,11 @@ namespace SlowTests.Core.Indexing
                         Name = "Brilliant",
                         Type = Company.CompanyType.Public,
                         Address1 = "Buckingham Palace",
-                        Address2 = "London"
+                        Address2 = "London",
+                        Contacts = new List<Contact>
+                        {
+                            new Contact { Email = "email3@email.com" }
+                        }
                     });
 
                     session.SaveChanges();
@@ -66,15 +84,32 @@ namespace SlowTests.Core.Indexing
                     var result = session.Load<Companies_NameTransformer.Result>("companies/1", typeof(Companies_NameTransformer));
 
                     Assert.Equal("Amazing", result.Name);
+
+                    var results = session.Load<Companies_ContactsTransformer.Result[]>("companies/1", typeof(Companies_ContactsTransformer));
+
+                    Assert.Equal(2, results.Length);
+                    Assert.Equal("email1@email.com", results[0].Email);
+                    Assert.Equal("email2@email.com", results[1].Email);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Load<Companies_NameTransformer.Result>(new[] { "companies/1", "companies/2" }, typeof(Companies_NameTransformer));
+                    var results1 = session.Load<Companies_NameTransformer.Result>(new[] { "companies/1", "companies/2" }, typeof(Companies_NameTransformer));
 
-                    Assert.Equal(2, results.Length);
-                    Assert.Equal("Amazing", results[0].Name);
-                    Assert.Equal("Brilliant", results[1].Name);
+                    Assert.Equal(2, results1.Length);
+                    Assert.Equal("Amazing", results1[0].Name);
+                    Assert.Equal("Brilliant", results1[1].Name);
+
+                    var results2 = session.Load<Companies_ContactsTransformer.Result[]>(new[] { "companies/1", "companies/2" }, typeof(Companies_ContactsTransformer));
+
+                    Assert.Equal(2, results2.Length);
+
+                    Assert.Equal(2, results2[0].Length);
+                    Assert.Equal("email1@email.com", results2[0][0].Email);
+                    Assert.Equal("email2@email.com", results2[0][1].Email);
+
+                    Assert.Equal(1, results2[1].Length);
+                    Assert.Equal("email3@email.com", results2[1][0].Email);
                 }
             }
         }
