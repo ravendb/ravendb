@@ -948,23 +948,29 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var etags = new Dictionary<string, long>();
-                    foreach (var collection in Collections)
-                    {
-                        etags[collection] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
-                    }
-
-                    return etags;
+                    return GetLastProcessedDocumentTombstonesPerCollection(tx);
                 }
             }
         }
+
+        protected Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
+        {
+            var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            foreach (var collection in Collections)
+            {
+                etags[collection] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
+            }
+
+            return etags;
+        }
+
 
         private void AddIndexingPerformance(IndexingStatsAggregator stats)
         {
