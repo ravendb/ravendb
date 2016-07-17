@@ -225,6 +225,10 @@
     <Reference Include="System.Web">
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
+    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.Helpers.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
       <Private>True</Private>
@@ -259,6 +263,8 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Impl\ServerInfo.cs" />
+    <Compile Include="Bundles\Replication\Impl\DocumentsLeftToReplicate.cs" />
     <Compile Include="Bundles\Replication\RavenConflictDocumentsTransformer.cs" />
     <Compile Include="Bundles\Replication\RavenConflictDocuments.cs" />
     <Compile Include="Bundles\Replication\Data\GlobalReplicationTopologyRequest.cs" />

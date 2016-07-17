@@ -10,7 +10,7 @@ namespace Raven.Abstractions.Streaming
         private const string JsonContentType = "application/json";
         private readonly Stream stream;
         private JsonWriter writer;
-        private bool closedArray;
+        private bool closedArray = false;
 
         public JsonOutputWriter(Stream stream)
         {

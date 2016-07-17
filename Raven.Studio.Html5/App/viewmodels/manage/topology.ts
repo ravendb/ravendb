@@ -4,10 +4,12 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import getGlobalReplicationTopology = require("commands/resources/getGlobalReplicationTopology");
+import getDocumentsLeftToReplicate = require("commands/database/replication/getDocumentsLeftToReplicate");
 import d3 = require('d3/d3');
 import dagre = require('dagre');
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import shell = require("viewmodels/shell");
+import database = require("models/resources/database");
 
 class topology extends viewModelBase {
 
@@ -24,6 +26,12 @@ class topology extends viewModelBase {
     topologyFiltered = ko.observable<globalTopologyDto>(null);
     currentLink = ko.observable<any>(null); 
     searchText = ko.observable<string>();
+
+    documentToReplicateText = ko.observable<string>(null);
+    isLoadingDocumentToReplicateCount = ko.observable<boolean>(false);
+    localDatabaseIds: KnockoutComputed<string[]>;
+    canCalculateDocumentsToReplicateCount: KnockoutComputed<boolean>;
+    canExportDocumentsToReplicateCount: KnockoutComputed<boolean>;
 
     settingsAccess = new settingsAccessAuthorizer();
 
@@ -46,16 +54,73 @@ class topology extends viewModelBase {
 
     constructor() {
         super();
-        this.searchText.throttle(250).subscribe(value => this.filter(value));
-    }
 
-    hasSaveAsPngSupport = ko.computed(() => {
-        return !(navigator && navigator.msSaveBlob);
-    });
+        this.searchText.throttle(250).subscribe(value => this.filter(value));
+
+        this.localDatabaseIds = ko.computed(() => {
+            var topology = this.topology();
+            if (!topology) {
+                return [];
+            }
+
+            return topology.Databases.LocalDatabaseIds;
+        });
+
+        this.canCalculateDocumentsToReplicateCount = ko.computed(() => {
+            var currentLink = this.currentLink();
+            if (!currentLink) {
+                return false;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return false;
+            }
+
+            var topology = this.topology();
+            if (!topology) {
+                return false;
+            }
+
+            var destinations = this.getAllReachableDestinationsFrom(currentLink.Source, topology.Databases.Connections);
+
+            return destinations.contains(currentLink.Destination);
+        });
+
+        this.canExportDocumentsToReplicateCount = ko.computed(() => {
+            var currentLink = this.currentLink();
+            if (!currentLink) {
+                return false;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return false;
+            }
+
+            var topology = this.topology();
+            if (!topology) {
+                return false;
+            }
+
+            var localServer = topology
+                .Databases
+                .Connections
+                .first((x: replicationTopologyConnectionDto) => {
+                    var serverId = this.getServerId(x.SendServerId, x.StoredServerId);
+                    var foundServerId = this.localDatabaseIds().first(id => id === serverId);
+                    if (!foundServerId) {
+                        return false;
+                    }
+
+                    return x.Source === currentLink.Source;
+                });
+
+            return !!localServer;
+        });
+    }
 
     activate(args) {
         super.activate(args);
-        this.updateHelpLink('ES8PCB');
+        this.updateHelpLink("ES8PCB");
     }
 
     attached() {
@@ -66,6 +131,117 @@ class topology extends viewModelBase {
     compositionComplete() {
         this.resize();
     }
+
+    getAllReachableDestinationsFrom(sourceServerUrl: string, connections: replicationTopologyConnectionDto[]): string[] {
+        var result: string[] = [];
+
+        connections.forEach(connection => {
+            if (sourceServerUrl === connection.Source) {
+                result.push(connection.Destination);
+
+                var updatedConncetions = connections.filter(x => x.Destination !== sourceServerUrl);
+
+                var reachables = this.getAllReachableDestinationsFrom(connection.Destination, updatedConncetions);
+                result.pushAll(reachables);
+            }
+        });
+
+        return result;
+    }
+
+    getDocumentsToReplicateCount() {
+        var currentLink = this.currentLink();
+        if (currentLink == null) {
+            return;
+        }
+        
+        if (currentLink.SourceToDestinationState === "Offline") {
+            return;
+        }
+
+        var destinationSplitted = currentLink.Destination.split("/databases/");
+        var databaseName = destinationSplitted.last();
+        var destinationUrl = destinationSplitted.first() + "/";
+        var sourceSplitted = currentLink.Source.split("/databases/");
+        var sourceUrl = sourceSplitted.first() + "/";
+        var sourceDatabaseName = sourceSplitted.last();
+        var sourceId = this.getServerId(currentLink.SendServerId, currentLink.StoredServerId);
+
+        this.isLoadingDocumentToReplicateCount(true);
+        var getDocsToReplicateCount =
+            new getDocumentsLeftToReplicate(sourceUrl, destinationUrl, databaseName,
+                    sourceId, new database(sourceDatabaseName))
+                .execute();
+
+        getDocsToReplicateCount
+            .done((documentCount: documentCountDto) => {
+                var message = "";
+                var isApproximate = documentCount.Type === "Approximate";
+                if (isApproximate) {
+                    message += "Approximately ";
+                }
+
+                message += documentCount.Count.toLocaleString();
+
+                if (isApproximate) {
+                    message += ">=";
+                }
+
+                if (documentCount.IsEtl) {
+                    message += " (ETL)";
+                }
+
+                this.documentToReplicateText(message);
+            })
+            .fail(() => this.documentToReplicateText("Couldn't calculate document count!"))
+            .always(() => this.isLoadingDocumentToReplicateCount(false));
+    }
+
+    getServerId(sendServerId: string, storedServerId: string) {
+        var serverId = sendServerId;
+        if (serverId === "00000000-0000-0000-0000-000000000000") {
+            serverId = storedServerId;
+        }
+
+        return serverId;
+    }
+
+    export() {
+        var confirmation = this.confirmationMessage("Export", "Are you sure that you want to export documents to replicate ids?");
+        confirmation.done(() => {
+            var url = "/admin/replication/export-docs-left-to-replicate";
+            var currentLink = this.currentLink();
+            if (currentLink == null) {
+                return;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return;
+            }
+
+            this.isLoadingDocumentToReplicateCount(true);
+            var destinationSplitted = currentLink.Destination.split("/databases/");
+            var databaseName = destinationSplitted.last();
+            var destinationUrl = destinationSplitted.first() + "/";
+            var sourceSplitted = currentLink.Source.split("/databases/");
+            var sourceUrl = sourceSplitted.first() + "/";
+            var sourceDatabaseName = sourceSplitted.last();
+
+            var requestData = {
+                SourceUrl: sourceUrl,
+                DestinationUrl: destinationUrl,
+                DatabaseName: databaseName,
+                SourceId: this.getServerId(currentLink.SendServerId, currentLink.StoredServerId)
+            };
+
+            var db = new database(sourceDatabaseName);
+            this.downloader.downloadByPost(db, url, requestData, this.isLoadingDocumentToReplicateCount);
+        });
+    }
+
+    hasSaveAsPngSupport = ko.computed(() => {
+        return !(navigator && navigator.msSaveBlob);
+    });
 
     resize() {
         this.width = $("#replicationTopologySection").width() * 0.66;
@@ -349,13 +525,13 @@ class topology extends viewModelBase {
                 d3.selectAll(".selected").classed("selected", false);
                 d3.select(this).classed('selected', currentSelection !== this);
                 self.currentLink(currentSelection !== this ? d : null);
+                self.documentToReplicateText(null);
             });
 
         edgesDom
             .transition()
             .attr('d', d => self.linkWithArrow(d));
     }
-
 
     fetchTopology() {
         this.showLoadingIndicator(true);
@@ -366,7 +542,10 @@ class topology extends viewModelBase {
                 this.topologyFiltered(topo);
                 this.createReplicationTopology();
             })
-            .always(() => this.showLoadingIndicator(false)); 
+            .always(() => {
+                this.currentLink(null);
+                this.showLoadingIndicator(false);
+            }); 
     }
 
     saveAsPng() {

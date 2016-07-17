@@ -32,7 +32,6 @@ namespace Raven.Database.FileSystem.Controllers
 {
     public class FsStudioTasksController : BaseFileSystemApiController
     {
-
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/check-sufficient-diskspace")]
         public async Task<HttpResponseMessage> CheckSufficientDiskspaceBeforeImport(long fileSize)
@@ -142,43 +141,50 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/studio-tasks/exportFilesystem")]
         public Task<HttpResponseMessage> ExportFilesystem(StudioTasksController.ExportData smugglerOptionsJson)
         {
-            var requestString = smugglerOptionsJson.SmugglerOptions;
-            SmugglerFilesOptions smugglerOptions;
-
-            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
-            {
-                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                smugglerOptions = (SmugglerFilesOptions)serializer.Deserialize(jsonReader, typeof(SmugglerFilesOptions));
-            }
-
-
             var result = GetEmptyMessage();
 
-            // create PushStreamContent object that will be called when the output stream will be ready.
-            result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+            try
             {
-                try
-                {
-                    var dataDumper = new FilesystemDataDumper(FileSystem, smugglerOptions);
-                    await dataDumper.ExportData(
-                        new SmugglerExportOptions<FilesConnectionStringOptions>
-                        {
-                            ToStream = outputStream
-                        }).ConfigureAwait(false);
-                }
-                finally
-                {
-                    outputStream.Close();
-                }
-            });
+                var requestString = smugglerOptionsJson.SmugglerOptions;
+                SmugglerFilesOptions smugglerOptions;
 
-            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                string.Format("Dump of {0}, {1}", FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
-                smugglerOptions.NoneDefualtFileName;
-            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+                {
+                    var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                    smugglerOptions = (SmugglerFilesOptions)serializer.Deserialize(jsonReader, typeof(SmugglerFilesOptions));
+                }
+
+                //create PushStreamContent object that will be called when the output stream will be ready.
+                result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+                {
+                    try
+                    {
+                        var dataDumper = new FilesystemDataDumper(FileSystem, smugglerOptions);
+                        await dataDumper.ExportData(
+                            new SmugglerExportOptions<FilesConnectionStringOptions>
+                            {
+                                ToStream = outputStream
+                            }).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        outputStream.Close();
+                    }
+                });
+
+                var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                    $"Dump of {FileSystemName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
+                    smugglerOptions.NoneDefualtFileName;
+                result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                {
+                    FileName = fileName + ".ravenfsdump"
+                };
+            }
+            catch (Exception e)
             {
-                FileName = fileName + ".ravenfsdump"
-            };
+                result.StatusCode = HttpStatusCode.InternalServerError;
+                result.Content = new StringContent(e.Message);
+            }
 
             return new CompletedTask<HttpResponseMessage>(result);
         }

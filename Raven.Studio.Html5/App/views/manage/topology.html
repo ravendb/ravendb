@@ -55,22 +55,23 @@
         <div data-bind="visible: settingsAccess.canWrite()">
             <div class="panel panel-default panel-wo-margin" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#replicationTopologySection' }">
                 <div class="panel-heading">
-                    <span data-bind="visible: !topology()">
-                        <button data-bind="click: fetchTopology" class="btn btn-primary">
+                    <div>
+                        <button data-bind="click: fetchTopology, disable: showLoadingIndicator" class="btn btn-primary">
                             <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: showLoadingIndicator"></i>
-                            <i class="fa fa-sitemap fa-fw" data-bind="visible: !showLoadingIndicator()"></i> Fetch topology
+                            <i class="fa fa-sitemap fa-fw" data-bind="visible: !showLoadingIndicator()"></i>
+                            <span data-bind="text: !topology() ? 'Fetch topology' : 'Refetch topology'"></span>
                         </button>
                         <i class="fa fa-warning text-warning padd-left-10"></i> <span class="text-muted"> This operation may be time consuming.</span>
-                    </span>
+                    </div>
 
-                    <div class="btn-group" data-bind="if: topology">
+                    <div class="btn-group" data-bind="if: topology" style="width: 500px;">
                         <div class="input-group">
                             <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search by name" data-bind="value: $root.searchText, valueUpdate: 'afterkeydown'" />
+                            <input class="form-control" placeholder="Search by name" data-bind="value: $root.searchText, valueUpdate: 'afterkeydown'" />
                         </div>
                     </div>
 
-                    <div class="pull-right btn-group" data-bind="if: topology">
+                    <div class="btn-group" data-bind="if: topology">
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Download topology">
                             <i class="fa fa-download"></i>
                         </button>
@@ -157,12 +158,35 @@
                                                         <td>DestinationToSourceState</td>
                                                         <td data-bind="text: DestinationToSourceState"></td>
                                                     </tr>
-                                                    <tr data-bind="if: Errors">
+                                                    <tr data-bind="if: !!Errors && Errors.length > 0">
                                                         <td>Errors</td>
                                                         <td>
                                                             <ul data-bind="foreach: Errors">
                                                                 <li data-bind="text: $data"></li>
                                                             </ul>
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr data-bind="visible: $root.canCalculateDocumentsToReplicateCount">
+                                                        <td>Documents to Replicate</td>
+                                                        <td>
+                                                            <div data-bind="visible: !!$root.documentToReplicateText">
+                                                                <span style="font-weight: bold" data-bind="text: $root.documentToReplicateText"></span>
+                                                            </div>
+
+                                                            <div data-bind="visible: !$root.isLoadingDocumentToReplicateCount()">
+                                                                <a href="#" data-bind="click: $root.getDocumentsToReplicateCount.bind($root), text: !$root.documentToReplicateText() ? 'Calculate' : 'Recalculate'"></a>
+                                                            </div>
+
+                                                            <div data-bind="visible: !$root.isLoadingDocumentToReplicateCount() && $root.canExportDocumentsToReplicateCount">
+                                                                <a href="#" data-bind="click: $root.export.bind($root)" title="Export document ids">
+                                                                    Export CSV
+                                                                </a>
+                                                            </div>
+
+                                                            <span data-bind="visible: $root.isLoadingDocumentToReplicateCount">
+                                                                <i class="fa fa-spinner fa-spin"></i>
+                                                            </span>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -209,7 +233,7 @@
                                                         <td>DestinationToSourceState</td>
                                                         <td data-bind="text: DestinationToSourceState"></td>
                                                     </tr>
-                                                    <tr data-bind="if: Errors">
+                                                    <tr data-bind="if: !!Errors && Errors.length > 0">
                                                         <td>Errors</td>
                                                         <td>
                                                             <ul data-bind="foreach: Errors">
@@ -261,7 +285,7 @@
                                                         <td>DestinationToSourceState</td>
                                                         <td data-bind="text: DestinationToSourceState"></td>
                                                     </tr>
-                                                    <tr data-bind="if: Errors">
+                                                    <tr data-bind="if: !!Errors && Errors.length > 0">
                                                         <td>Errors</td>
                                                         <td>
                                                             <ul data-bind="foreach: Errors">

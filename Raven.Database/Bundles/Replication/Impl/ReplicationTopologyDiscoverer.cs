@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -10,7 +9,6 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Tasks;
-using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Config.Retriever;
 using Raven.Json.Linq;

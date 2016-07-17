@@ -4,16 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
-using Rachis;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Document;
 using Raven.Database.Raft.Dto;
-using Raven.Server;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Raft
@@ -34,6 +32,60 @@ namespace Raven.Tests.Raft
                 var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
                 Assert.True(configuration.EnableReplication);
             });
+        }
+
+        [Fact]
+        public void CanCreateClusterAndSendCustomDatabaseSettings()
+        {
+            var clusterStores = CreateRaftCluster(3);
+
+            SetupClusterConfiguration(clusterStores, true, new Dictionary<string, string>
+            {
+                { Constants.MaxClauseCount, "123" }
+            });
+
+            clusterStores.ForEach(store =>
+            {
+                WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+                var configurationJson = store.DatabaseCommands.ForSystemDatabase().Get(Constants.Cluster.ClusterConfigurationDocumentKey);
+                var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+                Assert.True(configuration.EnableReplication);
+                Assert.Equal("123", configuration.DatabaseSettings[Constants.MaxClauseCount]);
+            });
+        }
+
+        [Fact]
+        public void ClusterWideSettingsArePropatagedToDatabases()
+        {
+            var clusterStores = CreateRaftCluster(3);
+            
+            SetupClusterConfiguration(clusterStores, true, new Dictionary<string, string>
+            {
+                { Constants.MaxClauseCount, "123" }
+            });
+
+            clusterStores.ForEach(store =>
+            {
+                WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Cluster.ClusterConfigurationDocumentKey);
+            });
+
+            clusterStores[0].DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("newDB");
+
+            clusterStores.ForEach(store =>
+            {
+                WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Database.Prefix + "newDb");
+            });
+
+            clusterStores.ForEach(store =>
+            {
+                using (var request = store.DatabaseCommands.ForDatabase("newDb").CreateRequest("/debug/config", HttpMethod.Get))
+                {
+                    var response = request.ReadResponseJson();
+                    var jObject = response as RavenJObject;
+                    Assert.Equal(123, jObject.Value<int>("MaxClauseCount"));
+                }
+            });
+
         }
 
         [Fact]

@@ -150,9 +150,11 @@ namespace Raven.Client.Connection.Implementation
                         Credentials = credentialsToUse
                     };
 #else
-                    var handler = new WinHttpHandler
+                    var handler = new HttpClientHandler
                     {
-                        ServerCredentials = useDefaultCredentials ? CredentialCache.DefaultCredentials : credentialsToUse
+                        AllowAutoRedirect = false,
+                        UseDefaultCredentials = useDefaultCredentials,
+                        Credentials = credentialsToUse
                     };
 #endif
                     return handler;

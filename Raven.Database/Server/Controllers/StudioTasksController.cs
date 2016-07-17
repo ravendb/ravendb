@@ -255,42 +255,51 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
         public Task<HttpResponseMessage> ExportDatabase([FromBody] ExportData smugglerOptionsJson)
         {
-            var requestString = smugglerOptionsJson.SmugglerOptions;
-            SmugglerDatabaseOptions smugglerOptions;
-
-            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
-            {
-                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                smugglerOptions = (SmugglerDatabaseOptions) serializer.Deserialize(jsonReader, typeof (SmugglerDatabaseOptions));
-            }
-
             var result = GetEmptyMessage();
 
-            // create PushStreamContent object that will be called when the output stream will be ready.
-            result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+            try
             {
-                try
-                {
-                    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
-                    await dataDumper.ExportData(
-                        new SmugglerExportOptions<RavenConnectionStringOptions>
-                        {
-                            ToStream = outputStream
-                        }).ConfigureAwait(false);
-                }
-                finally
-                {
-                    outputStream.Close();
-                }
-            });
+                var requestString = smugglerOptionsJson.SmugglerOptions;
+                SmugglerDatabaseOptions smugglerOptions;
 
-            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
-                smugglerOptions.NoneDefaultFileName;
-            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+                {
+                    var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                    smugglerOptions = (SmugglerDatabaseOptions) serializer.Deserialize(jsonReader, typeof (SmugglerDatabaseOptions));
+                }
+
+                //create PushStreamContent object that will be called when the output stream will be ready.
+                result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+                {
+                    try
+                    {
+                        var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
+                        await dataDumper.ExportData(
+                            new SmugglerExportOptions<RavenConnectionStringOptions>
+                            {
+                                ToStream = outputStream
+                            }).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        outputStream.Close();
+                    }
+                });
+
+                var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                    $"Dump of {DatabaseName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
+                    smugglerOptions.NoneDefaultFileName;
+
+                result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                {
+                    FileName = fileName + ".ravendbdump"
+                };
+            }
+            catch (Exception e)
             {
-                FileName = fileName + ".ravendbdump"
-            };
+                result.StatusCode = HttpStatusCode.InternalServerError;
+                result.Content = new StringContent(e.Message);
+            }
 
             return new CompletedTask<HttpResponseMessage>(result);
         }

@@ -16,12 +16,14 @@ namespace Raven.Abstractions.Streaming
         private const string CsvContentType = "text/csv";
 
         private readonly Stream stream;
+        private readonly string[] customColumns;
         private StreamWriter writer;
         private bool doIncludeId;
 
-        public ExcelOutputWriter(Stream stream)
+        public ExcelOutputWriter(Stream stream, string[] customColumns = null)
         {
             this.stream = stream;
+            this.customColumns = customColumns;
         }
 
         public string ContentType => CsvContentType;
@@ -97,6 +99,12 @@ namespace Raven.Abstractions.Streaming
             writer.WriteLine();
         }
 
+        public void Write(string result)
+        {
+            OutputCsvValue(result);
+            writer.WriteLine();
+        }
+
         public void WriteError(Exception exception)
         {
             writer.WriteLine();
@@ -117,6 +125,15 @@ namespace Raven.Abstractions.Streaming
                 includeNestedProperties: true,
                 includeMetadata: false,
                 excludeParentPropertyNames: true).ToList();
+
+            if (customColumns != null && customColumns.Length > 0)
+            {
+                // since user defined custom CSV columns filter list generated using GetPropertiesFromJObject
+                // we interate over customColumns instead of properties to maintain columns order requested by user
+                properties = customColumns
+                    .SelectMany(c => properties.Where(p => p.StartsWith(c)))
+                    .ToList();
+            }
 
             RavenJToken token;
             if (result.TryGetValue("@metadata", out token))

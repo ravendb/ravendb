@@ -6,7 +6,8 @@
       "**/*.cs",
       "../Raven.Bundles.UniqueConstraints/Constants.cs",
       "../../CommonAssemblyInfo.cs"
-    ]
+    ],
+    "warningsAsErrors": false
   },
 
   "configurations": {
@@ -23,14 +24,8 @@
   },
 
   "frameworks": {
-    "net45": {
-      "buildOptions": {
-        "define": [ "NET4_5" ]
-      }
-    },
-
-  "netstandard1.6": {
-      "imports": "dnxcore50",
+    "netstandard1.6": {
+      "imports": [ "dnxcore50" ],
       "buildOptions": {
         "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
       },
@@ -38,8 +33,5 @@
         "System.Reflection.Extensions": "4.0.1"
       }
     }
-  },
-
-  "runtimes": {
   }
 }

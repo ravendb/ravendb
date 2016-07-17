@@ -11,18 +11,16 @@ using System.Runtime.InteropServices;
 [assembly: CLSCompliant(false)]
 [assembly: AssemblyTitle("RavenDB")]
 [assembly: AssemblyVersion("3.5.0")]
-[assembly: AssemblyFileVersion("3.5.13.0")]
-[assembly: AssemblyInformationalVersion("3.5.0 / {commit} / ")]
+[assembly: AssemblyFileVersion("3.5.0.13")]
+[assembly: AssemblyInformationalVersion("3.5.0")]
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
 
 #if !DNXCORE50
-
 [assembly: SuppressIldasm]
 #endif
 
 #if DEBUG
-
 [assembly: AssemblyConfiguration("Debug")]
 #else
 [assembly: AssemblyConfiguration("Release")]
@@ -30,7 +28,7 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyDelaySign(false)]
 [assembly: NeutralResourcesLanguage("en-US")]
-[assembly: RavenVersion(Build = "{build-label}", CommitHash = "{commit}", Version = "3.0")]
+[assembly: RavenVersion(Build = "{build-label}", CommitHash = "{commit}", Version = "3.5")]
 
 [AttributeUsage(AttributeTargets.Assembly)]
 public class RavenVersionAttribute : Attribute

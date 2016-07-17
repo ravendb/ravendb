@@ -137,12 +137,11 @@ namespace Raven.Database.Raft
             try
             {
                 await raftEngine.AddToClusterAsync(nodeConnectionInfo).ConfigureAwait(false);
-                return;
             }
             catch (NotLeadingException)
             {
+                await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo).ConfigureAwait(false);
             }
-            await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo).ConfigureAwait(false);
         }
 
         public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
@@ -298,30 +297,15 @@ namespace Raven.Database.Raft
             }
         }
 
-        public Task SendNodeUpdateAsync(NodeConnectionInfo node)
+        public async Task SendNodeUpdateAsync(NodeConnectionInfo node)
         {
             try
             {
-                var currentTopology = raftEngine.CurrentTopology;
-                var requestedTopology = new Topology(
-                    currentTopology.TopologyId,
-                    currentTopology.AllVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList(),
-                    currentTopology.NonVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList(),
-                    currentTopology.PromotableNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList());
-
-                var command = new TopologyChangeCommand
-                {
-                    Completion = new TaskCompletionSource<object>(),
-                    Requested = requestedTopology,
-                    Previous = currentTopology
-                };
-
-                raftEngine.AppendCommand(command);
-                return command.Completion.Task;
+                await raftEngine.UpdateNodeAsync(node).ConfigureAwait(false);
             }
             catch (NotLeadingException)
             {
-                return SendNodeUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node);
+                await SendNodeUpdateInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
             }
         }
 

@@ -17,6 +17,7 @@ using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -515,6 +516,50 @@ namespace Raven.Database.Bundles.SqlReplication
                             colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType,false);
                             
                             colParam.Value = fieldValue;
+
+                            if (objectValue.ContainsKey("Size"))
+                            {
+                                var size = objectValue["Size"].Value<int>();
+                                colParam.Size = size;
+                            }
+                            return;
+                        }
+                        if (objectValue != null && objectValue.Keys.Count >= 4
+                            && objectValue.ContainsKey("EnumType") && objectValue.ContainsKey("EnumValue")
+                            && objectValue.ContainsKey("EnumProperty") && (objectValue.ContainsKey("Value") || objectValue.ContainsKey("Values")))
+                        {
+                            var enumType = Type.GetType(objectValue["EnumType"].Value<string>(), false);
+                            if (enumType == null)
+                            {
+                                throw new InvalidOperationException(string.Format("Couldn't find type '{0}'.", objectValue["EnumType"]));
+                            }
+                            var enumStringvalue = objectValue["EnumValue"].Value<string>();
+                            object enumValue;
+                            if (enumStringvalue.Contains("|"))
+                            {
+                                var splitvalue = enumStringvalue.Split('|').Select(e => (int) Enum.Parse(enumType, e.Trim()));
+                                enumValue = splitvalue.Aggregate((a, b) => a | b);
+                            }
+                            else
+                            {
+                                enumValue = Enum.Parse(enumType, enumStringvalue);
+                            }
+
+                            var property = colParam.GetType().GetProperty(objectValue["EnumProperty"].Value<string>());
+                            if (property == null)
+                            {
+                                throw new InvalidOperationException(string.Format("Missing property '{0}' on type '{1}' of parameter.", 
+                                    objectValue["EnumProperty"], colParam.GetType().FullName));
+                            }
+                            if (objectValue.ContainsKey("Value"))
+                            {
+                                colParam.Value = objectValue["Value"].Value<object>();
+                            }
+                            else if (objectValue.ContainsKey("Values"))
+                            {
+                                colParam.Value = objectValue["Values"].Values<object>().ToArray();
+                            }
+                            property.SetValue(colParam, enumValue);
 
                             if (objectValue.ContainsKey("Size"))
                             {

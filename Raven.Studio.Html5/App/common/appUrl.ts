@@ -248,6 +248,10 @@ class appUrl {
         return '#admin/settings/globalConfig';
     }
 
+    static forGlobalConfigDatabaseSettings(): string {
+        return '#admin/settings/globalConfigDatabaseSettings';
+    }
+
     static forGlobalConfigReplication(): string {
         return '#admin/settings/globalConfigReplication';
     }
@@ -722,7 +726,6 @@ class appUrl {
             query: "Tag:" + collection.name,
             column: customColumns
         }
-
 
         return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
     }

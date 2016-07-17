@@ -11,7 +11,6 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Streaming;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -207,7 +206,7 @@ namespace Raven.Database.Counters.Controllers
         {
             private const int StreamBufferSize = 1024 * 8;
             private readonly CountersLandlord landlord;
-            private readonly Func<Stream,IOutputWriter> getWriter;
+            private readonly Func<Stream, IOutputWriter> getWriter;
             private readonly IEnumerable<RavenJObject> content;
             private readonly Action<string> outputContentTypeSetter;
             private readonly CounterStorage.Reader reader;

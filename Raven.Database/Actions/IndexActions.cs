@@ -19,6 +19,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -610,12 +611,8 @@ namespace Raven.Database.Actions
                     }
                     catch (TotalDataSizeExceededException e)
                     {
-                        Log.Warn(string.Format(
-                            @"Aborting applying precomputed batch for index {0}, 
-                                because total data size gatherered exceeded 
-                                configured data size ({1} bytes)", 
-                            index, Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes) , e);
-                        throw;
+                        //expected error
+                        Log.Info(e.Message);
                     }
                     catch (Exception e)
                     {
@@ -678,8 +675,9 @@ namespace Raven.Database.Actions
             var docsToIndex = new List<JsonDocument>();
             TransactionalStorage.Batch(actions =>
             {
-                var query = GetQueryForAllMatchingDocumentsForIndex(generator);
+                var query = QueryBuilder.GetQueryForAllMatchingDocumentsForIndex(Database, generator.ForEntityNames);
 
+                using (DocumentCacher.SkipSetDocumentsInDocumentCache())
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
                 {
@@ -713,9 +711,14 @@ namespace Raven.Database.Actions
                     }
 
                     if (Log.IsDebugEnabled)
-                        Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
-                              op.Header.TotalResults);
-                    int totalLoadedDocumentSize = 0;
+                    {
+                        Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs",
+                            index, op.Header.TotalResults);
+                    }
+
+                    var totalLoadedDocumentSize = 0;
+                    const int totalSizeToCheck = 16 * 1024 * 1024; //16MB
+                    var localLoadedDocumentSize = 0;
                     op.Execute(document =>
                     {
                         var metadata = document.Value<RavenJObject>(Constants.Metadata);
@@ -737,16 +740,44 @@ namespace Raven.Database.Actions
                             Metadata = metadata
                         };
 
+                        docsToIndex.Add(doc);
                         totalLoadedDocumentSize += serializedSizeOnDisk;
-                        if (totalLoadedDocumentSize >= Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes)
+                        localLoadedDocumentSize += serializedSizeOnDisk;
+
+                        if (totalLoadedDocumentSize > Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes)
                         {
+                            var error = string.Format(
+                                @"Aborting applying precomputed batch for index id: {0}, name: {1}
+                                    because we have {2}mb of documents that were fetched
+                                    and the configured max data to fetch is {3}mb",
+                                index.indexId, index.PublicName, totalLoadedDocumentSize,
+                                Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes / 1024 / 1024);
+
                             //we are aborting operation, so don't keep the references
-                            docsToIndex.Clear(); 
-                            throw new TotalDataSizeExceededException();
+                            docsToIndex.Clear();
+                            throw new TotalDataSizeExceededException(error);
                         }
 
-                        docsToIndex.Add(doc);
+
+                        if (localLoadedDocumentSize <= totalSizeToCheck)
+                            return;
+
+                        localLoadedDocumentSize = 0;
+
+                        if (Database.Configuration.MemoryLimitForProcessingInMb > MemoryStatistics.AvailableMemoryInMb)
+                        {
+                            var error = string.Format(
+                                @"Aborting applying precomputed batch for index id: {0}, name: {1}
+                                    because we have {2}mb of available memory and the available memory for processing is: {3}mb",
+                                index.indexId, index.PublicName,
+                                MemoryStatistics.AvailableMemoryInMb, Database.Configuration.MemoryLimitForProcessingInMb);
+
+                            //we are aborting operation, so don't keep the references
+                            docsToIndex.Clear();
+                            throw new TotalDataSizeExceededException(error);
+                        }
                     });
+
                     result = new PrecomputedIndexingBatch
                     {
                         LastIndexed = op.Header.IndexEtag,
@@ -768,39 +799,6 @@ namespace Raven.Database.Actions
                 }
             }
 
-        }
-
-        private string GetQueryForAllMatchingDocumentsForIndex(AbstractViewGenerator generator)
-        {
-            var terms = new TermsQueryRunner(Database)
-                .GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
-
-            var sb = new StringBuilder();
-
-            foreach (var entityName in generator.ForEntityNames)
-            {
-                bool added = false;
-                foreach (var term in terms)
-                {
-                    if (string.Equals(entityName, term, StringComparison.OrdinalIgnoreCase))
-                    {
-                        AppendTermToQuery(term, sb);
-                        added = true;
-                    }
-                }
-                if (added == false)
-                    AppendTermToQuery(entityName, sb);
-            }
-
-            return sb.ToString();
-        }
-
-        private static void AppendTermToQuery(string term, StringBuilder sb)
-        {
-            if (sb.Length != 0)
-                sb.Append(" OR ");
-
-            sb.Append("Tag:[[").Append(term).Append("]]");
         }
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)

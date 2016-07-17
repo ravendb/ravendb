@@ -115,7 +115,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h4 class="panel-title pull-left">
-                        <a data-toggle="collapse" href="#replicationSetupCollapse">Replication topology</a>
+                        <a data-toggle="collapse" href="#replicationSetupCollapse">Replication Topology</a>
                     </h4>
                     <div class="pull-right btn-group" data-bind="if: topology">
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Download topology">
@@ -131,9 +131,20 @@
                 </div>
                 <div class="panel-collapse collapse" id="replicationSetupCollapse">
                     <div class="panel-body">
+                        <div>
+                            <button data-bind="click: fetchTopology, disable: showLoadingIndicator" class="btn btn-default">
+                                <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: showLoadingIndicator"></i>
+                                <i class="fa fa-sitemap" data-bind="visible: !showLoadingIndicator()"></i>
+                                <span data-bind="text: !topology() ? 'Fetch topology' : 'Refetch topology'"></span>
+                            </button>
+                            <p class="help-block">
+                                <i class="fa fa-warning text-warning"></i> This operation might be time consuming.
+                            </p>
+                        </div>
+
                         <div class="row" data-bind="with: topology">
                             <div class="col-xs-8">
-                                <svg id="replicationTopology"  transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+                                <svg id="replicationTopology" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
                             </div>
                             <div class="col-xs-4">
                                 <div data-bind="if: !$root.currentLink()">
@@ -151,6 +162,9 @@
                                                 <dd>Error in communication</dd>
                                             </dl>
                                         </div>
+
+                                        <br />
+                                        <i class="fa fa-info-circle text-info"></i> Use the mouse to pan by clicking on the background; you may also use the mousewheel to zoom.
                                     </div>
                                 </div>
                                 <div data-bind="with: $root.currentLink">
@@ -162,8 +176,8 @@
                                                         <th>Property</th>
                                                         <th>Value</th>
                                                     </tr>
-                                                </thead>
-                                                <tbody>
+                                                    </thead>
+                                                    <tbody>
                                                     <tr>
                                                         <td>Source</td>
                                                         <td data-bind="text: Source"></td>
@@ -200,12 +214,35 @@
                                                         <td>DestinationToSourceState</td>
                                                         <td data-bind="text: DestinationToSourceState"></td>
                                                     </tr>
-                                                    <tr data-bind="if: Errors">
+                                                    <tr data-bind="if: !!Errors && Errors.length > 0">
                                                         <td>Errors</td>
                                                         <td>
                                                             <ul data-bind="foreach: Errors">
                                                                 <li data-bind="text: $data"></li>
                                                             </ul>
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr data-bind="visible: $root.canCalculateDocumentsToReplicateCount">
+                                                        <td>Documents to Replicate</td>
+                                                        <td>
+                                                            <div data-bind="visible: !!$root.documentToReplicateText">
+                                                                <span style="font-weight: bold" data-bind="text: $root.documentToReplicateText"></span>
+                                                            </div>
+
+                                                            <div data-bind="visible: !$root.isLoadingDocumentToReplicateCount()">
+                                                                <a href="#" data-bind="click: $root.getDocumentsToReplicateCount.bind($root), text: !$root.documentToReplicateText() ? 'Calculate' : 'Recalculate'"></a>
+                                                            </div>
+
+                                                            <div data-bind="visible: !$root.isLoadingDocumentToReplicateCount() && $root.canExportDocumentsToReplicateCount">
+                                                                <a href="#" data-bind="click: $root.export.bind($root)" title="Export document ids">
+                                                                    Export CSV
+                                                                </a>  
+                                                            </div>
+                                                            
+                                                            <span data-bind="visible: $root.isLoadingDocumentToReplicateCount">
+                                                                <i class="fa fa-spinner fa-spin"></i>
+                                                            </span>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -214,16 +251,6 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div data-bind="visible: topology() == null">
-                            <button data-bind="click: fetchTopology" class="btn btn-default"><i class="fa fa-sitemap"></i> Fetch topology</button>
-                            <p class="help-block">
-                                <i class="fa fa-warning text-warning"></i> This operation may be time consuming.
-                            </p>
-
-                            <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
-
-
                         </div>
                     </div>
                 </div>

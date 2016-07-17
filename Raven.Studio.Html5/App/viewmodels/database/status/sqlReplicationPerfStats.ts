@@ -11,6 +11,8 @@ class sqlReplicationPerfStats extends viewModelBase {
     statsAvailable: KnockoutComputed<boolean>;
     hasReplicationEnabled = ko.observable(false);
 
+    documentationLink = "http://ravendb.net/l/RVGRQB/" + viewModelBase.clientVersion() + "/";
+
     jsonData: any[] = [];
     rawJsonData: any[] = [];
     hiddenNames = d3.set([]);

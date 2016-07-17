@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -1173,5 +1174,17 @@ namespace Raven.Tests.Helpers
             return new DisposableAction(() => MultiDatabase.ConfigureDatabaseDocument = null);
         }
 
+        protected static int GetCachedItemsCount(DocumentStore store)
+        {
+            var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(null,
+                    store.Url + $"/databases/{store.DefaultDatabase}/debug/cache-details",
+                    HttpMethod.Get,
+                    store.DatabaseCommands.PrimaryCredentials,
+                    store.Conventions));
+
+            var response = request.ReadResponseJson();
+            return response.Value<int>("CachedItems");
+        }
     }
 }

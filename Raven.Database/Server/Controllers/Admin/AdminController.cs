@@ -1402,6 +1402,10 @@ namespace Raven.Database.Server.Controllers.Admin
                 if (db.IsSystemDatabase())
                     return;
 
+                var databaseId = DatabasesLandlord.GetDatabaseId(db.Name);
+                if (databaseId != null)
+                    mergedTopology.LocalDatabaseIds.Add(databaseId.Value);
+
                 databaseNames.Remove(db.Name);
                 var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(db, new RavenJArray(), 10, Log);
                 var node = replicationSchemaDiscoverer.Discover();

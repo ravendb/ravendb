@@ -132,8 +132,6 @@ namespace Voron.Trees.Fixed
                 isNew = false;
                 return page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long);
             }
-            var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
-            headerToWrite->NumberOfEntries++;
 
             if (page.LastMatch > 0)
                 page.LastSearchPosition++; // after the last one
@@ -148,6 +146,8 @@ namespace Voron.Trees.Fixed
                 return addLargeEntry;
             }
 
+            var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
+
             ResetStartPosition(page);
 
             var entriesToMove = page.FixedSize_NumberOfEntries - page.LastSearchPosition;
@@ -157,7 +157,10 @@ namespace Voron.Trees.Fixed
                     page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize),
                     entriesToMove * _entrySize);
             }
+
             page.FixedSize_NumberOfEntries++;
+            headerToWrite->NumberOfEntries++;
+
             isNew = true;
             *((long*)(page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize))) = key;
             return (page.Base + page.FixedSize_StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long));
@@ -213,6 +216,7 @@ namespace Voron.Trees.Fixed
 
         private Page PageSplit(Page page, long key)
         {
+            var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             Page parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
             if (parentPage == null) // root split
             {
@@ -220,9 +224,7 @@ namespace Voron.Trees.Fixed
                 parentPage.FixedSize_NumberOfEntries = 1;
                 parentPage.FixedSize_StartPosition = (ushort)Constants.PageHeaderSize;
                 parentPage.FixedSize_ValueSize = _valSize;
-
-                var largePtr =
-                    (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
+                
                 largePtr->RootPageNumber = parentPage.PageNumber;
                 largePtr->Depth++;
                 var dataStart = GetSeparatorKeyAtPosition(parentPage);
@@ -245,6 +247,8 @@ namespace Voron.Trees.Fixed
                     AddLeafKey(newPage, 0, key);
 
                     AddSeparatorToParentPage(parentPage, parentPage.LastSearchPosition + 1, key, newPage.PageNumber);
+
+                    largePtr->NumberOfEntries++;
                 }
                 else // not at end, random inserts, split page 3/4 to 1/4
                 {

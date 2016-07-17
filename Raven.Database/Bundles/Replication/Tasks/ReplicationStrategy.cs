@@ -87,6 +87,7 @@ namespace Raven.Bundles.Replication.Tasks
                 if (key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilo documents
                     return true;
             }
+
             return false;
         }
 

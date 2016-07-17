@@ -40,6 +40,7 @@
                     <button type="button" class="btn btn-danger" data-bind="click: deleteDocument" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
                 </div>
             </div>
+
             <div data-bind="ifnot: loadedDocumentName">
                 <div class="btn-group">
                     <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)"><i class="fa fa-save"></i></button>
@@ -59,9 +60,13 @@
                 <button type="button" class="btn btn-default" data-bind="text: 'Doc ' + (currentItemIndex() + 1).toLocaleString() + ' of ' + totalResultCount().toLocaleString()"></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.nextDocumentOrFirst.bind($root)" title="Go to next document (Alt+PageDown)"><i class="fa fa-caret-right"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.lastDocument.bind($root), attr:{ disabled: $root.isLastDocumentNavDisabled }" title="Go to last document (Alt+End)"><i class="fa fa-step-forward"></i></button>
-
             </div>
         </div>
+
+        <div>
+            <span class="changeNotification" data-bind="text: documentChangeNotificationMessage"></span>
+        </div>
+
         <br />
         <div class="row">
             <div class="col-md-7">

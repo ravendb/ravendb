@@ -28,6 +28,8 @@ namespace Raven.Database.Raft
 
         public ClusterManagementHttpClient Client { get; private set; }
 
+        public bool HasNonEmptyTopology => Engine.CurrentTopology.AllNodes.Any();
+
         public ClusterManager(RaftEngine engine)
         {
             Engine = engine;

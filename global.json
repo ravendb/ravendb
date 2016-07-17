@@ -4,5 +4,5 @@
     "runtime": "coreclr",
     "architecture": "x64"
   },
-  "projects": [ "Raven.Sparrow", "." ]
+  "projects": [ ".", "Raven.Sparrow" ]
 }

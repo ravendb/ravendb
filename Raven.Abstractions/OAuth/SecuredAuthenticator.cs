@@ -193,7 +193,7 @@ namespace Raven.Abstractions.OAuth
 #if !DNXCORE50
                 var handler = new WebRequestHandler();
 #else
-                var handler = new WinHttpHandler();
+                var handler = new HttpClientHandler();
 #endif
 
                 using (var httpClient = new HttpClient(handler))

@@ -226,7 +226,7 @@ namespace Raven.Tests.Raft
             }, TimeSpan.FromSeconds(15)),$"Node didn't become unstale in time, {server}"));
         }
 
-        protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true)
+        protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true, Dictionary<string, string> databaseSettings = null)
         {
             var clusterStore = clusterStores[0];
             var requestFactory = new HttpRavenRequestFactory();
@@ -235,7 +235,11 @@ namespace Raven.Tests.Raft
             {
                 Url = clusterStore.Url
             });
-            replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = enableReplication }));
+            replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration
+            {
+                EnableReplication = enableReplication,
+                DatabaseSettings = databaseSettings
+            }));
             replicationRequest.ExecuteRequest();
 
             clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
