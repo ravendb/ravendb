@@ -22,7 +22,7 @@ namespace Raven.Client.Smuggler
 
         public bool IgnoreErrorsAndContinue { get; set; }
 
-        public long? Limit { get; set; }
+        public int? Limit { get; set; }
 
         public string TransformScript { get; set; }
 
