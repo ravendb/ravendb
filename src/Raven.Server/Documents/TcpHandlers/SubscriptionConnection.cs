@@ -35,6 +35,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
 
         private static int _counter;
+        private SubscriptionConnectionState _state;
 
         public SubscriptionConnection(Stream networkStream, DocumentDatabase database, JsonOperationContext context, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
         {
@@ -80,14 +81,14 @@ namespace Raven.Server.Documents.TcpHandlers
                 });
                 return false;
             }
-            var state = _database.SubscriptionStorage.OpenSubscription(_options);
+            _state = _database.SubscriptionStorage.OpenSubscription(_options);
             var timeout = 0;
 
             while (true)
             {
                 try
                 {
-                    _options.DisposeOnDisconnect = await state.RegisterSubscriptionConnection(_options,
+                    _options.DisposeOnDisconnect = await _state.RegisterSubscriptionConnection(_options,
                         timeout);
 
                     await WriteJsonAsync(new DynamicJsonValue
@@ -159,9 +160,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             context.Write(writer, new DynamicJsonValue
                             {
-                                ["Type"] = "CoonectionStatus",
-                                ["Status"] = "None",
-                                ["FreeText"] = e.ToString()
+                                ["Type"] = "Error",
+                                ["Exception"] = e.ToString()
                             });
                         }
                     }
@@ -183,9 +183,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             {
                                 context.Write(writer, new DynamicJsonValue
                                 {
-                                    ["Type"] = "CoonectionStatus",
+                                    ["Type"] = "Error",
                                     ["Status"] = status,
-                                    ["FreeText"] = connection._options.ConnectionException.ToString()
+                                    ["Exception"] = connection._options.ConnectionException.ToString()
                                 });
                             }
                         }
@@ -289,7 +289,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     if (_buffer.Length > (_options.MaxBatchSize ?? 1024*32))
                                     {
                                         await FlushBufferToNetwork();
-                                        _database.Metrics.SubscriptionDocsPerSecond.Mark(docsToFlush);
+                                        _state.DocsRate.Mark(docsToFlush);
                                         docsToFlush = 0;
                                     }
                                     doc.Data.Dispose();
@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     });
                                     _bufferedWriter.Flush();
                                     await FlushBufferToNetwork();
-                                    _database.Metrics.SubscriptionDocsPerSecond.Mark(docsToFlush);
+                                    _state.DocsRate.Mark(docsToFlush);
                                     docsToFlush = 0;
                                 }
 

@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this);
+            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler);
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this,DatabaseShutdown);
