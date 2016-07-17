@@ -111,7 +111,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(2, database.IndexStore.CreateIndex(indexDefinition2));
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened = true))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true))
             {
                 var indexes = database
                     .IndexStore

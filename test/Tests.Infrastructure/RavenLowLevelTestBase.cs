@@ -46,7 +46,7 @@ namespace FastTests
 
             var configuration = new RavenConfiguration();
             configuration.Initialize();
-            configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened = true;
+            configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
             configuration.Core.RunInMemory = runInMemory;
             configuration.Core.DataDirectory = dataDirectory;
 

@@ -240,7 +240,7 @@ select new
                 Assert.Equal(2, database.IndexStore.CreateIndex(defTwo));
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened = true))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true))
             {
                 var indexes = database
                     .IndexStore

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Imports.Newtonsoft.Json;
@@ -23,22 +24,24 @@ namespace Raven.Server.Documents.Transformers
 
         private IndexingConfiguration _configuration;
 
-        private Transformer(int transformerId, TransformerDefinition definition, TransformerBase transformer, Logger log)
+        protected Transformer(int transformerId, TransformerDefinition definition, TransformerBase transformer, Logger log)
         {
             Definition = definition;
-            Definition.TransfomerId = transformerId;
+
+            if (Definition != null) // FaultyInMemoryTransformer can have this
+                Definition.TransfomerId = transformerId;
 
             _transformer = transformer;
             _log = log;
         }
 
-        public int TransformerId => Definition.TransfomerId;
+        public virtual int TransformerId => Definition.TransfomerId;
 
-        public string Name => Definition?.Name;
+        public virtual string Name => Definition?.Name;
 
         public readonly TransformerDefinition Definition;
 
-        public void SetLock(TransformerLockMode mode)
+        public virtual void SetLock(TransformerLockMode mode)
         {
             if (Definition.LockMode == mode)
                 return;
@@ -49,7 +52,8 @@ namespace Raven.Server.Documents.Transformers
                     return;
 
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Changing lock mode for '{Name} ({TransformerId})' from '{Definition.LockMode}' to '{mode}'.");
+                    _log.Info(
+                        $"Changing lock mode for '{Name} ({TransformerId})' from '{Definition.LockMode}' to '{mode}'.");
 
                 var oldMode = Definition.LockMode;
                 try
@@ -65,12 +69,14 @@ namespace Raven.Server.Documents.Transformers
             }
         }
 
-        private void Initialize(IndexingConfiguration configuration)
+        private void Initialize(IndexingConfiguration configuration, bool persist)
         {
             lock (_locker)
             {
                 _configuration = configuration;
-                Persist();
+
+                if (persist)
+                    Persist();
             }
         }
 
@@ -79,33 +85,40 @@ namespace Raven.Server.Documents.Transformers
             if (_configuration.RunInMemory)
                 return;
 
-            File.WriteAllText(GetPath(TransformerId, _configuration), JsonConvert.SerializeObject(Definition, Formatting.Indented, Default.Converters));
+            File.WriteAllText(GetPath(TransformerId, Name, _configuration), JsonConvert.SerializeObject(Definition, Formatting.Indented, Default.Converters));
         }
 
-        public static Transformer CreateNew(int transformerId, TransformerDefinition definition, IndexingConfiguration configuration, Logger log)
+        public static Transformer CreateNew(int transformerId, TransformerDefinition definition,
+            IndexingConfiguration configuration, Logger log)
         {
             var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
             var transformer = new Transformer(transformerId, definition, compiledTransformer, log);
-            transformer.Initialize(configuration);
+            transformer.Initialize(configuration, persist: true);
 
             return transformer;
         }
 
-        public static Transformer Open(int transformerId, IndexingConfiguration configuration, Logger log)
+        public static Transformer Open(int transformerId, string fullPath, IndexingConfiguration configuration, Logger log)
         {
-            var path = GetPath(transformerId, configuration);
-            if (File.Exists(path) == false)
-                throw new InvalidOperationException($"Could not find transformer file at '{path}'.");
+            if (File.Exists(fullPath) == false)
+                throw new InvalidOperationException($"Could not find transformer file at '{fullPath}'.");
 
-            var transformerDefinitionAsText = File.ReadAllText(path);
+            var transformerDefinitionAsText = File.ReadAllText(fullPath);
             var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(transformerDefinitionAsText);
 
-            return CreateNew(transformerId, transformerDefinition, configuration, log);
+            if (transformerDefinition == null)
+                throw new InvalidOperationException($"Could not read transformer definition from '{fullPath}'.");
+
+            var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
+            var transformer = new Transformer(transformerId, transformerDefinition, compiledTransformer, log);
+            transformer.Initialize(configuration, persist: false);
+
+            return transformer;
         }
 
-        private static string GetPath(int transformerId, IndexingConfiguration configuration)
+        private static string GetPath(int transformerId, string name, IndexingConfiguration configuration)
         {
-            var path = Path.Combine(configuration.IndexStoragePath, "Transformers", transformerId + FileExtension);
+            var path = Path.Combine(configuration.IndexStoragePath, "Transformers", $"{transformerId}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(name))}{FileExtension}");
 
             if (Platform.RunningOnPosix)
                 path = PosixHelper.FixLinuxPath(path);
@@ -113,9 +126,44 @@ namespace Raven.Server.Documents.Transformers
             return path;
         }
 
-        public TransformationScope OpenTransformationScope(DocumentDatabase documentDatabase, DocumentsOperationContext context)
+        public virtual TransformationScope OpenTransformationScope(DocumentDatabase documentDatabase, DocumentsOperationContext context)
         {
             return new TransformationScope(_transformer.TransformResults, documentDatabase, context);
+        }
+
+        public static bool TryReadIdFromFile(string name, out int transformerId)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                transformerId = -1;
+                return false;
+            }
+
+            var indexOfDot = name.IndexOf(".", StringComparison.OrdinalIgnoreCase);
+            name = name.Substring(0, indexOfDot);
+
+            return int.TryParse(name, out transformerId);
+        }
+
+        public static string TryReadNameFromFile(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            var parts = name.Split('.');
+            if (parts.Length != 3)
+                return null;
+
+            var encodedName = parts[1];
+
+            try
+            {
+                return Encoding.UTF8.GetString(Convert.FromBase64String(encodedName));
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }
