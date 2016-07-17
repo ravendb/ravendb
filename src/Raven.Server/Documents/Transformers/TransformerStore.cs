@@ -5,7 +5,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Sparrow;
 
 using Voron.Platform.Posix;
@@ -14,8 +13,6 @@ namespace Raven.Server.Documents.Transformers
 {
     public class TransformerStore : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(TransformerStore));
-
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
@@ -80,7 +77,7 @@ namespace Raven.Server.Documents.Transformers
                     if (int.TryParse(name, out transformerId) == false)
                         continue;
 
-                    var transformer = Transformer.Open(transformerId, _documentDatabase.Configuration.Indexing);
+                    var transformer = Transformer.Open(transformerId, _documentDatabase.Configuration.Indexing, _documentDatabase.LoggerSetup.GetLogger<Transformer>(_documentDatabase.Name));
                     _transformers.Add(transformer);
                 }
             }
@@ -107,7 +104,7 @@ namespace Raven.Server.Documents.Transformers
                 }
 
                 var transformerId = _transformers.GetNextIndexId();
-                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing);
+                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing, _documentDatabase.LoggerSetup.GetLogger<Transformer>(_documentDatabase.Name));
 
                 return CreateTransformerInternal(transformer, transformerId);
             }
