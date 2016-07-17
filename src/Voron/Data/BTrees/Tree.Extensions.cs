@@ -20,6 +20,12 @@ namespace Voron.Data.BTrees
             return Increment(keySlice, delta, version);
         }
 
+        public bool AddMax(string key, long value)
+        {
+            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
+            return AddMax(keySlice, value);
+        }
+
         public void Add(string key, Stream value, ushort version)
         {
             var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
@@ -38,7 +44,7 @@ namespace Voron.Data.BTrees
             Add(keySlice, value, version);
         }
 
-        public void Add( string key, byte[] value, ushort version)
+        public void Add(string key, byte[] value, ushort version)
         {
             var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
             var valueSlice = Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable);
