@@ -165,5 +165,17 @@ namespace Raven.Server.Documents.Transformers
                 return null;
             }
         }
+
+        public void Delete()
+        {
+            if (_configuration.RunInMemory)
+                return;
+
+            var path = GetPath(TransformerId, Name, _configuration);
+            if (File.Exists(path) == false)
+                return;
+
+            File.Delete(path);
+        }
     }
 }

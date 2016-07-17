@@ -171,18 +171,17 @@ namespace Raven.Server.Documents.Transformers
 
         private void DeleteTransformerInternal(int id)
         {
-            lock (_locker)
-            {
-                Transformer transformer;
-                if (_transformers.TryRemoveById(id, out transformer) == false)
-                    throw new InvalidOperationException("There is no transformer with id: " + id);
+            Transformer transformer;
+            if (_transformers.TryRemoveById(id, out transformer) == false)
+                throw new InvalidOperationException("There is no transformer with id: " + id);
 
-                _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
-                {
-                    Name = transformer.Name,
-                    Type = TransformerChangeTypes.TransformerRemoved
-                });
-            }
+            transformer.Delete();
+
+            _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
+            {
+                Name = transformer.Name,
+                Type = TransformerChangeTypes.TransformerRemoved
+            });
         }
 
         private int CreateTransformerInternal(Transformer transformer, int transformerId)

@@ -108,5 +108,34 @@ namespace FastTests.Server.Documents.Transformers
                 Assert.Equal("Transformer with id 1 is in-memory implementation of a faulty transformer", e.Message);
             }
         }
+
+        [Fact]
+        public void CanDelete()
+        {
+            var path = NewDataPath();
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var transformerId1 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                {
+                    TransformResults = "results.Select(x => new { Name = x.Name })",
+                    LockMode = TransformerLockMode.LockedIgnore,
+                    Temporary = true,
+                    Name = "Transformer1"
+                });
+
+                Assert.Equal(1, transformerId1);
+
+                var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
+                var transformerFilePath = Path.Combine(path, "Indexes", "Transformers", $"1.{encodedName}{Transformer.FileExtension}");
+
+                Assert.True(File.Exists(transformerFilePath));
+                Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
+
+                database.TransformerStore.DeleteTransformer("Transformer1");
+
+                Assert.False(File.Exists(transformerFilePath));
+                Assert.Equal(0, database.TransformerStore.GetTransformers().Count());
+            }
+        }
     }
 }
