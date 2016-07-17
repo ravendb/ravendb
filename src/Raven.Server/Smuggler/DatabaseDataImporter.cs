@@ -79,7 +79,7 @@ namespace Raven.Server.Smuggler
                                     }
                                     break;
                                 case "Attachments":
-                                    /*TODO:Should we warn here or write to log*/
+                                    result.Warnings.Add("Attachments are not supported anymore. Use RavenFS isntead. Skipping.");
                                     break;
                                 case "Indexes":
                                 case "Transformers":
@@ -117,26 +117,42 @@ namespace Raven.Server.Smuggler
                                         identitiesBuilder.FinalizeDocument();
                                         using (var reader = identitiesBuilder.CreateReader())
                                         {
-                                            string identityKey, identityValueString;
-                                            if (reader.TryGet("Key", out identityKey) == false)
+                                            try
                                             {
-                                                // TODO: Warn
+                                                string identityKey, identityValueString;
+                                                long identityValue;
+                                                if (reader.TryGet("Key", out identityKey) == false ||
+                                                    reader.TryGet("Value", out identityValueString) == false ||
+                                                    long.TryParse(identityValueString, out identityValue) == false)
+                                                {
+                                                    result.Warnings.Add($"Cannot import the following identity: '{reader}'. Skipping.");
+                                                }
+                                                else
+                                                {
+                                                    identities[identityKey] = identityValue;
+                                                }
                                             }
-                                            if (reader.TryGet("Value", out identityValueString) == false)
+                                            catch (Exception e)
                                             {
-                                                // TODO: Warn
+                                                result.Warnings.Add($"Cannot import the following identity: '{reader}'. Error: {e}. Skipping.");
                                             }
-                                            long identityValue;
-                                            if (long.TryParse(identityValueString, out identityValue) == false)
-                                            {
-                                                // TODO: Warn
-                                            }
-                                            identities[identityKey] = identityValue;
                                         }
                                     }
                                     break;
                                 default:
-                                    /*TODO:Should we warn here or write to log*/
+                                    result.Warnings.Add($"The following type is not recognized: '{operateOnType}'. Skipping.");
+                                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "Identities", parser, state))
+                                    {
+                                        builder.ReadNestedObject();
+                                        while (builder.Read() == false)
+                                        {
+                                            var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                                            if (read == 0)
+                                                throw new EndOfStreamException("Stream ended without reaching end of json content");
+                                            parser.SetBuffer(buffer, read);
+                                        }
+                                        builder.FinalizeDocument();
+                                    }
                                     break;
                             }
                             break;
