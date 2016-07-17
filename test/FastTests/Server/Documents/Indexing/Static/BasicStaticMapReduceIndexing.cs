@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -28,12 +29,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
                     // TODO arek Reduce = "results.GroupBy(x => x.City).Select(g => new { City = g.Key, Count = g.Sum(x => x.Count) })",
-                    Type = IndexType.MapReduce,
-                    Fields =
-                    {
-                        { "Location", new IndexFieldOptions { Storage = FieldStorage.Yes } },
-                        { "Count", new IndexFieldOptions { Storage = FieldStorage.Yes, Sort = SortOptions.NumericDefault } }
-                    }
                 }, database))
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
@@ -99,8 +94,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        // TODO arek - index definition persistance test
-
         [Fact]
         public async Task Static_map_reduce_index_with_multiple_outputs_per_document()
         {
@@ -122,12 +115,9 @@ select new
     Count = g.Sum(x=> (int)x.Count),
     Total = g.Sum(x=> (int)x.Total)
 }",
-                    Type = IndexType.MapReduce,
                     Fields =
                     {
-                        { "Product", new IndexFieldOptions { Storage = FieldStorage.Yes} },
-                        { "Count", new IndexFieldOptions { Storage = FieldStorage.Yes, Sort = SortOptions.NumericDefault } },
-                        { "Total", new IndexFieldOptions { Storage = FieldStorage.Yes, Sort = SortOptions.NumericDefault } }
+                        { "Product", new IndexFieldOptions { Storage = FieldStorage.Yes} }
                     }
                 }, database))
                 {
@@ -207,6 +197,85 @@ select new
                         Assert.Equal(20, (double)(LazyDoubleValue)queryResult.Results[0].Data["Total"]);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public void CanPersist()
+        {
+            var path = NewDataPath();
+            IndexDefinition defOne, defTwo;
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                defOne = new IndexDefinition
+                {
+                    Name = "Users_ByCount_GroupByLocation",
+                    Maps = {"from user in docs.Users select new { user.Location, Count = 1 }"},
+                    Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
+                };
+
+                Assert.Equal(1, database.IndexStore.CreateIndex(defOne));
+
+                defTwo = new IndexDefinition()
+                {
+                    Name = "Orders_ByCount_GroupByProduct",
+                    Maps = { @"from order in docs.Orders
+from line in ((IEnumerable<dynamic>)order.Lines)
+select new { Product = line.Product, Count = 1, Total = line.Price }" },
+                    Reduce = @"from result in results
+group result by result.Product into g
+select new
+{
+    Product = g.Key,
+    Count = g.Sum(x=> (int)x.Count),
+    Total = g.Sum(x=> (int)x.Total)
+}",
+                    Fields =
+                    {
+                        { "Product", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} }
+                    },
+                    LockMode = IndexLockMode.SideBySide
+                };
+                Assert.Equal(2, database.IndexStore.CreateIndex(defTwo));
+            }
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened = true))
+            {
+                var indexes = database
+                    .IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.IndexId)
+                    .OfType<MapReduceIndex>()
+                    .ToList();
+
+                Assert.Equal(1, indexes[0].IndexId);
+                Assert.Equal(IndexType.MapReduce, indexes[0].Type);
+                Assert.Equal("Users_ByCount_GroupByLocation", indexes[0].Name);
+                Assert.Equal(1, indexes[0].Definition.Collections.Length);
+                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(2, indexes[0].Definition.MapFields.Count);
+                Assert.Contains("Location", indexes[0].Definition.MapFields.Keys);
+                Assert.Contains("Count", indexes[0].Definition.MapFields.Keys);
+                Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
+                Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
+                Assert.True(indexes[0].Definition.Equals(defOne, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
+                Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
+
+                Assert.Equal(2, indexes[1].IndexId);
+                Assert.Equal(IndexType.MapReduce, indexes[1].Type);
+                Assert.Equal("Orders_ByCount_GroupByProduct", indexes[1].Name);
+                Assert.Equal(1, indexes[1].Definition.Collections.Length);
+                Assert.Equal("Orders", indexes[1].Definition.Collections[0]);
+                Assert.Equal(3, indexes[1].Definition.MapFields.Count);
+                Assert.Contains("Product", indexes[1].Definition.MapFields.Keys);
+                Assert.Equal(FieldIndexing.Analyzed, indexes[1].Definition.MapFields["Product"].Indexing);
+                Assert.Contains("Count", indexes[1].Definition.MapFields.Keys);
+                Assert.Contains("Total", indexes[1].Definition.MapFields.Keys);
+                Assert.Equal(IndexLockMode.SideBySide, indexes[1].Definition.LockMode);
+                Assert.Equal(IndexingPriority.Normal, indexes[1].Priority);
+                Assert.True(indexes[1].Definition.Equals(defTwo, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
+                Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
             }
         }
     }

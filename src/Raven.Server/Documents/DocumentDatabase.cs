@@ -17,6 +17,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -36,40 +37,41 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public readonly PatchDocument Patch;
 
-		private HttpJsonRequestFactory _httpJsonRequestFactory;
+        private HttpJsonRequestFactory _httpJsonRequestFactory;
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
+        private Task _transformerStoreTask;
         public bool LazyTransactionMode { get; set; }
         public DateTime LazyTransactionExpiration { get; set; }
         public TransactionOperationsMerger TxMerger;
-	    private DocumentConvention _convention;
+        private DocumentConvention _convention;
 
-	    public string Url { get; private set; }
+        public string Url { get; private set; }
 
-	    public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
             LoggerSetup loggerSetup)
         {
             Name = name;
             Configuration = configuration;
             LoggerSetup = loggerSetup;
 
-	        var hostName = Dns.GetHostName();
-	        Url = Configuration.Core.ServerUrl.ToLower()
-											  .Replace("localhost", hostName)
-											  .Replace("127.0.0.1", hostName);
+            var hostName = Dns.GetHostName();
+            Url = Configuration.Core.ServerUrl.ToLower()
+                                              .Replace("localhost", hostName)
+                                              .Replace("127.0.0.1", hostName);
 
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
+            TransformerStore = new TransformerStore(this);
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this);
+            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler);
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this,DatabaseShutdown);
-
         }
 
         public SubscriptionStorage SubscriptionStorage { get; set; }
@@ -97,45 +99,47 @@ namespace Raven.Server.Documents
 
         public IndexStore IndexStore { get; private set; }
 
+        public TransformerStore TransformerStore { get; private set; }
+
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
-	    public HttpJsonRequestFactory HttpRequestFactory => _httpJsonRequestFactory;
+        public HttpJsonRequestFactory HttpRequestFactory => _httpJsonRequestFactory;
 
-
-	    public void Initialize(HttpJsonRequestFactory httpRequestFactory, DocumentConvention convention)
-	    {
-		    _convention = convention;
-		    _httpJsonRequestFactory = httpRequestFactory;
+        public void Initialize(HttpJsonRequestFactory httpRequestFactory, DocumentConvention convention)
+        {
+            _convention = convention;
+            _httpJsonRequestFactory = httpRequestFactory;
             DocumentsStorage.Initialize();
             InitializeInternal();
         }
 
         public void Initialize(StorageEnvironmentOptions options, HttpJsonRequestFactory httpRequestFactory, DocumentConvention convention)
         {
-			_httpJsonRequestFactory = httpRequestFactory;
-			_convention = convention;
-			DocumentsStorage.Initialize(options);
+            _httpJsonRequestFactory = httpRequestFactory;
+            _convention = convention;
+            DocumentsStorage.Initialize(options);
             InitializeInternal();
         }
 
-	    public TcpConnectionInfo GetTcpInfo(string url, string apiKey)
-		{
-			using (var request = HttpRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
-				MultiDatabase.GetRootDatabaseUrl(url)),
-				HttpMethod.Get,
-				new OperationCredentials(apiKey, CredentialCache.DefaultCredentials),_convention)))
-			{
-				var result = request.ReadResponseJson();
-				return _convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
-			}
-		}
+        public TcpConnectionInfo GetTcpInfo(string url, string apiKey)
+        {
+            using (var request = HttpRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
+                MultiDatabase.GetRootDatabaseUrl(url)),
+                HttpMethod.Get,
+                new OperationCredentials(apiKey, CredentialCache.DefaultCredentials),_convention)))
+            {
+                var result = request.ReadResponseJson();
+                return _convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+            }
+        }
 
-		private void InitializeInternal()
+        private void InitializeInternal()
         {
             TxMerger.Start();
             _indexStoreTask = IndexStore.InitializeAsync();
+            _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
@@ -149,6 +153,16 @@ namespace Raven.Server.Documents
             {
                 _indexStoreTask = null;
             }
+
+            try
+            {
+                _transformerStoreTask.Wait(DatabaseShutdown);
+            }
+            finally
+            {
+                _transformerStoreTask = null;
+            }
+
             SubscriptionStorage.Initialize();
         }
 
@@ -173,6 +187,15 @@ namespace Raven.Server.Documents
                 {
                     _indexStoreTask.Wait(DatabaseShutdown);
                     _indexStoreTask = null;
+                });
+            }
+
+            if (_transformerStoreTask != null)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    _transformerStoreTask.Wait(DatabaseShutdown);
+                    _transformerStoreTask = null;
                 });
             }
 

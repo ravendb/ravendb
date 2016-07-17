@@ -50,7 +50,7 @@ namespace Raven.Abstractions.Data
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
         public RavenJObject Data { get; set; }
-        public string FreeText { get; set; }
+        public string Exception { get; set; }
     }
 
     public class SubscriptionConnectionOptions

@@ -28,6 +28,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
         [DefaultValue(null)]
+        [ConfigurationEntry("Raven/Indexing/StoragePath")]
         [ConfigurationEntry("Raven/IndexStoragePath")]
         public string IndexStoragePath
         {

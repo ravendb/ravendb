@@ -3,21 +3,25 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
+using Raven.Server.Utils.Metrics;
 using Sparrow;
 
 namespace Raven.Server.Documents
 {
-    public class SubscriptionConnectionState
+    public class SubscriptionConnectionState:IDisposable
     {
         private readonly AsyncManualResetEvent _connectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionConnectionState(SubscriptionConnectionOptions currentConnection)
+        public SubscriptionConnectionState(SubscriptionConnectionOptions currentConnection, MetricsScheduler metricsScheduler)
         {
             _currentConnection = currentConnection;
+            DocsRate = new MeterMetric(metricsScheduler);
             _connectionInUse.Set();
         }
 
         private SubscriptionConnectionOptions _currentConnection;
+        internal readonly MeterMetric DocsRate;
+
 
         public SubscriptionConnectionOptions Connection => _currentConnection;
 
@@ -72,6 +76,12 @@ namespace Raven.Server.Documents
         public void EndConnection()
         {
             _currentConnection?.CancellationTokenSource.Cancel();
+        }
+
+        public void Dispose()
+        {
+            EndConnection();
+            DocsRate?.Dispose();
         }
     }
 }

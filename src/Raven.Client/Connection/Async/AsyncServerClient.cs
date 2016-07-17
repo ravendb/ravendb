@@ -387,7 +387,7 @@ namespace Raven.Client.Connection.Async
         public async Task<string> DirectPutTransformerAsync(string name, TransformerDefinition transformerDefinition,
                                                             OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
         {
-            var requestUri = operationMetadata.Url + "/transformers/" + name;
+            var requestUri = operationMetadata.Url + "/transformers?name=" + name;
 
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Put, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
             {
@@ -649,9 +649,8 @@ namespace Raven.Client.Connection.Async
                 {
                     using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Transformer(name), HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                     {
-                        var transformerDefinitionJson = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        var value = transformerDefinitionJson.Value<RavenJObject>("Transformer");
-                        return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(value));
+                        var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        return json.Deserialize<TransformerDefinition[]>(convention)[0];
                     }
                 }
                 catch (ErrorResponseException we)
@@ -661,6 +660,7 @@ namespace Raven.Client.Connection.Async
 
                     throw;
                 }
+
             }, token);
         }
 

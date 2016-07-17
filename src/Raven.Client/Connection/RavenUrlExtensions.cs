@@ -86,7 +86,7 @@ namespace Raven.Client.Connection
 
         public static string Transformer(this string url, string transformer)
         {
-            return $"{url}/transformers/{transformer}";
+            return $"{url}/transformers?name={transformer}";
         }
 
         public static string IndexNames(this string url, int start, int pageSize)

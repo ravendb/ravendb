@@ -93,3 +93,4 @@ src/Raven.Studio/typings/**/*.d.ts
 test/FastTests/Databases/
 /test/Tryouts/Logs
 /test/FastTests/Logs
+/test/SlowTests/test-timings.xml

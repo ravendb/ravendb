@@ -92,10 +92,15 @@ namespace Raven.Server.Documents.Indexes
 
         public int CreateIndex(IndexDefinition definition)
         {
+            if (definition == null)
+                throw new ArgumentNullException(nameof(definition));
+
             lock (_locker)
             {
                 Index existingIndex;
-                ValidateIndexDefinition(definition.Name, out existingIndex);
+                var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
+                if (lockMode == IndexLockMode.LockedIgnore)
+                    return existingIndex.IndexId;
 
                 switch (GetIndexCreationOptions(definition, existingIndex))
                 {
@@ -130,10 +135,15 @@ namespace Raven.Server.Documents.Indexes
 
         public int CreateIndex(IndexDefinitionBase definition)
         {
+            if (definition == null)
+                throw new ArgumentNullException(nameof(definition));
+
             lock (_locker)
             {
                 Index existingIndex;
-                ValidateIndexDefinition(definition.Name, out existingIndex);
+                var lockMode = ValidateIndexDefinition(definition.Name, out existingIndex);
+                if (lockMode == IndexLockMode.LockedIgnore)
+                    return existingIndex.IndexId;
 
                 switch (GetIndexCreationOptions(definition, existingIndex))
                 {
@@ -220,7 +230,7 @@ namespace Raven.Server.Documents.Indexes
                        : IndexCreationOptions.Update;
         }
 
-        private void ValidateIndexDefinition(string name, out Index existingIndex)
+        private IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)
         {
             ValidateIndexName(name);
 
@@ -231,11 +241,13 @@ namespace Raven.Server.Documents.Indexes
                     case IndexLockMode.SideBySide:
                         throw new NotImplementedException(); // TODO [ppekrol]
                     case IndexLockMode.LockedIgnore:
-                        return;
+                        return IndexLockMode.LockedIgnore;
                     case IndexLockMode.LockedError:
                         throw new InvalidOperationException("Can not overwrite locked index: " + name);
                 }
             }
+
+            return IndexLockMode.Unlock;
         }
 
         private void ValidateIndexName(string name)

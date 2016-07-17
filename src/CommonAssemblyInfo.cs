@@ -21,4 +21,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDelaySign(false)]
 [assembly: NeutralResourcesLanguage("en-US")]
 
+[assembly: InternalsVisibleTo("Tests.Infrastructure")]
 [assembly: InternalsVisibleTo("FastTests")]
+[assembly: InternalsVisibleTo("SlowTests")]

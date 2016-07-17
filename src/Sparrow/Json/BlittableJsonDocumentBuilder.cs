@@ -49,6 +49,14 @@ namespace Sparrow.Json
             });
         }
 
+        public void ReadNestedObject()
+        {
+            _continuationState.Push(new BuildingState
+            {
+                State = ContinuationState.ReadObject
+            });
+        }
+
         public int SizeInBytes => _stream.SizeInBytes;
 
         public void Dispose()

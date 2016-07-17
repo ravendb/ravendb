@@ -314,13 +314,13 @@ namespace Raven.Client.Document
                                     AfterBatch(incomingBatch.Count);
                                     incomingBatch.Clear();
                                     break;
-                                case SubscriptionConnectionServerMessage.MessageType.CoonectionStatus:
+                                case SubscriptionConnectionServerMessage.MessageType.Error:
                                     switch (receivedMessage.Status)
                                     {
                                         case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
-                                            throw new SubscriptionClosedException(receivedMessage.FreeText??string.Empty);
+                                            throw new SubscriptionClosedException(receivedMessage.Exception??string.Empty);
                                         default:
-                                            throw new Exception($"Connection terminated by server. Exception: {receivedMessage.FreeText??"None"}");
+                                            throw new Exception($"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
                                     }
                                     
                                 default:

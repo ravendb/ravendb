@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (anonymousObjectCreationExpressionSyntax == null)
                 return node;
 
-            Fields = ExtractFields(anonymousObjectCreationExpressionSyntax);
+            Fields = RewritersHelper.ExtractFields(anonymousObjectCreationExpressionSyntax);
 
             return node;
         }
@@ -38,35 +38,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (anonymousObjectCreationExpressionSyntax == null)
                 return node;
 
-            Fields = ExtractFields(anonymousObjectCreationExpressionSyntax);
+            Fields = RewritersHelper.ExtractFields(anonymousObjectCreationExpressionSyntax);
 
             return node;
-        }
-
-        private HashSet<string> ExtractFields(AnonymousObjectCreationExpressionSyntax anonymousObjectCreationExpressionSyntax)
-        {
-            var fields = new HashSet<string>();
-            for (var i = 0; i < anonymousObjectCreationExpressionSyntax.Initializers.Count; i++)
-            {
-                var initializer = anonymousObjectCreationExpressionSyntax.Initializers[i];
-                string name;
-                if (initializer.NameEquals != null)
-                {
-                    name = initializer.NameEquals.Name.Identifier.Text;
-                }
-                else
-                {
-                    var memberAccess = initializer.Expression as MemberAccessExpressionSyntax;
-                    if (memberAccess == null)
-                        throw new NotSupportedException($"Cannot extract field name from: {initializer}");
-
-                    name = memberAccess.Name.Identifier.Text;
-                }
-
-                fields.Add(name);
-            }
-
-            return fields;
         }
     }
 }
