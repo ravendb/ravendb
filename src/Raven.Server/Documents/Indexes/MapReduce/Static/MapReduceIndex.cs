@@ -6,17 +6,22 @@ using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition>
     {
-        private readonly StaticIndexBase _compiled;
+        internal readonly StaticIndexBase _compiled;
         private readonly Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper>();
+
+        private int _maxNumberOfIndexOutputs;
+        private int _actualMaxNumberOfIndexOutputs;
 
         private MapReduceIndex(int indexId, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.MapReduce, definition)
@@ -24,19 +29,52 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             _compiled = compiled;
         }
 
-        public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
+        protected override void InitializeInternal()
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.GroupByFields);
-            var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
+            _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument;
+        }
+
+        public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
+        {
+            var instance = CreateIndexInstance(indexId, definition);
             instance.Initialize(documentDatabase);
 
             return instance;
         }
 
+        public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            var definition = StaticMapIndexDefinition.Load(environment);
+            var instance = CreateIndexInstance(indexId, definition);
+
+            instance.Initialize(environment, documentDatabase);
+
+            return instance;
+        }
+
+        private static MapReduceIndex CreateIndexInstance(int indexId, IndexDefinition definition)
+        {
+            var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
+
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields);
+            var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
+
+            return instance;
+        }
+
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
+        {
+            return new IIndexingWork[]
+            {
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
+                new ReduceMapResultsOfStaticIndex(_compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext), 
+            };
+        }
+
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
         public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -50,6 +88,33 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             wrapper.InitializeForEnumeration(mapResults, indexContext);
 
             PutMapResults(key, wrapper, indexContext);
+        }
+
+        public override int? ActualMaxNumberOfIndexOutputs
+        {
+            get
+            {
+                if (_actualMaxNumberOfIndexOutputs <= 1)
+                    return null;
+
+                return _actualMaxNumberOfIndexOutputs;
+            }
+        }
+        public override int MaxNumberOfIndexOutputs => _maxNumberOfIndexOutputs;
+        protected override bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
+        {
+            if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
+                return false;
+
+            if (Definition.IndexDefinition.MaxIndexOutputsPerDocument != null)
+            {
+                // user has specifically configured this value, but we don't trust it.
+
+                if (_actualMaxNumberOfIndexOutputs < numberOfAlreadyProducedOutputs)
+                    _actualMaxNumberOfIndexOutputs = numberOfAlreadyProducedOutputs;
+            }
+
+            return true;
         }
 
         private class AnonymusObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>

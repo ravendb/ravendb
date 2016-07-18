@@ -4,38 +4,42 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Smuggler
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/smuggler", "POST")]
+        [RavenAction("/databases/*/smuggler/export", "POST")]
         public Task PostExport()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                new DatabaseDataExporter(Database)
                 {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(context.GetLazyString("Docs"));
-                    int? maxNumberOfDocumentsToExport = null;
-                    var documents = Database.DocumentsStorage.GetDocumentsAfter(context, 0, 0, maxNumberOfDocumentsToExport ?? int.MaxValue);
-                    writer.WriteDocuments(context, documents, false);
-
-                    writer.WriteEndObject();
-                }
+                    Limit = GetIntValueQueryString("limit", required: false)
+                }.Export(context, ResponseBodyStream());
             }
-
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/smuggler/import", "POST")]
+        public async Task PostImport()
+        {
+            // var fileName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("fileName");
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            //TODO: detect gzip or not based on query string param
+            using (var stream = new GZipStream(HttpContext.Request.Body, CompressionMode.Decompress))
+            {
+                await new DatabaseDataImporter(Database).Import(context, stream);
+            }
         }
     }
 }

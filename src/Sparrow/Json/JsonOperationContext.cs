@@ -42,7 +42,7 @@ namespace Sparrow.Json
             CachedProperties = new CachedProperties(this);
         }
 
-        private byte[] GetParsingBuffer()
+        public byte[] GetParsingBuffer()
         {
             if (_parsingBuffer == null)
                 _parsingBuffer = new byte[4096];
@@ -489,13 +489,13 @@ namespace Sparrow.Json
                 _parser = new UnmanagedJsonParser(context, _state, "parse/multi");
             }
 
-			public BlittableJsonReaderObject ParseToMemory(string debugTag = null) => 
-				Parse(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
+            public BlittableJsonReaderObject ParseToMemory(string debugTag = null) => 
+                Parse(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
 
-	        public Task<BlittableJsonReaderObject> ParseToMemoryAsync(string debugTag = null) => 
-				ParseAsync(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
+            public Task<BlittableJsonReaderObject> ParseToMemoryAsync(string debugTag = null) => 
+                ParseAsync(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
 
-	        public Task<int> ReadAsync(byte[] buffer, int offset, int count)
+            public Task<int> ReadAsync(byte[] buffer, int offset, int count)
             {
                 if (_parser.BufferOffset != _parser.BufferSize)
                     return Task.FromResult(_parser.ReadBuffer(buffer, offset, count));
@@ -549,40 +549,40 @@ namespace Sparrow.Json
                 }
             }
 
-			public BlittableJsonReaderObject Parse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
-			{
-				var writer = new BlittableJsonDocumentBuilder(_context, mode, debugTag, _parser, _state);
-				try
-				{
-					writer.ReadObject();
-					_context.CachedProperties.NewDocument();
-					while (true)
-					{
-						if (_parser.BufferOffset == _parser.BufferSize)
-						{
-							var read = _stream.Read(_buffer, 0, _buffer.Length);
-							if (read == 0)
-								throw new EndOfStreamException("Stream ended without reaching end of json content");
-							_parser.SetBuffer(_buffer, read);
-						}
-						else
-						{
-							_parser.SetBuffer(new ArraySegment<byte>(_buffer, _parser.BufferOffset, _parser.BufferSize));
-						}
-						if (writer.Read())
-							break;
-					}
-					writer.FinalizeDocument();
-					return writer.CreateReader();
-				}
-				catch (Exception)
-				{
-					writer.Dispose();
-					throw;
-				}
-			}
+            public BlittableJsonReaderObject Parse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
+            {
+                var writer = new BlittableJsonDocumentBuilder(_context, mode, debugTag, _parser, _state);
+                try
+                {
+                    writer.ReadObject();
+                    _context.CachedProperties.NewDocument();
+                    while (true)
+                    {
+                        if (_parser.BufferOffset == _parser.BufferSize)
+                        {
+                            var read = _stream.Read(_buffer, 0, _buffer.Length);
+                            if (read == 0)
+                                throw new EndOfStreamException("Stream ended without reaching end of json content");
+                            _parser.SetBuffer(_buffer, read);
+                        }
+                        else
+                        {
+                            _parser.SetBuffer(new ArraySegment<byte>(_buffer, _parser.BufferOffset, _parser.BufferSize));
+                        }
+                        if (writer.Read())
+                            break;
+                    }
+                    writer.FinalizeDocument();
+                    return writer.CreateReader();
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
+            }
 
-			public void Dispose()
+            public void Dispose()
             {
                 _parser?.Dispose();
             }

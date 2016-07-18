@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -16,6 +18,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -39,8 +42,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
-        public bool LazyTransactionMode { get; set; }
-        public DateTime LazyTransactionExpiration { get; set; }
+        private Task _transformerStoreTask;
         public TransactionOperationsMerger TxMerger;
 
 	    public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
@@ -53,14 +55,14 @@ namespace Raven.Server.Documents
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
+            TransformerStore = new TransformerStore(this);
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this);
+            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler);
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this,DatabaseShutdown);
-
         }
 
         public SubscriptionStorage SubscriptionStorage { get; set; }
@@ -88,6 +90,8 @@ namespace Raven.Server.Documents
 
         public IndexStore IndexStore { get; private set; }
 
+        public TransformerStore TransformerStore { get; private set; }
+
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
@@ -99,7 +103,7 @@ namespace Raven.Server.Documents
         }
 
         public void Initialize(StorageEnvironmentOptions options)
-        {
+        {			
 			DocumentsStorage.Initialize(options);
             InitializeInternal();
         }
@@ -109,6 +113,7 @@ namespace Raven.Server.Documents
         {
             TxMerger.Start();
             _indexStoreTask = IndexStore.InitializeAsync();
+            _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
 			DocumentReplicationLoader.Initialize();
             DocumentTombstoneCleaner.Initialize();
@@ -122,6 +127,16 @@ namespace Raven.Server.Documents
             {
                 _indexStoreTask = null;
             }
+
+            try
+            {
+                _transformerStoreTask.Wait(DatabaseShutdown);
+            }
+            finally
+            {
+                _transformerStoreTask = null;
+            }
+
             SubscriptionStorage.Initialize();
         }
 
@@ -146,6 +161,15 @@ namespace Raven.Server.Documents
                 {
                     _indexStoreTask.Wait(DatabaseShutdown);
                     _indexStoreTask = null;
+                });
+            }
+
+            if (_transformerStoreTask != null)
+            {
+            exceptionAggregator.Execute(() =>
+            {
+                    _transformerStoreTask.Wait(DatabaseShutdown);
+                    _transformerStoreTask = null;
                 });
             }
 
@@ -259,5 +283,15 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<StorageEnvironment> GetAllStoragesEnvironment()
+        {
+            // TODO :: more storage environments ?
+            yield return DocumentsStorage.Environment;
+            yield return SubscriptionStorage.Environment();
+            foreach (var index in IndexStore.GetIndexes())
+            {
+                yield return index._indexStorage.Environment();
+    }
+        }
     }
 }

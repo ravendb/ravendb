@@ -53,6 +53,37 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/subscriptions/running", "GET",
+            "/databases/{databaseName:string}/subscriptions/running")]
+        public Task GetRunningSubscriptions()
+        {
+
+            var start = GetStart();
+            var take = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                HttpContext.Response.StatusCode = 200;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    Database.SubscriptionStorage.WriteRunningSubscriptions(writer, context, start, take);
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/subscriptions/drop", "POST",
+            "/databases/{databaseName:string}/subscriptions/drop?id={subscriptionId:long}")]
+        public Task DropSubscriptionConnection()
+        {
+            var subscriptionId = GetLongQueryString("id").Value;
+            HttpContext.Response.StatusCode = 200;
+            Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId);
+            return Task.CompletedTask;
+        }
 
         [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions?start={start:int}&pageSize={pageSize:int}")]
         public Task Get()
@@ -63,12 +94,11 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                var subscriptionTableValues = Database.SubscriptionStorage.GetSubscriptions(start, take);
                 HttpContext.Response.StatusCode = 200;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    Database.SubscriptionStorage.WriteSubscriptionTableValues(writer, context, subscriptionTableValues);
+                    Database.SubscriptionStorage.WriteSubscriptionTableValues(writer, context, start, take);
                 }
             }
             return Task.CompletedTask;

@@ -4,8 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
+using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
-
+using SlowTests.Core.Utils.Transformers;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -16,7 +17,7 @@ namespace SlowTests.Core.Indexing
 {
     public class IndexDefinitionMethods : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanUseMetadataFor()
         {
             using (var store = await GetDocumentStore())
@@ -121,6 +122,36 @@ namespace SlowTests.Core.Indexing
                     Assert.Equal("Post3", posts[0].Comments[0].Title);
                     Assert.Equal("Post2", posts[0].Comments[0].Comments[0].Title);
                     Assert.Equal("Post1", posts[0].Comments[0].Comments[0].Comments[0].Title);
+                }
+            }
+        }
+
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task CreateAndQuerySimpleIndexWithReferencedDocuments()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                new Companies_WithReferencedEmployees().Execute(store);
+                new CompanyEmployeesTransformer().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { Id = "employees/1", LastName = "Last Name 1" });
+                    session.Store(new Employee { Id = "employees/2", LastName = "Last Name 2" });
+                    session.Store(new Employee { Id = "employees/3", LastName = "Last Name 3" });
+                    session.Store(new Company { Name = "Company", EmployeesIds = new List<string> { "employees/1", "employees/2", "employees/3" } });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var companies = session.Query<Company, Companies_WithReferencedEmployees>()
+                        .TransformWith<CompanyEmployeesTransformer, Companies_WithReferencedEmployees.CompanyEmployees>()
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    Assert.Equal("Company", companies[0].Name);
+                    Assert.NotNull(companies[0].Employees);
+                    Assert.Equal("Last Name 1", companies[0].Employees[0]);
+                    Assert.Equal("Last Name 2", companies[0].Employees[1]);
+                    Assert.Equal("Last Name 3", companies[0].Employees[2]);
                 }
             }
         }

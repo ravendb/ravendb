@@ -16,7 +16,7 @@ namespace Sparrow.Json
         private readonly IJsonParser _reader;
         private readonly JsonParserState _state;
         private readonly UnmanagedWriteBuffer _stream;
-        private UnmanagedBuffersPool.AllocatedMemoryData _buffer, _compressionBuffer;
+        private UnmanagedBuffersPool.AllocatedMemoryData _compressionBuffer;
         private int _position;
         private WriteToken _writeToken;
         private readonly string _debugTag;
@@ -49,15 +49,18 @@ namespace Sparrow.Json
             });
         }
 
+        public void ReadNestedObject()
+        {
+            _continuationState.Push(new BuildingState
+            {
+                State = ContinuationState.ReadObject
+            });
+        }
+
         public int SizeInBytes => _stream.SizeInBytes;
 
         public void Dispose()
         {
-            if (_buffer != null)
-            {
-                _context.ReturnMemory(_buffer);
-                _buffer = null;
-            }
             if (_compressionBuffer != null)
             {
                 _context.ReturnMemory(_compressionBuffer);
@@ -571,8 +574,9 @@ namespace Sparrow.Json
                      // the verbatim string
                      str.Size - sizeof(int) * 2;
             var shouldCompress =
-                _state.CompressedSize != null &&
-                ((state & UsageMode.CompressStrings) == UsageMode.CompressStrings && size > 128 || (state & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings);
+                _state.CompressedSize != null ||
+                (((state & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128))
+                || ((state & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings) && (size <= 128);
             if (maxGoodCompressionSize > 0 && shouldCompress)
             {
                 Compressed++;
@@ -585,6 +589,7 @@ namespace Sparrow.Json
                     // we already have compressed data here
                     compressedSize = _state.CompressedSize.Value;
                     compressionBuffer = _state.StringBuffer;
+                    _state.CompressedSize = null;
                 }
                 else
                 {
@@ -616,7 +621,8 @@ namespace Sparrow.Json
                 compressedSize = _context.Lz4.Encode64(str.Buffer,
                     compressionBuffer,
                     str.Size,
-                    maxGoodCompressionSize);
+                    maxGoodCompressionSize,
+                    acceleration: CalculateCompressionAcceleration(str.Size));
             }
             else
             {
@@ -626,6 +632,11 @@ namespace Sparrow.Json
                     maxGoodCompressionSize);
             }
             return compressionBuffer;
+        }
+
+        private static int CalculateCompressionAcceleration(int size)
+        {
+            return (int)Math.Log(size, 2);
         }
 
 

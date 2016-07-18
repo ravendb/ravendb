@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
@@ -16,14 +17,15 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
 {
     public class RavenAwsGlacierClient : RavenAwsClient
     {
-        public RavenAwsGlacierClient(string awsAccessKey, string awsSecretKey, string awsRegionEndpoint)
-            : base(awsAccessKey, awsSecretKey, awsRegionEndpoint)
+        public RavenAwsGlacierClient(string awsAccessKey, string awsSecretKey, string awsRegionName)
+            : base(awsAccessKey, awsSecretKey, awsRegionName)
         {
         }
 
-        public string UploadArchive(string glacierVaultName, Stream stream, string archiveDescription, int timeoutInSeconds)
+        public async Task<string> UploadArchive(string glacierVaultName, Stream stream, string archiveDescription, int timeoutInSeconds)
         {
-            var url = string.Format("{0}/-/vaults/{1}/archives", GetUrl(null), glacierVaultName);
+            await ValidateAwsRegion();
+            var url = $"{GetUrl(null)}/-/vaults/{glacierVaultName}/archives";
 
             var now = SystemTime.UtcNow;
 
@@ -48,7 +50,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
-            var response = AsyncHelpers.RunSync(() => client.PostAsync(url, content));
+            var response = await client.PostAsync(url, content);
             if (response.IsSuccessStatusCode)
                 return ReadArchiveId(response);
 
@@ -59,7 +61,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
 
         public override string GetHost(string glacierVaultName)
         {
-            return string.Format("glacier.{0}.amazonaws.com", AwsRegion);
+            return $"glacier.{AwsRegion}.amazonaws.com";
         }
 
         private static string ReadArchiveId(HttpResponseMessage response)

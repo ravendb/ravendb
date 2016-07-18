@@ -24,6 +24,8 @@ namespace Voron.Data.Tables
 
         public SchemaIndexDef Key => _pk;
 
+        public bool AllowNoIndexesOrPrimaryKey { get; set; }
+
         public Dictionary<string, SchemaIndexDef> Indexes => _indexes;
         public Dictionary<string, FixedSizeSchemaIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
 
@@ -140,7 +142,7 @@ namespace Voron.Data.Tables
         /// </summary>
         public void Create(Transaction tx, string name)
         {
-            if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
+            if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0 && AllowNoIndexesOrPrimaryKey == false)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
             var tableTree = tx.CreateTree(name);

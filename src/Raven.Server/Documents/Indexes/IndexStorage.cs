@@ -311,12 +311,12 @@ namespace Raven.Server.Documents.Indexes
                         var e = context.GetLazyString(error.Error);
 
                         var tvb = new TableValueBuilder
-                                      {
-                                          { (byte*)&ticksBigEndian, sizeof(long) },
-                                          { document.Buffer, document.Size },
-                                          { action.Buffer, action.Size },
-                                          { e.Buffer, e.Size }
-                                      };
+                        {
+                            {(byte*)&ticksBigEndian, sizeof(long)},
+                            {document.Buffer, document.Size},
+                            {action.Buffer, action.Size},
+                            {e.Buffer, e.Size}
+                        };
 
                         table.Insert(tvb);
                     }
@@ -502,6 +502,11 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice LastIndexingTimeSlice = Slice.From(StorageEnvironment.LabelsContext, "LastIndexingTime", ByteStringType.Immutable);
 
             public static readonly Slice PrioritySlice = Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable);
+        }
+
+        public StorageEnvironment Environment()
+        {
+            return _environment;
         }
     }
 }

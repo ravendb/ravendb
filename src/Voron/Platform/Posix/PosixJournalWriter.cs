@@ -28,7 +28,7 @@ namespace Voron.Platform.Posix
             _filename = filename;
 
 
-            _fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | OpenFlags.O_DIRECT | OpenFlags.O_CREAT,
+            _fd = Syscall.open(filename, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             if (_fd == -1)
@@ -126,6 +126,22 @@ namespace Voron.Platform.Posix
                 position += result;
             }
             return true;
+        }
+
+        public void Truncate(long size)
+        {
+            var result = Syscall.ftruncate(_fd, size);
+            if (result == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
+
+            if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(_filename) == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
         }
     }
 }

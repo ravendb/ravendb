@@ -217,7 +217,7 @@ namespace Voron.Impl.Journal
 
             ValidateHeader(current, LastTransactionHeader);
 
-            if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
+            if ((current->TxMarker & TransactionMarker.Commit) != TransactionMarker.Commit)
             {
                 // uncommitted transaction, probably
                 RequireHeaderUpdate = true;
@@ -257,13 +257,13 @@ namespace Voron.Impl.Journal
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
             // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
-            byte* dataPtr = _pager.AcquirePagePointer(null, _readingPage) + (current->Compressed == true ? sizeof(TransactionHeader) : 0);
+            byte* dataPtr = _pager.AcquirePagePointer(null, _readingPage) + (current->Compressed ? sizeof(TransactionHeader) : 0);
 
-            ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->Compressed == true ? current->CompressedSize : current->UncompressedSize);
+            ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->Compressed ? current->CompressedSize : current->UncompressedSize);
             if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Invalid hash signature for transaction " + current->TransactionId, null);
+                options.InvokeRecoveryError(this, "Invalid hash signature for transaction: " + current->ToString(), null);
 
                 return false;
             }

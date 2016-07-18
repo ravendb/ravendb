@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.PeriodicExport
         /// <summary>
         /// Amazon Web Services (AWS) region.
         /// </summary>
-        public string AwsRegionEndpoint { get; set; }
+        public string AwsRegionName { get; set; }
 
         /// <summary>
         /// Microsoft Azure Storage Container name.

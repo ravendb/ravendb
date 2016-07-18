@@ -174,6 +174,7 @@ namespace Voron.Impl
             _txHeader->LastPageNumber = -1;
             _txHeader->PageCount = -1;
             _txHeader->Hash = 0;
+            _txHeader->TimeStampTicksUtc = DateTime.UtcNow.Ticks;
             _txHeader->TxMarker = TransactionMarker.None;
             _txHeader->Compressed = false;
             _txHeader->CompressedSize = 0;
@@ -546,7 +547,6 @@ namespace Voron.Impl
             {
                 FreePage(_pagesToFreeOnCommit.Pop());
             }
-
             _txHeader->LastPageNumber = _state.NextPageNumber - 1;
             _txHeader->PageCount = _allocatedPagesInTransaction;
             _txHeader->OverflowPageCount = _overflowPagesInTransaction;

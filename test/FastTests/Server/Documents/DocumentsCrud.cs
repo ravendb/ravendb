@@ -271,9 +271,9 @@ namespace FastTests.Server.Documents
             options.OwnsPagers = true;
 
             _configuration = new RavenConfiguration();
-            _configuration.Core.RunInMemory = true;
             _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
             _configuration.Initialize();
+            _configuration.Core.RunInMemory = true;
 
             _documentDatabase = new DocumentDatabase("test", _configuration, new MetricsScheduler(), new LoggerSetup(Path.GetTempPath(),LogMode.None));
             _documentDatabase.Initialize(options);

@@ -1,19 +1,29 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Raven.Server.Documents.Transformers;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class StaticIndexDocsEnumerator : IIndexedDocumentsEnumerator
     {
+        private readonly EnumerationType _enumerationType;
         private readonly IEnumerable _resultsOfCurrentDocument;
         private readonly IEnumerator<Document> _docsEnumerator;
 
-        public StaticIndexDocsEnumerator(IEnumerable<Document> docs, IndexingFunc func, string collection)
+        public StaticIndexDocsEnumerator(IEnumerable<Document> docs, IndexingFunc func, string collection, EnumerationType enumerationType)
         {
+            _enumerationType = enumerationType;
             _docsEnumerator = docs.GetEnumerator();
             _resultsOfCurrentDocument = func(new DynamicIteratonOfCurrentDocumentWrapper(this));
 
-            CurrentIndexingScope.Current.SourceCollection = collection;
+            switch (enumerationType)
+            {
+                case EnumerationType.Index:
+                    CurrentIndexingScope.Current.SourceCollection = collection;
+                    break;
+                case EnumerationType.Transformer:
+                    break;
+            }
         }
 
         public bool MoveNext(out IEnumerable resultsOfCurrentDocument)
@@ -21,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static
             Current?.Data.Dispose();
 
             if (_docsEnumerator.MoveNext() == false)
-            { 
+            {
                 Current = null;
                 resultsOfCurrentDocument = null;
 
@@ -40,6 +50,12 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _docsEnumerator.Dispose();
             Current?.Data?.Dispose();
+        }
+
+        public enum EnumerationType
+        {
+            Index,
+            Transformer
         }
 
         private class DynamicIteratonOfCurrentDocumentWrapper : IEnumerable<DynamicDocumentObject>
@@ -82,7 +98,16 @@ namespace Raven.Server.Documents.Indexes.Static
                     _dynamicDocument.Set(_seen);
 
                     Current = _dynamicDocument;
-                    CurrentIndexingScope.Current.Source = _dynamicDocument;
+
+                    switch (_inner._enumerationType)
+                    {
+                        case EnumerationType.Index:
+                            CurrentIndexingScope.Current.Source = _dynamicDocument;
+                            break;
+                        case EnumerationType.Transformer:
+                            CurrentTransformationScope.Current.Source = _dynamicDocument;
+                            break;
+                    }
 
                     return true;
                 }

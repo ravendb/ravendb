@@ -62,6 +62,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
 
+        public static readonly Func<BlittableJsonReaderObject, TransformerDefinition> TransformerDefinition = GenerateJsonDeserializationRoutine<TransformerDefinition>();
         public static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try
@@ -102,10 +103,8 @@ namespace Raven.Server.Json
                 type == typeof(long) ||
                 type == typeof(int) ||
                 type == typeof(double) ||
-                type == typeof(DateTime) ||
-                type == typeof(DateTimeOffset) ||
-                type == typeof(TimeSpan) ||
-                type.GetTypeInfo().IsEnum)
+                type.GetTypeInfo().IsEnum ||
+                type == typeof(DateTime))
             {
                 var value = GetParameter(propertyInfo.PropertyType, vars);
 

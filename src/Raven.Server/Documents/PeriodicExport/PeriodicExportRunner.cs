@@ -8,7 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
@@ -40,7 +42,6 @@ namespace Raven.Server.Documents.PeriodicExport
         public readonly TimeSpan FullExportInterval;
         public readonly TimeSpan IncrementalInterval;
 
-        private readonly object _locker = new object();
         private int? _exportLimit;
 
         //interval can be 2^32-2 milliseconds at most
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
                 if (IsValidTimespanForTimer(IncrementalInterval))
                 {
-                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastExportAt;
+                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastExportAt ;
                     var nextExport = timeSinceLastExport >= IncrementalInterval ? TimeSpan.Zero : IncrementalInterval - timeSinceLastExport;
 
                     _incrementalExportTimer = new Timer(TimerCallback, false, nextExport, IncrementalInterval);
@@ -152,16 +153,158 @@ namespace Raven.Server.Documents.PeriodicExport
 
         private void TimerCallback(object fullExport)
         {
-            if (_database.DatabaseShutdown.IsCancellationRequested)
+            if (_runningTask != null || _database.DatabaseShutdown.IsCancellationRequested)
                 return;
 
-            if (Monitor.TryEnter(_locker) == false)
+            // we have shared lock for both incremental and full backup.
+            lock (this)
+            {
+                if (_runningTask != null || _database.DatabaseShutdown.IsCancellationRequested)
+                    return;
+                _runningTask = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await RunPeriodicExport((bool)fullExport);
+                    }
+                    finally
+                    {
+                        lock (this)
+                        {
+                            _runningTask = null;
+                        }
+                    }
+                });
+            }
+        }
+
+        private async Task RunPeriodicExport(bool fullExport)
+        {
+            if (_cancellationToken.IsCancellationRequested)
                 return;
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Exporting a {(fullExport ? "full" : "incremental")} export");
 
             try
             {
-                _runningTask = RunPeriodicExport((bool)fullExport);
-                _runningTask.Wait();
+                DocumentsOperationContext context;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                {
+                    var sp = Stopwatch.StartNew();
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        if (fullExport == false)
+                        {
+                            var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                            // No-op if nothing has changed
+                            if (currentLastEtag == _status.LastDocsEtag)
+                                return;
+                        }
+
+                        var exportDirectory = _configuration.LocalFolderName ?? Path.Combine(_database.Configuration.Core.DataDirectory, "PeriodicExport-Temp");
+                        if (Directory.Exists(exportDirectory) == false)
+                            Directory.CreateDirectory(exportDirectory);
+
+                        var dataExporter = new DatabaseDataExporter(_database)
+                        {
+                            Limit = _exportLimit,
+                        };
+
+                        string exportFilePath;
+                        var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
+                        string fileName;
+                        if (fullExport)
+                        {
+                            // create filename for full export
+                            fileName = $"{now}.ravendb-full-export";
+                            exportFilePath = Path.Combine(exportDirectory, fileName);
+                            if (File.Exists(exportFilePath))
+                            {
+                                var counter = 1;
+                                while (true)
+                                {
+                                    fileName = $"{now} - {counter}.ravendb-full-export";
+                                    exportFilePath = Path.Combine(exportDirectory, fileName);
+
+                                    if (File.Exists(exportFilePath) == false)
+                                        break;
+                                    counter++;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // create filename for incremental export
+                            fileName = $"{now}-0.ravendb-incremental-export";
+                            exportFilePath = Path.Combine(exportDirectory, fileName);
+                            if (File.Exists(exportFilePath))
+                            {
+                                var counter = 1;
+                                while (true)
+                                {
+                                    fileName = $"{now}-{counter}.ravendb-incremental-export";
+                                    exportFilePath = Path.Combine(exportDirectory, fileName);
+
+                                    if (File.Exists(exportFilePath) == false)
+                                        break;
+                                    counter++;
+                                }
+                            }
+
+                            dataExporter.StartDocsEtag = _status.LastDocsEtag;
+                            if (dataExporter.StartDocsEtag == null)
+                            {
+                                IncrementalExport.ReadLastEtagsFromFile(exportDirectory, context, dataExporter);
+                            }
+                        }
+
+                        var exportResult = dataExporter.Export(context, exportFilePath);
+
+                        if (fullExport == false)
+                        {
+                            // No-op if nothing has changed
+                            if (exportResult.LastDocsEtag == _status.LastDocsEtag)
+                            {
+                                Log.Info("Periodic export returned prematurely, nothing has changed since last export");
+                                return;
+                            }
+                        }
+
+                        try
+                        {
+                            await UploadToServer(exportFilePath, fileName, fullExport);
+                        }
+                        finally
+                        {
+                            // if user did not specify local folder we delete temporary file.
+                            if (string.IsNullOrEmpty(_configuration.LocalFolderName))
+                            {
+                                IOExtensions.DeleteFile(exportFilePath);
+                            }
+                        }
+
+                        _status.LastDocsEtag = exportResult.LastDocsEtag;
+                        if (fullExport)
+                            _status.LastFullExportAt = SystemTime.UtcNow;
+                        else
+                            _status.LastExportAt = SystemTime.UtcNow;
+
+                        WriteStatus();
+                    }
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Successfully exported {(fullExport ? "full" : "incremental")} export in {sp.ElapsedMilliseconds:#,#;;0} ms.");
+
+                    _exportLimit = null;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // shutting down, probably
+            }
+            catch (ObjectDisposedException)
+            {
+                // shutting down, probably
             }
             catch (Exception e)
             {
@@ -177,130 +320,6 @@ namespace Raven.Server.Documents.PeriodicExport
                     UniqueKey = "Periodic Export Error",
                 });
             }
-            finally
-            {
-                _runningTask = null;
-                Monitor.Exit(_locker);
-            }
-        }
-
-        private async Task RunPeriodicExport(bool fullExport)
-        {
-            if (_cancellationToken.IsCancellationRequested)
-                return;
-
-            if (Log.IsDebugEnabled)
-                Log.Debug($"Exporting a {(fullExport ? "full" : "incremental")} export");
-
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                var sp = Stopwatch.StartNew();
-                using (var tx = context.OpenReadTransaction())
-                {
-                    if (fullExport == false)
-                    {
-                        var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        // No-op if nothing has changed
-                        if (currentLastEtag == _status.LastDocsEtag)
-                            return;
-                    }
-
-                    var exportDirectory = _configuration.LocalFolderName ?? Path.Combine(_database.Configuration.Core.DataDirectory, "PeriodicExport-Temp");
-                    if (Directory.Exists(exportDirectory) == false)
-                        Directory.CreateDirectory(exportDirectory);
-
-                    var dataExporter = new DatabaseDataExporter(_database)
-                    {
-                        Limit = _exportLimit,
-                    };
-
-                    string exportFilePath;
-                    var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
-                    string fileName;
-                    if (fullExport)
-                    {
-                        // create filename for full export
-                        fileName = $"{now}.ravendb-full-export";
-                        exportFilePath = Path.Combine(exportDirectory, fileName);
-                        if (File.Exists(exportFilePath))
-                        {
-                            var counter = 1;
-                            while (true)
-                            {
-                                fileName = $"{now} - {counter}.ravendb-full-export";
-                                exportFilePath = Path.Combine(exportDirectory, fileName);
-
-                                if (File.Exists(exportFilePath) == false)
-                                    break;
-                                counter++;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // create filename for incremental export
-                        fileName = $"{now}-0.ravendb-incremental-export";
-                        exportFilePath = Path.Combine(exportDirectory, fileName);
-                        if (File.Exists(exportFilePath))
-                        {
-                            var counter = 1;
-                            while (true)
-                            {
-                                fileName = $"{now}-{counter}.ravendb-incremental-export";
-                                exportFilePath = Path.Combine(exportDirectory, fileName);
-
-                                if (File.Exists(exportFilePath) == false)
-                                    break;
-                                counter++;
-                            }
-                        }
-
-                        dataExporter.StartDocsEtag = _status.LastDocsEtag;
-                        if (dataExporter.StartDocsEtag == null)
-                        {
-                            IncrementalExport.ReadLastEtagsFromFile(exportDirectory, context, dataExporter);
-                        }
-                    }
-
-                    var exportResult = dataExporter.Export(context, new DatabaseSmugglerFileDestination {FilePath = exportFilePath});
-
-                    if (fullExport == false)
-                    {
-                        // No-op if nothing has changed
-                        if (exportResult.LastDocsEtag == _status.LastDocsEtag)
-                        {
-                            Log.Info("Periodic export returned prematurely, nothing has changed since last export");
-                            return;
-                        }
-                    }
-
-                    try
-                    {
-                        await UploadToServer(exportFilePath, fileName, fullExport).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        // if user did not specify local folder we delete temporary file.
-                        if (string.IsNullOrEmpty(_configuration.LocalFolderName))
-                        {
-                            IOExtensions.DeleteFile(exportFilePath);
-                        }
-                    }
-
-                    _status.LastDocsEtag = exportResult.LastDocsEtag;
-                    if (fullExport)
-                        _status.LastFullExportAt = SystemTime.UtcNow;
-                    else
-                        _status.LastExportAt = SystemTime.UtcNow;
-
-                    WriteStatus();
-                }
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Successfully exported {(fullExport ? "full" : "incremental")} export in {sp.ElapsedMilliseconds:#,#;;0} ms.");
-
-                _exportLimit = null;
-            }
         }
 
         private void WriteStatus()
@@ -315,8 +334,8 @@ namespace Raven.Server.Documents.PeriodicExport
                 var status = new DynamicJsonValue
                 {
                     ["LastDocsEtag"] = _status.LastDocsEtag,
-                    ["LastExportAt"] = _status.LastExportAt,
-                    ["LastFullExportAt"] = _status.LastFullExportAt,
+                    ["LastExportAt"] = _status.LastExportAt.GetDefaultRavenFormat(),
+                    ["LastFullExportAt"] = _status.LastFullExportAt.GetDefaultRavenFormat(),
                 };
                 var readerObject = context.ReadObject(status, Constants.PeriodicExport.StatusDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 var putResult = _database.DocumentsStorage.Put(context, Constants.PeriodicExport.StatusDocumentKey, null, readerObject);
@@ -331,19 +350,19 @@ namespace Raven.Server.Documents.PeriodicExport
         {
             if (!string.IsNullOrWhiteSpace(_configuration.GlacierVaultName))
             {
-                UploadToGlacier(exportPath, fileName, isFullExport);
+                await UploadToGlacier(exportPath, fileName, isFullExport);
             }
             else if (!string.IsNullOrWhiteSpace(_configuration.S3BucketName))
             {
-                UploadToS3(exportPath, fileName, isFullExport);
+                await UploadToS3(exportPath, fileName, isFullExport);
             }
             else if (!string.IsNullOrWhiteSpace(_configuration.AzureStorageContainer))
             {
-                await UploadToAzure(exportPath, fileName, isFullExport).ConfigureAwait(false);
+                await UploadToAzure(exportPath, fileName, isFullExport);
             }
         }
 
-        private void UploadToS3(string exportPath, string fileName, bool isFullExport)
+        private async Task UploadToS3(string exportPath, string fileName, bool isFullExport)
         {
             if (_awsAccessKey == Constants.DataCouldNotBeDecrypted ||
                 _awsSecretKey == Constants.DataCouldNotBeDecrypted)
@@ -351,11 +370,11 @@ namespace Raven.Server.Documents.PeriodicExport
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
 
-            using (var client = new RavenAwsS3Client(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+            using (var client = new RavenAwsS3Client(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(exportPath))
             {
                 var key = CombinePathAndKey(_configuration.S3RemoteFolderName, fileName);
-                client.PutObject(_configuration.S3BucketName, key, fileStream, new Dictionary<string, string>
+                await client.PutObject(_configuration.S3BucketName, key, fileStream, new Dictionary<string, string>
                 {
                     {"Description", GetArchiveDescription(isFullExport)}
                 }, 60*60);
@@ -364,7 +383,7 @@ namespace Raven.Server.Documents.PeriodicExport
             }
         }
 
-        private void UploadToGlacier(string exportPath, string fileName, bool isFullExport)
+        private async Task UploadToGlacier(string exportPath, string fileName, bool isFullExport)
         {
             if (_awsAccessKey == Constants.DataCouldNotBeDecrypted ||
                 _awsSecretKey == Constants.DataCouldNotBeDecrypted)
@@ -372,10 +391,10 @@ namespace Raven.Server.Documents.PeriodicExport
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
 
-            using (var client = new RavenAwsGlacierClient(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+            using (var client = new RavenAwsGlacierClient(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(exportPath))
             {
-                var archiveId = client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60*60);
+                var archiveId = await client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60*60);
                 Log.Info($"Successfully uploaded export {fileName} to Glacier, archive ID: {archiveId}");
             }
         }
@@ -390,14 +409,14 @@ namespace Raven.Server.Documents.PeriodicExport
 
             using (var client = new RavenAzureClient(_azureStorageAccount, _azureStorageKey, _configuration.AzureStorageContainer))
             {
-                await client.PutContainer().ConfigureAwait(false);
+                await client.PutContainer();
                 using (var fileStream = File.OpenRead(exportPath))
                 {
                     var key = CombinePathAndKey(_configuration.AzureRemoteFolderName, fileName);
                     await client.PutBlob(key, fileStream, new Dictionary<string, string>
                     {
                         {"Description", GetArchiveDescription(isFullExport)}
-                    }).ConfigureAwait(false);
+                    });
 
                     Log.Info($"Successfully uploaded export {fileName} to Azure container {_configuration.AzureStorageContainer}, with key {key}");
                 }
@@ -420,7 +439,23 @@ namespace Raven.Server.Documents.PeriodicExport
             _incrementalExportTimer?.Dispose();
             _fullExportTimer?.Dispose();
             var task = _runningTask;
-            task?.Wait();
+
+            try
+            {
+                task?.Wait();
+            }
+            catch (ObjectDisposedException)
+            {
+                // shutting down, probably
+            }
+            catch (OperationCanceledException)
+            {
+                // shutting down, probably
+            }
+            catch (Exception e)
+            {
+                 Log.ErrorException("Error when disposing periodic export runner task", e);
+            }
         }
 
         public static PeriodicExportRunner LoadConfigurations(DocumentDatabase database)

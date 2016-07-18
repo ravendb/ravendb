@@ -44,6 +44,10 @@ namespace Raven.Client.Connection
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
         {
+            // Default database doesn't have replication topology endpoint
+            if (MultiDatabase.GetRootDatabaseUrl(serverClient.Url) == serverClient.Url)
+                return Task.CompletedTask;
+
             return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => 
                 AsyncHelpers.RunSync(() => 
                     serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));

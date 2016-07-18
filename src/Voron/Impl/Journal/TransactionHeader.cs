@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
+using Voron.Global;
 
 namespace Voron.Impl.Journal
 {
@@ -48,5 +50,14 @@ namespace Voron.Impl.Journal
         [FieldOffset(116)]
         public int UncompressedSize;
 
+        [FieldOffset(120)]
+        public long TimeStampTicksUtc; // DateTime.UtcNow.Ticks when the tx happened
+
+        public override string ToString()
+        {
+            var validMarker = (HeaderMarker == Constants.TransactionHeaderMarker ? "Valid" : "Invalid");
+            var timestamp = new DateTime(TimeStampTicksUtc).ToString("g");
+            return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, PageCount: {PageCount}, OverflowPageCount: {OverflowPageCount}, Hash: {Hash}, Root: {Root}, TxMarker: {TxMarker}, Compressed: {Compressed}, CompressedSize: {CompressedSize}, UncompressedSize: {UncompressedSize}, TimeStamp: {timestamp}";
+        }
     }
 }

@@ -14,9 +14,16 @@ namespace Raven.Server.Documents
 
         public event Action<IndexChangeNotification> OnIndexChange;
 
+        public event Action<TransformerChangeNotification> OnTransformerChange;
+
         public void RaiseNotifications(IndexChangeNotification indexChangeNotification)
         {
             OnIndexChange?.Invoke(indexChangeNotification);
+        }
+
+        public void RaiseNotifications(TransformerChangeNotification transformerChangeNotification)
+        {
+            OnTransformerChange?.Invoke(transformerChangeNotification);
         }
 
         public void RaiseSystemNotifications(DocumentChangeNotification documentChangeNotification)

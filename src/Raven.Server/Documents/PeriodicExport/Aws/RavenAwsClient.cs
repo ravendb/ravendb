@@ -13,6 +13,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Abstractions.Util;
@@ -27,20 +28,19 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
 
         private static bool _endpointsLoaded;
 
-        private static readonly Dictionary<string, string> Endpoints = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> AwsRegionNames = new Dictionary<string, string>();
 
         private readonly string _awsAccessKey;
-
         private readonly byte[] _awsSecretKey;
+        private readonly string _awsRegionName;
 
         protected string AwsRegion { get; private set; }
 
-        protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionEndpoint)
+        protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName)
         {
-            this._awsAccessKey = awsAccessKey;
-            this._awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + awsSecretKey);
-
-            AwsRegion = GetAwsRegion(awsRegionEndpoint);
+            _awsAccessKey = awsAccessKey;
+            _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + awsSecretKey);
+            AwsRegion = _awsRegionName = awsRegionName;
         }
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
@@ -51,15 +51,15 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
 
             using (var hash = new HMACSHA256(signingKey))
             {
-                var scope = string.Format("{0}/{1}/{2}/aws4_request", date.ToString("yyyyMMdd"), AwsRegion, ServiceName);
-                var stringToHash = string.Format("AWS4-HMAC-SHA256\n{0}\n{1}\n{2}", RavenAwsHelper.ConvertToString(date), scope, canonicalRequestHash);
+                var scope = $"{date:yyyyMMdd}/{AwsRegion}/{ServiceName}/aws4_request";
+                var stringToHash = $"AWS4-HMAC-SHA256\n{RavenAwsHelper.ConvertToString(date)}\n{scope}\n{canonicalRequestHash}";
 
                 var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
                 var signature = RavenAwsHelper.ConvertToHex(hashedString);
 
-                var credentials = $"{_awsAccessKey}/{date.ToString("yyyyMMdd")}/{AwsRegion}/{ServiceName}/aws4_request";
+                var credentials = $"{_awsAccessKey}/{date:yyyyMMdd}/{AwsRegion}/{ServiceName}/aws4_request";
 
-                return new AuthenticationHeaderValue("AWS4-HMAC-SHA256", string.Format("Credential={0},SignedHeaders={1},Signature={2}", credentials, signedHeaders, signature));
+                return new AuthenticationHeaderValue("AWS4-HMAC-SHA256", $"Credential={credentials},SignedHeaders={signedHeaders},Signature={signature}");
             }
         }
 
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
                 .OrderBy(x => x.Key);
 
             var canonicalHeaders = headers
-                .Aggregate(string.Empty, (current, parameter) => current + string.Format("{0}:{1}\n", parameter.Key.ToLower(), parameter.Value.Trim()));
+                .Aggregate(string.Empty, (current, parameter) => current + $"{parameter.Key.ToLower()}:{parameter.Value.Trim()}\n");
 
             signedHeaders = headers
                 .Aggregate(string.Empty, (current, parameter) => current + parameter.Key.ToLower() + ";");
@@ -132,40 +132,47 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
                 return hash.ComputeHash(Encoding.UTF8.GetBytes("aws4_request"));
         }
 
-        private string GetAwsRegion(string awsRegionEndpoint)
+        public async Task ValidateAwsRegion()
         {
-            string endpoint;
-            if (Endpoints.TryGetValue(awsRegionEndpoint.ToLower(), out endpoint))
-                return endpoint;
+            string region;
+            if (AwsRegionNames.TryGetValue(_awsRegionName.ToLower(), out region))
+            {
+                AwsRegion = region;
+                return;
+            }
 
             if (_endpointsLoaded)
-                throw new InvalidOperationException("Given endpoint is invalid: " + awsRegionEndpoint);
+                throw new InvalidOperationException("Given endpoint is invalid: " + _awsRegionName);
 
-            LoadEndpoints();
+            await LoadEndpoints();
 
-            return GetAwsRegion(awsRegionEndpoint);
+            await ValidateAwsRegion();
         }
 
-        private void LoadEndpoints()
+        private async Task LoadEndpoints()
         {
-            if (_endpointsLoaded)
-                return;
+            AwsRegionNames.Clear();
 
-            Endpoints.Clear();
-
-            var response = AsyncHelpers.RunSync(() => GetClient().GetAsync("http://aws-sdk-configurations.amazonwebservices.com/endpoints.xml"));
+            var response = await GetClient().GetAsync("http://aws-sdk-configurations.amazonwebservices.com/endpoints.xml");
             if (response.IsSuccessStatusCode)
             {
-                using (var stream = AsyncHelpers.RunSync(() => response.Content.ReadAsStreamAsync()))
+                using (var stream = await response.Content.ReadAsStreamAsync())
                 using (var reader = new StreamReader(stream))
                     LoadEndpointsFromReader(reader);
 
                 return;
             }
 
-            using (var stream = typeof(RavenAwsClient).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Documents.PeriodicExport.Aws.Amazon.AWS.endpoints.xml"))
-            using (var reader = new StreamReader(stream))
-                LoadEndpointsFromReader(reader);
+            foreach (var endpoint in new[]
+            {
+                "us-east-1", "us-west-1", "us-west-2",
+                "ap-northeast-1", "ap-southeast-1", "ap-southeast-2",
+                "sa-east-1",
+                "eu-west-1", "eu-central-1", "us-gov-west-1"
+            })
+            {
+                AwsRegionNames.Add(endpoint, endpoint);
+            }
         }
 
         private static void LoadEndpointsFromReader(TextReader reader)
@@ -176,7 +183,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             foreach (var node in xDocument.Descendants("Region"))
             {
                 var nodeName = node.Element("Name").Value.ToLower();
-                Endpoints.Add(nodeName, nodeName);
+                AwsRegionNames.Add(nodeName, nodeName);
             }
 
             _endpointsLoaded = true;

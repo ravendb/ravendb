@@ -28,6 +28,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
         [DefaultValue(null)]
+        [ConfigurationEntry("Raven/Indexing/StoragePath")]
         [ConfigurationEntry("Raven/IndexStoragePath")]
         public string IndexStoragePath
         {
@@ -88,5 +89,15 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Indexing/ThrowIfAnyIndexCouldNotBeOpened")]
         public bool ThrowIfAnyIndexCouldNotBeOpened { get; set; }
+
+        [Description("Limits the number of map outputs that a map index is allowed to create for a one source document. If a map operation applied to the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and the appropriate error message will be added to the indexing errors. Default value: 15. In order to disable this check set value to -1.")]
+        [DefaultValue(15)]
+        [ConfigurationEntry("Raven/Indexing/MaxMapIndexOutputsPerDocument")]
+        public int MaxMapIndexOutputsPerDocument { get; set; }
+
+        [Description("Limits the number of map outputs that a map-reduce index is allowed to create for a one source document. If a map operation applied to the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and the appropriate error message will be added to the indexing errors. Default value: 50. In order to disable this check set value to -1.")]
+        [DefaultValue(50)]
+        [ConfigurationEntry("Raven/Indexing/MaxMapIndexOutputsPerDocument")]
+        public int MaxMapReduceIndexOutputsPerDocument { get; set; }
     }
 }

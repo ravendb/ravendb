@@ -5,9 +5,11 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -21,13 +23,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexPersistence : IDisposable
     {
+        private readonly Index _index;
+
         private readonly Analyzer _dummyAnalyzer = new SimpleAnalyzer();
-
-        private readonly int _indexId;
-
-        private readonly IndexDefinitionBase _definition;
-
-        private readonly IndexType _indexType;
 
         private readonly LuceneDocumentConverterBase _converter;
 
@@ -45,33 +43,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private bool _initialized;
 
-        public LuceneIndexPersistence(int indexId, IndexDefinitionBase indexDefinition, IndexType indexType)
+        public LuceneIndexPersistence(Index index)
         {
-            _indexId = indexId;
-            _definition = indexDefinition;
-            _indexType = indexType;
+            _index = index;
 
-            IEnumerable<IndexField> fields = _definition.MapFields.Values;
+            var fields = index.Definition.MapFields.Values.ToList();
 
-            var mapReduceDef = indexDefinition as AutoMapReduceIndexDefinition;
-            if (mapReduceDef != null)
-                fields = fields.Union(mapReduceDef.GroupByFields.Values);
-
-            switch (indexType)
+            switch (_index.Type)
             {
                 case IndexType.AutoMap:
                 case IndexType.AutoMapReduce:
-                    _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
+                case IndexType.MapReduce:
+                    if (_index.Type == IndexType.AutoMapReduce)
+                    {
+                        var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
+                        fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
+                    }
+                    
+                    _converter = new LuceneDocumentConverter(fields, reduceOutput: _index.Type.IsMapReduce());
                     break;
                 case IndexType.Map:
-                case IndexType.MapReduce:
-                    _converter = new AnonymousLuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
+                    _converter = new AnonymousLuceneDocumentConverter(fields, reduceOutput: false);
                     break;
                 case IndexType.Faulty:
                     _converter = null;
                     break;
                 default:
-                    throw new NotSupportedException(indexType.ToString());
+                    throw new NotSupportedException(_index.Type.ToString());
             }
 
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
@@ -109,23 +107,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction)
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index persistence for index '{_definition.Name} ({_indexId})' was already disposed.");
+                throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was already disposed.");
 
             if (_initialized == false)
-                throw new InvalidOperationException($"Index persistence for index '{_definition.Name} ({_indexId})' was not initialized.");
+                throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
 
-            return new IndexWriteOperation(_definition.Name, _definition.MapFields, _directory, _converter, writeTransaction, this); // TODO arek - 'this' :/
+            return new IndexWriteOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _converter, writeTransaction, this); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index persistence for index '{_definition.Name} ({_indexId})' was already disposed.");
+                throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was already disposed.");
 
             if (_initialized == false)
-                throw new InvalidOperationException($"Index persistence for index '{_definition.Name} ({_indexId})' was not initialized.");
+                throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
 
-            return new IndexReadOperation(_definition.Name, _indexType, _definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
+            return new IndexReadOperation(_index.Definition.Name, _index.Type, _index.MaxNumberOfIndexOutputs, _index.ActualMaxNumberOfIndexOutputs, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
         }
 
         internal void RecreateSearcher()

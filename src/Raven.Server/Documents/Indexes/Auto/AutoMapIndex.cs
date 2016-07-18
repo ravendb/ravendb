@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.Indexes.Auto
         private AutoMapIndex(int indexId, AutoMapIndexDefinition definition)
             : base(indexId, IndexType.AutoMap, definition)
         {
+            ActualMaxNumberOfIndexOutputs = null;
+            MaxNumberOfIndexOutputs = 1;
         }
 
         public static AutoMapIndex CreateNew(int indexId, AutoMapIndexDefinition definition, DocumentDatabase documentDatabase)
@@ -33,5 +35,8 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             return new AutoIndexDocsEnumerator(documents);
         }
+
+        public override int? ActualMaxNumberOfIndexOutputs { get; }
+        public override int MaxNumberOfIndexOutputs { get; }
     }
 }

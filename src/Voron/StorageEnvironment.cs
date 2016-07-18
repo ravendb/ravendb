@@ -23,6 +23,8 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Platform.Posix;
+using Voron.Platform.Win32;
 using Voron.Util;
 using Voron.Util.Conversion;
 
@@ -291,18 +293,21 @@ namespace Voron
             try
             {
                 // if there is a pending flush operation, we need to wait for it
-                bool lockTaken = false;
-                using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
+                if (_journal != null) // error during ctor
                 {
-                    if (lockTaken == false)
+                    bool lockTaken = false;
+                    using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                     {
-                        // if we are here, then we didn't get the flush lock, so it is currently being run
-                        // we need to wait for it to complete (so we won't be shutting down the db while we 
-                        // are flushing and maybe access in valid memory.
-                        using (_journal.Applicator.TakeFlushingLock())
+                        if (lockTaken == false)
                         {
-                            // when we are here, we know that we aren't flushing, and we can dispose, 
-                            // any future calls to flush will abort because we are marked as disposed
+                            // if we are here, then we didn't get the flush lock, so it is currently being run
+                            // we need to wait for it to complete (so we won't be shutting down the db while we 
+                            // are flushing and maybe access in valid memory.
+                            using (_journal.Applicator.TakeFlushingLock())
+                            {
+                                // when we are here, we know that we aren't flushing, and we can dispose, 
+                                // any future calls to flush will abort because we are marked as disposed
+                            }
                         }
                     }
                 }
@@ -705,6 +710,115 @@ namespace Voron
                     throw;
                 }
             }
+        }
+
+        public bool TryEnterTxLock()
+        {
+            bool txLockTaken = false;
+            bool flushInProgressReadLockTaken = false;
+
+            try
+            {
+                var wait = Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30);
+                if (FlushInProgressLock.IsWriteLockHeld == false)
+                    flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
+
+                if (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false)
+                    return false;
+
+                Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
+                if (txLockTaken == false)
+                {
+                    FlushInProgressLock.ExitReadLock();
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                if (txLockTaken)
+                {
+                    Monitor.Exit(_txWriter);
+                }
+                if (flushInProgressReadLockTaken)
+                {
+                    FlushInProgressLock.ExitReadLock();
+                }
+                throw;
+            }
+            return true;
+        }
+
+        public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration, LowLevelTransaction tx)
+        {
+            var oldMode = Options.TransactionsMode;
+
+            if (oldMode == mode)
+                return TransactionsModeResult.ModeAlreadySet;
+
+            Options.TransactionsMode = mode;
+            if (duration == TimeSpan.FromMinutes(0)) // infinte
+                Options.NonSafeTransactionExpiration = null;
+            else
+                Options.NonSafeTransactionExpiration = DateTime.Now + duration;
+
+            bool locksTaken = false;
+            try
+            {
+                locksTaken = TryEnterTxLock();
+
+                if (locksTaken == false)
+                {
+                    return TransactionsModeResult.CannotSetMode;
+                }
+
+                if (oldMode == TransactionsMode.Lazy)
+                    CommitNonLazy(tx);
+
+                if (oldMode == TransactionsMode.Danger)
+                    Journal.TruncateJournal(Options.PageSize);
+
+                switch (mode)
+                {
+                    case TransactionsMode.Safe:
+                    case TransactionsMode.Lazy:
+                        {
+                            Options.PosixOpenFlags = OpenFlags.O_DSYNC | OpenFlags.O_DIRECT;
+                            Options.WinOpenFlags = Win32NativeFileAttributes.Write_Through |
+                                                   Win32NativeFileAttributes.NoBuffering;
+                        }
+                        break;
+
+                    case TransactionsMode.Danger:
+                        {
+                            Options.PosixOpenFlags = 0;
+                            Options.WinOpenFlags = Win32NativeFileAttributes.None;
+                            Journal.TruncateJournal(Options.PageSize);
+                        }
+                        break;
+                    default:
+                        {
+                            throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + mode);
+                        }
+                }
+            }
+            finally
+            {
+                if (locksTaken)
+                {
+                    Monitor.Exit(_txWriter);
+                    FlushInProgressLock.ExitReadLock();
+                }
+            }
+
+            return TransactionsModeResult.SetModeSuccessfully;
+        }
+
+        public void CommitNonLazy(LowLevelTransaction tx) // TODO :: is it ok to use directly LowLevelTx and call Commit ?
+        {
+            // this non lazy transaction forces the journal to actually
+            // flush everything
+            tx.IsLazyTransaction = false;
+            tx.Commit();
         }
     }
 }
