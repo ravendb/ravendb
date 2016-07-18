@@ -142,6 +142,9 @@ namespace Voron.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int madvise(IntPtr addr, int length, MAdvFlags madvFlags);
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int ftruncate(int fd, long size);
     }
 
     [Flags]
@@ -496,7 +499,7 @@ namespace Voron.Platform.Posix
         O_NONBLOCK = 0x00000800,
         O_SYNC = 1052672, // 0x00101000, // value directly from printf("%d", O_SYNC)
         O_DSYNC = 4096, // 0x00001000, // value directly from printf("%d", O_DSYNC)
-        O_DIRECT = 16384, // 0x00004000, // value directly from printf("%d", O_DSYNC)
+        O_DIRECT = 16384, // 0x00004000, // value directly from printf("%d", O_DIRECT)
 
         //
         // These are non-Posix.  Using them will result in errors/exceptions on

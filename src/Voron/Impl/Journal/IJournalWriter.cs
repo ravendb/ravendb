@@ -12,5 +12,6 @@ namespace Voron.Impl.Journal
         bool DeleteOnClose { get; set; }
         AbstractPager CreatePager();
         bool Read(long pageNumber, byte* buffer, int count);
+        void Truncate(long size);
     }
 }

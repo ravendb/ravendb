@@ -968,6 +968,13 @@ namespace Voron.Impl.Journal
 
             return doCompression;
         }
+
+        public void TruncateJournal(int pageSize)
+        {
+            // switching transactions modes requires to close jounal, 
+            // truncate it (in case of recovery) and create next journal file
+            CurrentFile?.JournalWriter.Truncate(pageSize * CurrentFile.WritePagePosition);
+        }
     }
 
 

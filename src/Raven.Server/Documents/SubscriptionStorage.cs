@@ -414,6 +414,10 @@ namespace Raven.Server.Documents
             }
         }
 
-       
+
+        public StorageEnvironment Environment()
+        {
+            return _environment;
+        }
     }
 }

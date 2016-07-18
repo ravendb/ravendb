@@ -503,5 +503,10 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice PrioritySlice = Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable);
         }
+
+        public StorageEnvironment Environment()
+        {
+            return _environment;
+        }
     }
 }
