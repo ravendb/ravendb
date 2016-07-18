@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
@@ -69,6 +70,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/Storage/AllowOn32Bits")]
         [ConfigurationEntry("Raven/Voron/AllowOn32Bits")]
         public bool AllowOn32Bits { get; set; }
+
+        [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]
+        [DefaultValue(1440)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Raven/Storage/TransactionsModeDuration")]
+        [ConfigurationEntry("Raven/TransactionsModeDuration")]
+        public int TransactionsModeDuration { get; set; }
 
         public override void Initialize(IConfigurationRoot settings)
         {

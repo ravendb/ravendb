@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -42,8 +44,6 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
-        public bool LazyTransactionMode { get; set; }
-        public DateTime LazyTransactionExpiration { get; set; }
         public TransactionOperationsMerger TxMerger;
         private DocumentConvention _convention;
 
@@ -309,5 +309,15 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<StorageEnvironment> GetAllStoragesEnvironment()
+        {
+            // TODO :: more storage environments ?
+            yield return DocumentsStorage.Environment;
+            yield return SubscriptionStorage.Environment();
+            foreach (var index in IndexStore.GetIndexes())
+            {
+                yield return index._indexStorage.Environment();
+            }
+        }
     }
 }

@@ -498,5 +498,10 @@ namespace Voron
         public static bool RunningOnPosix
             => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+
+        public TransactionsMode TransactionsMode { get; set; }
+        public OpenFlags PosixOpenFlags = OpenFlags.O_DSYNC | OpenFlags.O_DIRECT;
+        public Win32NativeFileAttributes WinOpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
+        public DateTime? NonSafeTransactionExpiration { get; set; }
     }
 }
