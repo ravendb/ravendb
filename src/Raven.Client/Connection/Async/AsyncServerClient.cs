@@ -165,8 +165,7 @@ namespace Raven.Client.Connection.Async
 
                     var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
-                    //NOTE: To review, I'm not confidence this is the correct way to deserialize the transformer definition
-                    return json.Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter())).ToArray();
+                    return json.Deserialize<TransformerDefinition[]>(convention);
                 }
             }, token);
         }

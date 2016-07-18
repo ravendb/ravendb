@@ -92,5 +92,16 @@ namespace Raven.Server.Documents.Handlers
 
             return Task.CompletedTask;
         }
+
+        [RavenAction("/databases/*/transformers", "DELETE")]
+        public Task Delete()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            Database.TransformerStore.DeleteTransformer(name);
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return Task.CompletedTask;
+        }
     }
 }
