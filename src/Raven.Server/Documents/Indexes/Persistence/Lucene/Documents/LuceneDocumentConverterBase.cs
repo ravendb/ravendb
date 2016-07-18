@@ -38,13 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool reduceOutput = false)
         {
-            _fields = fields.ToDictionary(x => x.Name, x =>
-            {
-                if (reduceOutput)
-                    x.Storage = FieldStorage.Yes;
-
-                return x;
-            }, StringComparer.OrdinalIgnoreCase);
+            _fields = fields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
 
             _reduceOutput = reduceOutput;
         }

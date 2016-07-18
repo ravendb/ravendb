@@ -147,8 +147,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    double expected = numberOfUsers/locations.Length + numberOfUsers%(locations.Length - i);
-                    Assert.Equal(expected, ((LazyDoubleValue)results[i].Data["Count"]));
+                    long expected = numberOfUsers/locations.Length + numberOfUsers%(locations.Length - i);
+                    Assert.Equal(expected, results[i].Data["Count"]);
                 }
 
                 // update
@@ -204,8 +204,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    double expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                    Assert.Equal(expected + 1, ((LazyDoubleValue)results[i].Data["Count"]));
+                    long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                    Assert.Equal(expected + 1, results[i].Data["Count"]);
                 }
 
                 // delete
@@ -257,8 +257,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    double expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                    Assert.Equal(expected - 1, ((LazyDoubleValue)results[i].Data["Count"]));
+                    long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                    Assert.Equal(expected - 1, results[i].Data["Count"]);
                 }
             }
         }

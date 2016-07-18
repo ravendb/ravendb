@@ -28,8 +28,6 @@ namespace Raven.Client.Linq
     /// </summary>
     public class RavenQueryProviderProcessor<T>
     {
-        private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
-
         private readonly Action<IDocumentQueryCustomization> customizeQuery;
         /// <summary>
         /// The query generator
@@ -1597,7 +1595,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 FieldsToRename.Add(new RenamedField
                 {
                     NewField = groupByKey,
-                    OriginalField = ReplaceInvalidCharacterForFields.Replace(groupByField.Name, "_")
+                    OriginalField = groupByField.Name
                 });
 
                 groupByField.ClientSideName = groupByKey;
@@ -1701,7 +1699,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 FieldsToRename.Add(new RenamedField
                 {
                     NewField = renamedField,
-                    OriginalField = ReplaceInvalidCharacterForFields.Replace(mapReduceField, "_")
+                    OriginalField = mapReduceField
                 });
 
                 dynamicMapReduceField.ClientSideName = renamedField;
