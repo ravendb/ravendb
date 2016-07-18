@@ -31,9 +31,7 @@ namespace Raven.Client.Smuggler
 
         private async Task<Stream> ExportAsync(DatabaseSmugglerOptions options, CancellationToken token)
         {
-            // TODO: Use HttpClientCache and support api-key
-            var httpClient = new HttpClient();
-
+            var httpClient = GetHttpClient();
             ShowProgress("Starting to export file");
             var database = options.Database ?? _store.DefaultDatabase;
             var url = $"{_store.Url}/databases/{database}/smuggler/export";
@@ -101,8 +99,7 @@ namespace Raven.Client.Smuggler
 
         private async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, string url, string database, CancellationToken cancellationToken)
         {
-            // TODO: Use HttpClientCache and support api-key
-            var httpClient = new HttpClient();
+            var httpClient = GetHttpClient();
             using (var content = new StreamContent(stream))
             {
                 var uri = $"{url}/databases/{database}/smuggler/import";
@@ -112,6 +109,15 @@ namespace Raven.Client.Smuggler
                     var x = await response.Content.ReadAsStringAsync();
                 }
             }
+        }
+
+        private HttpClient GetHttpClient()
+        {
+            // TODO: Use HttpClientCache and support api-key
+            return new HttpClient
+            {
+                Timeout = TimeSpan.FromDays(1)
+            };
         }
 
         private void ShowProgress(string message)
