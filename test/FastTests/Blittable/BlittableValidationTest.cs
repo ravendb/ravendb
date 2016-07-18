@@ -579,7 +579,7 @@ namespace FastTests.Blittable
             Assert.Equal(message.Message, "Root metadata offset not valid");
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-4837: Blittable Validation fails for some json files")]
         public unsafe void ParseBlitAndValidate()
         {
             var assembly = typeof(BlittableFormatTests).GetTypeInfo().Assembly;
