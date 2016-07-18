@@ -6,8 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-
 using Raven.Abstractions.Cluster;
 
 namespace Raven.Abstractions.Replication
@@ -15,7 +13,7 @@ namespace Raven.Abstractions.Replication
     /// <summary>
     /// Data class for replication destination documents
     /// </summary>
-    public class ReplicationDestination
+    public class ReplicationDestination : IEquatable<ReplicationDestination>
     {
         /// <summary>
         /// The name of the connection string specified in the 
@@ -107,17 +105,14 @@ namespace Raven.Abstractions.Replication
             }
         }
 
-        public bool CanBeFailover()
-        {
-            return IgnoredClient == false && Disabled == false && (SpecifiedCollections == null || SpecifiedCollections.Count == 0);
-        }
+        public bool CanBeFailover() => 
+			IgnoredClient == false && Disabled == false && (SpecifiedCollections == null || SpecifiedCollections.Count == 0);
 
-        protected bool Equals(ReplicationDestination other)
-        {
-            return IsEqualTo(other);
-        }
+	    public override string ToString() => $"{nameof(Url)}: {Url}, {nameof(Database)}: {Database}";
 
-        public bool IsEqualTo(ReplicationDestination other)
+	    public bool Equals(ReplicationDestination other) => IsEqualTo(other);
+
+	    public bool IsEqualTo(ReplicationDestination other)
         {
             return string.Equals(Username, other.Username) && string.Equals(Password, other.Password) &&
                    string.Equals(Domain, other.Domain) && string.Equals(ApiKey, other.ApiKey) &&
@@ -154,12 +149,12 @@ namespace Raven.Abstractions.Replication
             }
         }
 
-        public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
+		public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
         {
             public bool HasGlobal { get; set; }
 
             public bool HasLocal { get; set; }
-    }
+		}
 
         public class ReplicationDestinationWithClusterInformation : ReplicationDestination
         {

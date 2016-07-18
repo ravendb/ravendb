@@ -12,13 +12,7 @@ namespace Raven.Abstractions.Data
 			Replication
 		}
 
-		public string DatabaseName { get; set; }
-
-		public string SourceDatabaseName { get; set; }
-
-		public string SourceDatabaseId { get; set; }
-
-		public string SourceUrl { get; set; }
+		public string DatabaseName { get; set; }	
 
 		public OperationTypes Operation { get; set; }
 	}

@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Client.Indexing;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
@@ -20,7 +21,9 @@ namespace Raven.Server.Json
 		
 		public static readonly Func<BlittableJsonReaderObject, ReplicationBatchReply> ReplicationBatchReply = GenerateJsonDeserializationRoutine<ReplicationBatchReply>();
 
-		public static readonly Func<BlittableJsonReaderObject, ReplicationEtagReply> ReplicationEtagReply = GenerateJsonDeserializationRoutine<ReplicationEtagReply>();
+		public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtag> ReplicationLatestEtag = GenerateJsonDeserializationRoutine<ReplicationLatestEtag>();
+
+		public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtagReply> ReplicationEtagReply = GenerateJsonDeserializationRoutine<ReplicationLatestEtagReply>();
 
 		public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderMessage> TcpConnectionHeaderMessage = GenerateJsonDeserializationRoutine<TcpConnectionHeaderMessage>();
 

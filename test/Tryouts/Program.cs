@@ -1,13 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests.Blittable;
-using FastTests.Server.Documents.Indexing.Auto;
-using FastTests.Voron.Backups;
-using FastTests.Voron.Compaction;
-using SlowTests.Tests.Sorting;
+using FastTests.Server.Documents.Replication;
 
 namespace Tryout
 {
@@ -18,11 +10,15 @@ namespace Tryout
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine( i);
-                using (var n = new FastTests.Server.Documents.ModifyExistingDocument())
-                {
-                    n.ShouldThrowIfChangeRavenEntityName().Wait();
-                }
-            }
-        }
+				using (var test = new ReplicationBasicTests())
+					test.Master_master_replication_from_etag_zero_without_conflict_should_work().Wait();
+				using (var test = new ReplicationBasicTests())
+					test.Master_master_replication_with_multiple_PUTS_should_work().Wait();
+				using (var test = new ReplicationBasicTests())
+					test.Master_slave_replication_from_etag_zero_should_work().Wait();
+				using (var test = new ReplicationBasicTests())
+					test.Master_slave_replication_with_multiple_PUTS_should_work().Wait();
+			}
+		}
     }
 }
