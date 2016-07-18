@@ -31,6 +31,7 @@ class replicationStats extends viewModelBase {
     currentLink = ko.observable<replicationTopologyConnectionDto>(null);
     documentToReplicateText = ko.observable<string>(null);
     isLoadingDocumentToReplicateCount = ko.observable<boolean>(false);
+    exportProgress = ko.observable<string>("");
     databaseId = ko.observable<string>();
     canCalculateDocumentsToReplicateCount: KnockoutComputed<boolean>;
     canExportDocumentsToReplicateCount: KnockoutComputed<boolean>;
@@ -265,6 +266,7 @@ class replicationStats extends viewModelBase {
     export() {
         var confirmation = this.confirmationMessage("Export", "Are you sure that you want to export documents to replicate ids?");
         confirmation.done(() => {
+            this.exportProgress("");
             var url = "/admin/replication/export-docs-left-to-replicate";
             var currentLink = this.currentLink();
             if (currentLink == null) {
@@ -276,6 +278,7 @@ class replicationStats extends viewModelBase {
             }
 
             this.isLoadingDocumentToReplicateCount(true);
+
             var destinationSplitted = currentLink.Destination.split("/databases/");
             var databaseName = destinationSplitted.last();
             var destinationUrl = destinationSplitted.first() + "/";
@@ -289,7 +292,7 @@ class replicationStats extends viewModelBase {
             };
 
             var db = this.activeDatabase();
-            this.downloader.downloadByPost(db, url, requestData, this.isLoadingDocumentToReplicateCount);
+            this.downloader.downloadByPost(db, url, requestData, this.isLoadingDocumentToReplicateCount, this.exportProgress);
         });
     }
 
@@ -462,6 +465,7 @@ class replicationStats extends viewModelBase {
                 d3.select(this).classed('selected', currentSelection != this);
                 self.currentLink(currentSelection != this ? d : null);
                 self.documentToReplicateText(null);
+                self.exportProgress("");
             });
     }
 

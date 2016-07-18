@@ -9,7 +9,7 @@
             Importing will overwrite any existing data.
         </p>
         <div data-bind="with: activeFilesystem">
-            <span class="btn btn-primary btn-file" data-bind="disable: isImporting">
+            <span class="btn btn-primary btn-file" data-bind="attr: { 'disabled': isImporting() ? 'disabled' : null }">
                 Choose file <input id="importFilesystemFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }"/>
             </span>
             <button class="btn btn-primary" data-bind="click: $root.importFs.bind($root), disable: !$root.hasFileSelected() || isImporting()">
@@ -19,9 +19,9 @@
             <p data-bind="visible: $root.hasFileSelected()">
                 Selected file name: <span data-bind="text: $root.importedFileName()"></span>
             </p>
-            <br /> 
-            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting() || !!importStatus()"></p>
-            <br />
+            <div style="margin-top: 15px">
+                <p data-bind="text: importStatus, visible: $root.isUploading() || isImporting() || !!importStatus()"></p>
+            </div> 
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
             </div>

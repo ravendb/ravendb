@@ -43,6 +43,7 @@
     <TypeScriptCompile Include="App\commands\database\index\startReducingCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\stopReducingCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checksufficientdiskspaceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\studio\getNextOperationId.ts" />
     <TypeScriptCompile Include="App\commands\database\subscriptions\getSubscriptionCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\fsCheckSufficientDiskSpaceCommand.ts" />

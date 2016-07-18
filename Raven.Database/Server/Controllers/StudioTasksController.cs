@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -157,7 +158,7 @@ for(var customFunction in customFunctions) {{
                 fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
             }
 
-            var status = new ImportOperationStatus();
+            var status = new DataDumperOperationStatus();
             var cts = new CancellationTokenSource();
 
             var user = CurrentOperationContext.User.Value;
@@ -240,7 +241,7 @@ for(var customFunction in customFunctions) {{
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
-                TaskType = TaskActions.PendingTaskType.ImportDatabase,
+                TaskType = TaskActions.PendingTaskType.ExportDatabase,
                 Description = fileName
             }, out id, cts);
 
@@ -257,51 +258,81 @@ for(var customFunction in customFunctions) {{
         {
             var result = GetEmptyMessage();
 
-            try
-            {
-                var requestString = smugglerOptionsJson.SmugglerOptions;
-                SmugglerDatabaseOptions smugglerOptions;
+            var taskId = smugglerOptionsJson.ProgressTaskId;
+            var requestString = smugglerOptionsJson.DownloadOptions;
+            SmugglerDatabaseOptions smugglerOptions;
 
-                using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+            {
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                smugglerOptions = (SmugglerDatabaseOptions) serializer.Deserialize(jsonReader, typeof (SmugglerDatabaseOptions));
+            }
+
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                $"Dump of {DatabaseName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
+                smugglerOptions.NoneDefaultFileName;
+
+            //create PushStreamContent object that will be called when the output stream will be ready.
+            result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+            {
+                var status = new DataDumperOperationStatus();
+                var tcs = new TaskCompletionSource<object>();
+                var sp = Stopwatch.StartNew();
+
+                try
                 {
-                    var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                    smugglerOptions = (SmugglerDatabaseOptions) serializer.Deserialize(jsonReader, typeof (SmugglerDatabaseOptions));
+                    Database.Tasks.AddTask(tcs.Task, status, new TaskActions.PendingTaskDescription
+                    {
+                        StartTime = SystemTime.UtcNow,
+                        TaskType = TaskActions.PendingTaskType.ExportDatabase,
+                        Description = "Exporting database, file name: " + fileName
+                    }, taskId, smugglerOptions.CancelToken, skipStatusCheck: true);
+
+                    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
+                    dataDumper.Progress += s => status.MarkProgress(s);
+                    await dataDumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToStream = outputStream
+                        }).ConfigureAwait(false);
+
+                    const string message = "Completed export";
+                    status.MarkCompleted(message, sp.Elapsed);
                 }
-
-                //create PushStreamContent object that will be called when the output stream will be ready.
-                result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+                catch (OperationCanceledException e)
                 {
-                    try
-                    {
-                        var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
-                        await dataDumper.ExportData(
-                            new SmugglerExportOptions<RavenConnectionStringOptions>
-                            {
-                                ToStream = outputStream
-                            }).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        outputStream.Close();
-                    }
-                });
-
-                var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                    $"Dump of {DatabaseName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
-                    smugglerOptions.NoneDefaultFileName;
-
-                result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                    status.MarkCanceled(e.Message);
+                }
+                catch (Exception e)
                 {
-                    FileName = fileName + ".ravendbdump"
-                };
-            }
-            catch (Exception e)
+                    status.ExceptionDetails = e.ToString();
+                    status.MarkFaulted(e.ToString());
+
+                    throw;
+                }
+                finally
+                {
+                    tcs.SetResult("Completed");
+                    outputStream.Close();
+                }
+            });
+
+            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                result.StatusCode = HttpStatusCode.InternalServerError;
-                result.Content = new StringContent(e.Message);
-            }
+                FileName = fileName + ".ravendbdump"
+            };
 
             return new CompletedTask<HttpResponseMessage>(result);
+        }
+
+        [HttpGet]
+        [RavenRoute("studio-tasks/next-operation-id")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/next-operation-id")]
+        public HttpResponseMessage GetNextTaskId()
+        {
+            var result = Database.Tasks.GetNextTaskId();
+            var response = Request.CreateResponse(HttpStatusCode.OK, result);
+            return response;
         }
 
         [HttpPost]
@@ -853,10 +884,12 @@ for(var customFunction in customFunctions) {{
 
         public class ExportData
         {
-            public string SmugglerOptions { get; set; }
+            public string DownloadOptions { get; set; }
+
+            public long ProgressTaskId { get; set; }
         }
 
-        private class ImportOperationStatus : OperationStateBase
+        private class DataDumperOperationStatus : OperationStateBase
         {
             public string ExceptionDetails { get; set; }
         }

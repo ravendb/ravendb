@@ -9,10 +9,14 @@
         <div class="btn-toolbar">
             <div>
                 <form class="navbar-form navbar-left" data-bind="submit: startExport">
-                    <button class="btn btn-primary" type="submit" download>
-                        <i class="fa fa-download"></i>
+                    <!-- ko with: activeFilesystem -->
+                    <button class="btn btn-primary" type="submit" data-bind="disable: isExporting" download>
+                        <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isExporting"></i>
+                        <i class="fa fa-download" data-bind="visible: !isExporting()"></i>
                         Export File System
                     </button>
+                    <!-- /ko -->
+
                     <div class="checkbox" data-bind="visible: !chooseDifferntFileName()">
                         <input type="checkbox" class="styled" id="different_name" data-bind="checked: chooseDifferntFileName">
                         <label for="different_name">Override file name</label>
@@ -20,10 +24,12 @@
                     <div data-bind="visible: chooseDifferntFileName" class="form-group">
                         <input class="form-control" type="text" name="fileName" data-bind="visible: chooseDifferntFileName, value: noneDefualtFileName" title="Insert a file name to ovveride the default one." placeholder="Exported File Name">
                     </div>
-                </form>
-                
-                <form id="fsExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="about:blank">
-                    <input type="hidden" id="SmugglerOptions" name="SmugglerOptions" />
+
+                    <!-- ko with: activeFilesystem -->
+                    <div style="margin-top: 15px">
+                        <p data-bind="text: exportStatus"></p>
+                    </div>
+                    <!-- /ko -->
                 </form>
             </div>
         </div>

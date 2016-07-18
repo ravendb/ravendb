@@ -21,7 +21,7 @@ class importDatabase extends viewModelBase {
     removeAnalyzers = ko.observable(false);
     hasFileSelected = ko.observable(false);
     importedFileName = ko.observable<string>();
-    isUploading = false;
+    isUploading = ko.observable<boolean>(false);
     private filePickerTag = "#importDatabaseFilePicker";
 
     constructor() {
@@ -37,31 +37,37 @@ class importDatabase extends viewModelBase {
             content: "Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class=\"code-keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return</span> doc;<br />}</pre>"
         });
         this.updateHelpLink("YD9M1R");
-
-        var db: database = this.activeDatabase();
-        var importStatus = db.importStatus();
-        if (importStatus === "Uploading 100%") {
-            db.importStatus("");
-    }
     }
 
     canDeactivate(isClose) {
         super.canDeactivate(isClose);
 
-        if (this.isUploading) {
+        if (this.isUploading()) {
             this.confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", ["OK"]);
             return false;
         }
+
         return true;
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => this.activeDatabase().importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, "") + "%")),
+            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => {
+                var db = this.activeDatabase();
+                if (!db) {
+                    return;
+                }
+
+                if (db.isImporting() === false || this.isUploading() === false) {
+                    return;
+                }
+
+                db.importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, "") + "%");
+            }),
             ko.postbox.subscribe("ChangesApiReconnected", (db: database) => {
                 db.importStatus("");
                 db.isImporting(false);
-                this.isUploading = false;
+                this.isUploading(false);
             })
         ];
     }
@@ -96,9 +102,9 @@ class importDatabase extends viewModelBase {
         var importFileName = $(this.filePickerTag).val().split(/(\\|\/)/g).pop();
         if (isFileSelected) {
             var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
-            new checksufficientdiskspaceCommand( fileInput.files[0].size, this.activeDatabase())
+            new checksufficientdiskspaceCommand(fileInput.files[0].size, this.activeDatabase())
                 .execute()
-                .done(() => {                    
+                .done(() => {
                     this.hasFileSelected(isFileSelected);
                     this.importedFileName(importFileName);
                     db.importStatus("");
@@ -109,16 +115,15 @@ class importDatabase extends viewModelBase {
                         this.hasFileSelected(false);
                         this.importedFileName("");
                     }
-                )
+                );
         }        
     }
 
     importDb() {
         var db: database = this.activeDatabase();
         db.isImporting(true);
-        this.isUploading = true;
+        this.isUploading(true);
         
-
         var formData = new FormData();
         var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);        
         formData.append("file", fileInput.files[0]);
@@ -148,26 +153,29 @@ class importDatabase extends viewModelBase {
                 db.importStatus("Processing uploaded file");
             })
             .fail(() => db.importStatus(""))
-            .always(() => this.isUploading = false);
+            .always(() => this.isUploading(false));
     }
 
     private waitForOperationToComplete(db: database, operationId: number) {        
         new getOperationStatusCommand(db, operationId)
             .execute()
-            .done((result: importOperationStatusDto) => this.importStatusRetrieved(db, operationId, result));
+            .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(db, operationId, result));
     }
 
-    private importStatusRetrieved(db: database, operationId: number, result: importOperationStatusDto) {
+    private importStatusRetrieved(db: database, operationId: number, result: dataDumperOperationStatusDto) {
         if (result.Completed) {
             if (result.ExceptionDetails == null && result.State != null && result.State.Progress != null) {
                 this.hasFileSelected(false);
-                $(this.filePickerTag).val('');
+                $(this.filePickerTag).val("");
                 db.importStatus("Last import was from '" + this.importedFileName() + "', " + result.State.Progress.toLocaleLowerCase());
                 messagePublisher.reportSuccess("Successfully imported data to " + db.name);
+            } else if (result.Canceled) {
+                db.importStatus("Import was canceled!");
             } else {
-                db.importStatus("");
+                db.importStatus("Failed to import database, see recent errors for details!");
                 messagePublisher.reportError("Failed to import data!", result.ExceptionDetails);
             }
+
             db.isImporting(false);
         }
         else {

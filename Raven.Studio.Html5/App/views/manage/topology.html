@@ -184,6 +184,10 @@
                                                                 </a>
                                                             </div>
 
+                                                            <div style="margin-top: 15px" data-bind="if: !!$root.exportProgress()">
+                                                                <span data-bind="text: $root.exportProgress"></span>
+                                                            </div>
+
                                                             <span data-bind="visible: $root.isLoadingDocumentToReplicateCount">
                                                                 <i class="fa fa-spinner fa-spin"></i>
                                                             </span>

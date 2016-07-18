@@ -1298,7 +1298,7 @@ interface bulkOperationProgress {
     ProcessedEntries: number;
 }
 
-interface importOperationStatusDto extends operationStatusDto {
+interface dataDumperOperationStatusDto extends operationStatusDto {
     ExceptionDetails: string;
 }
 

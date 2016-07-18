@@ -223,7 +223,7 @@ namespace Raven.Abstractions.Smuggler
                         metadataList.Add(fileContainer);
 
                         totalCount++;
-                        if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                        if (totalCount%30 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
                         {
                             Operations.ShowProgress("Exported {0} files. ", totalCount);
                             lastReport = SystemTime.UtcNow;

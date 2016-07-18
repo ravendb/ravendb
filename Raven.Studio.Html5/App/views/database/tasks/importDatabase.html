@@ -9,8 +9,8 @@
             Importing will overwrite any existing documents and indexes.
         </p>
         <div data-bind="with: activeDatabase">
-            <span class="btn btn-primary btn-file" data-bind="disable: isImporting">
-                Choose file <input id="importDatabaseFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }" />
+            <span class="btn btn-primary btn-file" data-bind="attr: { 'disabled': isImporting() ? 'disabled' : null }">
+                Choose file <input id="importDatabaseFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" />
             </span>
             <button class="btn btn-primary" data-bind="click: $root.importDb.bind($root), disable: !$root.hasFileSelected() || isImporting()">
                 <i class="fa fa-upload"></i>
@@ -19,9 +19,9 @@
             <p data-bind="visible: $root.hasFileSelected()">
                 Selected file name: <span data-bind="text: $root.importedFileName()"></span>
             </p>
-            <br />           
-            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting() || !!importStatus()"></p>
-            <br />
+            <div style="margin-top: 15px">
+                <p data-bind="text: importStatus, visible: $root.isUploading() || isImporting() || !!importStatus()"></p>
+            </div>         
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
             </div>

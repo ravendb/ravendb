@@ -4,8 +4,7 @@ import getCollectionsCommand = require("commands/database/documents/getCollectio
 import collection = require("models/database/documents/collection");
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
 import appUrl = require("common/appUrl");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import messagePublisher = require('common/messagePublisher');
+import messagePublisher = require("common/messagePublisher");
 
 class filterSetting {
     path = ko.observable<string>("");
@@ -33,7 +32,6 @@ class exportDatabase extends viewModelBase {
     exportActionUrl: KnockoutComputed<string>;
     noneDefualtFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
-    authToken = ko.observable<string>();
     exportCommand: KnockoutComputed<string>;
 
     constructor() {
@@ -55,11 +53,6 @@ class exportDatabase extends viewModelBase {
                     }
                 }));
             });
-
-        this.exportActionUrl = ko.computed(() => {
-            var token = this.authToken();
-            return appUrl.forResourceQuery(this.activeDatabase()) + "/studio-tasks/exportDatabase" + (token ? '?singleUseAuthToken=' + token : '');
-        });
 
         this.exportCommand = ko.computed(() => {
             var targetServer = appUrl.forServer();
@@ -152,6 +145,10 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        var db = this.activeDatabase();
+        db.isExporting(true);
+        db.exportStatus("");
+
         var operateOnTypes = 0;
         if (this.includeDocuments()) {
             operateOnTypes += 1;
@@ -189,17 +186,16 @@ class exportDatabase extends viewModelBase {
             NoneDefualtFileName: this.noneDefualtFileName()
         };
 
-        $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
-
-        new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase()).execute()
+        new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase())
+            .execute()
             .done(() => {
-                new getSingleAuthTokenCommand(this.activeDatabase()).execute().done((token: singleAuthToken) => {
-                    this.authToken(token.Token);
-                    $("#dbExportDownloadForm").submit();
-                }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for export.", errorThrown));
+                var url = "/studio-tasks/exportDatabase";
+                this.downloader.downloadByPost(db, url, smugglerOptions,
+                    db.isExporting, db.exportStatus);
             })
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Invalid export options", response.responseText, response.statusText);
+                db.isExporting(false);
             });
 
     }

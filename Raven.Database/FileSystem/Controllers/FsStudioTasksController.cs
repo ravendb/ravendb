@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -74,7 +75,7 @@ namespace Raven.Database.FileSystem.Controllers
                 fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
             }
 
-            var status = new ImportOperationStatus();
+            var status = new DataDumperOperationStatus();
             var cts = new CancellationTokenSource();
 
             var task = Task.Run(async () =>
@@ -127,8 +128,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.ImportFileSystem,
-                Payload = fileName,
-
+                Payload = fileName
             }, out id, cts);
 
             return GetMessageWithObject(new
@@ -143,53 +143,83 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var result = GetEmptyMessage();
 
-            try
-            {
-                var requestString = smugglerOptionsJson.SmugglerOptions;
-                SmugglerFilesOptions smugglerOptions;
+            var taskId = smugglerOptionsJson.ProgressTaskId;
+            var requestString = smugglerOptionsJson.DownloadOptions;
+            SmugglerFilesOptions smugglerOptions;
 
-                using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+            {
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                smugglerOptions = (SmugglerFilesOptions) serializer.Deserialize(jsonReader, typeof (SmugglerFilesOptions));
+            }
+
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                $"Dump of {FileSystemName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
+                smugglerOptions.NoneDefualtFileName;
+
+            //create PushStreamContent object that will be called when the output stream will be ready.
+            result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+            {
+                var status = new DataDumperOperationStatus();
+                var tcs = new TaskCompletionSource<object>();
+                var sp = Stopwatch.StartNew();
+
+                try
                 {
-                    var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                    smugglerOptions = (SmugglerFilesOptions)serializer.Deserialize(jsonReader, typeof(SmugglerFilesOptions));
+                    FileSystem.Tasks.AddTask(tcs.Task, status, new TaskActions.PendingTaskDescription
+                    {
+                        StartTime = SystemTime.UtcNow,
+                        TaskType = TaskActions.PendingTaskType.ExportFileSystem,
+                        Payload = "Exporting file system, file name: " + fileName
+                    }, taskId, smugglerOptions.CancelToken, skipStatusCheck: true);
+
+                    var dataDumper = new FilesystemDataDumper(FileSystem, smugglerOptions);
+                    dataDumper.Progress += s => status.MarkProgress(s);
+                    await dataDumper.ExportData(
+                        new SmugglerExportOptions<FilesConnectionStringOptions>
+                        {
+                            ToStream = outputStream
+                        }).ConfigureAwait(false);
+
+                    const string message = "Completed export";
+                    status.MarkCompleted(message, sp.Elapsed);
                 }
-
-                //create PushStreamContent object that will be called when the output stream will be ready.
-                result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+                catch (OperationCanceledException e)
                 {
-                    try
-                    {
-                        var dataDumper = new FilesystemDataDumper(FileSystem, smugglerOptions);
-                        await dataDumper.ExportData(
-                            new SmugglerExportOptions<FilesConnectionStringOptions>
-                            {
-                                ToStream = outputStream
-                            }).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        outputStream.Close();
-                    }
-                });
-
-                var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                    $"Dump of {FileSystemName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
-                    smugglerOptions.NoneDefualtFileName;
-                result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                    status.MarkCanceled(e.Message);
+                }
+                catch (Exception e)
                 {
-                    FileName = fileName + ".ravenfsdump"
-                };
-            }
-            catch (Exception e)
+                    status.ExceptionDetails = e.ToString();
+                    status.MarkFaulted(e.ToString());
+
+                    throw;
+                }
+                finally
+                {
+                    tcs.SetResult("Completed");
+                    outputStream.Close();
+                }
+            });
+
+            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                result.StatusCode = HttpStatusCode.InternalServerError;
-                result.Content = new StringContent(e.Message);
-            }
+                FileName = fileName + ".ravenfsdump"
+            };
 
             return new CompletedTask<HttpResponseMessage>(result);
         }
 
-        private class ImportOperationStatus : OperationStateBase
+        [HttpGet]
+        [RavenRoute("fs/{fileSystemName}/studio-tasks/next-operation-id")]
+        public HttpResponseMessage GetNextTaskId()
+        {
+            var result = FileSystem.Tasks.GetNextTaskId();
+            var response = Request.CreateResponse(HttpStatusCode.OK, result);
+            return response;
+        }
+
+        private class DataDumperOperationStatus : OperationStateBase
         {
             public string ExceptionDetails { get; set; }
         }

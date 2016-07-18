@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
@@ -82,6 +81,7 @@ namespace Raven.Database.Actions
         {
             if (task.Status == TaskStatus.Created)
                 throw new ArgumentException("Task must be started before it gets added to the database.", "task");
+
             var localId = id = Interlocked.Increment(ref pendingTaskCounter);
             pendingTasks.TryAdd(localId, new PendingTask
             {
@@ -92,12 +92,39 @@ namespace Raven.Database.Actions
             });
         }
 
+        public void AddTask(Task task, IOperationState state, PendingTaskDescription description, long id, 
+            CancellationTokenSource tokenSource = null, bool skipStatusCheck = false)
+        {
+            if (skipStatusCheck == false && task.Status == TaskStatus.Created)
+                throw new ArgumentException("Task must be started before it gets added to the database.", "task");
+
+            if (id > Interlocked.Read(ref pendingTaskCounter))
+                throw new ArgumentException("Invalid task id: " + id, "id");
+
+            var addResult = pendingTasks.TryAdd(id, new PendingTask
+            {
+                Task = task,
+                State = state,
+                Description = description,
+                TokenSource = tokenSource
+            });
+
+            if (addResult == false)
+            {
+                throw new InvalidOperationException($"Task with id: {id} already exists");
+            }
+        }
+
+        public long GetNextTaskId()
+        {
+            return Interlocked.Increment(ref pendingTaskCounter);
+        }
+
         public void RemoveTask(long taskId)
         {
             PendingTask value;
             pendingTasks.TryRemove(taskId, out value);
         }
-
 
         public IOperationState KillTask(long id)
         {
@@ -194,7 +221,7 @@ namespace Raven.Database.Actions
 
             BackupFilesystem,
 
-            ImportDatabase,
+            ExportDatabase,
 
             RestoreDatabase,
 
@@ -222,7 +249,9 @@ namespace Raven.Database.Actions
 
             StorageBreakdown,
 
-            SlowDocCounts
+            SlowDocCounts,
+
+            ExportDocumentsLeftToReplicate
         }
     }
 }

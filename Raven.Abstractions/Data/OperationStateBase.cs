@@ -46,6 +46,27 @@ namespace Raven.Abstractions.Data
             Completed = true;
         }
 
+        public void MarkCompleted(string initialMessage, TimeSpan elapsed)
+        {
+            initialMessage += ", took: ";
+
+            var fullMessage = false;
+            if (elapsed.Hours > 0)
+            {
+                initialMessage += $"{elapsed.Hours} hours, ";
+                fullMessage = true;
+            }
+
+            if (fullMessage || elapsed.Minutes > 0)
+            {
+                initialMessage += $"{elapsed.Minutes} minutes and ";
+            }
+
+            initialMessage += $"{elapsed.Seconds} seconds";
+
+            MarkCompleted(initialMessage);
+        }
+
         public void MarkFaulted(string error = null, Exception exception = null)
         {
             VerifyState();
