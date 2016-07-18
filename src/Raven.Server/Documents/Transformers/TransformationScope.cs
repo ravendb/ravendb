@@ -5,17 +5,21 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using System.Linq;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Transformers
 {
     public class TransformationScope : IDisposable
     {
+        private readonly IndexingFunc _transformResults;
         private readonly DocumentsOperationContext _context;
 
-        public TransformationScope(IndexingFunc transformResults, DocumentDatabase documentDatabase, DocumentsOperationContext context)
+        public TransformationScope(IndexingFunc transformResults, DocumentsStorage documentsStorage, DocumentsOperationContext context)
         {
+            _transformResults = transformResults;
             _context = context;
-            CurrentTransformationScope.Current = new CurrentTransformationScope(transformResults, documentDatabase);
+            CurrentTransformationScope.Current = new CurrentTransformationScope(documentsStorage, context);
         }
 
         public void Dispose()
@@ -25,7 +29,7 @@ namespace Raven.Server.Documents.Transformers
 
         public IEnumerable<Document> Transform(IEnumerable<Document> documents)
         {
-            var docsEnumerator = new StaticIndexDocsEnumerator(documents, CurrentTransformationScope.Current.TransformResults, null, StaticIndexDocsEnumerator.EnumerationType.Transformer);
+            var docsEnumerator = new StaticIndexDocsEnumerator(documents, _transformResults, null, StaticIndexDocsEnumerator.EnumerationType.Transformer);
 
             IEnumerable transformedResults;
             while (docsEnumerator.MoveNext(out transformedResults))
@@ -46,7 +50,24 @@ namespace Raven.Server.Documents.Transformers
 
                         var value = new DynamicJsonValue();
                         foreach (var property in accessor.Properties)
-                            value[property.Key] = property.Value(transformedResult);
+                        {
+                            var propertyValue = property.Value(transformedResult);
+                            var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
+                            if (propertyValueAsEnumerable != null)
+                            {
+                                value[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x =>
+                                {
+                                    var dynamicDocument = x as DynamicDocumentObject;
+                                    if (dynamicDocument != null)
+                                        return (BlittableJsonReaderObject)dynamicDocument;
+
+                                    return x;
+                                }));
+                                continue;
+                            }
+
+                            value[property.Key] = propertyValue;
+                        }
 
                         values.Add(value);
                     }

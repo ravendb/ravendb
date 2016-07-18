@@ -126,9 +126,9 @@ namespace Raven.Server.Documents.Transformers
             return path;
         }
 
-        public virtual TransformationScope OpenTransformationScope(DocumentDatabase documentDatabase, DocumentsOperationContext context)
+        public virtual TransformationScope OpenTransformationScope(DocumentsStorage documentsStorage, DocumentsOperationContext context)
         {
-            return new TransformationScope(_transformer.TransformResults, documentDatabase, context);
+            return new TransformationScope(_transformer.TransformResults, documentsStorage, context);
         }
 
         public static bool TryReadIdFromFile(string name, out int transformerId)

@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Transformers
             throw new NotSupportedException($"Transformer with id {TransformerId} is in-memory implementation of a faulty transformer");
         }
 
-        public override TransformationScope OpenTransformationScope(DocumentDatabase documentDatabase, DocumentsOperationContext context)
+        public override TransformationScope OpenTransformationScope(DocumentsStorage documentsStorage, DocumentsOperationContext context)
         {
             throw new NotSupportedException($"Transformer with id {TransformerId} is in-memory implementation of a faulty transformer");
         }

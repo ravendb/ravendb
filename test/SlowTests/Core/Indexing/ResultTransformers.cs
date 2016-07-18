@@ -114,7 +114,70 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact]
+        public async Task BasicTransformerWithLoadDocuments()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                var transformer = new CompanyEmployeesTransformer();
+                transformer.Execute(store);
+
+                var transformerDefinition = transformer.CreateTransformerDefinition();
+                var serverDefinition = store.DatabaseCommands.GetTransformer(transformer.TransformerName);
+
+                Assert.True(transformerDefinition.Equals(serverDefinition));
+
+                using (var session = store.OpenSession())
+                {
+                    var employee1 = new Employee
+                    {
+                        LastName = "John"
+                    };
+
+                    var employee2 = new Employee
+                    {
+                        LastName = "Bob"
+                    };
+
+                    session.Store(employee1);
+                    session.Store(employee2);
+
+                    session.Store(new Company
+                    {
+                        Name = "Amazing",
+                        EmployeesIds = new List<string> { employee1.Id, employee2.Id }
+                    });
+
+                    session.Store(new Company
+                    {
+                        Name = "Brilliant",
+                        EmployeesIds = new List<string> { employee2.Id }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Load<CompanyEmployeesTransformer.Result>("companies/1", typeof(CompanyEmployeesTransformer));
+
+                    Assert.Equal("Amazing", result.Name);
+                    Assert.True(result.Employees.SequenceEqual(new[] { "John", "Bob" }));
+
+                    var results = session.Load<CompanyEmployeesTransformer.Result>(new [] { "companies/1", "companies/2" }, typeof(CompanyEmployeesTransformer));
+
+                    Assert.Equal(2, results.Length);
+
+                    Assert.True(results[0].Employees.SequenceEqual(new[] { "John", "Bob" }));
+                    Assert.Equal("Amazing", results[0].Name);
+
+                    Assert.True(results[1].Employees.SequenceEqual(new[] { "Bob" }));
+                    Assert.Equal("Brilliant", results[1].Name);
+                }
+            }
+        }
+
+        [Fact(Skip = "Missing feature: Collation and https://github.com/dotnet/roslyn/issues/12045")]
         public async Task CanApplyTransformerOnQueryResults()
         {
             using (var store = await GetDocumentStore())
@@ -163,7 +226,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task CanApplyTransformerOnDynamicQueryResults()
         {
             using (var store = await GetDocumentStore())

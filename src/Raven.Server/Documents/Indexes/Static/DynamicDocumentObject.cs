@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _document = document;
             _dynamicJson.Set(_document.Data);
         }
-        
+
         public object this[string key]
         {
             get
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (targetType == typeof(DateTime))
             {
                 var s = value as string ?? value as LazyStringValue;
-                
+
                 if (s != null)
                 {
                     DateTime dateTime;
@@ -189,6 +189,11 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value), e);
             }
+        }
+
+        public static implicit operator BlittableJsonReaderObject(DynamicDocumentObject self)
+        {
+            return self._document.Data;
         }
     }
 }
