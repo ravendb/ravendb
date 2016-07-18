@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Indexes
         {
         }
 
-        private void LoadValues()
+        protected virtual void LoadValues()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -534,42 +534,49 @@ namespace Raven.Server.Documents.Indexes
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
-            using (InitializeIndexingWork(indexContext))
             using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext))
             {
                 var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
-                try
+                using (InitializeIndexingWork(indexContext))
                 {
-                    foreach (var work in _indexWorkers)
+                    try
                     {
-                        using (var scope = stats.For(work.Name))
+                        foreach (var work in _indexWorkers)
                         {
-                            mightBeMore |= work.Execute(databaseContext, indexContext, writeOperation, scope, cancellationToken);
+                            using (var scope = stats.For(work.Name))
+                            {
+                                mightBeMore |= work.Execute(databaseContext, indexContext, writeOperation, scope,
+                                    cancellationToken);
 
-                            if (mightBeMore)
-                                _mre.Set();
+                                if (mightBeMore)
+                                    _mre.Set();
+                            }
                         }
                     }
-                }
-                finally
-                {
-                    if (writeOperation.IsValueCreated)
+                    finally
                     {
-                        using (stats.For("Lucene_Write"))
-                            writeOperation.Value.Dispose();
+                        if (writeOperation.IsValueCreated)
+                        {
+                            using (stats.For("Lucene_Write"))
+                                writeOperation.Value.Dispose();
+                        }
                     }
-                }
 
-                _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                    _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                }
 
                 using (stats.For("Storage_Commit"))
+                {
                     tx.Commit();
+                }
 
                 if (writeOperation.IsValueCreated)
                 {
                     using (stats.For("Lucene_RecreateSearcher"))
+                    {
                         IndexPersistence.RecreateSearcher(); // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                    }
                 }
 
                 return mightBeMore;

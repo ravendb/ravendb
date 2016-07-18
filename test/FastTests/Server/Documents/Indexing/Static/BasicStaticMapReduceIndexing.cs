@@ -215,7 +215,9 @@ select new
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
                 };
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(defOne));
+                var index = database.IndexStore.GetIndex(database.IndexStore.CreateIndex(defOne));
+
+                Assert.Equal(1, index.IndexId);
 
                 defTwo = new IndexDefinition()
                 {
@@ -238,6 +240,27 @@ select new
                     LockMode = IndexLockMode.SideBySide
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(defTwo));
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                {
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+                        {
+                            ["Location"] = "Poland",
+                            [Constants.Metadata] = new DynamicJsonValue
+                            {
+                                [Constants.Headers.RavenEntityName] = "Users"
+                            }
+                        }))
+                        {
+                            database.DocumentsStorage.Put(context, "users/1", null, doc);
+                        }
+                        tx.Commit();
+                    }
+
+                    index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                }
             }
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true))
@@ -261,6 +284,7 @@ select new
                 Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
                 Assert.True(indexes[0].Definition.Equals(defOne, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
                 Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
+                Assert.Equal(0, indexes[0]._mapReduceWorkContext.LastMapResultId);
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.MapReduce, indexes[1].Type);
@@ -276,6 +300,7 @@ select new
                 Assert.Equal(IndexingPriority.Normal, indexes[1].Priority);
                 Assert.True(indexes[1].Definition.Equals(defTwo, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
                 Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
+                Assert.Equal(-1, indexes[1]._mapReduceWorkContext.LastMapResultId);
             }
         }
     }

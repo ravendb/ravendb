@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -97,6 +98,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
+                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+
                     var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
 
                     var state = new ReduceKeyState(tree);
@@ -129,6 +132,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     index.IndexPersistence.RecreateSearcher();
 
+                    mapReduceContext.Dispose();
 
                     tx.Commit();
                 }
@@ -153,10 +157,10 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 // update
 
-                mapReduceContext.Dispose();
-
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
+                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+
                     var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
 
                     var state = new ReduceKeyState(tree);
@@ -189,6 +193,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     index.IndexPersistence.RecreateSearcher();
 
+                    mapReduceContext.Dispose();
+
                     tx.Commit();
                 }
 
@@ -210,10 +216,10 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 // delete
 
-                mapReduceContext.Dispose();
-
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
+                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+
                     var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
 
                     var state = new ReduceKeyState(tree);

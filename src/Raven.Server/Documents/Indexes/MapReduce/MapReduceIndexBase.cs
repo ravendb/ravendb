@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
@@ -16,7 +15,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract class MapReduceIndexBase<T> : Index<T> where T : IndexDefinitionBase
     {
-        protected readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
+        internal const string MapEntriesTreeName = "MapEntries";
+
+        internal readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
 
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -62,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             // each fixed size tree stored records like 
             // -> { identifier of a map result, hash of a reduce key for the map result }
 
-            return tx.CreateTree("MapEntries");
+            return tx.CreateTree(MapEntriesTreeName);
         }
 
         protected unsafe void PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
@@ -182,6 +183,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _mapReduceWorkContext.StateByReduceKeyHash[reduceKeyHash] = state = new ReduceKeyState(tree);
             }
             return state;
+        }
+
+        protected override void LoadValues()
+        {
+            base.LoadValues();
+
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var mapEntries = tx.InnerTransaction.ReadTree(MapEntriesTreeName);
+
+                if (mapEntries == null)
+                    return;
+
+                _mapReduceWorkContext.Initialize(mapEntries);
+            }
         }
     }
 }
