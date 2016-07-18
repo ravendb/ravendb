@@ -10,10 +10,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
     {
-        private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
+        private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache =
+            new ConcurrentDictionary<Type, PropertyAccessor>();
 
-        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool reduceOutput = false)
-            : base(fields, reduceOutput)
+        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields)
+            : base(fields, reduceOutput: false)
         {
         }
 
@@ -26,7 +27,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             foreach (var property in accessor.Properties)
             {
                 var value = property.Value(document);
-                var field = _fields[property.Key];
+
+                IndexField field;
+
+                try
+                {
+                    field = _fields[property.Key];
+                }
+                catch (KeyNotFoundException e)
+                {
+                    if (accessor.Properties.Count == _fields.Count)
+                        throw new InvalidOperationException(
+                            $"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
+
+                    throw new NotImplementedException("Dynamic fields are not supported yet"); // TODO arek - output of CreateField() will be probably AbstractField - just add it to the result
+                }
+
                 foreach (var luceneField in GetRegularFields(field, value))
                     yield return luceneField;
             }

@@ -59,6 +59,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/DatabaseOperationTimeout")]
         public TimeSetting DatabaseOperationTimeout { get; set; }
 
+        [Description("Indicates if we should throw an exception if any index could not be opened")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/ThrowIfAnyIndexOrTransformerCouldNotBeOpened")]
+        public bool ThrowIfAnyIndexOrTransformerCouldNotBeOpened { get; set; }
+
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
             if (string.IsNullOrEmpty(workingDirectory))

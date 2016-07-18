@@ -70,8 +70,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(dynamicObject.Data.Length, 0);
                 Assert.Equal(dynamicObject.SubData.SubArray.Length, 0);
                 Assert.Equal(dynamicObject.Name, "Trolo");
-                Assert.Throws<IndexOutOfRangeException>(() => dynamicObject.Data[0]);
-                Assert.Throws<IndexOutOfRangeException>(() => dynamicObject.SubData.SubArray[0]);
+                Assert.Throws<ArgumentOutOfRangeException>(() => dynamicObject.Data[0]);
+                Assert.Throws<ArgumentOutOfRangeException>(() => dynamicObject.SubData.SubArray[0]);
             }
         }
 

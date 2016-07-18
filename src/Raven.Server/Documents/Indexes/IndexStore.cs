@@ -459,7 +459,7 @@ namespace Raven.Server.Documents.Indexes
                         continue;
 
                     List<Exception> exceptions = null;
-                    if (_documentDatabase.Configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened)
+                    if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
                         exceptions = new List<Exception>();
 
                     try

@@ -10,7 +10,7 @@ namespace SlowTests.Core.Commands
 {
     public class Transformers : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact]
         public async Task CanPutUpdateAndDeleteTransformer()
         {
             using (var store = await GetDocumentStore())

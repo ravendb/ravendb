@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes
         {
             Name = name;
             Collections = collections;
-            MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
+            MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
             LockMode = lockMode;
         }
 
