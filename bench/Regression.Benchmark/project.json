@@ -8,9 +8,7 @@
       "include": [ "**/*.cs" ]
     },
     "embed": [
-      "**/*.json",
-      "Voron/Bugs/Data/*.txt",
-      "**/*.ravendump"
+      "Data/*.json"
     ],
     "define": [ "DEBUG" ]
   },
