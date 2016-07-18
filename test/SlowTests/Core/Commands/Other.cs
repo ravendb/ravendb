@@ -65,8 +65,8 @@ namespace SlowTests.Core.Commands
         [Fact(Skip = "Missing feature: /docs/startsWith")]
         public async Task CanSwitchDatabases()
         {
-            using (var store1 = await GetDocumentStore("store1"))
-            using (var store2 = await GetDocumentStore("store2"))
+            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
+            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
             {
                 store1.DatabaseCommands.Put(
                     "items/1",

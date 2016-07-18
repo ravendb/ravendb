@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -36,6 +37,15 @@ namespace Raven.Client.Smuggler
             ShowProgress("Starting to export file");
             var database = options.Database ?? _store.DefaultDatabase;
             var url = $"{_store.Url}/databases/{database}/smuggler/export";
+            var query = new Dictionary<string, string>();
+            if (options.Limit.HasValue)
+            {
+                query.Add("limit", options.Limit.Value.ToString());
+            }
+            if (query.Count > 0)
+            {
+                url += "?" + string.Join("&", query.Select(pair => pair.Key + "=" + pair.Value));
+            }
             // todo: send the options here
             var response = await httpClient.PostAsync(url, new StringContent(""), token).ConfigureAwait(false);
             var stream = await response.Content.ReadAsStreamAsync();
@@ -46,11 +56,11 @@ namespace Raven.Client.Smuggler
         {
             using (var stream = await ExportAsync(options, token))
             {
-                await ImportAsync(options, stream, serverUrl, databaseName);
+                await ImportAsync(options, stream, serverUrl, databaseName, token);
             }
         }
 
-        public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options,  string directoryPath)
+        public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options,  string directoryPath, CancellationToken cancellationToken = default(CancellationToken))
         {
             var files = Directory.GetFiles(directoryPath)
                 .Where(file => Constants.PeriodicExport.IncrementalExportExtension.Equals(Path.GetExtension(file), StringComparison.OrdinalIgnoreCase))
@@ -67,15 +77,15 @@ namespace Raven.Client.Smuggler
             for (var i = 0; i < files.Length - 1; i++)
             {
                 var filePath = Path.Combine(directoryPath, files[i]);
-                await ImportAsync(options, filePath).ConfigureAwait(false);
+                await ImportAsync(options, filePath, cancellationToken).ConfigureAwait(false);
             }
             options.OperateOnTypes = oldOperateOnTypes;
 
             var lastFilePath = Path.Combine(directoryPath, files.Last());
-            await ImportAsync(options, lastFilePath).ConfigureAwait(false);
+            await ImportAsync(options, lastFilePath, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ImportAsync(DatabaseSmugglerOptions options, string filePath)
+        public async Task ImportAsync(DatabaseSmugglerOptions options, string filePath, CancellationToken cancellationToken = default(CancellationToken))
         {
             var countOfFileParts = 0;
             do
@@ -83,20 +93,20 @@ namespace Raven.Client.Smuggler
                 ShowProgress($"Starting to import file: {filePath}");
                 using (var fileStream = File.OpenRead(filePath))
                 {
-                    await ImportAsync(options, fileStream, _store.Url, options.Database ?? _store.DefaultDatabase).ConfigureAwait(false);
+                    await ImportAsync(options, fileStream, _store.Url, options.Database ?? _store.DefaultDatabase, cancellationToken).ConfigureAwait(false);
                 }
                 filePath = $"{filePath}.part{++countOfFileParts:D3}";
             } while (File.Exists(filePath));
         }
 
-        private async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, string url, string database)
+        private async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, string url, string database, CancellationToken cancellationToken)
         {
             // TODO: Use HttpClientCache and support api-key
             var httpClient = new HttpClient();
             using (var content = new StreamContent(stream))
             {
                 var uri = $"{url}/databases/{database}/smuggler/import";
-                var response = await httpClient.PostAsync(uri, content).ConfigureAwait(false);
+                var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
                     var x = await response.Content.ReadAsStringAsync();
