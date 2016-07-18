@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly JsonOperationContext.MultiDocumentParser _multiDocumentParser;
         private readonly DocumentDatabase _database;
+        private readonly TcpClient _tcpClient;
         private NetworkStream _stream;
         private DocumentsOperationContext _context;
         private Thread _incomingThread;
@@ -30,15 +31,12 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
 
-        public IncomingReplicationHandler(
-            JsonOperationContext.MultiDocumentParser multiDocumentParser,
-            DocumentDatabase database,
-            NetworkStream stream,
-            ReplicationLatestEtagRequest replicatedLastEtag)
+        public IncomingReplicationHandler(JsonOperationContext.MultiDocumentParser multiDocumentParser, DocumentDatabase database, TcpClient tcpClient, NetworkStream stream, ReplicationLatestEtagRequest replicatedLastEtag)
         {
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             _multiDocumentParser = multiDocumentParser;
             _database = database;
+            _tcpClient = tcpClient;
             _stream = stream;
             _contextDisposable = _database.DocumentsStorage
                                           .ContextPool
@@ -236,8 +234,25 @@ namespace Raven.Server.Documents.Replication
         public void Dispose()
         {
             _cts.Cancel();
+            try
+            {
+                _stream.Dispose();
+            }
+            catch (Exception)
+            {
+            }
+            try
+            {
+                _tcpClient.Dispose();
+            }
+            catch (Exception)
+            {
+            }
 
-            _incomingThread?.Join();
+            if (_incomingThread != Thread.CurrentThread)
+            {
+                _incomingThread?.Join();
+            }
             _incomingThread = null;
         }
 

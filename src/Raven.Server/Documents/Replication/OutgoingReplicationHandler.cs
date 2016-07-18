@@ -300,7 +300,11 @@ namespace Raven.Server.Documents.Replication
             }
             catch (Exception) { }
 
-            _sendingThread?.Join();
+            if (_sendingThread != Thread.CurrentThread)
+            {
+                _sendingThread?.Join();
+            }
+
 
         }
 

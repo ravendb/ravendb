@@ -268,7 +268,7 @@ namespace Raven.Server
                                 SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                                documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(header, multiDocumentParser, stream);
+                                documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(context, stream, tcpClient, multiDocumentParser);
                                 break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);

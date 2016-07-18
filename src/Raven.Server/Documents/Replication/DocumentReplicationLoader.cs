@@ -44,9 +44,8 @@ namespace Raven.Server.Documents.Replication
                 null, TimeSpan.Zero, TimeSpan.FromMilliseconds(45000));
         }
 
-        public void AcceptIncomingConnection(TcpConnectionHeaderMessage incomingMwessageHeader,
-            JsonOperationContext.MultiDocumentParser multiDocumentParser,
-            NetworkStream stream)
+        public void AcceptIncomingConnection(
+             JsonOperationContext context, NetworkStream stream, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
             using (var readerObject = multiDocumentParser.ParseToMemory("IncomingReplication/get-last-etag-message read"))
@@ -54,45 +53,39 @@ namespace Raven.Server.Documents.Replication
                 getLatestEtagMessage = JsonDeserialization.ReplicationLatestEtagRequest(readerObject);
             }
 
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, stream))
-            using (context.OpenReadTransaction())
+            DocumentsOperationContext documentsOperationContext;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
+            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, stream))
+            using (documentsOperationContext.OpenReadTransaction())
             {
-                context.Write(writer, new DynamicJsonValue
+                documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
-                    ["LastSentEtag"] = GetLastReceivedEtag(Guid.Parse(getLatestEtagMessage.SourceDatabaseId), context)
+                    ["LastSentEtag"] = GetLastReceivedEtag(Guid.Parse(getLatestEtagMessage.SourceDatabaseId), documentsOperationContext)
                 });
             }
 
             var connectionInfo = IncomingConnectionInfo.FromGetLatestEtag(getLatestEtagMessage);
-
-            string rejectionMessage;
-            if (!IsValidConnection(connectionInfo, incomingMessageHeader, out rejectionMessage))
+            try
+            {
+                AssertValidConnection(connectionInfo);
+            }
+            catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Connection from [{connectionInfo}] is rejected. Reason: {rejectionMessage}");
+                    _log.Info($"Connection from [{connectionInfo}] is rejected.",e);
 
-                _incomingRejectionStats.AddOrUpdate(connectionInfo,
-                    _ =>
-                    {
-                        var queue = new ConcurrentQueue<IncomingConnectionRejectionInfo>();
-                        queue.Enqueue(new IncomingConnectionRejectionInfo { Reason = rejectionMessage });
-                        return queue;
-                    },
-                    (_, existing) =>
-                    {
-                        existing.Enqueue(new IncomingConnectionRejectionInfo { Reason = rejectionMessage });
-                        return existing;
-                    });
+                var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
+                    _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
+                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo { Reason = e.ToString() });
 
-                return;
+                throw;
             }
 
             var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
             {
                 var newIncoming = new IncomingReplicationHandler(multiDocumentParser,
                         _database,
+                        tcpClient,
                         stream,
                         getLatestEtagMessage);
                 newIncoming.Failed += OnIncomingReceiveFailed;
@@ -118,15 +111,13 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool IsValidConnection(IncomingConnectionInfo connectionInfo,  out string rejectionMessage)
+        private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
         {
-            rejectionMessage = null;
 
-            //not 100% sure it is enough for detecting loopback replication
             if (Guid.Parse(connectionInfo.SourceDatabaseId) == _database.DbId)
             {
-                rejectionMessage = $"Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})";
-                return false;
+                throw new InvalidOperationException(
+                    "Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
             }
 
             var relevantActivityEntry =
@@ -136,11 +127,9 @@ namespace Raven.Server.Documents.Replication
                 (relevantActivityEntry.Value - DateTime.UtcNow).TotalMilliseconds <=
                 _database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds)
             {
-                rejectionMessage = $"Tried to connect [{connectionInfo}], but the connection from the same source was active less then 30 seconds ago. Duplicate connections from the same source are not allowed.";
-                return false;
+                throw new InvalidOperationException(
+                    $"Tried to connect [{connectionInfo}], but the connection from the same source was active less then {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalSeconds} ago. Duplicate connections from the same source are not allowed.");
             }
-
-            return true;
         }
 
         public void Initialize()
