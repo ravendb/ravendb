@@ -53,7 +53,7 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Subscriptions.Benchmark", "
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "BulkInsert.Benchmark", "bench\BulkInsert.Benchmark\BulkInsert.Benchmark.xproj", "{447C3359-4A9D-4AAD-AA76-6AD3D181D202}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Regression", "bench\Regression.Benchmark\Regression.xproj", "{2D0F7063-091D-4BFD-9A1D-A9DD7421148F}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Regression.Benchmark", "bench\Regression.Benchmark\Regression.Benchmark.xproj", "{2D0F7063-091D-4BFD-9A1D-A9DD7421148F}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Tests.Infrastructure", "test\Tests.Infrastructure\Tests.Infrastructure.xproj", "{363B35F2-A2AD-43E6-839F-D7A3CD52F1BB}"
 EndProject
