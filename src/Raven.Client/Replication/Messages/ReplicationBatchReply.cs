@@ -5,8 +5,8 @@
 		public enum ReplyType
 		{
 			None,
-			Success,
-			Failure
+			Ok,
+			Error
 		}
 
 		public ReplyType Type { get; set; }

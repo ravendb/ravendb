@@ -10,7 +10,6 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Raven.Server.Config;
@@ -39,27 +38,19 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public readonly PatchDocument Patch;
 
-        private HttpJsonRequestFactory _httpJsonRequestFactory;
+		private HttpJsonRequestFactory _httpJsonRequestFactory;
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
         public TransactionOperationsMerger TxMerger;
-        private DocumentConvention _convention;
 
-        public string Url { get; private set; }
-
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
+	    public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
             LoggerSetup loggerSetup)
         {
             Name = name;
             Configuration = configuration;
             LoggerSetup = loggerSetup;
-
-            var hostName = Dns.GetHostName();
-            Url = Configuration.Core.ServerUrl.ToLower()
-                                              .Replace("localhost", hostName)
-                                              .Replace("127.0.0.1", hostName);
 
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
@@ -105,43 +96,26 @@ namespace Raven.Server.Documents
 
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
-        public HttpJsonRequestFactory HttpRequestFactory => _httpJsonRequestFactory;
-
-        public void Initialize(HttpJsonRequestFactory httpRequestFactory, DocumentConvention convention)
-        {
-            _convention = convention;
-            _httpJsonRequestFactory = httpRequestFactory;
+	    public void Initialize()
+	    {
             DocumentsStorage.Initialize();
             InitializeInternal();
         }
 
-        public void Initialize(StorageEnvironmentOptions options, HttpJsonRequestFactory httpRequestFactory, DocumentConvention convention)
-        {
-            _httpJsonRequestFactory = httpRequestFactory;
-            _convention = convention;
-            DocumentsStorage.Initialize(options);
+        public void Initialize(StorageEnvironmentOptions options)
+        {			
+			DocumentsStorage.Initialize(options);
             InitializeInternal();
         }
 
-        public TcpConnectionInfo GetTcpInfo(string url, string apiKey)
-        {
-            using (var request = HttpRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
-                MultiDatabase.GetRootDatabaseUrl(url)),
-                HttpMethod.Get,
-                new OperationCredentials(apiKey, CredentialCache.DefaultCredentials),_convention)))
-            {
-                var result = request.ReadResponseJson();
-                return _convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
-            }
-        }
 
-        private void InitializeInternal()
+		private void InitializeInternal()
         {
             TxMerger.Start();
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
-
+			DocumentReplicationLoader.Initialize();
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
 
@@ -192,8 +166,8 @@ namespace Raven.Server.Documents
 
             if (_transformerStoreTask != null)
             {
-                exceptionAggregator.Execute(() =>
-                {
+            exceptionAggregator.Execute(() =>
+            {
                     _transformerStoreTask.Wait(DatabaseShutdown);
                     _transformerStoreTask = null;
                 });
@@ -317,7 +291,7 @@ namespace Raven.Server.Documents
             foreach (var index in IndexStore.GetIndexes())
             {
                 yield return index._indexStorage.Environment();
-            }
+    }
         }
     }
 }

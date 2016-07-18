@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -30,7 +28,7 @@ namespace FastTests.Server.Documents
             _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
 
             _documentDatabase = new DocumentDatabase("foo", _configuration, new MetricsScheduler(), new LoggerSetup(Path.GetTempPath(), LogMode.None));
-            _documentDatabase.Initialize(new HttpJsonRequestFactory(1),new DocumentConvention());
+            _documentDatabase.Initialize();
 
             _unmanagedBuffersPool = new UnmanagedBuffersPool("test");
         }
@@ -278,7 +276,7 @@ namespace FastTests.Server.Documents
             _configuration.Core.RunInMemory = true;
 
             _documentDatabase = new DocumentDatabase("test", _configuration, new MetricsScheduler(), new LoggerSetup(Path.GetTempPath(),LogMode.None));
-            _documentDatabase.Initialize(options, new HttpJsonRequestFactory(16),new DocumentConvention());
+            _documentDatabase.Initialize(options);
         }
 
         [Fact]

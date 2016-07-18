@@ -1,6 +1,6 @@
 ﻿namespace Raven.Abstractions.Replication
 {
-	public class ReplicationEtagReply
+	public class ReplicationLatestEtagReply
 	{
 		public long LastSentEtag { get; set; }
 	}

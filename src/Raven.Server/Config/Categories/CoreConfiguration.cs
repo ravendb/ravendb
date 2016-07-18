@@ -11,13 +11,10 @@ namespace Raven.Server.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
-        private bool runInMemory;
-        private string workingDirectory;
+	    private string workingDirectory;
         private string dataDirectory;
-        private string serverUrl;
-        private string tcpServerUrl;
 
-        [Description("The maximum allowed page size for queries")]
+	    [Description("The maximum allowed page size for queries")]
         [DefaultValue(1024)]
         [MinValue(10)]
         [ConfigurationEntry("Raven/MaxPageSize")]
@@ -26,40 +23,19 @@ namespace Raven.Server.Config.Categories
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
         [DefaultValue("http://localhost:8080")]
         [ConfigurationEntry("Raven/ServerUrl")]
-        public string ServerUrl
-        {
-            get { return serverUrl; }
-            set
-            {
-                serverUrl = value;
-            }
-        }
+        public string ServerUrl { get; set; }
 
-        [Description("The URLs which the server should listen to. By default we listen to localhost:8081")]
+	    [Description("The URLs which the server should listen to. By default we listen to localhost:8081")]
         [DefaultValue("tcp://localhost:8081")]
         [ConfigurationEntry("Raven/ServerUrl/TCP")]
-        public string TcpServerUrl
-        {
-            get { return tcpServerUrl; }
-            set
-            {
-                tcpServerUrl = value;
-            }
-        }
+        public string TcpServerUrl { get; set; }
 
-        [Description("Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
+	    [Description("Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/RunInMemory")]
-        public bool RunInMemory
-        {
-            get { return runInMemory; }
-            set
-            {
-                runInMemory = value;
-            }
-        }
+        public bool RunInMemory { get; set; }
 
-        [DefaultValue(@"~\")]
+	    [DefaultValue(@"~\")]
         [ConfigurationEntry("Raven/WorkingDir")]
         public string WorkingDirectory
         {
