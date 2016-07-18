@@ -21,7 +21,10 @@ namespace Raven.Server.Smuggler
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                new DatabaseDataExporter(Database).Export(context, ResponseBodyStream());
+                new DatabaseDataExporter(Database)
+                {
+                    Limit = GetIntValueQueryString("limit", required: false)
+                }.Export(context, ResponseBodyStream());
             }
             return Task.CompletedTask;
         }

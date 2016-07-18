@@ -1,12 +1,3 @@
-using System;
-using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
-using System.Linq;
-
 namespace Raven.Client.Smuggler
 {
     public class DatabaseSmugglerOptions
