@@ -176,6 +176,20 @@ namespace Raven.Database.Storage.Voron.StorageActions
             AddReduceKeyCount(keySlice, view, viewKeySlice, reduceKey, newValue, reduceKeyCountVersion);
         }
 
+        public bool HasMappedResultsForIndex(int view)
+        {
+            var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
+            var viewKey = CreateViewKey(view);
+
+            using (var iterator = mappedResultsByView.MultiRead(Snapshot, viewKey))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                    return false;
+
+                return true;
+            }
+        }
+
         public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)
         {
             var viewKey = CreateViewKey(view);

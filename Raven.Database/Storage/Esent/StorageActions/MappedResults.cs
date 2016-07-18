@@ -571,6 +571,17 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
 
         }
+
+        public bool HasMappedResultsForIndex(int view)
+        {
+            Api.JetSetCurrentIndex(session, MappedResults, "by_view");
+            Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
+                return false;
+
+            return true;
+        }
+
         public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)
         {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_doc_key");
