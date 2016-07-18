@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Replication
                 null, TimeSpan.Zero, TimeSpan.FromMilliseconds(45000));
         }
 
-        public void AcceptIncomingConnection(TcpConnectionHeaderMessage incomingMessageHeader,
+        public void AcceptIncomingConnection(TcpConnectionHeaderMessage incomingMwessageHeader,
             JsonOperationContext.MultiDocumentParser multiDocumentParser,
             NetworkStream stream)
         {
@@ -118,15 +118,14 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool IsValidConnection(IncomingConnectionInfo connectionInfo, TcpConnectionHeaderMessage incomingMessageHeader, out string rejectionMessage)
+        private bool IsValidConnection(IncomingConnectionInfo connectionInfo,  out string rejectionMessage)
         {
             rejectionMessage = null;
 
             //not 100% sure it is enough for detecting loopback replication
-            if (incomingMessageHeader.DatabaseName.Equals(connectionInfo.SourceDatabaseName) &&
-                connectionInfo.SourceMachineName.Equals(Environment.MachineName))
+            if (Guid.Parse(connectionInfo.SourceDatabaseId) == _database.DbId)
             {
-                rejectionMessage = $"Cannot have have replication with source and destination being the same database. ({connectionInfo})";
+                rejectionMessage = $"Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})";
                 return false;
             }
 
