@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             : base(fields, reduceOutput)
         {
             if (reduceOutput)
-                _blittableTraverser = new BlittableJsonTraverser(new char[] { }); // map-reduce results are have always flat structure
+                _blittableTraverser = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always flat structure
             else
                 _blittableTraverser = new BlittableJsonTraverser();
         }
