@@ -103,6 +103,11 @@ namespace Raven.Abstractions.Data
         public string AdditionalQuery { get; set; }
 
         /// <summary>
+        /// The default analyzer to be used for fields without any analyzer specified in the index definition. Default is LowerCaseKeywordAnalyzer.
+        /// </summary>
+        public string DefaultAnalyzerName { get; set; }
+
+        /// <summary>
         /// Values for the the mapping group fields to use as the basis for comparison
         /// </summary>
         public NameValueCollection MapGroupFields { get; set; }
@@ -158,6 +163,8 @@ namespace Raven.Abstractions.Data
             }
             if(string.IsNullOrWhiteSpace(AdditionalQuery) == false)
                 uri.Append("query=").Append(Uri.EscapeDataString(AdditionalQuery)).Append("&");
+            if (string.IsNullOrWhiteSpace(DefaultAnalyzerName) == false)
+                uri.Append("defaultAnalyzer=").Append(Uri.EscapeDataString(DefaultAnalyzerName)).Append("&");
             if (Boost != null && Boost != DefaultBoost)
                 uri.Append("boost=true&");
             if (BoostFactor != null && BoostFactor != DefaultBoostFactor)
