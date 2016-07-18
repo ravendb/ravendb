@@ -621,7 +621,8 @@ namespace Sparrow.Json
                 compressedSize = _context.Lz4.Encode64(str.Buffer,
                     compressionBuffer,
                     str.Size,
-                    maxGoodCompressionSize,(int)Math.Log(str.Size));
+                    maxGoodCompressionSize,
+                    acceleration: CalculateCompressionAcceleration(str.Size));
             }
             else
             {
@@ -631,6 +632,11 @@ namespace Sparrow.Json
                     maxGoodCompressionSize);
             }
             return compressionBuffer;
+        }
+
+        private static int CalculateCompressionAcceleration(int size)
+        {
+            return (int)Math.Log(size, 2);
         }
 
 
