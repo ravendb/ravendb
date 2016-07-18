@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     _converter = new LuceneDocumentConverter(fields, reduceOutput: _index.Type.IsMapReduce());
                     break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, reduceOutput: false);
+                    _converter = new AnonymousLuceneDocumentConverter(fields);
                     break;
                 case IndexType.Faulty:
                     _converter = null;
