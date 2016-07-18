@@ -38,14 +38,12 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public readonly PatchDocument Patch;
 
-		private HttpJsonRequestFactory _httpJsonRequestFactory;
-
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
         public TransactionOperationsMerger TxMerger;
 
-	    public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
             LoggerSetup loggerSetup)
         {
             Name = name;
@@ -62,7 +60,7 @@ namespace Raven.Server.Documents
             SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler);
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
-            TxMerger = new TransactionOperationsMerger(this,DatabaseShutdown);
+            TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
         }
 
         public SubscriptionStorage SubscriptionStorage { get; set; }
@@ -96,26 +94,26 @@ namespace Raven.Server.Documents
 
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
-	    public void Initialize()
-	    {
+        public void Initialize()
+        {
             DocumentsStorage.Initialize();
             InitializeInternal();
         }
 
         public void Initialize(StorageEnvironmentOptions options)
-        {			
-			DocumentsStorage.Initialize(options);
+        {
+            DocumentsStorage.Initialize(options);
             InitializeInternal();
         }
 
 
-		private void InitializeInternal()
+        private void InitializeInternal()
         {
             TxMerger.Start();
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
-			DocumentReplicationLoader.Initialize();
+            DocumentReplicationLoader.Initialize();
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
 
@@ -166,8 +164,8 @@ namespace Raven.Server.Documents
 
             if (_transformerStoreTask != null)
             {
-            exceptionAggregator.Execute(() =>
-            {
+                exceptionAggregator.Execute(() =>
+                {
                     _transformerStoreTask.Wait(DatabaseShutdown);
                     _transformerStoreTask = null;
                 });
@@ -291,7 +289,7 @@ namespace Raven.Server.Documents
             foreach (var index in IndexStore.GetIndexes())
             {
                 yield return index._indexStorage.Environment();
-    }
+            }
         }
     }
 }

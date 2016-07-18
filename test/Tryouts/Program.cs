@@ -9,7 +9,7 @@ namespace Tryouts
     {
         private static void Main(string[] args)
         {
-            using (var store = new DocumentStore {Url = "http://localhost:8080", DefaultDatabase = "FreeDB"})
+            using (var store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = "FreeDB" })
             {
                 store.Initialize();
                 var sw = new Stopwatch();

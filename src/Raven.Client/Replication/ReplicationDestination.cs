@@ -30,7 +30,7 @@ namespace Raven.Abstractions.Replication
         public string Url
         {
             get { return url; }
-            set 
+            set
             {
                 url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
             }
@@ -40,7 +40,7 @@ namespace Raven.Abstractions.Replication
         /// The replication server username to use
         /// </summary>
         public string Username { get; set; }
-        
+
         /// <summary>
         /// The replication server password to use
         /// </summary>
@@ -93,7 +93,7 @@ namespace Raven.Abstractions.Replication
         /// <summary>
         /// If not null then only docs from specified collections are replicated and transformed / filtered according to an optional script.
         /// </summary>
-        public Dictionary<string, string> SpecifiedCollections { get; set; } 
+        public Dictionary<string, string> SpecifiedCollections { get; set; }
 
         public string Humane
         {
@@ -105,19 +105,19 @@ namespace Raven.Abstractions.Replication
             }
         }
 
-        public bool CanBeFailover() => 
-			IgnoredClient == false && Disabled == false && (SpecifiedCollections == null || SpecifiedCollections.Count == 0);
+        public bool CanBeFailover() =>
+            IgnoredClient == false && Disabled == false && (SpecifiedCollections == null || SpecifiedCollections.Count == 0);
 
-	    public override string ToString() => $"{nameof(Url)}: {Url}, {nameof(Database)}: {Database}";
+        public override string ToString() => $"{nameof(Url)}: {Url}, {nameof(Database)}: {Database}";
 
-	    public bool Equals(ReplicationDestination other) => IsEqualTo(other);
+        public bool Equals(ReplicationDestination other) => IsEqualTo(other);
 
-	    public bool IsEqualTo(ReplicationDestination other)
+        public bool IsEqualTo(ReplicationDestination other)
         {
             return string.Equals(Username, other.Username) && string.Equals(Password, other.Password) &&
                    string.Equals(Domain, other.Domain) && string.Equals(ApiKey, other.ApiKey) &&
                    string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase) &&
-                   TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&				   
+                   TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
                    (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
@@ -149,12 +149,12 @@ namespace Raven.Abstractions.Replication
             }
         }
 
-		public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
+        public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
         {
             public bool HasGlobal { get; set; }
 
             public bool HasLocal { get; set; }
-		}
+        }
 
         public class ReplicationDestinationWithClusterInformation : ReplicationDestination
         {
@@ -163,21 +163,21 @@ namespace Raven.Abstractions.Replication
             public static ReplicationDestinationWithClusterInformation Create(ReplicationDestinationWithConfigurationOrigin source, bool isInCluster, bool isLeader)
             {
                 return new ReplicationDestinationWithClusterInformation
-                       {
-                           ApiKey = source.ApiKey,
-                           ClientVisibleUrl = source.ClientVisibleUrl,
-                           Database = source.Database,
-                           Disabled = source.Disabled,
-                           Domain = source.Domain,
-                           IgnoredClient = source.IgnoredClient,
-                           ClusterInformation = new ClusterInformation(isInCluster, isLeader),
-                           Password = source.Password,
-                           SkipIndexReplication = source.SkipIndexReplication,
-                           TransitiveReplicationBehavior = source.TransitiveReplicationBehavior,
-                           Url = source.Url,
-                           Username = source.Username,
-                           SpecifiedCollections = source.SpecifiedCollections
-                       };
+                {
+                    ApiKey = source.ApiKey,
+                    ClientVisibleUrl = source.ClientVisibleUrl,
+                    Database = source.Database,
+                    Disabled = source.Disabled,
+                    Domain = source.Domain,
+                    IgnoredClient = source.IgnoredClient,
+                    ClusterInformation = new ClusterInformation(isInCluster, isLeader),
+                    Password = source.Password,
+                    SkipIndexReplication = source.SkipIndexReplication,
+                    TransitiveReplicationBehavior = source.TransitiveReplicationBehavior,
+                    Url = source.Url,
+                    Username = source.Username,
+                    SpecifiedCollections = source.SpecifiedCollections
+                };
             }
         }
     }
