@@ -2,7 +2,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Sparrow.Collections;
@@ -12,7 +11,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using Sparrow;
 using Voron.Trees;
@@ -174,6 +172,20 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
 
             AddReduceKeyCount(keySlice, view, viewKeySlice, reduceKey, newValue, reduceKeyCountVersion);
+        }
+
+        public bool HasMappedResultsForIndex(int view)
+        {
+            var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
+            var viewKey = CreateViewKey(view);
+
+            using (var iterator = mappedResultsByView.MultiRead(Snapshot, viewKey))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                    return false;
+
+                return true;
+            }
         }
 
         public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)

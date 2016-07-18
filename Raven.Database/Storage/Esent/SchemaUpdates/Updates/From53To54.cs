@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="From51To52.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="From53To54.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -12,11 +12,11 @@ using Raven.Storage.Esent.SchemaUpdates;
 
 namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 {
-    public class From51To52 : ISchemaUpdate
+    public class From53To54 : ISchemaUpdate
     {
         private InMemoryRavenConfiguration configuration;
 
-        public string FromSchemaVersion { get { return "5.1"; } }
+        public string FromSchemaVersion { get { return "5.3"; } }
 
         public void Init(IUuidGenerator generator, InMemoryRavenConfiguration configuration)
         {
@@ -25,17 +25,17 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 
         public void Update(Session session, JET_DBID dbid, Action<string> output)
         {
-            using (var tbl = new Table(session, dbid, "tasks", OpenTableGrbit.None))
+            using (var table = new Table(session, dbid, "mapped_results", OpenTableGrbit.None))
             {
-                SchemaCreator.CreateIndexes(session, tbl, new JET_INDEXCREATE
+                SchemaCreator.CreateIndexes(session, table, new JET_INDEXCREATE
                 {
-                    szIndexName = "by_task_type",
-                    szKey = "+task_type\0\0",
-                    grbit = CreateIndexGrbit.IndexIgnoreNull
+                    szIndexName = "by_view",
+                    szKey = "+view\0\0",
+                    grbit = CreateIndexGrbit.IndexDisallowNull
                 });
-
-                SchemaCreator.UpdateVersion(session, dbid, "5.2");
             }
+
+            SchemaCreator.UpdateVersion(session, dbid, "5.4");
         }
     }
 }
