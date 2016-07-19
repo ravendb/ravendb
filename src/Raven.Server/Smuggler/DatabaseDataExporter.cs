@@ -1,6 +1,8 @@
 using System.IO;
 using System.IO.Compression;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -67,6 +69,31 @@ namespace Raven.Server.Smuggler
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyString("Indexes"));
                 writer.WriteStartArray();
+                foreach (var index in _database.IndexStore.GetIndexes())
+                {
+                    if (index.Type == IndexType.Map || index.Type == IndexType.MapReduce)
+                    {
+                        var indexDefinition = index.GetIndexDefinition();
+                        writer.WriteIndexDefinition(context, indexDefinition);
+                    }
+                    else if (index.Type == IndexType.Faulty)
+                    {
+                        // TODO: Should we export them?
+                    }
+                    else
+                    {
+                        // TODO: Export auto indexes.
+                    }
+                }
+                writer.WriteEndArray();
+
+                writer.WriteComma();
+                writer.WritePropertyName(context.GetLazyString("Transformers"));
+                writer.WriteStartArray();
+                foreach (var transformer in _database.TransformerStore.GetTransformers())
+                {
+                    writer.WriteTransformerDefinition(context, transformer.Definition);
+                }
                 writer.WriteEndArray();
 
                 writer.WriteComma();

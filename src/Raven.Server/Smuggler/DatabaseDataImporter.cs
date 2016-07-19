@@ -4,7 +4,11 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -82,23 +86,44 @@ namespace Raven.Server.Smuggler
                                     result.Warnings.Add("Attachments are not supported anymore. Use RavenFS isntead. Skipping.");
                                     break;
                                 case "Indexes":
-                                case "Transformers":
-                                    /*result.IndexesCount++;
-                                    result.TransformersCount++;*/
-                                    using (var indexesBuilder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "Indexes", parser, state))
+                                    result.IndexesCount++;
+                                    using (var indexBuilder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "Indexes", parser, state))
                                     {
-                                        indexesBuilder.ReadNestedObject();
-                                        while (indexesBuilder.Read() == false)
+                                        indexBuilder.ReadNestedObject();
+                                        while (indexBuilder.Read() == false)
                                         {
                                             var read = await stream.ReadAsync(buffer, 0, buffer.Length);
                                             if (read == 0)
                                                 throw new EndOfStreamException("Stream ended without reaching end of json content");
                                             parser.SetBuffer(buffer, read);
                                         }
-                                        indexesBuilder.FinalizeDocument();
-                                        using (var reader = indexesBuilder.CreateReader())
+                                        indexBuilder.FinalizeDocument();
+                                        using (var reader = indexBuilder.CreateReader())
                                         {
-                                            /*TODO:Implement*/
+                                            var index = new IndexDefinition();
+                                            // TODO: Populate this index
+                                            _database.IndexStore.CreateIndex(index);
+                                        }
+                                    }
+                                    break;
+                                case "Transformers":
+                                    result.TransformersCount++;
+                                    using (var transformerBuilder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "Indexes", parser, state))
+                                    {
+                                        transformerBuilder.ReadNestedObject();
+                                        while (transformerBuilder.Read() == false)
+                                        {
+                                            var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                                            if (read == 0)
+                                                throw new EndOfStreamException("Stream ended without reaching end of json content");
+                                            parser.SetBuffer(buffer, read);
+                                        }
+                                        transformerBuilder.FinalizeDocument();
+                                        using (var reader = transformerBuilder.CreateReader())
+                                        {
+                                            var transformerDefinition = new TransformerDefinition();
+                                            // TODO: Import
+                                            _database.TransformerStore.CreateTransformer(transformerDefinition);
                                         }
                                     }
                                     break;
