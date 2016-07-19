@@ -61,6 +61,9 @@ namespace Raven.Server.Documents
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
+            HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments, 
+                configuration.Databases.MaxWarnSizeHugeDocuments);
+
         }
 
         public SubscriptionStorage SubscriptionStorage { get; set; }
@@ -83,6 +86,8 @@ namespace Raven.Server.Documents
         public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
 
         public DocumentsNotifications Notifications { get; }
+
+        public HugeDocuments HugeDocuments { get; }
 
         public MetricsCountersManager Metrics { get; }
 

@@ -394,7 +394,11 @@ namespace Raven.Server.Documents
             if (tvr == null)
                 return null;
 
-            return TableValueToDocument(context, tvr);
+            var doc = TableValueToDocument(context, tvr);
+
+            context.DocumentDatabase().HugeDocuments.AddIfDocIsHuge(doc.Key, doc.Data.Size);
+
+            return doc;
         }
 
         public IEnumerable<DocumentTombstone> GetTombstonesAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
