@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries.Parse
     {
         private static readonly Analyzer QueryAnalyzer = new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer());
 
-        public static HashSet<string> GetFields(IndexQuery query)
+        public static HashSet<string> GetFields(IndexQueryServerSide query)
         {
             var hashSet = new HashSet<string>();
             if (string.IsNullOrWhiteSpace(query.Query))
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Queries.Parse
             return false;
         }
 
-        public static HashSet<Tuple<string, string>> GetFieldsForDynamicQuery(IndexQuery query)
+        public static HashSet<Tuple<string, string>> GetFieldsForDynamicQuery(IndexQueryServerSide query)
         {
             var results = new HashSet<Tuple<string, string>>();
             foreach (var result in GetFields(query))

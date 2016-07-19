@@ -8,6 +8,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -84,13 +85,13 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(2, batchStats.ReduceSuccesses);
                         Assert.Equal(0, batchStats.ReduceErrors);
 
-                        var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
 
                         context.Reset();
 
-                        queryResult = await index.Query(new IndexQuery() { Query = "Location:Poland" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide() { Query = "Location:Poland" }, context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
 
@@ -195,13 +196,13 @@ select new
                         Assert.Equal(3, batchStats.ReduceSuccesses);
                         Assert.Equal(0, batchStats.ReduceErrors);
 
-                        var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
                         context.Reset();
 
-                        queryResult = await index.Query(new IndexQuery { Query = "Product:Milk" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide { Query = "Product:Milk" }, context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("Milk", queryResult.Results[0].Data["Product"].ToString());

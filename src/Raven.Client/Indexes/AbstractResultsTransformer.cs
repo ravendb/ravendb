@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Data.Transformers;
 
 namespace Raven.Client.Indexes
 {
@@ -47,7 +48,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Returns value of a transformer parameter for specified key
         /// </summary>
-        protected RavenJToken Parameter(string key)
+        protected TransformerParameter Parameter(string key)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
@@ -55,7 +56,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Returns value of a transformer parameter for specified key or specified default value if there is no parameter under given key
         /// </summary>
-        protected RavenJToken ParameterOrDefault(string key, object defaultVal)
+        protected TransformerParameter ParameterOrDefault(string key, object defaultVal)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }

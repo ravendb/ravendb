@@ -28,17 +28,46 @@ namespace FastTests.Client.Indexing
         {
             using (var store = await GetDocumentStore())
             {
-                IndexQuery query;
+                IndexQuery q;
                 using (var session = store.OpenSession())
                 {
                     var people = session.Query<Person>()
                         .Where(x => x.Name == "John")
                         .ToList(); // create index
 
-                    query = session.Advanced.DocumentQuery<Person>()
+                    q = session.Advanced.DocumentQuery<Person>()
                         .WhereEquals(x => x.Name, "John")
                         .GetIndexQuery(isAsync: false);
                 }
+
+                var query = new IndexQueryServerSide
+                {
+                    Transformer = q.Transformer,
+                    Start = q.Start,
+                    AllowMultipleIndexEntriesForSameDocumentToResultTransformer = q.AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                    CutoffEtag = q.CutoffEtag,
+                    DebugOptionGetIndexEntries = q.DebugOptionGetIndexEntries,
+                    DefaultField = q.DefaultField,
+                    DefaultOperator = q.DefaultOperator,
+                    DisableCaching = q.DisableCaching,
+                    DynamicMapReduceFields = q.DynamicMapReduceFields,
+                    ExplainScores = q.ExplainScores,
+                    FieldsToFetch = q.FieldsToFetch,
+                    HighlightedFields = q.HighlightedFields,
+                    HighlighterKeyName = q.HighlighterKeyName,
+                    HighlighterPostTags = q.HighlighterPostTags,
+                    HighlighterPreTags = q.HighlighterPreTags,
+                    Includes = q.Includes,
+                    IsDistinct = q.IsDistinct,
+                    PageSize = q.PageSize,
+                    Query = q.Query,
+                    ShowTimings = q.ShowTimings,
+                    SkipDuplicateChecking = q.SkipDuplicateChecking,
+                    SortedFields = q.SortedFields,
+                    WaitForNonStaleResults = q.WaitForNonStaleResults,
+                    WaitForNonStaleResultsAsOfNow = q.WaitForNonStaleResultsAsOfNow,
+                    WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout
+                };
 
                 var database = await Server
                     .ServerStore

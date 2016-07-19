@@ -713,7 +713,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
-        public async Task<DocumentQueryResult> Query(IndexQuery query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public async Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -790,7 +790,7 @@ namespace Raven.Server.Documents.Indexes
                                     throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
                             }
 
-                            using (var scope = transformer?.OpenTransformationScope(DocumentDatabase.DocumentsStorage, documentsContext))
+                            using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, DocumentDatabase.DocumentsStorage, documentsContext))
                             {
                                 var results = scope != null ? scope.Transform(documents) : documents;
 
@@ -888,7 +888,7 @@ namespace Raven.Server.Documents.Indexes
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 
-        private DisposableAction MarkQueryAsRunning(IndexQuery query, OperationCancelToken token)
+        private DisposableAction MarkQueryAsRunning(IndexQueryServerSide query, OperationCancelToken token)
         {
             var queryStartTime = DateTime.UtcNow;
             var queryId = Interlocked.Increment(ref _numberOfQueries);
@@ -902,7 +902,7 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private static bool WillResultBeAcceptable(bool isStale, IndexQuery query, AsyncWaitForIndexing wait)
+        private static bool WillResultBeAcceptable(bool isStale, IndexQueryServerSide query, AsyncWaitForIndexing wait)
         {
             if (isStale == false)
                 return true;

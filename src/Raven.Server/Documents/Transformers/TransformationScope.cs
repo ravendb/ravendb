@@ -12,14 +12,14 @@ namespace Raven.Server.Documents.Transformers
 {
     public class TransformationScope : IDisposable
     {
-        private readonly IndexingFunc _transformResults;
+        private readonly IndexingFunc _transformer;
         private readonly DocumentsOperationContext _context;
 
-        public TransformationScope(IndexingFunc transformResults, DocumentsStorage documentsStorage, DocumentsOperationContext context)
+        public TransformationScope(IndexingFunc transformer, BlittableJsonReaderObject transformerParameters, DocumentsStorage documentsStorage, DocumentsOperationContext context)
         {
-            _transformResults = transformResults;
+            _transformer = transformer;
             _context = context;
-            CurrentTransformationScope.Current = new CurrentTransformationScope(documentsStorage, context);
+            CurrentTransformationScope.Current = new CurrentTransformationScope(transformerParameters, documentsStorage, context);
         }
 
         public void Dispose()
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Transformers
 
         public IEnumerable<Document> Transform(IEnumerable<Document> documents)
         {
-            var docsEnumerator = new StaticIndexDocsEnumerator(documents, _transformResults, null, StaticIndexDocsEnumerator.EnumerationType.Transformer);
+            var docsEnumerator = new StaticIndexDocsEnumerator(documents, _transformer, null, StaticIndexDocsEnumerator.EnumerationType.Transformer);
 
             IEnumerable transformedResults;
             while (docsEnumerator.MoveNext(out transformedResults))
@@ -72,13 +72,15 @@ namespace Raven.Server.Documents.Transformers
                         values.Add(value);
                     }
 
-                    yield return new Document
+                    var document = new Document
                     {
                         //Key = docsEnumerator.Current.Key,
-                        Data = _context.ReadObject(result, docsEnumerator.Current.Key),
+                        Data = _context.ReadObject(result, docsEnumerator.Current.Key ?? string.Empty),
                         Etag = docsEnumerator.Current.Etag,
                         StorageId = docsEnumerator.Current.StorageId
                     };
+
+                    yield return document;
                 }
             }
         }

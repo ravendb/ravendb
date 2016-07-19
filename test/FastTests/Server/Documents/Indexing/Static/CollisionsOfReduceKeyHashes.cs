@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -139,7 +140,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 var queryResult =
                     await
-                        index.Query(new IndexQuery(),
+                        index.Query(new IndexQueryServerSide(),
                             new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
                             OperationCancelToken.None);
 
@@ -198,7 +199,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQuery(),
+                queryResult = await index.Query(new IndexQueryServerSide(),
                             new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
                             OperationCancelToken.None);
 
@@ -245,7 +246,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQuery()
+                queryResult = await index.Query(new IndexQueryServerSide
                     {
                         SortedFields = new[]
                         {

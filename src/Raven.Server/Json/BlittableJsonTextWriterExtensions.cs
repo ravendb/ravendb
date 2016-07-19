@@ -7,7 +7,6 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -167,7 +166,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQuery query)
+        public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
         {
             writer.WriteStartObject();
 
@@ -419,19 +418,7 @@ namespace Raven.Server.Json
             writer.WritePropertyName(context.GetLazyString(nameof(query.TransformerParameters)));
             writer.WriteStartObject();
             if (query.TransformerParameters != null)
-            {
-                isFirstInternal = true;
-                foreach (var kvp in query.TransformerParameters)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(kvp.Key)));
-                    writer.WriteString(context.GetLazyString(kvp.Value.ToString(Formatting.Indented)));
-                }
-            }
+                writer.WriteObject(query.TransformerParameters);
             writer.WriteEndObject();
 
             writer.WriteEndObject();

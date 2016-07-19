@@ -2,14 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
-using Raven.Client.Indexing;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
@@ -53,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
-            var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
+            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var includes = GetStringValuesQueryString("include", required: false);
@@ -102,7 +98,7 @@ namespace Raven.Server.Documents.Handlers
 
         private void Explain(DocumentsOperationContext context, string indexName)
         {
-            var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
+            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
             var runner = new QueryRunner(Database, context);
 
             var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
@@ -146,11 +142,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task ExecuteQueryOperation(Func<QueryRunner, string, IndexQuery, QueryOperationOptions, OperationCancelToken, Task> operation, DocumentsOperationContext context)
+        private async Task ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, OperationCancelToken, Task> operation, DocumentsOperationContext context)
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
-            var query = GetIndexQuery(int.MaxValue);
+            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(int.MaxValue), context);
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
@@ -217,114 +213,6 @@ namespace Raven.Server.Documents.Handlers
                 result.MapGroupFields[mgf.Key.Substring(4)] = mgf.Value[0];
 
             return result;
-        }
-
-        private IndexQuery GetIndexQuery(int maxPageSize)
-        {
-            var result = new IndexQuery
-            {
-                // all defaults which need to have custom value
-                PageSize = maxPageSize
-            };
-
-            HashSet<string> includes = null;
-            foreach (var item in HttpContext.Request.Query)
-            {
-                try
-                {
-                    switch (item.Key)
-                    {
-                        case "query":
-                            result.Query = item.Value[0];
-                            break;
-                        case StartParameter:
-                            result.Start = GetStart();
-                            break;
-                        case PageSizeParameter:
-                            result.PageSize = GetPageSize(maxPageSize);
-                            break;
-                        case "cutOffEtag":
-                            result.CutoffEtag = long.Parse(item.Value[0]);
-                            break;
-                        case "waitForNonStaleResultsAsOfNow":
-                            result.WaitForNonStaleResultsAsOfNow = bool.Parse(item.Value[0]);
-                            break;
-                        case "waitForNonStaleResultsTimeout":
-                            result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
-                            break;
-                        case "fetch":
-                            result.FieldsToFetch = item.Value;
-                            break;
-                        case "defaultField":
-                            result.DefaultOperator = "And".Equals(item.Value[0], StringComparison.OrdinalIgnoreCase) ?
-                                                            QueryOperator.And : QueryOperator.Or;
-                            break;
-                        case "sort":
-                            result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
-                            break;
-                        case "mapReduce":
-                            result.DynamicMapReduceFields = ParseDynamicMapReduceFields(item.Value);
-                            break;
-                        case "include":
-                            if (includes == null)
-                                includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                            includes.Add(item.Value[0]);
-                            break;
-                        case "distinct":
-                            result.IsDistinct = bool.Parse(item.Value[0]);
-                            break;
-                        case "transformer":
-                            result.Transformer = item.Value[0];
-                            break;
-                            // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
-                            // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
-                            // TODO: We also need to make sure that we aren't using headers
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
-                }
-            }
-
-            if (includes != null)
-                result.Includes = includes.ToArray();
-
-            if (result.Query == null)
-            {
-                /* TODO arek queryFromPostRequest ?? */
-
-                result.Query = string.Empty;
-            }
-
-            return result;
-        }
-
-        private static DynamicMapReduceField[] ParseDynamicMapReduceFields(StringValues item)
-        {
-            var mapReduceFields = new DynamicMapReduceField[item.Count];
-
-            for (int i = 0; i < item.Count; i++)
-            {
-                var mapReduceField = item[i].Split('-');
-
-                if (mapReduceField.Length != 3)
-                    throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {item[i]}");
-
-                FieldMapReduceOperation operation;
-
-                if (Enum.TryParse(mapReduceField[1], out operation) == false)
-                    throw new InvalidOperationException($"Could not parse map-reduce field operation: {mapReduceField[2]}");
-
-                mapReduceFields[i] = new DynamicMapReduceField
-                {
-                    Name = mapReduceField[0],
-                    OperationType = operation,
-                    IsGroupBy = bool.Parse(mapReduceField[2]),
-                };
-            }
-            return mapReduceFields;
         }
     }
 }

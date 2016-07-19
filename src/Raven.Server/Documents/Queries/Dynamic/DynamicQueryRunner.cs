@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _documents = documents;
         }
 
-        public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQuery query, long? existingResultEtag)
+        public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
         {
             var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
                 }
 
-                using (var scope = transformer?.OpenTransformationScope(_documents, _context))
+                using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, _documents, _context))
                 {
                     var documents = _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize);
                     var results = scope != null ? scope.Transform(documents) : documents;
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return index.Query(query, _context, _token);
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(string dynamicIndexName, IndexQuery query)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(string dynamicIndexName, IndexQueryServerSide query)
         {
             var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
             var map = DynamicQueryMapping.Create(collection, query);
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return false;
         }
 
-        private static IndexQuery EnsureValidQuery(IndexQuery query, DynamicQueryMapping map)
+        private static IndexQueryServerSide EnsureValidQuery(IndexQueryServerSide query, DynamicQueryMapping map)
         {
             foreach (var field in map.MapFields)
             {

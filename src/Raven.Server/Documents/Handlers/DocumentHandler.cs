@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (transformer != null)
                 {
-                    using (var scope = transformer.OpenTransformationScope(Database.DocumentsStorage, context))
+                    using (var scope = transformer.OpenTransformationScope(null, Database.DocumentsStorage, context))
                     {
                         writer.WriteDocuments(context, scope.Transform(documents), metadataOnly);
                         return;
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (transformer != null)
                 {
-                    using (var scope = transformer.OpenTransformationScope(Database.DocumentsStorage, context))
+                    using (var scope = transformer.OpenTransformationScope(null, Database.DocumentsStorage, context))
                     {
                         writer.WriteDocuments(context, scope.Transform(documents), metadataOnly);
                     }

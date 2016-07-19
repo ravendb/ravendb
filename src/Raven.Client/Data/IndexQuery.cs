@@ -17,184 +17,14 @@ using Raven.Json.Linq;
 namespace Raven.Client.Data
 {
     /// <summary>
-    /// All the information required to query a Raven index
+    /// All the information required to query an index
     /// </summary>
-    public class IndexQuery : IEquatable<IndexQuery>
+    public class IndexQuery : IndexQuery<Dictionary<string, RavenJToken>>
     {
-        public static int DefaultPageSize = 128;
-
-        private int pageSize;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IndexQuery"/> class.
-        /// </summary>
-        public IndexQuery()
+        public override bool Equals(IndexQuery<Dictionary<string, RavenJToken>> other)
         {
-            pageSize = DefaultPageSize;
+            return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
         }
-
-        /// <summary>
-        /// Whatever the page size was explicitly set or still at its default value
-        /// </summary>
-        public bool PageSizeSet { get; private set; }
-
-        /// <summary>
-        /// Whatever we should apply distinct operation to the query on the server side
-        /// </summary>
-        public bool IsDistinct { get; set; }
-
-        /// <summary>
-        /// Actual query that will be performed (Lucene syntax).
-        /// </summary>
-        public string Query { get; set; }
-
-        /// <summary>
-        /// Parameters that will be passed to transformer (if specified).
-        /// </summary>
-        public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
-
-        /// <summary>
-        /// Number of records that should be skipped.
-        /// </summary>
-        public int Start { get; set; }
-
-        /// <summary>
-        /// Maximum number of records that will be retrieved.
-        /// </summary>
-        public int PageSize
-        {
-            get
-            {
-                return pageSize;
-            }
-            set
-            {
-                pageSize = value;
-                PageSizeSet = true;
-            }
-        }
-
-        /// <summary>
-        /// Array of fields that will be fetched.
-        /// <para>Fetch order:</para>
-        /// <para>1. Stored index fields</para>
-        /// <para>2. Document</para>
-        /// </summary>
-        public string[] FieldsToFetch { get; set; }
-
-        /// <summary>
-        /// Array of fields containing sorting information.
-        /// </summary>
-        public SortedField[] SortedFields { get; set; }
-
-        /// <summary>
-        /// Array of fields in a dynamic map reduce-query
-        /// </summary>
-        internal DynamicMapReduceField[] DynamicMapReduceFields { get; set; }
-
-        /// <summary>
-        /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
-        /// </summary>
-        public bool WaitForNonStaleResultsAsOfNow { get; set; }
-
-        /// <summary>
-        /// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
-        /// </summary>
-        public bool WaitForNonStaleResults { get; set; }
-
-        public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
-
-        /// <summary>
-        /// Gets or sets the cutoff etag.
-        /// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
-        /// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
-        /// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
-        /// <para>can work without it.</para>
-        /// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
-        /// <para>etag belong to is actually considered for the results. </para>
-        /// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        /// <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
-        /// <para>considered to be an acceptable tradeoff.</para>
-        /// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
-        /// <para>use the Cutoff date option, instead.</para>
-        /// </summary>
-        public long? CutoffEtag { get; set; }
-
-        /// <summary>
-        /// Default field to use when querying directly on the Lucene query
-        /// </summary>
-        public string DefaultField { get; set; }
-
-        /// <summary>
-        /// Changes the default operator mode we use for queries.
-        /// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
-        /// <para> Name:John OR Age:18</para>
-        /// <para>When set to And the query will be interpreted as:</para>
-        ///	<para> Name:John AND Age:18</para>
-        /// </summary>
-        public QueryOperator DefaultOperator { get; set; }
-
-        /// <summary>
-        /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
-        /// <para>to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be </para>
-        /// <para>called just once for each document in the result set</para>
-        /// </summary>
-        public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
-
-        /// <summary>
-        /// Whatever we should get the raw index entries.
-        /// </summary>
-        public bool DebugOptionGetIndexEntries { get; set; }
-
-        /// <summary>
-        /// Array of fields containing highlighting information.
-        /// </summary>
-        public HighlightedField[] HighlightedFields { get; set; }
-
-        /// <summary>
-        /// Array of highlighter pre tags that will be applied to highlighting results.
-        /// </summary>
-        public string[] HighlighterPreTags { get; set; }
-
-        /// <summary>
-        /// Array of highlighter post tags that will be applied to highlighting results.
-        /// </summary>
-        public string[] HighlighterPostTags { get; set; }
-
-        /// <summary>
-        /// Highlighter key name.
-        /// </summary>
-        public string HighlighterKeyName { get; set; }
-
-        /// <summary>
-        /// Name of transformer to use on query results.
-        /// </summary>
-        public string Transformer { get; set; }
-
-        /// <summary>
-        /// Whatever we should disable caching of query results
-        /// </summary>
-        public bool DisableCaching { get; set; }
-
-        /// <summary>
-        /// Allow to skip duplicate checking during queries
-        /// </summary>
-        public bool SkipDuplicateChecking { get; set; }
-
-        /// <summary>
-        /// Whatever a query result should contains an explanation about how docs scored against query
-        /// </summary>
-        public bool ExplainScores { get; set; }
-
-        /// <summary>
-        /// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
-        /// </summary>
-        public bool ShowTimings { get; set; }
-
-        /// <summary>
-        /// An array of relative paths that specify related documents ids which should be included in a query result
-        /// </summary>
-        public string[] Includes { get; set; }
 
         /// <summary>
         /// Gets the index query URL.
@@ -330,6 +160,184 @@ namespace Raven.Client.Data
                 path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
             }
         }
+    }
+
+    public abstract class IndexQuery<T> : IEquatable<IndexQuery<T>>
+    {
+        public static int DefaultPageSize = 128;
+
+        private int _pageSize;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IndexQuery"/> class.
+        /// </summary>
+        protected IndexQuery()
+        {
+            _pageSize = DefaultPageSize;
+        }
+
+        /// <summary>
+        /// Whatever the page size was explicitly set or still at its default value
+        /// </summary>
+        public bool PageSizeSet { get; private set; }
+
+        /// <summary>
+        /// Whatever we should apply distinct operation to the query on the server side
+        /// </summary>
+        public bool IsDistinct { get; set; }
+
+        /// <summary>
+        /// Actual query that will be performed (Lucene syntax).
+        /// </summary>
+        public string Query { get; set; }
+
+        /// <summary>
+        /// Parameters that will be passed to transformer (if specified).
+        /// </summary>
+        public T TransformerParameters { get; set; }
+
+        /// <summary>
+        /// Number of records that should be skipped.
+        /// </summary>
+        public int Start { get; set; }
+
+        /// <summary>
+        /// Maximum number of records that will be retrieved.
+        /// </summary>
+        public int PageSize
+        {
+            get
+            {
+                return _pageSize;
+            }
+            set
+            {
+                _pageSize = value;
+                PageSizeSet = true;
+            }
+        }
+
+        /// <summary>
+        /// Array of fields that will be fetched.
+        /// <para>Fetch order:</para>
+        /// <para>1. Stored index fields</para>
+        /// <para>2. Document</para>
+        /// </summary>
+        public string[] FieldsToFetch { get; set; }
+
+        /// <summary>
+        /// Array of fields containing sorting information.
+        /// </summary>
+        public SortedField[] SortedFields { get; set; }
+
+        /// <summary>
+        /// Array of fields in a dynamic map reduce-query
+        /// </summary>
+        internal DynamicMapReduceField[] DynamicMapReduceFields { get; set; }
+
+        /// <summary>
+        /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
+        /// </summary>
+        public bool WaitForNonStaleResultsAsOfNow { get; set; }
+
+        /// <summary>
+        /// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
+        /// </summary>
+        public bool WaitForNonStaleResults { get; set; }
+
+        public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
+
+        /// <summary>
+        /// Gets or sets the cutoff etag.
+        /// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
+        /// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
+        /// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
+        /// <para>can work without it.</para>
+        /// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
+        /// <para>etag belong to is actually considered for the results. </para>
+        /// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
+        /// <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
+        /// <para>considered to be an acceptable tradeoff.</para>
+        /// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
+        /// <para>use the Cutoff date option, instead.</para>
+        /// </summary>
+        public long? CutoffEtag { get; set; }
+
+        /// <summary>
+        /// Default field to use when querying directly on the Lucene query
+        /// </summary>
+        public string DefaultField { get; set; }
+
+        /// <summary>
+        /// Changes the default operator mode we use for queries.
+        /// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
+        /// <para> Name:John OR Age:18</para>
+        /// <para>When set to And the query will be interpreted as:</para>
+        ///	<para> Name:John AND Age:18</para>
+        /// </summary>
+        public QueryOperator DefaultOperator { get; set; }
+
+        /// <summary>
+        /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
+        /// <para>to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be </para>
+        /// <para>called just once for each document in the result set</para>
+        /// </summary>
+        public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
+
+        /// <summary>
+        /// Whatever we should get the raw index entries.
+        /// </summary>
+        public bool DebugOptionGetIndexEntries { get; set; }
+
+        /// <summary>
+        /// Array of fields containing highlighting information.
+        /// </summary>
+        public HighlightedField[] HighlightedFields { get; set; }
+
+        /// <summary>
+        /// Array of highlighter pre tags that will be applied to highlighting results.
+        /// </summary>
+        public string[] HighlighterPreTags { get; set; }
+
+        /// <summary>
+        /// Array of highlighter post tags that will be applied to highlighting results.
+        /// </summary>
+        public string[] HighlighterPostTags { get; set; }
+
+        /// <summary>
+        /// Highlighter key name.
+        /// </summary>
+        public string HighlighterKeyName { get; set; }
+
+        /// <summary>
+        /// Name of transformer to use on query results.
+        /// </summary>
+        public string Transformer { get; set; }
+
+        /// <summary>
+        /// Whatever we should disable caching of query results
+        /// </summary>
+        public bool DisableCaching { get; set; }
+
+        /// <summary>
+        /// Allow to skip duplicate checking during queries
+        /// </summary>
+        public bool SkipDuplicateChecking { get; set; }
+
+        /// <summary>
+        /// Whatever a query result should contains an explanation about how docs scored against query
+        /// </summary>
+        public bool ExplainScores { get; set; }
+
+        /// <summary>
+        /// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
+        /// </summary>
+        public bool ShowTimings { get; set; }
+
+        /// <summary>
+        /// An array of relative paths that specify related documents ids which should be included in a query result
+        /// </summary>
+        public string[] Includes { get; set; }
 
         /// <summary>
         /// Gets the custom query string variables.
@@ -340,23 +348,20 @@ namespace Raven.Client.Data
             return string.Empty;
         }
 
-        public IndexQuery Clone()
-        {
-            return (IndexQuery)MemberwiseClone();
-        }
-
         public override string ToString()
         {
             return Query;
         }
 
-        public bool Equals(IndexQuery other)
+        public virtual bool Equals(IndexQuery<T> other)
         {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
+            if (ReferenceEquals(null, other))
+                return false;
+            if (ReferenceEquals(this, other))
+                return true;
+
             return PageSizeSet.Equals(other.PageSizeSet) &&
                    string.Equals(Query, other.Query) &&
-                   DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters) &&
                    Start == other.Start &&
                    Equals(IsDistinct, other.IsDistinct) &&
                    EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
@@ -390,23 +395,23 @@ namespace Raven.Client.Data
             unchecked
             {
                 var hashCode = PageSizeSet.GetHashCode();
-                hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
-                hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FieldsToFetch?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (SortedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (DefaultField?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (int)DefaultOperator;
                 hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
-                hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (HighlighterKeyName != null ? HighlighterKeyName.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Transformer != null ? Transformer.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (HighlighterKeyName?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Transformer?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
@@ -414,16 +419,15 @@ namespace Raven.Client.Data
             }
         }
 
-        public static bool operator ==(IndexQuery left, IndexQuery right)
+        public static bool operator ==(IndexQuery<T> left, IndexQuery<T> right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(IndexQuery left, IndexQuery right)
+        public static bool operator !=(IndexQuery<T> left, IndexQuery<T> right)
         {
             return !Equals(left, right);
         }
-
     }
 
     public enum QueryOperator

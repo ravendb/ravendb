@@ -48,10 +48,10 @@ namespace Raven.Server.Documents.Queries
 
         public static Query BuildQuery(string query, Analyzer analyzer)
         {
-            return BuildQuery(query, new IndexQuery(), analyzer);
+            return BuildQuery(query, new IndexQueryServerSide(), analyzer);
         }
 
-        public static Query BuildQuery(string query, IndexQuery indexQuery, Analyzer analyzer)
+        public static Query BuildQuery(string query, IndexQueryServerSide indexQuery, Analyzer analyzer)
         {
             var originalQuery = query;
             try

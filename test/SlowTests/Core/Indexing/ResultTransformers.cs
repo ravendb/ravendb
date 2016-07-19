@@ -412,7 +412,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact]
         public async Task CanUseTransformerWithParameterOrDefault()
         {
             using (var store = await GetDocumentStore())

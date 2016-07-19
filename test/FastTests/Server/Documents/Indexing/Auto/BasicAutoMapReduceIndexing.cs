@@ -12,6 +12,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -35,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await mri.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
                     var result = queryResult.Results[0].Data;
@@ -51,14 +52,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await mri.Query(new IndexQuery()
+                    var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
                         Query = "Count_Range:[Lx2 TO Lx10]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
-                    queryResult = await mri.Query(new IndexQuery()
+                    queryResult = await mri.Query(new IndexQueryServerSide()
                     {
                         Query = "Count_Range:[Lx10 TO NULL]"
                     }, context, OperationCancelToken.None);
@@ -96,7 +97,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery
+                    var queryResult = await index.Query(new IndexQueryServerSide
                     {
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     }, context, OperationCancelToken.None);
@@ -134,7 +135,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -159,7 +160,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -176,7 +177,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -204,7 +205,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -218,7 +219,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -365,7 +366,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await mri.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
                     var result = queryResult.Results[0].Data;
@@ -383,14 +384,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await mri.Query(new IndexQuery()
+                    var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
                         Query = "Count_Range:[Lx2 TO Lx10]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
-                    queryResult = await mri.Query(new IndexQuery()
+                    queryResult = await mri.Query(new IndexQueryServerSide()
                     {
                         Query = "Count_Range:[Lx10 TO NULL]"
                     }, context, OperationCancelToken.None);
@@ -436,7 +437,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await mri.Query(new IndexQuery()
+                    var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
                         Query = "ShipTo_Country:Poland"
                     }, context, OperationCancelToken.None);
@@ -537,7 +538,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -573,7 +574,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -612,7 +613,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -648,7 +649,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery() { SortedFields = new []{ new SortedField("Location") }}, context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide() { SortedFields = new []{ new SortedField("Location") }}, context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -695,7 +696,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var results = (await index.Query(new IndexQuery(), context, OperationCancelToken.None)).Results;
+                    var results = (await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None)).Results;
 
                     Assert.Equal(6, results.Count);
 
@@ -703,7 +704,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     {
                         var employeeNumber = i % 2 + 1;
                         var companyNumber = i % 3 + 1;
-                        results = (await index.Query(new IndexQuery
+                        results = (await index.Query(new IndexQueryServerSide
                         {
                             Query = $"Employee:employees/{employeeNumber} AND Company:companies/{companyNumber}"
                         }, context, OperationCancelToken.None)).Results;

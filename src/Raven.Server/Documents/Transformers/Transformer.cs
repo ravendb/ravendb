@@ -8,6 +8,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Platform.Posix;
 
@@ -126,9 +127,9 @@ namespace Raven.Server.Documents.Transformers
             return path;
         }
 
-        public virtual TransformationScope OpenTransformationScope(DocumentsStorage documentsStorage, DocumentsOperationContext context)
+        public virtual TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, DocumentsStorage documentsStorage, DocumentsOperationContext context)
         {
-            return new TransformationScope(_transformer.TransformResults, documentsStorage, context);
+            return new TransformationScope(_transformer.TransformResults, parameters, documentsStorage, context);
         }
 
         public static bool TryReadIdFromFile(string name, out int transformerId)
