@@ -45,9 +45,6 @@ namespace Raven.Server.ServerWide.Context
             return _documentDatabase.DocumentsStorage.Environment;
         }
 
-        public DocumentDatabase DocumentDatabase()
-        {
-            return _documentDatabase;
-        }
+        public DocumentDatabase DocumentDatabase => _documentDatabase;
     }
 }
