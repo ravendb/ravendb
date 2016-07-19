@@ -17,6 +17,7 @@ using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
 
@@ -274,8 +275,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     return
                         HandleSyntaxInReduce(
-                            new ReduceFunctionProcessor(ResultsVariableNameRetriever.QuerySyntax,
-                                GroupByFieldsRetriever.QuerySyntax), queryExpression, out groupByFields);
+                            new ReduceFunctionProcessor(
+                                ResultsVariableNameRetriever.QuerySyntax,
+                                GroupByFieldsRetriever.QuerySyntax,
+                                SelectManyRewriter.QuerySyntax),
+                            queryExpression, out groupByFields);
                 }
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
@@ -283,8 +287,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     return
                         HandleSyntaxInReduce(
-                            new ReduceFunctionProcessor(ResultsVariableNameRetriever.MethodSyntax,
-                                GroupByFieldsRetriever.MethodSyntax), invocationExpression, out groupByFields);
+                            new ReduceFunctionProcessor(
+                                ResultsVariableNameRetriever.MethodSyntax,
+                                GroupByFieldsRetriever.MethodSyntax,
+                                SelectManyRewriter.MethodSyntax),
+                            invocationExpression, out groupByFields);
                 }
 
                 throw new InvalidOperationException("Not supported expression type.");

@@ -7,11 +7,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
     {
         private readonly ResultsVariableNameRetriever _resultsVariable;
         private readonly GroupByFieldsRetriever _groupByFields;
+        private readonly SelectManyRewriter _selectManyRewriter;
 
-        public ReduceFunctionProcessor(ResultsVariableNameRetriever resultsVariable, GroupByFieldsRetriever groupByFields)
+        public ReduceFunctionProcessor(ResultsVariableNameRetriever resultsVariable, GroupByFieldsRetriever groupByFields, SelectManyRewriter selectManyRewriter)
         {
             _resultsVariable = resultsVariable;
             _groupByFields = groupByFields;
+            _selectManyRewriter = selectManyRewriter;
         }
 
         public string ResultsVariableName => _resultsVariable.ResultsVariableName;
@@ -24,7 +26,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             {
                 _resultsVariable,
                 _groupByFields,
-                DynamicLambdaExpressionsRewriter.Instance
+                DynamicLambdaExpressionsRewriter.Instance,
+                _selectManyRewriter
             })
             {
                 if (rewriter == _groupByFields)

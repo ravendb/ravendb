@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     //Maps = { @"docs.Orders.SelectMany(x => x.Lines, (order, line) => new { Product = line.Product, Count = 1, Total = line.Price })" },
 
                     Maps = { @"from order in docs.Orders
-from line in ((IEnumerable<dynamic>)order.Lines)
+from line in order.Lines
 select new { Product = line.Product, Count = 1, Total = line.Price }" },
                     Reduce = @"from result in results
 group result by result.Product into g
@@ -236,7 +236,7 @@ select new
                 {
                     Name = "Orders_ByCount_GroupByProduct",
                     Maps = { @"from order in docs.Orders
-from line in ((IEnumerable<dynamic>)order.Lines)
+from line in order.Lines
 select new { Product = line.Product, Count = 1, Total = line.Price }" },
                     Reduce = @"from result in results
 group result by result.Product into g
