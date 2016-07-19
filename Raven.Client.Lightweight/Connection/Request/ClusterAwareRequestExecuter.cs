@@ -127,6 +127,11 @@ namespace Raven.Client.Connection.Request
                 httpJsonRequest.AddHeader(Constants.Cluster.ClusterFailoverBehaviorHeader, "true");
         }
 
+        public void SetReadStripingBase(int strippingBase)
+        {
+            this.readStripingBase = strippingBase;
+        }
+
         private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
         {
             token.ThrowIfCancellationRequested();
@@ -165,7 +170,9 @@ namespace Raven.Client.Connection.Request
                     break;
                 case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     if (node == null)
+                    {
                         return await HandleWithFailovers(operation, token).ConfigureAwait(false);
+                    }
 
                     if (method == HttpMethods.Get)
                         node = GetNodeForReadOperation(node);
@@ -175,7 +182,6 @@ namespace Raven.Client.Connection.Request
                         return await HandleWithFailovers(operation, token).ConfigureAwait(false);
                     break;
             }
-
             var operationResult = await TryClusterOperationAsync(node, operation, false, token).ConfigureAwait(false);
             if (operationResult.Success)
                 return operationResult.Result;
@@ -190,7 +196,10 @@ namespace Raven.Client.Connection.Request
             Debug.Assert(node != null);
 
             var nodes = NodeUrls;
-            var nodeIndex = readStripingBase % nodes.Count;
+            if (readStripingBase == -1)
+                return LeaderNode;
+
+            var nodeIndex = readStripingBase % nodes.Count; // todo: prevent dividing by zero
             var readNode = nodes[nodeIndex];
             if (ShouldExecuteUsing(readNode))
                 return readNode;
@@ -425,7 +434,9 @@ namespace Raven.Client.Connection.Request
 
         public IDisposable ForceReadFromMaster()
         {
-            return new DisposableAction(() => { });
+            var strippingBase = readStripingBase;
+            readStripingBase = -1;
+            return new DisposableAction(() => { readStripingBase = strippingBase; });
         }
 
         public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };

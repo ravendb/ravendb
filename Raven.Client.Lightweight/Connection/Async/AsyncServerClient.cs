@@ -117,7 +117,8 @@ namespace Raven.Client.Connection.Async
 
             this.requestExecuterGetter = requestExecuterGetter;
             this.requestTimeMetricGetter = requestTimeMetricGetter;
-            requestExecuterSelector = new RequestExecuterSelector(() => requestExecuterGetter(this, databaseName, incrementReadStripe), convention);
+            requestExecuterSelector = new RequestExecuterSelector(() => 
+                requestExecuterGetter(this, databaseName, incrementReadStripe), convention);
             requestExecuterSelector.Select().UpdateReplicationInformationIfNeededAsync(this);
         }
 
@@ -659,7 +660,13 @@ namespace Raven.Client.Connection.Async
             if (databaseUrl == Url)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, 
+                credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, 
+                jsonRequestFactory, sessionId, 
+                requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false)
+            {
+                operationsHeaders = operationsHeaders
+            };
         }
 
         internal AsyncServerClient ForSystemDatabaseInternal()

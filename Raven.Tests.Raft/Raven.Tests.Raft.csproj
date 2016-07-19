@@ -90,6 +90,7 @@
     <Compile Include="Client\Indexes.cs" />
     <Compile Include="Client\WithFailovers.cs" />
     <Compile Include="ClusterLeave.cs" />
+    <Compile Include="RavenDB_4845.cs" />
     <Compile Include="Snapshotting.cs" />
     <Compile Include="ClusterBasic.cs" />
     <Compile Include="Client\Basic.cs" />
