@@ -94,7 +94,7 @@ namespace Raven.Server.Documents
             {
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, LoggerSetup);
-                documentDatabase.Initialize(_httpJsonRequestFactory,_convention);
+                documentDatabase.Initialize();
 
                 if (Log.IsInfoEnabled)
                 {

@@ -4,6 +4,7 @@
 //  </copyright>
 // ----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Client.Indexes;
@@ -16,6 +17,13 @@ namespace SlowTests.Core.Utils.Transformers
 {
     public class CompanyEmployeesTransformer : AbstractTransformerCreationTask<Company>
     {
+        public class Result
+        {
+            public string Name { get; set; }
+
+            public List<string> Employees { get; set; }
+        }
+
         public CompanyEmployeesTransformer()
         {
             TransformResults = companies => from company in companies

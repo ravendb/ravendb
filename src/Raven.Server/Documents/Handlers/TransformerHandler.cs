@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var json = await context.ReadForDiskAsync(RequestBodyStream(), name);
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), name);
                 var transformerDefinition = JsonDeserialization.TransformerDefinition(json);
                 transformerDefinition.Name = name;
 
@@ -90,6 +90,17 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteEndArray();
             }
 
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/transformers", "DELETE")]
+        public Task Delete()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            Database.TransformerStore.DeleteTransformer(name);
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
     }

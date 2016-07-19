@@ -1,0 +1,1 @@
+Monsters.json was taken from https://github.com/CleverRaven/Cataclysm-DDA/blob/master/data/json/monsters.json as an example of a big read-life json file. This file is licensed under Creative Commons Attribution-ShareAlike 3.0 Unported (https://creativecommons.org/licenses/by-sa/3.0/). 

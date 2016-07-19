@@ -7,8 +7,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 using Raven.Abstractions;
-using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -46,14 +44,14 @@ namespace FastTests
 
             var configuration = new RavenConfiguration();
             configuration.Initialize();
-            configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened = true;
+            configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
             configuration.Core.RunInMemory = runInMemory;
             configuration.Core.DataDirectory = dataDirectory;
 
             modifyConfiguration?.Invoke(configuration);
 
             var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler, new LoggerSetup(Path.GetTempFileName(), LogMode.None));
-            documentDatabase.Initialize(new HttpJsonRequestFactory(1),new DocumentConvention());
+            documentDatabase.Initialize();
 
             return documentDatabase;
         }

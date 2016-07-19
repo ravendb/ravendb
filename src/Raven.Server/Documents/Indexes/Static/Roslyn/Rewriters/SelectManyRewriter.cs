@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var selectMany = node.Expression.ToString();
-            if (selectMany != "docs.SelectMany")
+            if (selectMany != "docs.SelectMany" && selectMany != "results.SelectMany")
                 return base.VisitInvocationExpression(node);
 
             var arguments = node.ArgumentList.Arguments;

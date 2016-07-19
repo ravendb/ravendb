@@ -621,7 +621,7 @@ namespace Sparrow.Json
                             break;
                         default:
                             throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
-                    };
+                    }
                 }
             }
             return stringLength + escOffset + escCount + lenOffset;

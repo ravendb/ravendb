@@ -11,8 +11,8 @@ namespace FastTests.Smuggler
         [Fact]
         public async Task CanExportDirectlyToRemote()
         {
-            using (var store1 = await GetDocumentStore("store1"))
-            using (var store2 = await GetDocumentStore("store2"))
+            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
+            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
             {
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -34,8 +34,8 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = await GetDocumentStore("store1"))
-                using (var store2 = await GetDocumentStore("store2"))
+                using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
                     using (var session = store1.OpenAsyncSession())
                     {

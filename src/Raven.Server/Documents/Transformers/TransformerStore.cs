@@ -5,16 +5,15 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Sparrow;
-
+using Sparrow.Logging;
 using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Transformers
 {
     public class TransformerStore : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(TransformerStore));
+        private readonly Logger _log;
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -29,6 +28,7 @@ namespace Raven.Server.Documents.Transformers
         public TransformerStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
+            _log = documentDatabase.LoggerSetup.GetLogger<TransformerStore>(_documentDatabase.Name);
         }
 
         public Task InitializeAsync()
@@ -73,15 +73,34 @@ namespace Raven.Server.Documents.Transformers
                     if (string.Equals(transformerFile.Extension, Transformer.FileExtension, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
-                    var indexOfFileExtension = transformerFile.Name.IndexOf(Transformer.FileExtension, StringComparison.OrdinalIgnoreCase);
-                    var name = transformerFile.Name.Substring(0, indexOfFileExtension);
-
                     int transformerId;
-                    if (int.TryParse(name, out transformerId) == false)
+                    if (Transformer.TryReadIdFromFile(transformerFile.Name, out transformerId) == false)
                         continue;
 
-                    var transformer = Transformer.Open(transformerId, _documentDatabase.Configuration.Indexing);
-                    _transformers.Add(transformer);
+                    List<Exception> exceptions = null;
+                    if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
+                        exceptions = new List<Exception>();
+
+                    try
+                    {
+                        var transformer = Transformer.Open(transformerId, transformerFile.FullName, _documentDatabase.Configuration.Indexing, _documentDatabase.LoggerSetup.GetLogger<Transformer>(_documentDatabase.Name));
+                        _transformers.Add(transformer);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions?.Add(e);
+
+                        var fakeTransformer = new FaultyInMemoryTransformer(transformerId, Transformer.TryReadNameFromFile(transformerFile.Name));
+
+                        if (_log.IsOperationsEnabled)
+                            _log.Operations($"Could not open transformer with id {transformerId}. Created in-memory, fake instance: {fakeTransformer.Name}", e);
+                        //TODO arek: add alert
+
+                        _transformers.Add(fakeTransformer);
+                    }
+
+                    if (exceptions != null && exceptions.Count > 0)
+                        throw new AggregateException("Could not load some of the transformers", exceptions);
                 }
             }
         }
@@ -107,7 +126,7 @@ namespace Raven.Server.Documents.Transformers
                 }
 
                 var transformerId = _transformers.GetNextIndexId();
-                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing);
+                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing, _documentDatabase.LoggerSetup.GetLogger<Transformer>(_documentDatabase.Name));
 
                 return CreateTransformerInternal(transformer, transformerId);
             }
@@ -152,18 +171,17 @@ namespace Raven.Server.Documents.Transformers
 
         private void DeleteTransformerInternal(int id)
         {
-            lock (_locker)
-            {
-                Transformer transformer;
-                if (_transformers.TryRemoveById(id, out transformer) == false)
-                    throw new InvalidOperationException("There is no transformer with id: " + id);
+            Transformer transformer;
+            if (_transformers.TryRemoveById(id, out transformer) == false)
+                throw new InvalidOperationException("There is no transformer with id: " + id);
 
-                _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
-                {
-                    Name = transformer.Name,
-                    Type = TransformerChangeTypes.TransformerRemoved
-                });
-            }
+            transformer.Delete();
+
+            _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
+            {
+                Name = transformer.Name,
+                Type = TransformerChangeTypes.TransformerRemoved
+            });
         }
 
         private int CreateTransformerInternal(Transformer transformer, int transformerId)

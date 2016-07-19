@@ -110,9 +110,9 @@ namespace Raven.Server
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services => services.AddSingleton(Router))
                     // ReSharper disable once AccessToDisposedClosure
-                    .Build();				
-								
-				Log.Info("Initialized Server...");
+                    .Build();
+
+                Log.Info("Initialized Server...");
             }
             catch (Exception e)
             {
@@ -237,44 +237,44 @@ namespace Raven.Server
                 ListenToNewTcpConnection();
                 NetworkStream stream = null;
                 JsonOperationContext context = null;
-                JsonOperationContext.MultiDocumentParser multiDocumentParser = null;	            
-				try
+                JsonOperationContext.MultiDocumentParser multiDocumentParser = null;
+                try
                 {
                     tcpClient.NoDelay = true;
-                    tcpClient.ReceiveBufferSize = 32*1024;
+                    tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
                     stream = tcpClient.GetStream();
                     context = new JsonOperationContext(_unmanagedBuffersPool);
-                    multiDocumentParser = context.ParseMultiFrom(stream);					
-					try
+                    multiDocumentParser = context.ParseMultiFrom(stream);
+                    try
                     {
-						var header = JsonDeserialization.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
+                        var header = JsonDeserialization.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
 
-						var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
-	                    if (databaseLoadingTask == null)
-		                    throw new InvalidOperationException("There is no database named " + header.DatabaseName);
+                        var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
+                        if (databaseLoadingTask == null)
+                            throw new InvalidOperationException("There is no database named " + header.DatabaseName);
 
-	                    if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
-		                    throw new InvalidOperationException(
-			                    $"Timeout when loading database {header.DatabaseName}, try again later");
+                        if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
+                            throw new InvalidOperationException(
+                                $"Timeout when loading database {header.DatabaseName}, try again later");
 
-	                    var documentDatabase = await databaseLoadingTask;
-						switch (header.Operation)
-						{
-							case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
-								BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
-								break;
-							case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-								SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
-								break;
-							case TcpConnectionHeaderMessage.OperationTypes.Replication:								
-								documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(header, multiDocumentParser, stream);
-								break;
-							default:
-								throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
-						}
+                        var documentDatabase = await databaseLoadingTask;
+                        switch (header.Operation)
+                        {
+                            case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
+                                BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+                                break;
+                            case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                                SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+                                break;
+                            case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                                documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(context, stream, tcpClient, multiDocumentParser);
+                                break;
+                            default:
+                                throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
+                        }
 
-						tcpClient = null; // the connection handler will dispose this, it is not its responsability
+                        tcpClient = null; // the connection handler will dispose this, it is not its responsability
                         stream = null;
                         context = null;
                         multiDocumentParser = null;
@@ -313,7 +313,7 @@ namespace Raven.Server
                     }
                     catch (Exception)
                     {
-                        
+
                     }
                     try
                     {

@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -97,6 +98,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
+                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+
                     var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
 
                     var state = new ReduceKeyState(tree);
@@ -129,6 +132,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     index.IndexPersistence.RecreateSearcher();
 
+                    mapReduceContext.Dispose();
 
                     tx.Commit();
                 }
@@ -147,16 +151,16 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    double expected = numberOfUsers/locations.Length + numberOfUsers%(locations.Length - i);
-                    Assert.Equal(expected, ((LazyDoubleValue)results[i].Data["Count"]));
+                    long expected = numberOfUsers/locations.Length + numberOfUsers%(locations.Length - i);
+                    Assert.Equal(expected, results[i].Data["Count"]);
                 }
 
                 // update
 
-                mapReduceContext.Dispose();
-
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
+                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+
                     var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
 
                     var state = new ReduceKeyState(tree);
@@ -189,6 +193,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     index.IndexPersistence.RecreateSearcher();
 
+                    mapReduceContext.Dispose();
+
                     tx.Commit();
                 }
 
@@ -204,16 +210,16 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    double expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                    Assert.Equal(expected + 1, ((LazyDoubleValue)results[i].Data["Count"]));
+                    long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                    Assert.Equal(expected + 1, results[i].Data["Count"]);
                 }
 
                 // delete
 
-                mapReduceContext.Dispose();
-
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
+                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+
                     var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
 
                     var state = new ReduceKeyState(tree);
@@ -257,8 +263,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    double expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                    Assert.Equal(expected - 1, ((LazyDoubleValue)results[i].Data["Count"]));
+                    long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                    Assert.Equal(expected - 1, results[i].Data["Count"]);
                 }
             }
         }

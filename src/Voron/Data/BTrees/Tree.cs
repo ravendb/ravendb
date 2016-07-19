@@ -112,6 +112,27 @@ namespace Voron.Data.BTrees
             return value;
         }
 
+        /// <summary>
+        /// This is using little endian
+        /// </summary>
+        public bool AddMax(Slice key, long value, ushort? version = null)
+        {
+            var read = Read(key);
+            if (read != null)
+            {
+                var currentValue = *(long*)read.Reader.Base;
+                if (currentValue >= value)
+                    return false;
+            }
+
+            State.IsModified = true;
+
+            var result = (long*)DirectAdd(key, sizeof(long), version: version);
+            *result = value;
+
+            return true;
+        }
+
         public void Add(Slice key, Stream value, ushort? version = null)
         {
             if (value == null) throw new ArgumentNullException(nameof(value));

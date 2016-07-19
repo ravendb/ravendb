@@ -72,6 +72,11 @@ namespace Voron.Impl.Journal
             return false;
         }
 
+        public void Truncate(long size)
+        {
+            // nothing to do here
+        }
+
         public void Dispose()
         {
             Disposed = true;

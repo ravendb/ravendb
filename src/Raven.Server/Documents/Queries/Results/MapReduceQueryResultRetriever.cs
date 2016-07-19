@@ -1,6 +1,11 @@
-﻿using System.Globalization;
-
+﻿using System;
+using System.Globalization;
+using System.IO;
+using System.Runtime.InteropServices;
+using Raven.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -17,34 +22,34 @@ namespace Raven.Server.Documents.Queries.Results
             _fieldsToFetch = fieldsToFetch;
         }
 
-        public Document Get(Lucene.Net.Documents.Document input)
+        public unsafe Document Get(Lucene.Net.Documents.Document input)
         {
-            var djv = new DynamicJsonValue();
-
             // TODO [ppekrol] handle IsDistinct, no Id then
 
-            foreach (var field in input.GetFields())
+            var reduceValue = input.GetField(Constants.ReduceValueFieldName).GetBinaryValue();
+
+            var result = new BlittableJsonReaderObject((byte*)_indexContext.PinObjectAndGetAddress(reduceValue),
+                reduceValue.Length, _indexContext);
+
+            if (_fieldsToFetch.IsProjection)
             {
-                if (field.Name.EndsWith("_Range"))
+                foreach (var name in result.GetPropertyNames())
                 {
-                    var fieldName = field.Name.Substring(0, field.Name.Length - 6);
-                    if (_fieldsToFetch.ContainsField(fieldName) == false)
+                    if (_fieldsToFetch.ContainsField(name))
                         continue;
 
-                    djv[fieldName] = double.Parse(field.StringValue, CultureInfo.InvariantCulture);
+                    if (result.Modifications == null)
+                        result.Modifications = new DynamicJsonValue(result);
 
-                    continue;
+                    result.Modifications.Remove(name);
                 }
 
-                if (_fieldsToFetch.ContainsField(field.Name) == false)
-                    continue;
-
-                djv[field.Name] = field.StringValue;
+                result = _indexContext.ReadObject(result, "map-reduce result document");
             }
 
             return new Document
             {
-                Data = _indexContext.ReadObject(djv, "map-reduce result document")
+                Data = result
             };
         }
     }

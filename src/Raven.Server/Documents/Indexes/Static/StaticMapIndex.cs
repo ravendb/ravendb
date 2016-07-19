@@ -187,6 +187,34 @@ namespace Raven.Server.Documents.Indexes.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
+        public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var etags = GetLastProcessedDocumentTombstonesPerCollection(tx);
+
+                    if (_referencedCollections.Count <= 0)
+                        return etags;
+
+                    foreach (var collection in Collections)
+                    {
+                        foreach (var referencedCollection in _referencedCollections)
+                        {
+                            var etag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, referencedCollection);
+                            long currentEtag;
+                            if (etags.TryGetValue(referencedCollection, out currentEtag) == false || etag < currentEtag)
+                                etags[referencedCollection] = etag;
+                        }
+                    }
+
+                    return etags;
+                }
+            }
+        }
+
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(indexId, definition);

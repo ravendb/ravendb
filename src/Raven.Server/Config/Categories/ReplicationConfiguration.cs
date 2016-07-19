@@ -6,6 +6,13 @@ namespace Raven.Server.Config.Categories
 {
     public class ReplicationConfiguration : ConfigurationCategory
     {
+        [Description("Threshold under which a connection is considered active")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Replication/ActiveConnectionTimeoutInSec")]
+        [ConfigurationEntry("Raven/Replication/ActiveConnectionTimeout")]
+        public TimeSetting ActiveConnectionTimeout { get; set; }
+
         [DefaultValue(600)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Replication/IndexAndTransformerReplicationLatencyInSec")]

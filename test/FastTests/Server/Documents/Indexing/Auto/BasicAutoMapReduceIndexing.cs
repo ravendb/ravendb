@@ -44,10 +44,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.True(result.TryGet("Location", out location));
                     Assert.Equal("Poland", location);
 
-                    var count = result["Count"] as LazyDoubleValue;
-
-                    Assert.NotNull(count);
-                    Assert.Equal(2.0, count);
+                    var count = result["Count"];
+                    
+                    Assert.Equal(2L, count);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -112,8 +111,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     {
                         Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                        double expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                        Assert.Equal(expected, ((LazyDoubleValue)results[i].Data["Count"]));
+                        long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                        Assert.Equal(expected, results[i].Data["Count"]);
                     }
                 }
             }
@@ -122,7 +121,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanDelete()
         {
-            const int numberOfUsers = 10;
+            const long numberOfUsers = 10;
 
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
@@ -142,7 +141,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(numberOfUsers, (double)(LazyDoubleValue)results[0].Data["Count"]);
+                    Assert.Equal(numberOfUsers, results[0].Data["Count"]);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -167,7 +166,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(numberOfUsers - 1, (double)(LazyDoubleValue)results[0].Data["Count"]);
+                    Assert.Equal(numberOfUsers - 1, results[0].Data["Count"]);
                 }
 
                 CreateUsers(db, 1, "Poland");
@@ -184,7 +183,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(numberOfUsers, (double)(LazyDoubleValue)results[0].Data["Count"]);
+                    Assert.Equal(numberOfUsers, results[0].Data["Count"]);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -226,7 +225,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(numberOfUsers, (double)(LazyDoubleValue)results[0].Data["Count"]);
+                    Assert.Equal(numberOfUsers, results[0].Data["Count"]);
                 }
             }
         }
@@ -374,21 +373,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     string location;
                     Assert.True(result.TryGet("Location", out location));
                     Assert.Equal("Poland", location);
-
-                    var count = result["Count"] as LazyDoubleValue;
-
-                    Assert.NotNull(count);
-                    Assert.Equal(2.0, count);
-
-                    var totalCount = result["TotalCount"] as LazyDoubleValue;
-
-                    Assert.NotNull(totalCount);
-                    Assert.Equal(2.0, totalCount);
-
-                    var age = result["Age"] as LazyDoubleValue;
-
-                    Assert.NotNull(age);
-                    Assert.Equal("41.0", age.Inner.ToString());
+                    
+                    Assert.Equal(2L, result["Count"]);
+                    
+                    Assert.Equal(2L, result["TotalCount"]);
+                    
+                    Assert.Equal(41L, result["Age"]);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -455,18 +445,18 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     var result = queryResult.Results[0].Data;
 
                     string location;
-                    Assert.True(result.TryGet("ShipTo_Country", out location));
+                    Assert.True(result.TryGet("ShipTo.Country", out location));
                     Assert.Equal("Poland", location);
 
-                    var price = result["Lines_Price"] as LazyDoubleValue;
+                    var price = result["Lines,Price"] as LazyDoubleValue;
 
                     Assert.NotNull(price);
-                    Assert.Equal(63.6, price);
+                    
+                    Assert.Equal(63.6, price, 1);
 
-                    var quantity = result["Lines_Quantity"] as LazyDoubleValue;
-
-                    Assert.NotNull(quantity);
-                    Assert.Equal(9.0, quantity);
+                    var quantity = result["Lines,Quantity"];
+                    
+                    Assert.Equal(9L, quantity);
                 }
             }
         }
@@ -492,7 +482,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        private static void CreateUsers(DocumentDatabase db, int numberOfUsers, params string[] locations)
+        private static void CreateUsers(DocumentDatabase db, long numberOfUsers, params string[] locations)
         {
             using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
             {
@@ -554,7 +544,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(41.0, (LazyDoubleValue)results[0].Data["Age"]);
+                    Assert.Equal(41L, results[0].Data["Age"]);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -590,7 +580,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(51.0, (LazyDoubleValue)results[0].Data["Age"]);
+                    Assert.Equal(51L, results[0].Data["Age"]);
                 }
             }
         }
@@ -629,7 +619,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(41.0, (LazyDoubleValue)results[0].Data["Age"]);
+                    Assert.Equal(41L, results[0].Data["Age"]);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -665,10 +655,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(2, results.Count);
 
                     Assert.Equal("Israel", results[0].Data["Location"].ToString());
-                    Assert.Equal(20.0, (LazyDoubleValue)results[0].Data["Age"]);
+                    Assert.Equal(20L, results[0].Data["Age"]);
 
                     Assert.Equal("Poland", results[1].Data["Location"].ToString());
-                    Assert.Equal(21.0, (LazyDoubleValue)results[1].Data["Age"]);
+                    Assert.Equal(21L, results[1].Data["Age"]);
                 }
             }
         }
@@ -720,14 +710,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                         Assert.Equal(1, results.Count);
                         
-                        double expectedCount;
+                        long expectedCount;
 
                         if ((employeeNumber == 1 && companyNumber == 2) || (employeeNumber == 2 && companyNumber == 3))
-                            expectedCount = 1.0;
+                            expectedCount = 1;
                         else
-                            expectedCount = 2.0;
+                            expectedCount = 2;
 
-                        Assert.Equal(expectedCount, (LazyDoubleValue)results[0].Data["Count"]);
+                        Assert.Equal(expectedCount, results[0].Data["Count"]);
                     }
                 } 
             }

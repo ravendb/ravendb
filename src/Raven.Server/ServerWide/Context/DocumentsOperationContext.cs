@@ -25,11 +25,17 @@ namespace Raven.Server.ServerWide.Context
         {
             var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(context), _documentDatabase.Notifications);
 
-            if (_documentDatabase.LazyTransactionMode && _documentDatabase.LazyTransactionExpiration < DateTime.Now)
-                _documentDatabase.LazyTransactionMode = false;
+            var options = _documentDatabase.DocumentsStorage.Environment.Options;
 
-            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = _documentDatabase.LazyTransactionMode;
-            // IsLazyTransaction can be overriden kater by a specific feature like bulk insert
+            if ((options.TransactionsMode == TransactionsMode.Lazy || options.TransactionsMode == TransactionsMode.Danger) &&
+                options.NonSafeTransactionExpiration != null && options.NonSafeTransactionExpiration < DateTime.Now)
+            {
+                options.TransactionsMode = TransactionsMode.Safe;
+            }
+
+            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = 
+                options.TransactionsMode == TransactionsMode.Lazy;
+            // IsLazyTransaction can be overriden later by a specific feature like bulk insert
 
             return tx;
         }
@@ -37,6 +43,11 @@ namespace Raven.Server.ServerWide.Context
         public StorageEnvironment Environment()
         {
             return _documentDatabase.DocumentsStorage.Environment;
+        }
+
+        public DocumentDatabase DocumentDatabase()
+        {
+            return _documentDatabase;
         }
     }
 }

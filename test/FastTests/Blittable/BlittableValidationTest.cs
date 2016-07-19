@@ -7,6 +7,10 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using FastTests.Blittable.BlittableJsonWriterTests;
+using System.Reflection;
+using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace FastTests.Blittable
 {
@@ -573,7 +577,30 @@ namespace FastTests.Blittable
             *(basePointer + size - 3) = 0x40;
             var message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
             Assert.Equal(message.Message, "Root metadata offset not valid");
+        }
 
+        [Fact(Skip = "RavenDB-4837: Blittable Validation fails for some json files")]
+        public unsafe void ParseBlitAndValidate()
+        {
+            var assembly = typeof(BlittableFormatTests).GetTypeInfo().Assembly;
+
+            var resources = assembly.GetManifestResourceNames();
+            var resourcePrefix = typeof(BlittableFormatTests).Namespace + ".Jsons.";
+
+            foreach (var name in resources.Where( x => x.StartsWith(resourcePrefix, StringComparison.Ordinal)))
+            {
+                using (var pool = new UnmanagedBuffersPool("test"))
+                using (var context = new JsonOperationContext(pool))
+                {                    
+                    using (var stream = assembly.GetManifestResourceStream(name))
+                    {
+                        using (var obj = context.Read(stream, "docs/1"))
+                        {
+                            obj.BlittableValidation();
+                        }
+                    }
+                }
+            }
         }
     }
 }

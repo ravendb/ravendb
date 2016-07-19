@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -31,8 +33,10 @@ namespace Raven.Server.ServerWide.Context
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
         where TTransaction : RavenTransaction
     {
+        private List<GCHandle> _pinnedObjects;
+
+        public readonly ByteStringContext Allocator;
         public TTransaction Transaction;
-        public ByteStringContext Allocator;
 
         protected TransactionOperationContext(UnmanagedBuffersPool pool)
             : base(pool)
@@ -66,11 +70,31 @@ namespace Raven.Server.ServerWide.Context
             return Transaction;
         }
 
+        public IntPtr PinObjectAndGetAddress(object obj)
+        {
+            var handle = GCHandle.Alloc(obj, GCHandleType.Pinned);
+
+             if (_pinnedObjects == null)
+                _pinnedObjects = new List<GCHandle>();
+
+             _pinnedObjects.Add(handle);
+
+            return handle.AddrOfPinnedObject();
+        }
+
         public override void Dispose()
         {
             base.Dispose();
 
             Allocator?.Dispose();
+
+            if (_pinnedObjects != null)
+            {
+                foreach (var pinnedObject in _pinnedObjects)
+                {
+                    pinnedObject.Free();
+                }
+            }
         }
 
         public override void Reset()
