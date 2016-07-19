@@ -300,7 +300,7 @@ task CopyRavenTraffic {
 task CopyRavenApiToken {
     Copy-Item $base_dir\Tools\Raven.ApiToken\bin\$global:configuration\Raven.Abstractions.??? $build_dir\OutputTools
     Copy-Item $base_dir\Tools\Raven.ApiToken\bin\$global:configuration\Raven.ApiToken.??? $build_dir\OutputTools
-    Copy-Item $base_dir\Tools\Raven.ApiToken\token_test.ps1 $build_dir\OutputTools
+    Copy-Item $base_dir\Tools\Raven.ApiToken\api_token_example.ps1 $build_dir\OutputTools
 }
 
 task CopyStorageExporter {
@@ -435,8 +435,6 @@ task CopyRootFiles {
     cp $base_dir\license.txt $build_dir\Output\license.txt
     cp $base_dir\license.txt $build_dir\OutputTools\license.txt
     cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
-    cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1 # delete?
-    cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1 # delete?
     cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
     cp $base_dir\acknowledgments.txt $build_dir\OutputTools\acknowledgments.txt
 
