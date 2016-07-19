@@ -363,7 +363,7 @@ namespace Raven.Client.Data
             return PageSizeSet.Equals(other.PageSizeSet) &&
                    string.Equals(Query, other.Query) &&
                    Start == other.Start &&
-                   Equals(IsDistinct, other.IsDistinct) &&
+                   IsDistinct == other.IsDistinct &&
                    EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
                    EnumerableExtension.ContentEquals(SortedFields, other.SortedFields) &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&

@@ -1,11 +1,14 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
@@ -37,6 +40,7 @@ namespace FastTests.Client.Indexing
 
                     q = session.Advanced.DocumentQuery<Person>()
                         .WhereEquals(x => x.Name, "John")
+                        .Take(20)
                         .GetIndexQuery(isAsync: false);
                 }
 
@@ -90,13 +94,18 @@ namespace FastTests.Client.Indexing
 
                 Assert.Equal(1, array.Length);
 
-                var info = array[0].JsonDeserialization<ExecutingQueryInfo>();
+                var info = array[0];
 
                 Assert.NotNull(array[0].Value<string>(nameof(ExecutingQueryInfo.Duration)));
-                Assert.Equal(10, info.QueryId);
-                Assert.Equal(now, info.StartTime);
-                Assert.Null(info.Token);
-                Assert.Equal(query, info.QueryInfo);
+                Assert.Equal(10, info.Value<int>(nameof(ExecutingQueryInfo.QueryId)));
+                Assert.Equal(now, info.Value<DateTime>(nameof(ExecutingQueryInfo.StartTime)));
+                Assert.Null(info.Value<OperationCancelToken>(nameof(ExecutingQueryInfo.Token)));
+
+                var output = info
+                    .Value<RavenJObject>(nameof(ExecutingQueryInfo.QueryInfo))
+                    .JsonDeserialization<IndexQuery>();
+
+                Assert.True(q.Equals(output));
             }
         }
     }
