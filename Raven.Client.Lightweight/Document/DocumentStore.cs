@@ -518,8 +518,9 @@ namespace Raven.Client.Document
 
             asyncDatabaseCommandsGenerator = () =>
             {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
+                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), 
+                    jsonRequestFactory,currentSessionId, 
+                    GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
                     Listeners.ConflictListeners, true);
 
                 if (string.IsNullOrEmpty(DefaultDatabase))
@@ -556,24 +557,42 @@ namespace Raven.Client.Document
             return result;
         }
 
-        private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, bool incrementStrippingBase)
+        private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, 
+            bool incrementStrippingBase)
         {
             var key = Url;
             if (string.IsNullOrEmpty(databaseName) == false)
                 key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
 
+            var originalKey = MultiDatabase.GetRootDatabaseUrl(Url);
+
             IRequestExecuter requestExecuter;
-            
+            IRequestExecuter originalRequestExecuter=null;
+
             if (Conventions.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeader
                 || Conventions.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers
                 || Conventions.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeader
                 || Conventions.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers)
+            {
                 requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
+                if (originalKey != key)
+                    originalRequestExecuter = clusterAwareRequestExecuters.GetOrAdd(originalKey, url => new ClusterAwareRequestExecuter());
+            }
             else
+            {
                 requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory, GetRequestTimeMetricForUrl)));
+                if (originalKey != key)
+                    originalRequestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(originalKey, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory, GetRequestTimeMetricForUrl)));
+            }
             
-
-            requestExecuter.GetReadStripingBase(incrementStrippingBase);
+            if (incrementStrippingBase || originalRequestExecuter == null)
+            {
+                requestExecuter.GetReadStripingBase(incrementStrippingBase);
+            }
+            else
+            {
+                requestExecuter.SetReadStripingBase(originalRequestExecuter.GetReadStripingBase(false));
+            }
 
             if (FailoverServers == null)
                 return requestExecuter;
