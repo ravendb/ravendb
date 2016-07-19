@@ -23,7 +23,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             foreach (var rewriter in new CSharpSyntaxRewriter[]
             {
                 _resultsVariable,
-                _groupByFields
+                _groupByFields,
+                DynamicLambdaExpressionsRewriter.Instance
             })
             {
                 if (rewriter == _groupByFields)

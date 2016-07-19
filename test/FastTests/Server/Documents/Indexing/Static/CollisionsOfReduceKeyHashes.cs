@@ -70,7 +70,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
                     Reduce =
-                        "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
+                        "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                     Type = IndexType.MapReduce,
                     Fields =
                     {

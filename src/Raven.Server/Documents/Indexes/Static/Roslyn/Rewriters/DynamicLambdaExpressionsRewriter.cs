@@ -47,9 +47,26 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 case "Select":
                     return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic>)({node})");
+                case "Sum":
+                case "Average":
+                    return ModifyLambdaForNumerics(node);
             }
 
             return base.VisitSimpleLambdaExpression(node);
+        }
+
+        private static SyntaxNode ModifyLambdaForNumerics(SimpleLambdaExpressionSyntax node)
+        {
+            var alreadyCasted = node.Body as CastExpressionSyntax;
+
+            if (alreadyCasted != null)
+            {
+                return SyntaxFactory.ParseExpression($"(Func<dynamic, {alreadyCasted.Type}>)({node})");
+            }
+
+            var cast = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(decimal){node.Body}");
+
+            return SyntaxFactory.ParseExpression($"(Func<dynamic, decimal>)({node.WithBody(cast)})");
         }
     }
 }

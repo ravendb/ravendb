@@ -26,8 +26,18 @@ namespace FastTests.Server.Documents.Indexing.Static
                 using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
                 {
                     Name = "Users_ByCount_GroupByLocation",
-                    Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
-                    Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
+                    Maps = { @"from user in docs.Users select new { 
+                                user.Location, 
+                                CountInteger = 1, 
+                                CountDouble = 1.0,
+                                CastedInteger = 1
+                            }" },
+                    Reduce = @"from result in results group result by result.Location into g select new { 
+                                Location = g.Key, 
+                                CountInteger = g.Sum(x => x.CountInteger), 
+                                CountDouble = g.Sum(x => x.CountDouble),
+                                CastedInteger = g.Sum(x => (int)x.CastedInteger) 
+                            }",
                     // TODO arek Reduce = "results.GroupBy(x => x.City).Select(g => new { City = g.Key, Count = g.Sum(x => x.Count) })",
                 }, database))
                 {
@@ -88,7 +98,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                         
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                        Assert.Equal(2L, results[0].Data["Count"]);
+                        Assert.Equal(2L, results[0].Data["CountInteger"]);
+                        Assert.Equal(2.0, (LazyDoubleValue)results[0].Data["CountDouble"]);
+                        Assert.Equal(2L, results[0].Data["CastedInteger"]);
                     }
                 }
             }
@@ -112,8 +124,8 @@ group result by result.Product into g
 select new
 {
     Product = g.Key,
-    Count = g.Sum(x=> (int)x.Count),
-    Total = g.Sum(x=> (int)x.Total)
+    Count = g.Sum(x=> x.Count),
+    Total = g.Sum(x=> x.Total)
 }",
                     Fields =
                     {
@@ -194,7 +206,7 @@ select new
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("Milk", queryResult.Results[0].Data["Product"].ToString());
                         Assert.Equal(2L, queryResult.Results[0].Data["Count"]);
-                        Assert.Equal(20L, queryResult.Results[0].Data["Total"]);
+                        Assert.Equal(21.0, (LazyDoubleValue)queryResult.Results[0].Data["Total"]);
                     }
                 }
             }
@@ -212,7 +224,7 @@ select new
                 {
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = {"from user in docs.Users select new { user.Location, Count = 1 }"},
-                    Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
+                    Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                 };
 
                 var index = database.IndexStore.GetIndex(database.IndexStore.CreateIndex(defOne));
@@ -230,8 +242,8 @@ group result by result.Product into g
 select new
 {
     Product = g.Key,
-    Count = g.Sum(x=> (int)x.Count),
-    Total = g.Sum(x=> (int)x.Total)
+    Count = g.Sum(x=> x.Count),
+    Total = g.Sum(x=> x.Total)
 }",
                     Fields =
                     {
