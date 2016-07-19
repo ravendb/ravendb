@@ -273,7 +273,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task CanLoadDocumentInTransformer()
         {
             using (var store = await GetDocumentStore())
@@ -311,7 +311,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact(Skip = "Missing feature: Includes in transformers")]
         public async Task CanSpecifyTransformerParameterAndIncludeInTransformer()
         {
             using (var store = await GetDocumentStore())
@@ -383,7 +383,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact(Skip = "Missing feature: AsDocument")]
         public async Task CanUseAsDocumentInTransformer()
         {
             using (var store = await GetDocumentStore())

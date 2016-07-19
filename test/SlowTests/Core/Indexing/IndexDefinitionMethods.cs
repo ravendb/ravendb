@@ -74,7 +74,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: AsDocument")]
         public async Task CanUseAsDocumentToIndexAllDocumentFields()
         {
             using (var store = await GetDocumentStore())
@@ -126,7 +126,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CreateAndQuerySimpleIndexWithReferencedDocuments()
         {
             using (var store = await GetDocumentStore())
