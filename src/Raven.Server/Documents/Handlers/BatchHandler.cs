@@ -153,8 +153,11 @@ namespace Raven.Server.Documents.Handlers
                                 ["Debug"] = patchResult.DebugInfo,
                             };
 
-                            context.DocumentDatabase().HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
+                            if (cmd.Document != null)
+                            {
+                                context.DocumentDatabase().HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
+                            }
                             if (cmd.IsDebugMode)
                             {
                                 additionalData["Document"] = patchResult.ModifiedDocument;
