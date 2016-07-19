@@ -355,7 +355,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact]
         public async Task CanUseMetadataForInTransformer()
         {
             using (var store = await GetDocumentStore())

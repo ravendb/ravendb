@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Queries
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
                 indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
                 result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
             }
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(indexName) || (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) == false && indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase) == false))
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
-            var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
+            var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
 
             return runner.ExplainIndexSelection(indexName, indexQuery);
         }

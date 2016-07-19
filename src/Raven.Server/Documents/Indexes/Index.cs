@@ -26,6 +26,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -780,10 +781,24 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
-                            foreach (var document in documents)
+
+                            Transformer transformer = null;
+                            if (string.IsNullOrEmpty(query.Transformer) == false)
                             {
-                                result.Results.Add(document);
-                                includeDocumentsCommand.Gather(document);
+                                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
+                                if (transformer == null)
+                                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
+                            }
+
+                            using (var scope = transformer?.OpenTransformationScope(DocumentDatabase.DocumentsStorage, documentsContext))
+                            {
+                                var results = scope != null ? scope.Transform(documents) : documents;
+
+                                foreach (var document in results)
+                                {
+                                    result.Results.Add(document);
+                                    includeDocumentsCommand.Gather(document);
+                                }
                             }
 
                             includeDocumentsCommand.Fill(result.Includes);

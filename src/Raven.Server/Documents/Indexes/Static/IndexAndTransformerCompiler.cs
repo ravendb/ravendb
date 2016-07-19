@@ -124,9 +124,9 @@ namespace Raven.Server.Documents.Indexes.Static
             var code = formatedCompilationUnit.SyntaxTree.ToString();
 
             var asm = new MemoryStream();
-            var pdb = new MemoryStream();
+            var pdb = EnableDebugging ? new MemoryStream() : null;
 
-            var result = compilation.Emit(asm, EnableDebugging ? pdb : null);
+            var result = compilation.Emit(asm, pdb);
             
             if (result.Success == false)
             {

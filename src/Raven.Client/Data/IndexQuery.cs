@@ -268,7 +268,7 @@ namespace Raven.Client.Data
 
             if (string.IsNullOrEmpty(Transformer) == false)
             {
-                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(Transformer));
+                path.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
             }
 
             if (TransformerParameters != null)
