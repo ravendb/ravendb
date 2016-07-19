@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     _logger.Info($"Forcing flush to data file to cleanup the scratch buffer in bulk insert");
                                 }
                                 // there's no flushing but scratch buffer full - let's flush and retry put doc
-                                context.Environment().ForceLogFlushToDataFile(null, true);
+                                context.Environment.ForceLogFlushToDataFile(null, true);
                             }
                         }
                         // TODO : Measure IO times (RavenDB-4659) - ForceFlush on a retry
