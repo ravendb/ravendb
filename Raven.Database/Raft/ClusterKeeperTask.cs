@@ -109,9 +109,16 @@ namespace Raven.Database.Raft
         {
             var currentTopology = clusterManager.Engine.CurrentTopology;
             var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName, null);
+
             var replicationDocument = replicationDocumentJson != null
                 ? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
-                : new ReplicationDocument();
+                : new ReplicationDocument
+                {
+                    ClientConfiguration = new ReplicationClientConfiguration
+                    {
+                        FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader
+                    }
+                };
 
             var replicationDocumentNormalizedDestinations = replicationDocument
                 .Destinations
