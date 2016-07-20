@@ -168,6 +168,13 @@ namespace Raven.Client.Changes
             TimeSpan elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
             if (elapsedTimeSinceHeartbeat.TotalSeconds < 45)
                 return;
+
+            if (clientSideHeartbeatTimer != null)
+            {
+                clientSideHeartbeatTimer.Dispose();
+                clientSideHeartbeatTimer = null;
+            }
+
             OnError(new TimeoutException("Over 45 seconds have passed since we got a server heartbeat, even though we should get one every 10 seconds or so.\r\n" +
                                          "This connection is now presumed dead, and will attempt reconnection"));
         }
@@ -255,6 +262,19 @@ namespace Raven.Client.Changes
         public virtual void OnError(Exception error)
         {
             logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
+
+            try
+            {
+                if (connection != null)
+                {
+                    connection.Dispose();
+                    connection = null;
+                }
+            }
+            catch (Exception e)
+            {
+                // ignore
+            }
 
             RenewConnection();
         }
