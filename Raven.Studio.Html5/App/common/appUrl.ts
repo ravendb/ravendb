@@ -993,40 +993,45 @@ class appUrl {
         if (routerInstruction) {
 
             var currentResourceName = null;
-            var currentResourceType = null;
+            var currentResourceType: string = null;
+            var currentResourceTypeEnum: TenantType;
             var dbInUrl = routerInstruction.queryParams[database.type];
             if (dbInUrl) {
                 currentResourceName = dbInUrl;
                 currentResourceType = database.type;
+                currentResourceTypeEnum = TenantType.Database;
             } else {
                 var fsInUrl = routerInstruction.queryParams[filesystem.type];
                 if (fsInUrl) {
                     currentResourceName = fsInUrl;
                     currentResourceType = filesystem.type;
+                    currentResourceTypeEnum = TenantType.FileSystem;
                 } else {
                     var csInUrl = routerInstruction.queryParams[counterStorage.type];
                     if (csInUrl) {
                         currentResourceName = csInUrl;
                         currentResourceType = counterStorage.type;
+                        currentResourceTypeEnum = TenantType.CounterStorage;
                     } else {
                         var tsInUrl = routerInstruction.queryParams[timeSeries.type];
                         if (tsInUrl) {
                             currentResourceName = tsInUrl;
                             currentResourceType = timeSeries.type;
+                            currentResourceTypeEnum = TenantType.TimeSeries;
                         }
                     }
                 }
             }
 
-            if (currentResourceType && currentResourceType != rs.type) {
+            if (currentResourceType && currentResourceTypeEnum !== rs.type) {
                 // user changed resource type - navigate to resources page and preselect resource
                 return appUrl.forResources() + "?" + rs.type + "=" + encodeURIComponent(rs.name);
             }
-            var isDifferentDbInAddress = !currentResourceName || currentResourceName !== rs.name.toLowerCase();
-            if (isDifferentDbInAddress) {
+            var isDifferentResourceInAddress = !currentResourceName || currentResourceName !== rs.name.toLowerCase();
+            if (isDifferentResourceInAddress) {
                 var existingAddress = window.location.hash;
-                var existingDbQueryString = currentResourceName ? rs.type + "=" + encodeURIComponent(currentResourceName) : null;
-                var newDbQueryString = rs.type + "=" + encodeURIComponent(rs.name);
+                var existingDbQueryString = currentResourceName ? currentResourceType + "=" + encodeURIComponent(currentResourceName) : null;
+                var newDbQueryString = currentResourceType + "=" + encodeURIComponent(rs.name);
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
                     existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + rs.type + "=" + encodeURIComponent(rs.name);

@@ -24,6 +24,9 @@ class databaseStatistics {
     }
 
     private getItemCountText(itemCount: number, singularText: string, suffix: string): string {
+        if (!itemCount) {
+            itemCount = 0;
+        }
         var itemCountText = itemCount.toLocaleString() + " " + singularText;
         if (itemCount !== 1) {
             itemCountText += suffix;

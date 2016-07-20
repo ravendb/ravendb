@@ -302,6 +302,7 @@ class metrics extends viewModelBase {
     showHideNoData(show: boolean) {
         if (show) {
             var metricsContainer = $("#metricsContainer");
+            this.svg.select('.no_data').remove();
             this.svg.append('text')
                 .attr('class', 'no_data')
                 .text('No data available')
@@ -773,7 +774,7 @@ class metrics extends viewModelBase {
         this.updatePrefetchOperations();
         this.updateFilteredOutIndexesOperations();
         this.updateGaps(gapsFinder.gapsPositions);
-        this.showHideNoData(this.rawMapJsonData.length === 0 && this.rawReduceJsonData.length === 0);
+        this.showHideNoData(this.rawMapJsonData.length === 0 && this.rawReduceJsonData.length === 0 && this.rawDeletionJsonData.length === 0);
     }
 
     private updateGroupNames(controllsEnter: D3.Selection, totalWidth: number) {
