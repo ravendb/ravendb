@@ -17,20 +17,163 @@ using Raven.Json.Linq;
 namespace Raven.Client.Data
 {
     /// <summary>
-    /// All the information required to query a Raven index
+    /// All the information required to query an index
     /// </summary>
-    public class IndexQuery : IEquatable<IndexQuery>
+    public class IndexQuery : IndexQuery<Dictionary<string, RavenJToken>>
+    {
+        public override bool Equals(IndexQuery<Dictionary<string, RavenJToken>> other)
+        {
+            return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
+        }
+
+        /// <summary>
+        /// Gets the index query URL.
+        /// </summary>
+        public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        {
+            if (operationUrl.EndsWith("/"))
+                operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
+            var path = new StringBuilder()
+                .Append(operationUrl)
+                .Append("/")
+                .Append(operationName)
+                .Append("/")
+                .Append(index);
+
+            AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
+
+            return path.ToString();
+        }
+
+        public string GetMinimalQueryString()
+        {
+            var sb = new StringBuilder();
+            AppendMinimalQueryString(sb);
+            return sb.ToString();
+        }
+
+
+        public string GetQueryString()
+        {
+            var sb = new StringBuilder();
+            AppendQueryString(sb);
+            return sb.ToString();
+        }
+
+        public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        {
+            path.Append("?");
+
+            AppendMinimalQueryString(path, includeQuery);
+
+            if (Start != 0)
+                path.Append("&start=").Append(Start);
+
+            if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
+                path.Append("&pageSize=").Append(PageSize);
+
+            if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
+                path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
+
+            if (IsDistinct)
+                path.Append("&distinct=true");
+
+            if (ShowTimings)
+                path.Append("&showTimings=true");
+            if (SkipDuplicateChecking)
+                path.Append("&skipDuplicateChecking=true");
+
+            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+            Includes.ApplyIfNotNull(include => path.AppendFormat("&include={0}", Uri.EscapeDataString(include)));
+
+            DynamicMapReduceFields.ApplyIfNotNull(field => path.Append("&mapReduce=")
+                        .Append(Uri.EscapeDataString(field.Name))
+                        .Append("-")
+                        .Append(field.OperationType)
+                        .Append("-")
+                        .Append(field.IsGroupBy));
+
+            SortedFields.ApplyIfNotNull(
+                field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+
+            if (string.IsNullOrEmpty(Transformer) == false)
+            {
+                path.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
+            }
+
+            if (TransformerParameters != null)
+            {
+                foreach (var input in TransformerParameters)
+                {
+                    path.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
+                }
+            }
+
+            if (CutoffEtag != null)
+            {
+                path.Append("&cutOffEtag=").Append(CutoffEtag);
+            }
+
+            if (WaitForNonStaleResultsAsOfNow)
+            {
+                path.Append("&waitForNonStaleResultsAsOfNow=true");
+            }
+
+            if (WaitForNonStaleResultsTimeout != null)
+            {
+                path.AppendLine("&waitForNonStaleResultsTimeout=" + WaitForNonStaleResultsTimeout);
+            }
+
+            HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
+            HighlighterPreTags.ApplyIfNotNull(tag => path.Append("&preTags=").Append(tag));
+            HighlighterPostTags.ApplyIfNotNull(tag => path.Append("&postTags=").Append(tag));
+
+            if (string.IsNullOrEmpty(HighlighterKeyName) == false)
+            {
+                path.AppendFormat("&highlighterKeyName={0}", Uri.EscapeDataString(HighlighterKeyName));
+            }
+
+            if (DebugOptionGetIndexEntries)
+                path.Append("&debug=entries");
+
+            if (ExplainScores)
+                path.Append("&explainScores=true");
+        }
+
+        private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
+        {
+            if (string.IsNullOrEmpty(Query) == false && appendQuery)
+            {
+                path.Append("&query=");
+                path.Append(EscapingHelper.EscapeLongDataString(Query));
+            }
+
+            if (string.IsNullOrEmpty(DefaultField) == false)
+            {
+                path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
+            }
+            if (DefaultOperator != QueryOperator.Or)
+                path.Append("&operator=AND");
+            var vars = GetCustomQueryStringVariables();
+            if (!string.IsNullOrEmpty(vars))
+            {
+                path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
+            }
+        }
+    }
+
+    public abstract class IndexQuery<T> : IEquatable<IndexQuery<T>>
     {
         public static int DefaultPageSize = 128;
 
-        private int pageSize;
+        private int _pageSize;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexQuery"/> class.
         /// </summary>
-        public IndexQuery()
+        protected IndexQuery()
         {
-            pageSize = DefaultPageSize;
+            _pageSize = DefaultPageSize;
         }
 
         /// <summary>
@@ -51,7 +194,7 @@ namespace Raven.Client.Data
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
-        public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
+        public T TransformerParameters { get; set; }
 
         /// <summary>
         /// Number of records that should be skipped.
@@ -65,11 +208,11 @@ namespace Raven.Client.Data
         {
             get
             {
-                return pageSize;
+                return _pageSize;
             }
             set
             {
-                pageSize = value;
+                _pageSize = value;
                 PageSizeSet = true;
             }
         }
@@ -197,141 +340,6 @@ namespace Raven.Client.Data
         public string[] Includes { get; set; }
 
         /// <summary>
-        /// Gets the index query URL.
-        /// </summary>
-        public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
-        {
-            if (operationUrl.EndsWith("/"))
-                operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
-            var path = new StringBuilder()
-                .Append(operationUrl)
-                .Append("/")
-                .Append(operationName)
-                .Append("/")
-                .Append(index);
-
-            AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
-
-            return path.ToString();
-        }
-
-        public string GetMinimalQueryString()
-        {
-            var sb = new StringBuilder();
-            AppendMinimalQueryString(sb);
-            return sb.ToString();
-        }
-
-
-        public string GetQueryString()
-        {
-            var sb = new StringBuilder();
-            AppendQueryString(sb);
-            return sb.ToString();
-        }
-
-        public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
-        {
-            path.Append("?");
-
-            AppendMinimalQueryString(path, includeQuery);
-
-            if (Start != 0)
-                path.Append("&start=").Append(Start);
-
-            if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
-                path.Append("&pageSize=").Append(PageSize);
-
-            if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
-                path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
-
-            if (IsDistinct)
-                path.Append("&distinct=true");
-
-            if (ShowTimings)
-                path.Append("&showTimings=true");
-            if (SkipDuplicateChecking)
-                path.Append("&skipDuplicateChecking=true");
-
-            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-            Includes.ApplyIfNotNull(include => path.AppendFormat("&include={0}", Uri.EscapeDataString(include)));
-
-            DynamicMapReduceFields.ApplyIfNotNull(field => path.Append("&mapReduce=")
-                        .Append(Uri.EscapeDataString(field.Name))
-                        .Append("-")
-                        .Append(field.OperationType)
-                        .Append("-")
-                        .Append(field.IsGroupBy));
-
-            SortedFields.ApplyIfNotNull(
-                field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
-
-            if (string.IsNullOrEmpty(Transformer) == false)
-            {
-                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(Transformer));
-            }
-
-            if (TransformerParameters != null)
-            {
-                foreach (var input in TransformerParameters)
-                {
-                    path.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
-                }
-            }
-
-            if (CutoffEtag != null)
-            {
-                path.Append("&cutOffEtag=").Append(CutoffEtag);
-            }
-
-            if (WaitForNonStaleResultsAsOfNow)
-            {
-                path.Append("&waitForNonStaleResultsAsOfNow=true");
-            }
-
-            if (WaitForNonStaleResultsTimeout != null)
-            {
-                path.AppendLine("&waitForNonStaleResultsTimeout=" + WaitForNonStaleResultsTimeout);
-            }
-
-            HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
-            HighlighterPreTags.ApplyIfNotNull(tag => path.Append("&preTags=").Append(tag));
-            HighlighterPostTags.ApplyIfNotNull(tag => path.Append("&postTags=").Append(tag));
-
-            if (string.IsNullOrEmpty(HighlighterKeyName) == false)
-            {
-                path.AppendFormat("&highlighterKeyName={0}", Uri.EscapeDataString(HighlighterKeyName));
-            }
-
-            if (DebugOptionGetIndexEntries)
-                path.Append("&debug=entries");
-
-            if (ExplainScores)
-                path.Append("&explainScores=true");
-        }
-
-        private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
-        {
-            if (string.IsNullOrEmpty(Query) == false && appendQuery)
-            {
-                path.Append("&query=");
-                path.Append(EscapingHelper.EscapeLongDataString(Query));
-            }
-
-            if (string.IsNullOrEmpty(DefaultField) == false)
-            {
-                path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
-            }
-            if (DefaultOperator != QueryOperator.Or)
-                path.Append("&operator=AND");
-            var vars = GetCustomQueryStringVariables();
-            if (!string.IsNullOrEmpty(vars))
-            {
-                path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
-            }
-        }
-
-        /// <summary>
         /// Gets the custom query string variables.
         /// </summary>
         /// <returns></returns>
@@ -340,25 +348,22 @@ namespace Raven.Client.Data
             return string.Empty;
         }
 
-        public IndexQuery Clone()
-        {
-            return (IndexQuery)MemberwiseClone();
-        }
-
         public override string ToString()
         {
             return Query;
         }
 
-        public bool Equals(IndexQuery other)
+        public virtual bool Equals(IndexQuery<T> other)
         {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
+            if (ReferenceEquals(null, other))
+                return false;
+            if (ReferenceEquals(this, other))
+                return true;
+
             return PageSizeSet.Equals(other.PageSizeSet) &&
                    string.Equals(Query, other.Query) &&
-                   DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters) &&
                    Start == other.Start &&
-                   Equals(IsDistinct, other.IsDistinct) &&
+                   IsDistinct == other.IsDistinct &&
                    EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
                    EnumerableExtension.ContentEquals(SortedFields, other.SortedFields) &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
@@ -390,23 +395,23 @@ namespace Raven.Client.Data
             unchecked
             {
                 var hashCode = PageSizeSet.GetHashCode();
-                hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
-                hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FieldsToFetch?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (SortedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (DefaultField?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (int)DefaultOperator;
                 hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
-                hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (HighlighterKeyName != null ? HighlighterKeyName.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Transformer != null ? Transformer.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (HighlighterKeyName?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Transformer?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
@@ -414,16 +419,15 @@ namespace Raven.Client.Data
             }
         }
 
-        public static bool operator ==(IndexQuery left, IndexQuery right)
+        public static bool operator ==(IndexQuery<T> left, IndexQuery<T> right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(IndexQuery left, IndexQuery right)
+        public static bool operator !=(IndexQuery<T> left, IndexQuery<T> right)
         {
             return !Equals(left, right);
         }
-
     }
 
     public enum QueryOperator

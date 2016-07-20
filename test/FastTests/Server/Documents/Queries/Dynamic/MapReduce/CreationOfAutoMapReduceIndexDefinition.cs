@@ -6,6 +6,7 @@ using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 
@@ -140,7 +141,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Extends_mapping_based_on_existing_definition_if_group_by_fields_match()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:A*",
                 DynamicMapReduceFields = new []
@@ -164,7 +165,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:A*",
                 DynamicMapReduceFields = new[]
@@ -209,7 +210,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
         private void create_dynamic_map_reduce_mapping_for_users_collection(string query, DynamicMapReduceField[] mapReduceFields)
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = query,
                 DynamicMapReduceFields = mapReduceFields

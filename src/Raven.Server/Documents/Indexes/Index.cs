@@ -26,6 +26,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -712,7 +713,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
-        public async Task<DocumentQueryResult> Query(IndexQuery query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public async Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -780,10 +781,24 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
-                            foreach (var document in documents)
+
+                            Transformer transformer = null;
+                            if (string.IsNullOrEmpty(query.Transformer) == false)
                             {
-                                result.Results.Add(document);
-                                includeDocumentsCommand.Gather(document);
+                                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
+                                if (transformer == null)
+                                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
+                            }
+
+                            using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, DocumentDatabase.DocumentsStorage, documentsContext))
+                            {
+                                var results = scope != null ? scope.Transform(documents) : documents;
+
+                                foreach (var document in results)
+                                {
+                                    result.Results.Add(document);
+                                    includeDocumentsCommand.Gather(document);
+                                }
                             }
 
                             includeDocumentsCommand.Fill(result.Includes);
@@ -873,7 +888,7 @@ namespace Raven.Server.Documents.Indexes
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 
-        private DisposableAction MarkQueryAsRunning(IndexQuery query, OperationCancelToken token)
+        private DisposableAction MarkQueryAsRunning(IndexQueryServerSide query, OperationCancelToken token)
         {
             var queryStartTime = DateTime.UtcNow;
             var queryId = Interlocked.Increment(ref _numberOfQueries);
@@ -887,7 +902,7 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private static bool WillResultBeAcceptable(bool isStale, IndexQuery query, AsyncWaitForIndexing wait)
+        private static bool WillResultBeAcceptable(bool isStale, IndexQueryServerSide query, AsyncWaitForIndexing wait)
         {
             if (isStale == false)
                 return true;

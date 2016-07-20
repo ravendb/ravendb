@@ -152,30 +152,6 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes and transformers")]
-        public Task write_then_read_from_complex_entity_types_lazily()
-        {
-            throw new NotImplementedException();
-
-            //using (var store = await GetDocumentStore())
-            //{
-            //    new Answers_ByAnswerEntity().Execute(store);
-            //    new Answers_ByAnswerEntityTransformer().Execute(store);
-
-            //    string answerId = ComplexValuesFromTransformResults.CreateEntities(store);
-            //    // Working
-            //    using (IDocumentSession session = store.OpenSession())
-            //    {
-            //        var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-            //            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-            //            .Where(x => x.Id == answerId)
-            //            .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
-            //            .Lazily();
-            //        Assert.NotNull(answerInfo.Value.ToArray().Length);
-            //    }
-            //}
-        }
-
         [Fact]
         public async Task LazyOperationsAreBatched()
         {

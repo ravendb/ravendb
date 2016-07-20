@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly IndexType _indexType;
 
-        private readonly IndexQuery _query;
+        private readonly IndexQueryServerSide _query;
 
         private readonly FieldsToFetch _fieldsToFetch;
 
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public int MaxNumberOfIndexOutputs { get; }
 
-        public IndexQueryingScope(IndexType indexType, IndexQuery query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever, int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument)
+        public IndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever, int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument)
         {
             _indexType = indexType;
             _query = query;

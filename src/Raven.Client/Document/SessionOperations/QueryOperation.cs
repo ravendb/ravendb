@@ -121,9 +121,27 @@ namespace Raven.Client.Document.SessionOperations
                 sessionOperations.TrackIncludedDocument(include);
             }
 
-            var list = queryResult.Results
-                .Select(x => x != null ? Deserialize<T>(x) : default(T))
-                .ToList();
+            var usedTransformer = string.IsNullOrEmpty(indexQuery.Transformer) == false;
+            var list = new List<T>();
+            foreach (var result in queryResult.Results)
+            {
+                if (result == null)
+                {
+                    list.Add(default(T));
+                    continue;
+                }
+
+                if (usedTransformer)
+                {
+                    var values = result.Value<RavenJArray>("$values");
+                    foreach (RavenJObject value in values)
+                        list.Add(Deserialize<T>(value));
+
+                    continue;
+                }
+
+                list.Add(Deserialize<T>(result));
+            }
 
             if (disableEntitiesTracking == false)
                 sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), indexQuery.Includes);

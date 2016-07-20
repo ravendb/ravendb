@@ -12,6 +12,33 @@ namespace FastTests.Blittable
     public class ObjectJsonParsingTests
     {
         [Fact]
+        public void Zzz()
+        {
+            using (var pool = new UnmanagedBuffersPool("foo"))
+            using (var ctx = new JsonOperationContext(pool))
+            {
+                var array = new DynamicJsonArray
+                {
+                    new DynamicJsonValue
+                    {
+                        ["LastName"] = "John"
+                    }
+                };
+
+                var input = new DynamicJsonValue
+                {
+                    ["$values"] = array
+                };
+
+                using (var inputJson = ctx.ReadObject(input, "input", BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings))
+                {
+
+                }
+            }
+        }
+
+
+        [Fact]
         public void CanCompressSmallStrings()
         {
             var traverser = new BlittableJsonTraverser();

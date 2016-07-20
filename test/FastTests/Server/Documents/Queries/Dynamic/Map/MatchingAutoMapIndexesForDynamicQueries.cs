@@ -6,6 +6,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 
@@ -26,7 +27,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void Failure_if_there_is_no_index()
         {
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek" });
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Name:Arek" });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -48,7 +49,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Companies", new IndexQuery { Query = "Name:IBM" });
+            var dynamicQuery = DynamicQueryMapping.Create("Companies", new IndexQueryServerSide { Query = "Name:IBM" });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -70,7 +71,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek" });
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Name:Arek" });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -110,7 +111,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             add_index(usersByName);
             add_index(usersByNameAndAge);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek Age:29" });
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Name:Arek Age:29" });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -133,7 +134,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(usersByName);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek Age:29" });
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Name:Arek Age:29" });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -168,7 +169,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek AND Address.Street:1stAvenue AND Friends,Name:Jon" });
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Name:Arek AND Address.Street:1stAvenue AND Friends,Name:Jon" });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -191,7 +192,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Name:Arek",
                 SortedFields = new[] { new SortedField("Name") },
@@ -219,7 +220,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 SortedFields = new[] { new SortedField("Address.ZipCode_Range") },
             });
@@ -245,7 +246,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Weight:70",
                 SortedFields = new[] { new SortedField("Weight_Range") },
@@ -271,7 +272,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Name:Arek",
                 SortedFields = new[] { new SortedField("Weight") },
@@ -299,7 +300,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQueryWithStringSorting = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQueryWithStringSorting = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Age_Range:{Lx9 TO NULL}",
                 SortedFields = new[] { new SortedField("Age_Range") },
@@ -310,7 +311,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
 
-            var dynamicQueryWithNoneSorting = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQueryWithNoneSorting = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Age_Range:31",
                 SortedFields = new[] { new SortedField("Age_Range") },
@@ -337,7 +338,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek" });
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Name:Arek" });
 
             var index = get_index(definition.Name);
 

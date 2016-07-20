@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<Document> Query(IndexQuery query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
+        public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
             var docsToGet = query.PageSize;
             var position = query.Start;
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<Document> IntersectQuery(IndexQuery query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
+        public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
             var subQueries = query.Query.Split(IntersectSeparators, StringSplitOptions.RemoveEmptyEntries);
             if (subQueries.Length <= 1)
@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.Search(documentQuery, null, minPageSize);
         }
 
-        private Query GetLuceneQuery(string q, IndexQuery query)
+        private Query GetLuceneQuery(string q, IndexQueryServerSide query)
         {
             Query documentQuery;
 

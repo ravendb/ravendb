@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsDistinct;
 
-        public FieldsToFetch(IndexQuery query, IndexDefinitionBase indexDefinition)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
         {
             Fields = GetFieldsToFetch(query.FieldsToFetch, indexDefinition, out AnyExtractableFromIndex);
             IsProjection = Fields != null && Fields.Count > 0;

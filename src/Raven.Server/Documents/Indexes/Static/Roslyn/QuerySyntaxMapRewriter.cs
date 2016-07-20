@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             {
                 _collectionRewriter,
                 _referencedCollectionRewriter,
+                SelectManyRewriter.QuerySyntax,
                 DynamicExtensionMethodsRewriter.Instance,
                 RecurseRewriter.Instance
             };

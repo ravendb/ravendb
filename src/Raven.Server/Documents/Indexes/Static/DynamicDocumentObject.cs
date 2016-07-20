@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Json.Linq;
 using Raven.Server.Json;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -116,79 +117,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_dynamicJson.TryGetByName(key, out result) == false)
                 throw new InvalidOperationException($"Could not get '{key}' value of dynamic object");
 
-            return Convert<T>(result, false);
-        }
-
-        internal static U Convert<U>(object value, bool cast)
-        {
-            if (cast)
-            {
-                // HACK
-                return (U)value;
-            }
-
-            if (value == null)
-                return default(U);
-
-            if (value is U)
-                return (U)value;
-
-            Type targetType = typeof(U);
-
-            if (targetType.GetTypeInfo().IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                targetType = Nullable.GetUnderlyingType(targetType);
-            }
-
-            if (targetType == typeof(Guid))
-            {
-                return (U)(object)new Guid(value.ToString());
-            }
-
-            if (targetType == typeof(string))
-            {
-                return (U)(object)value.ToString();
-            }
-
-            if (targetType == typeof(DateTime))
-            {
-                var s = value as string ?? value as LazyStringValue;
-
-                if (s != null)
-                {
-                    DateTime dateTime;
-                    if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out dateTime))
-                        return (U)(object)dateTime;
-
-                    dateTime = RavenJsonTextReader.ParseDateMicrosoft(s);
-                    return (U)(object)dateTime;
-                }
-            }
-
-            if (targetType == typeof(DateTimeOffset))
-            {
-                var s = value as string ?? value as LazyStringValue;
-
-                if (s != null)
-                {
-                    DateTimeOffset dateTimeOffset;
-                    if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out dateTimeOffset))
-                        return (U)(object)dateTimeOffset;
-
-                    return default(U);
-                }
-            }
-
-            try
-            {
-                return (U)System.Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value), e);
-            }
+            return TypeConverter.Convert<T>(result, false);
         }
 
         public static implicit operator BlittableJsonReaderObject(DynamicDocumentObject self)

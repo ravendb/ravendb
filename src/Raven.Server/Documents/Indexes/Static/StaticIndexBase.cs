@@ -71,10 +71,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IndexingFunc Reduce;
 
-        public void SetReduce(IndexingFunc reduce)
-        {
-            Reduce = reduce;
-        }
         public string[] OutputFields;
 
         public string[] GroupByFields;

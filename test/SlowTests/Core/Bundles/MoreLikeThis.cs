@@ -56,7 +56,7 @@ namespace SlowTests.Core.Bundles
             }
         }
 
-        [Fact(Skip = "Missing feature: Transformers")]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task CanUseMoreLikeThisWithTransformer()
         {
             using (var store = await GetDocumentStore())

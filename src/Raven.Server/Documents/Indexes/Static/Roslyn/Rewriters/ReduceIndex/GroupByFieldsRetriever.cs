@@ -8,14 +8,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
     public abstract class GroupByFieldsRetriever : CSharpSyntaxRewriter
     {
-        protected string _resultsVariableName;
-
         public string[] GroupByFields { get; protected set; }
-
-        public void Initialize(string resultsVariableName)
-        {
-            _resultsVariableName = resultsVariableName;
-        }
 
         public static GroupByFieldsRetriever QuerySyntax => new QuerySyntaxRetriever();
 
@@ -52,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
                 var expression = node.Expression.ToString();
-                if (expression.StartsWith($"{_resultsVariableName}.GroupBy") == false)
+                if (expression.StartsWith("results.GroupBy") == false)
                     return base.VisitInvocationExpression(node);
 
                 var resultsGroupByAndSelect = node.Expression as MemberAccessExpressionSyntax; // results.GroupBy(result => result.Type).Select

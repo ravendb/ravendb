@@ -6,33 +6,52 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    internal class SelectManyRewriter : CSharpSyntaxRewriter
+    public abstract class SelectManyRewriter : CSharpSyntaxRewriter
     {
-        public static SelectManyRewriter Instance = new SelectManyRewriter();
+        public static SelectManyRewriter MethodSyntax => new MethodSyntaxRewriter();
 
-        private SelectManyRewriter()
+        public static SelectManyRewriter QuerySyntax => new QuerySyntaxRewriter();
+
+        private class MethodSyntaxRewriter : SelectManyRewriter
         {
+            public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+            {
+                var selectMany = node.Expression.ToString();
+                if (selectMany != "docs.SelectMany" && selectMany != "results.SelectMany")
+                    return base.VisitInvocationExpression(node);
+
+                var arguments = node.ArgumentList.Arguments;
+                if (arguments.Count < 2)
+                    return node;
+
+                var firstArgument = arguments[0].Expression; // order => order.Lines
+                if (firstArgument.IsKind(SyntaxKind.SimpleLambdaExpression) == false)
+                    return node;
+
+                var lambda = (SimpleLambdaExpressionSyntax)firstArgument;
+                var toCast = lambda.ChildNodes().LastOrDefault();
+                var castExpression = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(IEnumerable<dynamic>){toCast}");
+
+                return node.ReplaceNode(toCast, castExpression);
+            }
         }
 
-        public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+        private class QuerySyntaxRewriter : SelectManyRewriter
         {
-            var selectMany = node.Expression.ToString();
-            if (selectMany != "docs.SelectMany" && selectMany != "results.SelectMany")
-                return base.VisitInvocationExpression(node);
+            public override SyntaxNode VisitFromClause(FromClauseSyntax node)
+            {
+                var fromExpression = node.Expression.ToString();
 
-            var arguments = node.ArgumentList.Arguments;
-            if (arguments.Count < 2)
-                return node;
+                if (fromExpression == "docs" || fromExpression == "results") // from order in docs.Orders or from result in results
+                    return base.VisitFromClause(node);
+                
+                // 2nd from clause
 
-            var firstArgument = arguments[0].Expression; // order => order.Lines
-            if (firstArgument.IsKind(SyntaxKind.SimpleLambdaExpression) == false)
-                return node;
+                var toCast = node.Expression; // order.Lines
+                var castExpression = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(IEnumerable<dynamic>){toCast}");
 
-            var lambda = (SimpleLambdaExpressionSyntax)firstArgument;
-            var toCast = lambda.ChildNodes().LastOrDefault();
-            var castExpression = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(IEnumerable<dynamic>){toCast}");
-
-            return node.ReplaceNode(toCast, castExpression);
+                return node.ReplaceNode(toCast, castExpression);
+            }
         }
     }
 }

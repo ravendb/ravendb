@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 
@@ -28,7 +29,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_if_there_is_no_index()
         {
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "", DynamicMapReduceFields = new []
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "", DynamicMapReduceFields = new []
             {
                 new DynamicMapReduceField
                 {
@@ -73,7 +74,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
                 DynamicMapReduceFields = new[]
@@ -121,7 +122,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Location:Poland", DynamicMapReduceFields = new []
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Location:Poland", DynamicMapReduceFields = new []
             {
                 new DynamicMapReduceField
                 {
@@ -163,7 +164,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
                 DynamicMapReduceFields = new[]
@@ -209,7 +210,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
                 DynamicMapReduceFields = new[]
@@ -297,7 +298,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountReducedByAgeAndLocation);
             add_index(usersByCountReducedByLocationAndNickNameAndAge);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
                 DynamicMapReduceFields = new[]
@@ -373,7 +374,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountGroupedByLocation);
             add_index(usersByCountAndTotalAgeGroupedByLocation);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:Poland",
                 DynamicMapReduceFields = new[]
@@ -421,7 +422,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("LineItems", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("LineItems", new IndexQueryServerSide
             {
                 Query = "Price:70",
                 SortedFields = new[] { new SortedField("Price_Range") },
@@ -447,7 +448,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Name:Arek",
                 SortedFields = new[] { new SortedField("Weight") },
@@ -490,7 +491,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 ReduceErrors = 900
             });
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "",
                 DynamicMapReduceFields = new[]

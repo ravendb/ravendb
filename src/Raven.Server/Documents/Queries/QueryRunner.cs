@@ -30,14 +30,14 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQuery query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
         {
             DocumentQueryResult result;
 
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
                 indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
                 result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
             }
@@ -84,27 +84,27 @@ namespace Raven.Server.Documents.Queries
             return index.MoreLikeThisQuery(query, context, token);
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQuery indexQuery)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQueryServerSide indexQuery)
         {
             if (string.IsNullOrWhiteSpace(indexName) || (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) == false && indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase) == false))
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
-            var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
+            var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
 
             return runner.ExplainIndexSelection(indexName, indexQuery);
         }
 
-        public Task ExecuteDeleteQuery(string indexName, IndexQuery query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)
+        public Task ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)
         {
             return ExecuteOperation(indexName, query, options, context, key => _database.DocumentsStorage.Delete(context, key, null), token);
         }
 
-        public Task ExecutePatchQuery(string indexName, IndexQuery query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, OperationCancelToken token)
+        public Task ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, OperationCancelToken token)
         {
             return ExecuteOperation(indexName, query, options, context, key => _database.Patch.Apply(context, key, null, patch, null), token);
         }
 
-        private async Task ExecuteOperation(string indexName, IndexQuery query, QueryOperationOptions options, DocumentsOperationContext context, Action<string> action, OperationCancelToken token)
+        private async Task ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<string> action, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
 
@@ -155,9 +155,9 @@ namespace Raven.Server.Documents.Queries
             tx?.Commit();
         }
 
-        private static IndexQuery ConvertToOperationQuery(IndexQuery query, QueryOperationOptions options)
+        private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)
         {
-            return new IndexQuery
+            return new IndexQueryServerSide
             {
                 Query = query.Query,
                 Start = query.Start,

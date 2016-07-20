@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -70,7 +71,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
                     Reduce =
-                        "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => (int) x.Count) }",
+                        "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                     Type = IndexType.MapReduce,
                     Fields =
                     {
@@ -139,7 +140,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 var queryResult =
                     await
-                        index.Query(new IndexQuery(),
+                        index.Query(new IndexQueryServerSide(),
                             new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
                             OperationCancelToken.None);
 
@@ -198,7 +199,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQuery(),
+                queryResult = await index.Query(new IndexQueryServerSide(),
                             new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
                             OperationCancelToken.None);
 
@@ -245,7 +246,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQuery()
+                queryResult = await index.Query(new IndexQueryServerSide
                     {
                         SortedFields = new[]
                         {

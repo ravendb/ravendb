@@ -4,6 +4,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 
@@ -136,7 +137,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionForQueryWithSortedFields()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Name:A*",
                 SortedFields = new[]
@@ -161,7 +162,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionForQueryWithNestedFieldsAndStringSortingSet()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Name:A*",
                 SortedFields = new[]
@@ -186,7 +187,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionForQueryWithNestedFieldsAndNumberSortingSet()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Name:A*",
                 SortedFields = new[]
@@ -211,7 +212,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionForQueryWithRangeField()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Age_Range:{Lx30 TO NULL}"
             });
@@ -229,7 +230,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void ExtendsMappingBasedOnExistingDefinition()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "FirstName:A*",
                 SortedFields = new[]
@@ -240,7 +241,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "LastName:A*",
                 SortedFields = new[]
@@ -271,7 +272,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void DefinitionExtensionWontDuplicateFields()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "FirstName:A* LastName:a*",
                 SortedFields = new[]
@@ -282,7 +283,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "FirstName:A* AddressId:addresses/1",
                 SortedFields = new[]
@@ -314,7 +315,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
         private void create_dynamic_mapping_for_users_collection(string query)
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = query
             });

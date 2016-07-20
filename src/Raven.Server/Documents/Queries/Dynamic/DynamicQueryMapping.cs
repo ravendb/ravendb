@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             SortDescriptors = extendedSortDescriptors.ToArray();
         }
 
-        public static DynamicQueryMapping Create(string entityName, IndexQuery query)
+        public static DynamicQueryMapping Create(string entityName, IndexQueryServerSide query)
         {
             var result = new DynamicQueryMapping
             {
