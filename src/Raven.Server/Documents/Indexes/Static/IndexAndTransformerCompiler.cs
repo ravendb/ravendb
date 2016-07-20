@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return
                         HandleSyntaxInReduce(
                             new ReduceFunctionProcessor(
-                                ResultsVariableNameRetriever.QuerySyntax,
+                                ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
                                 SelectManyRewriter.QuerySyntax),
                             queryExpression, out groupByFields);
@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return
                         HandleSyntaxInReduce(
                             new ReduceFunctionProcessor(
-                                ResultsVariableNameRetriever.MethodSyntax,
+                                ResultsVariableNameRewriter.MethodSyntax,
                                 GroupByFieldsRetriever.MethodSyntax,
                                 SelectManyRewriter.MethodSyntax),
                             invocationExpression, out groupByFields);
@@ -346,11 +346,14 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
 
-            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(reduceFunctionProcessor.ResultsVariableName)), rewrittenExpression);
+            var reducingFunction =
+                SyntaxFactory.SimpleLambdaExpression(
+                    SyntaxFactory.Parameter(SyntaxFactory.Identifier(ResultsVariableNameRewriter.ResultsVariable)),
+                    rewrittenExpression);
 
             groupByFields = reduceFunctionProcessor.GroupByFields;
 
-            return RoslynHelper.This(nameof(StaticIndexBase.Reduce)).Assign(indexingFunction).AsExpressionStatement();
+            return RoslynHelper.This(nameof(StaticIndexBase.Reduce)).Assign(reducingFunction).AsExpressionStatement();
         }
 
         private static ArrayCreationExpressionSyntax GetArrayCreationExpression(IEnumerable<string> items)

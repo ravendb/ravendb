@@ -120,7 +120,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { @"from order in docs.Orders
 from line in order.Lines
 select new { Product = line.Product, Count = 1, Total = line.Price }" },
-                    Reduce = @"from result in results
+                    Reduce = @"from result in mapResults
 group result by result.Product into g
 select new
 {
