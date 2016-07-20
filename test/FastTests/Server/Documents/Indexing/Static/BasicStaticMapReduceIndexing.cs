@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
@@ -38,8 +37,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 CountInteger = g.Sum(x => x.CountInteger), 
                                 CountDouble = g.Sum(x => x.CountDouble),
                                 CastedInteger = g.Sum(x => (int)x.CastedInteger) 
-                            }",
-                    // TODO arek Reduce = "results.GroupBy(x => x.City).Select(g => new { City = g.Key, Count = g.Sum(x => x.Count) })",
+                            }"
                 }, database))
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
@@ -115,8 +113,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
                 {
                     Name = "Users_ByCount_GroupByLocation",
-                    //Maps = { @"docs.Orders.SelectMany(x => x.Lines, (order, line) => new { Product = line.Product, Count = 1, Total = line.Price })" },
-
                     Maps = { @"from order in docs.Orders
 from line in order.Lines
 select new { Product = line.Product, Count = 1, Total = line.Price }" },
