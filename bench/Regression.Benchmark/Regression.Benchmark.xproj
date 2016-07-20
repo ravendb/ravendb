@@ -6,7 +6,7 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>2d0f7063-091d-4bfd-9a1d-a9dd7421148f</ProjectGuid>
+    <ProjectGuid>c860a261-76eb-4c96-9a5c-2a54b4d9bb2c</ProjectGuid>
     <RootNamespace>Regression</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
