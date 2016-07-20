@@ -13,6 +13,11 @@ namespace Raven.Bundles.Replication.Data
     {
         public Etag LastDocumentEtag { get; set; }
 
+        /// <summary>
+        /// This is the last modification time of the last batch sent from the source
+        /// </summary>
+        public DateTime? LastModifiedAtSource { get; set; }
+
         [Obsolete("Use RavenFS instead.")]
         public Etag LastAttachmentEtag { get; set; }
 

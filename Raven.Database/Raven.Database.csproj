@@ -462,6 +462,7 @@
     <Compile Include="Raft\Commands\ClusterConfigurationUpdateCommand.cs" />
     <Compile Include="Raft\Commands\DatabaseDeletedCommand.cs" />
     <Compile Include="Raft\Commands\DatabaseUpdateCommand.cs" />
+    <Compile Include="Raft\Commands\ReplicationStateCommand.cs" />
     <Compile Include="Raft\ConnectivityStatus.cs" />
     <Compile Include="Raft\Controllers\ClusterAdminController.cs" />
     <Compile Include="Raft\Controllers\ClusterController.cs" />
@@ -472,6 +473,7 @@
     <Compile Include="Raft\Storage\Handlers\CommandHandler.cs" />
     <Compile Include="Raft\Storage\Handlers\DatabaseDeletedCommandHandler.cs" />
     <Compile Include="Raft\Storage\Handlers\DatabaseUpdateCommandHandler.cs" />
+    <Compile Include="Raft\Storage\Handlers\ReplicationStateCommandHandler.cs" />
     <Compile Include="Raft\Util\RaftHelper.cs" />
     <Compile Include="Raft\ClusterManagerFactory.cs" />
     <Compile Include="Server\Connections\PushContentBase.cs" />

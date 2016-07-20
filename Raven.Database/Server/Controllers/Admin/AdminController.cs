@@ -1387,15 +1387,7 @@ namespace Raven.Database.Server.Controllers.Admin
         private ReplicationTopology CollectReplicationTopology()
         {
             var mergedTopology = new ReplicationTopology();
-
-            int nextPageStart = 0;
-            var databases = DatabasesLandlord.SystemDatabase.Documents
-                .GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
-                    int.MaxValue, CancellationToken.None, ref nextPageStart);
-
-            var databaseNames = databases
-                .Select(database =>
-                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+            HashSet<string> databaseNames = GetDatabasesNames();
 
             DatabasesLandlord.ForAllDatabases(db =>
             {
@@ -1422,6 +1414,19 @@ namespace Raven.Database.Server.Controllers.Admin
 
             mergedTopology.SkippedResources = databaseNames;
             return mergedTopology;
+        }
+
+        private HashSet<string> GetDatabasesNames()
+        {
+            int nextPageStart = 0;
+            var databases = DatabasesLandlord.SystemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
+                    int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+            var databaseNames = databases
+                .Select(database =>
+                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+            return databaseNames;
         }
 
         private SynchronizationTopology CollectFilesystemSynchronizationTopology()
