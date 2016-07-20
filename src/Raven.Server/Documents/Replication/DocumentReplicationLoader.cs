@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
@@ -36,6 +37,9 @@ namespace Raven.Server.Documents.Replication
 
         private readonly Logger _log;
 
+        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
+        public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Keys;
+
         public DocumentReplicationLoader(DocumentDatabase database)
         {
             _database = database;
@@ -43,6 +47,11 @@ namespace Raven.Server.Documents.Replication
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.Zero, TimeSpan.FromMilliseconds(45000));
         }
+
+        public IReadOnlyDictionary<ReplicationDestination, ConnectionFailureInfo> OutgoingFailureInfo => _outgoingFailureInfo;
+        public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
+        public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
+        public IReadOnlyCollection<ReplicationDestination> ReconnectQueue => _reconnectQueue;
 
         public void AcceptIncomingConnection(
              JsonOperationContext context, NetworkStream stream, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
@@ -180,7 +189,6 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
-                IncomingReplicationHandler _;
                 var storedInstance = _incoming.FirstOrDefault(x => ReferenceEquals(x.Value, instance));
                 if (storedInstance != null)
                     _incoming.TryRemove(storedInstance);

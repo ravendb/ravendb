@@ -111,6 +111,8 @@ namespace Sparrow.Json.Parsing
             _elements.Push(root);
         }
 
+        public IReadOnlyCollection<object> Elements => _elements;
+
         public void Dispose()
         {
 

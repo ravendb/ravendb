@@ -6,10 +6,9 @@ namespace Raven.Server.Config.Categories
 {
     public class ReplicationConfiguration : ConfigurationCategory
     {
-        [Description("Threshold under which a connection is considered active")]
+        [Description("Threshold under which an incoming replication connection is considered active. If an incoming connection receives messages within this time-span, new connection coming from the same source would be rejected (as the existing connection is considered active)")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Replication/ActiveConnectionTimeoutInSec")]
         [ConfigurationEntry("Raven/Replication/ActiveConnectionTimeout")]
         public TimeSetting ActiveConnectionTimeout { get; set; }
 

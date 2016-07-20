@@ -136,10 +136,7 @@ namespace Voron
             }
         }
 
-        public ScratchBufferPool ScratchBufferPool
-        {
-            get { return _scratchBufferPool; }
-        }
+        public ScratchBufferPool ScratchBufferPool => _scratchBufferPool;
 
         private unsafe void LoadExistingDatabase()
         {
