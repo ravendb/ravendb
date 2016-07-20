@@ -166,7 +166,7 @@ namespace Raven.Client.Connection.Request
             {
                 case FailoverBehavior.ReadFromAllWriteToLeader:
                     if (method == HttpMethods.Get)
-                        node = GetNodeForReadOperation(node);
+                        node = GetNodeForReadOperation(node) ?? node;
                     break;
                 case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     if (node == null)
@@ -175,7 +175,7 @@ namespace Raven.Client.Connection.Request
                     }
 
                     if (method == HttpMethods.Get)
-                        node = GetNodeForReadOperation(node);
+                        node = GetNodeForReadOperation(node) ?? node;
                     break;
                 case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
                     if (node == null)
@@ -195,11 +195,16 @@ namespace Raven.Client.Connection.Request
         {
             Debug.Assert(node != null);
 
-            var nodes = NodeUrls;
+            var nodes = new List<OperationMetadata>(NodeUrls);
+
             if (readStripingBase == -1)
                 return LeaderNode;
 
-            var nodeIndex = readStripingBase % nodes.Count; // todo: prevent dividing by zero
+            if (nodes.Count == 0)
+                return null;
+
+
+            var nodeIndex = readStripingBase % nodes.Count;
             var readNode = nodes[nodeIndex];
             if (ShouldExecuteUsing(readNode))
                 return readNode;
