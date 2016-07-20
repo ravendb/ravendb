@@ -396,7 +396,7 @@ namespace Raven.Server.Documents
 
             var doc = TableValueToDocument(context, tvr);
 
-            context.DocumentDatabase().HugeDocuments.AddIfDocIsHuge(doc.Key, doc.Data.Size);
+            context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc.Key, doc.Data.Size);
 
             return doc;
         }
