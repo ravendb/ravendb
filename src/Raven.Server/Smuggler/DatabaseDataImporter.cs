@@ -100,9 +100,14 @@ namespace Raven.Server.Smuggler
                                         indexBuilder.FinalizeDocument();
                                         using (var reader = indexBuilder.CreateReader())
                                         {
-                                            var index = new IndexDefinition();
-                                            // TODO: Populate this index
-                                            _database.IndexStore.CreateIndex(index);
+                                         /*   var index = new IndexDefinition();
+                                            string name;
+                                            if (reader.TryGet("Name", out name) == false)
+                                            {
+                                                result.Warnings.Add($"Cannot import the following index as it does not contain a name: '{reader}'. Skipping.");
+                                            }
+                                            index.Name = name;
+                                            _database.IndexStore.CreateIndex(index);*/
                                         }
                                     }
                                     break;
@@ -121,9 +126,9 @@ namespace Raven.Server.Smuggler
                                         transformerBuilder.FinalizeDocument();
                                         using (var reader = transformerBuilder.CreateReader())
                                         {
-                                            var transformerDefinition = new TransformerDefinition();
+                                           /* var transformerDefinition = new TransformerDefinition();
                                             // TODO: Import
-                                            _database.TransformerStore.CreateTransformer(transformerDefinition);
+                                            _database.TransformerStore.CreateTransformer(transformerDefinition);*/
                                         }
                                     }
                                     break;
