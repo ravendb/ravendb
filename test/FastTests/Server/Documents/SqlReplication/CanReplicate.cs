@@ -27,7 +27,7 @@ namespace FastTests.Server.Documents.SqlReplication
 {
     public class CanReplicate : RavenTestBase
     {
-        private const string defaultScript = @"
+        protected const string defaultScript = @"
 var orderData = {
     Id: documentId,
     OrderLinesCount: this.OrderLines.length,
@@ -47,7 +47,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 }";
 
 
-        private void CreateRdbmsSchema(DocumentStore store)
+        protected void CreateRdbmsSchema(DocumentStore store)
         {
             CreateRdbmsDatabase(store);
 
@@ -313,46 +313,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact]
-        public async Task ReplicateMultipleBatches()
-        {
-            using (var store = await GetDocumentStore())
-            {
-                CreateRdbmsSchema(store);
-
-                var eventSlim = new ManualResetEventSlim(false);
-                var database = await GetDatabase(store.DefaultDatabase);
-                int testCount = 5000;
-                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                {
-                    if (GetOrdersCount(store) == testCount)
-                        eventSlim.Set();
-                };
-
-                using (var bulkInsert = store.BulkInsert())
-                {
-                    for (int i = 0; i < testCount; i++)
-                    {
-                        await bulkInsert.StoreAsync(new Order
-                        {
-                            OrderLines = new List<OrderLine>
-                            {
-                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
-                                new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
-                            }
-
-                        });
-                    }
-                }
-
-                await SetupSqlReplication(store, defaultScript);
-
-                eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                Assert.Equal(testCount, GetOrdersCount(store));
-            }
-        }
-
+     
         [NonLinuxFact]
         public async Task RavenDB_3341()
         {
@@ -398,7 +359,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        private static int GetOrdersCount(DocumentStore store)
+        protected static int GetOrdersCount(DocumentStore store)
         {
             using (var con = new SqlConnection())
             {
@@ -707,7 +668,7 @@ var nameArr = this.StepName.split('.');");
             }
         }
 
-        private static async Task SetupSqlReplication(DocumentStore store, string script, bool insertOnly = false)
+        protected static async Task SetupSqlReplication(DocumentStore store, string script, bool insertOnly = false)
         {
             using (var session = store.OpenAsyncSession())
             {

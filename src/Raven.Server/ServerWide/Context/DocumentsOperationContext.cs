@@ -40,9 +40,8 @@ namespace Raven.Server.ServerWide.Context
             return tx;
         }
 
-        public StorageEnvironment Environment()
-        {
-            return _documentDatabase.DocumentsStorage.Environment;
-        }
+        public StorageEnvironment Environment => _documentDatabase.DocumentsStorage.Environment;
+
+        public DocumentDatabase DocumentDatabase => _documentDatabase;
     }
 }

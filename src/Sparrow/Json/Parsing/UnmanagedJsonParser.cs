@@ -627,15 +627,15 @@ namespace Sparrow.Json.Parsing
 
         public int ReadBuffer(byte[] buffer, int offset, int count)
         {
-            var toRead = Math.Min(_bufSize - _initialPos, count);
-            Buffer.BlockCopy(_inputBuffer, _initialPos, buffer, offset, toRead);
+            var toRead = Math.Min(_bufSize - _pos, count);
+            Buffer.BlockCopy(_inputBuffer, _pos, buffer, offset, toRead);
             _initialPos += toRead;
             return toRead;
         }
 
         public byte ReadByte()
         {
-            return _inputBuffer[_initialPos++];
+            return _inputBuffer[_pos++];
         }
     }
 }

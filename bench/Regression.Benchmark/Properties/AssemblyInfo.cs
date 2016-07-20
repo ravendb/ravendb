@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using Microsoft.Xunit.Performance;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -17,3 +18,6 @@ using System.Runtime.InteropServices;
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("2d0f7063-091d-4bfd-9a1d-a9dd7421148f")]
+
+[assembly: OptimizeForBenchmarks]
+[assembly: MeasureInstructionsRetired]
