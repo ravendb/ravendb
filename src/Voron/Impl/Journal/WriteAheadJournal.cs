@@ -434,9 +434,16 @@ namespace Voron.Impl.Journal
 
                     if (_waj._env.Disposed)
                         return;
-                    
+
                     if (lockTaken == false)
-                        throw new TimeoutException("Could not acquire the write lock in 30 seconds");
+                    {
+                        if (timeToWait == TimeSpan.Zero)
+                            // someone else is flushing, and we were explicitly told that we don't care about this
+                            // so there is no point in throwing
+                            return;
+
+                        throw new TimeoutException($"Could not acquire the write lock in {timeToWait.TotalSeconds} seconds");
+                    }
 
                     var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
@@ -561,6 +568,7 @@ namespace Voron.Impl.Journal
                         tryEnterReadLock = _waj._env.FlushInProgressLock.TryEnterWriteLock(timeout);
                     try
                     {
+                        _waj._env.EnsureTransactionLockFairnessForFlush();
                         using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
                             _lastSyncedJournal = lastProcessedJournal;
@@ -593,6 +601,7 @@ namespace Voron.Impl.Journal
                     }
                     finally
                     {
+                        _waj._env.DisableTransactionLockFairnessForFlush();
                         if(tryEnterReadLock)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
