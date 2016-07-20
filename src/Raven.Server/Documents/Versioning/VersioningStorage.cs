@@ -41,6 +41,10 @@ namespace Raven.Server.Documents.Versioning
                 StartIndex = 0,
                 Count = 3,
             });
+            _docsSchema.DefineFixedSizeIndex("Etag", new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 2,
+            });
 
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
@@ -217,6 +221,31 @@ namespace Raven.Server.Documents.Versioning
                     yield return document;
                 }
                 if (take <= 0)
+                    yield break;
+            }
+        }
+
+        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+
+            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["Etag"], etag))
+            {
+                var document = TableValueToDocument(context, tvr);
+                yield return document;
+            }
+        }
+
+        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag, int take)
+        {
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+
+            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["Etag"], etag))
+            {
+                var document = TableValueToDocument(context, tvr);
+                yield return document;
+
+                if (take-- <= 0)
                     yield break;
             }
         }
