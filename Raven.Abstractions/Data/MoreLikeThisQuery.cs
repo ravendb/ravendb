@@ -108,6 +108,11 @@ namespace Raven.Abstractions.Data
         public string DefaultAnalyzerName { get; set; }
 
         /// <summary>
+        /// An artificial document to use as the basis for comparison
+        /// </summary>
+        public string Document { get; set; }
+
+        /// <summary>
         /// Values for the the mapping group fields to use as the basis for comparison
         /// </summary>
         public NameValueCollection MapGroupFields { get; set; }
@@ -132,28 +137,29 @@ namespace Raven.Abstractions.Data
             if (string.IsNullOrEmpty(IndexName))
                 throw new InvalidOperationException("Index name cannot be null or empty");
 
-            var uri = new StringBuilder();
+            if (string.IsNullOrEmpty(DocumentId) && MapGroupFields.Count == 0 && string.IsNullOrEmpty(Document))
+                throw new InvalidOperationException("The document id, map group fields or document are mandatory");
 
-            string pathSuffix = string.Empty;
+            var uri = new StringBuilder();
+            uri.AppendFormat("/morelikethis/?index={0}&", Uri.EscapeUriString(IndexName));
 
             if (MapGroupFields.Count > 0)
             {
+                var pathSuffix = string.Empty;
                 var separator = string.Empty;
-                foreach(string key in MapGroupFields.Keys)
+                foreach (string key in MapGroupFields.Keys)
                 {
                     pathSuffix = pathSuffix + separator + key + '=' + MapGroupFields[key];
                     separator = ";";
                 }
+
+                uri.AppendFormat("docid={0}&", Uri.EscapeDataString(pathSuffix));
             }
-            else
+            else if (!string.IsNullOrEmpty(DocumentId))
             {
-                if(DocumentId == null)
-                    throw new ArgumentNullException("DocumentId", "DocumentId cannot be null");
-
-                pathSuffix = DocumentId;
+                uri.AppendFormat("docid={0}&", Uri.EscapeDataString(DocumentId));
             }
 
-            uri.AppendFormat("/morelikethis/?index={0}&docid={1}&", Uri.EscapeUriString(IndexName), Uri.EscapeDataString(pathSuffix));
             if (Fields != null)
             {
                 foreach (var field in Fields)
@@ -161,10 +167,12 @@ namespace Raven.Abstractions.Data
                     uri.AppendFormat("fields={0}&", field);
                 }
             }
-            if(string.IsNullOrWhiteSpace(AdditionalQuery) == false)
+            if (string.IsNullOrWhiteSpace(AdditionalQuery) == false)
                 uri.Append("query=").Append(Uri.EscapeDataString(AdditionalQuery)).Append("&");
             if (string.IsNullOrWhiteSpace(DefaultAnalyzerName) == false)
                 uri.Append("defaultAnalyzer=").Append(Uri.EscapeDataString(DefaultAnalyzerName)).Append("&");
+            if (string.IsNullOrWhiteSpace(Document) == false)
+                uri.Append("document=").Append(Uri.EscapeDataString(Document)).Append("&");
             if (Boost != null && Boost != DefaultBoost)
                 uri.Append("boost=true&");
             if (BoostFactor != null && BoostFactor != DefaultBoostFactor)
