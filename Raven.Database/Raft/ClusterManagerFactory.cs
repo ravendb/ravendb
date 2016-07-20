@@ -14,7 +14,9 @@ using Rachis.Storage;
 using Rachis.Transport;
 
 using Raven.Abstractions.Logging;
+using Raven.Database.Raft.Commands;
 using Raven.Database.Raft.Storage;
+using Raven.Database.Raft.Storage.Handlers;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
@@ -76,12 +78,12 @@ namespace Raven.Database.Raft
                 HeartbeatTimeout = configuration.Cluster.HeartbeatTimeout,
                 MaxLogLengthBeforeCompaction = configuration.Cluster.MaxLogLengthBeforeCompaction,
                 MaxEntriesPerRequest = configuration.Cluster.MaxEntriesPerRequest,
-                MaxStepDownDrainTime = configuration.Cluster.MaxStepDownDrainTime
+                MaxStepDownDrainTime = configuration.Cluster.MaxStepDownDrainTime,
             };
             var raftEngine = new RaftEngine(raftEngineOptions);
             stateMachine.RaftEngine = raftEngine;
-
-            return new ClusterManager(raftEngine);
+            stateMachine.RegisterHandler(typeof(ReplicationStateCommand), new ReplicationStateCommandHandler(systemDatabase, databasesLandlord, raftEngine));           
+            return new ClusterManager(raftEngine, databasesLandlord);
         }
     }
 }

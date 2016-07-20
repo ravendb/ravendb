@@ -55,7 +55,12 @@ namespace Raven.Database.Raft.Storage
 
             handlers.Add(typeof(ClusterConfigurationUpdateCommand), new ClusterConfigurationUpdateCommandHandler(systemDatabase, databasesLandlord));
             handlers.Add(typeof(DatabaseDeletedCommand), new DatabaseDeletedCommandHandler(systemDatabase, databasesLandlord));
-            handlers.Add(typeof(DatabaseUpdateCommand), new DatabaseUpdateCommandHandler(systemDatabase, databasesLandlord));
+            handlers.Add(typeof(DatabaseUpdateCommand), new DatabaseUpdateCommandHandler(systemDatabase, databasesLandlord));            
+        }
+
+        public void RegisterHandler(Type type, CommandHandler handler)
+        {
+            handlers.Add(type, handler);
         }
 
         private long ReadLastAppliedIndex()

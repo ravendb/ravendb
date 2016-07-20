@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -207,6 +208,34 @@ namespace Raven.Database.Raft
             catch (NotLeadingException)
             {
                 return SendDatabaseDeleteInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), databaseName, hardDelete);
+            }
+        }
+
+        public Task SendReplicationStateAsync(Dictionary<string, Tuple<DateTime,string>> databaseToLastModified)
+        {
+            try
+            {
+                var command = ReplicationStateCommand.Create(databaseToLastModified);
+                raftEngine.AppendCommand(command);
+                return command.Completion.Task;
+            }
+            catch (NotLeadingException)
+            {
+                return SendReplicationStateAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), databaseToLastModified);
+            }
+        }
+
+        private async Task SendReplicationStateAsync(NodeConnectionInfo node, Dictionary<string, Tuple<DateTime, string>> databaseToLastModified)
+        {
+            var url = node.Uri.AbsoluteUri + "cluster/replicationState";
+            using (var request = CreateRequest(node, url, HttpMethods.Post))
+            {
+                var response = await request.WriteAsync(
+                    () => new JsonContent(RavenJToken.FromObject(databaseToLastModified)))
+                    .ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                    return;
+                throw await CreateErrorResponseExceptionAsync(response).ConfigureAwait(false);
             }
         }
 

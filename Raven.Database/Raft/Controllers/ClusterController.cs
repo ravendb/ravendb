@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -13,6 +15,7 @@ using System.Web.Http;
 using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
+using Raven.Database.Raft.Commands;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
@@ -142,6 +145,16 @@ namespace Raven.Database.Raft.Controllers
             var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
             Bus.Publish(request, taskCompletionSource);
             return taskCompletionSource.Task;
+        }
+
+
+        [HttpPost]
+        [RavenRoute("cluster/replicationState")]
+        public async Task<HttpResponseMessage> ReplicationState()
+        {
+            var databaseToLastModify = await ReadJsonObjectAsync<Dictionary<string, Tuple<DateTime,string>>>().ConfigureAwait(false);
+            await ClusterManager.Client.SendReplicationStateAsync(databaseToLastModify).ConfigureAwait(false);
+            return GetEmptyMessage();
         }
 
         private static long Read7BitEncodedInt(Stream stream)

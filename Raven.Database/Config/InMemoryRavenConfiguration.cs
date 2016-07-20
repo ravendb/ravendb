@@ -367,6 +367,7 @@ namespace Raven.Database.Config
             Cluster.MaxLogLengthBeforeCompaction = ravenSettings.Cluster.MaxLogLengthBeforeCompaction.Value;
             Cluster.MaxEntriesPerRequest = ravenSettings.Cluster.MaxEntriesPerRequest.Value;
             Cluster.MaxStepDownDrainTime = ravenSettings.Cluster.MaxStepDownDrainTime.Value;
+            Cluster.MaxReplicationLatency = ravenSettings.Cluster.MaxReplicationLatency.Value;
 
             TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
@@ -1708,6 +1709,7 @@ namespace Raven.Database.Config
             public int MaxLogLengthBeforeCompaction { get; set; }
             public TimeSpan MaxStepDownDrainTime { get; set; }
             public int MaxEntriesPerRequest { get; set; }
+            public TimeSpan MaxReplicationLatency { get; set; }
         }
 
         public class MonitoringConfiguration

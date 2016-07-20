@@ -357,7 +357,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                     var conflictResolvers = Database.DocsConflictResolvers();
 
                     var lastEtag = Etag.Empty.ToString();
-
+                    var lastModified = DateTime.MinValue;
                     var docIndex = 0;
                     var retries = 0;
                     while (retries < 3 && docIndex < array.Length)
@@ -379,12 +379,13 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                     }
 
                                     lastEtag = metadata.Value<string>("@etag");
+                                    lastModified = metadata.Value<DateTime>(Constants.LastModified);
                                     var id = metadata.Value<string>("@id");
                                     document.Remove("@metadata");
                                     ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
                                 }
 
-                                SaveReplicationSource(src, lastEtag, array.Length, collections);
+                                SaveReplicationSource(src, lastEtag, array.Length, lastModified, collections);
                                 retries = lastIndex == docIndex ? retries : 0;
                             });
                         }
@@ -412,7 +413,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
             return GetEmptyMessage();
         }
 
-        private void SaveReplicationSource(string src, string lastEtag, int batchSize, string collections = null)
+        private void SaveReplicationSource(string src, string lastEtag, int batchSize, DateTime lastModified, string collections = null)
         {
             var remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
 
@@ -420,9 +421,13 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             var replicationDocument = Database.Documents.Get(replicationDocKey, null);
             var lastAttachmentId = Etag.Empty;
+            DateTime lastModification = lastModified;
             if (replicationDocument != null)
             {
-                lastAttachmentId = replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().LastAttachmentEtag;
+                var prevDoc = replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+                lastAttachmentId = prevDoc.LastAttachmentEtag;
+                if (batchSize == 0 && prevDoc.LastModifiedAtSource.HasValue) 
+                    lastModification = prevDoc.LastModifiedAtSource.Value;
             }
 
             Database
@@ -439,7 +444,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
                             ServerInstanceId = remoteServerInstanceId,
                             SourceCollections = collections,
                             LastModified = SystemTime.UtcNow,
-                            LastBatchSize = batchSize
+                            LastBatchSize = batchSize,
+                            LastModifiedAtSource = lastModification
                         }),
                     new RavenJObject(),
                     null);

@@ -7,15 +7,20 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Storage;
 using Rachis.Transport;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Raft.Storage;
+using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Raft
@@ -30,10 +35,89 @@ namespace Raven.Database.Raft
 
         public bool HasNonEmptyTopology => Engine.CurrentTopology.AllNodes.Any();
 
-        public ClusterManager(RaftEngine engine)
+        private Timer timer = null;
+
+        public ClusterManager(RaftEngine engine, DatabasesLandlord databasesLandlord)
         {
             Engine = engine;
             Client = new ClusterManagementHttpClient(engine);
+            DatabasesLandlord = databasesLandlord;
+            engine.StateChanged += OnRaftEngineStateChanged;
+        }
+
+        private DatabasesLandlord DatabasesLandlord { get; set; }
+
+        private void OnRaftEngineStateChanged(RaftEngineState state)
+        {
+            if (state == RaftEngineState.Leader)
+            {
+                var period = DatabasesLandlord.SystemDatabase.Configuration.Cluster.MaxReplicationLatency;
+                //timer should be null 
+                timer?.Dispose();
+                timer = new Timer(NewLeaderTimerCallback,null, period, period); 
+            }
+            else
+            {
+                //If this node was the leader before, dispose of the timer.
+                timer?.Dispose();
+            }
+        }
+
+        private void NewLeaderTimerCallback(object state)
+        {
+            //This method should never be invoked from non-leader
+            //Might happen if the timer and the state change event happen at the same time.
+            if (Engine.State != RaftEngineState.Leader)
+            {
+                if(Log.IsDebugEnabled)
+                    Log.Debug($"NewLeaderTimerCallback invoked from non-leader node, actual state:{Engine.State}");
+                return;
+            }
+            var databasesNames = GetDatabasesNames();
+            var databaseToLastModified = new Dictionary<string,Tuple<DateTime,string>>();
+            foreach (var databaseName in databasesNames)
+            {
+                try
+                {
+                    Task<DocumentDatabase> databaseTask;
+                    if (DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, out databaseTask) == false)
+                        continue;
+                    var database = databaseTask.Result;
+                    JsonDocument lastDoc = null;
+                    database.TransactionalStorage.Batch(action =>
+                    {
+                        lastDoc = action.Documents.GetDocumentsByReverseUpdateOrder(0, 1).FirstOrDefault();                        
+
+                    });
+                    if (lastDoc == null)
+                    {
+                        if (Log.IsWarnEnabled)
+                            Log.Warn($"Failed to get last document for databse: {databaseName} while generating replication state");
+                        continue;
+                    }
+                    databaseToLastModified[databaseName] = new Tuple<DateTime, string>(lastDoc.LastModified??DateTime.MinValue,database.TransactionalStorage.Id.ToString());
+                }
+                catch (Exception e)
+                {
+                    if(Log.IsWarnEnabled)
+                        Log.WarnException($"Failed to get database: {databaseName} while generating replication state",e);
+                }
+
+            }
+            Client.SendReplicationStateAsync(databaseToLastModified);
+        }
+
+        private HashSet<string> GetDatabasesNames()
+        {
+            int nextPageStart = 0;
+            var databases = DatabasesLandlord.SystemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
+                    int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+            var databaseNames = databases
+                .Select(database =>
+                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+            return databaseNames;
         }
 
         public ClusterTopology GetTopology()
@@ -130,14 +214,22 @@ namespace Raven.Database.Raft
 
             aggregator.Execute(() =>
             {
-                if (Client != null)
-                    Client.Dispose();
+                timer?.Dispose();
+            });
+            aggregator.Execute(() =>
+            {
+                if(Engine != null)
+                    Engine.StateChanged -= OnRaftEngineStateChanged;
+            });
+            
+            aggregator.Execute(() =>
+            {
+                Client?.Dispose();
             });
 
             aggregator.Execute(() =>
             {
-                if (Engine != null)
-                    Engine.Dispose();
+                Engine?.Dispose();
             });
 
             aggregator.ThrowIfNeeded();
