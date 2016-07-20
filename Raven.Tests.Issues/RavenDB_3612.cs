@@ -53,8 +53,8 @@ namespace Raven.Tests.Issues
                 var afterBatchCalled = new ManualResetEvent(false);
                 subscription.AfterBatch += count =>
                 {
-                    afterBatchCalled.Set();
                     processed = count;
+                    afterBatchCalled.Set();
                 };
 
                 subscription.Subscribe(x => { });
