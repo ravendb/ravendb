@@ -93,8 +93,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             continue;
                         }
 
-                        double? totalDouble = null;
-                        long? totalLong = null;
+                        decimal total = 0;
 
                         foreach (var item in arrayResult)
                         {
@@ -107,26 +106,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             switch (BlittableNumber.Parse(item, out doubleValue, out longValue))
                             {
                                 case NumberParseResult.Double:
-                                    if (totalDouble == null)
-                                        totalDouble = 0;
-
-                                    totalDouble += doubleValue;
+                                    total += (decimal)doubleValue;
                                     break;
                                 case NumberParseResult.Long:
-                                    if (totalLong == null)
-                                        totalLong = 0;
-
-                                    totalLong += longValue;
+                                    total += longValue;
                                     break;
                             }
                         }
 
-                        if (totalDouble != null)
-                            mappedResult[indexField.Name] = totalDouble;
-                        else if (totalLong != null)
-                            mappedResult[indexField.Name] = totalLong;
-                        else
-                            mappedResult[indexField.Name] = 0; // TODO arek - long / double ?
+                        mappedResult[indexField.Name] = total;
 
                         break;
                     case FieldMapReduceOperation.None:
