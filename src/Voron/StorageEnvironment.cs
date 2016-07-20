@@ -52,6 +52,19 @@ namespace Voron
         /// </summary>
         public static readonly ByteStringContext LabelsContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes);
 
+        /// <summary>
+        /// This value is here to control fairness in the access to the write transaction lock,
+        /// when we are flushing to the data file, there is a need to take the write tx lock to mutate
+        /// some of our in memory data structures safely. However, if there is a thread, such as tx merger thread,
+        /// that is doing high frequency transactions, the unfairness in the lock will automatically ensure that we'll
+        /// have very hard time actually getting the write lock in the flushing thread. 
+        /// 
+        /// When this value is set to a non negative number, we check if the current thread id equals to this number, and if not
+        /// we'll yield the thread for 1 ms. The idea is that this will allow the flushing thread, which doesn't have this limitation
+        /// to actually capture the lock, do its work, and then reset it.
+        /// </summary>
+        private int _otherThreadsShouldWaitBeforeGettingWriteTxLock = -1;
+        
         private readonly StorageEnvironmentOptions _options;
 
         private readonly ConcurrentSet<LowLevelTransaction> _activeTransactions = new ConcurrentSet<LowLevelTransaction>();
@@ -357,6 +370,14 @@ namespace Voron
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
+
+                    // See comment on the variable for the details
+                    var localCopy = Volatile.Read(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock);
+                    if (localCopy != -1 && localCopy != Thread.CurrentThread.ManagedThreadId)
+                    {
+                        Thread.Sleep(1);
+                    }
+
                     if (FlushInProgressLock.IsWriteLockHeld == false)
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
@@ -819,6 +840,16 @@ namespace Voron
             // flush everything
             tx.IsLazyTransaction = false;
             tx.Commit();
+        }
+
+        internal void EnsureTransactionLockFairnessForFlush()
+        {
+            Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, Thread.CurrentThread.ManagedThreadId);
+        }
+
+        internal void DisableTransactionLockFairnessForFlush()
+        {
+            Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, -1);
         }
     }
 }
