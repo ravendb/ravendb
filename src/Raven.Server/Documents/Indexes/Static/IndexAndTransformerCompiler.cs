@@ -187,10 +187,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var map = maps[i];
                 statements.AddRange(HandleMap(map, fieldNamesValidator));
             }
-
-            var outputFieldsArray = GetArrayCreationExpression(fieldNamesValidator.Fields);
-            statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
-
+            
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
                 string[] groupByFields;
@@ -199,6 +196,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 var groupByFieldsArray = GetArrayCreationExpression(groupByFields);
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
             }
+
+            var outputFieldsArray = GetArrayCreationExpression(fieldNamesValidator.Fields);
+            statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
@@ -350,8 +350,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             groupByFields = reduceFunctionProcessor.GroupByFields;
 
-            return RoslynHelper.This("SetReduce")
-                .Invoke(indexingFunction).AsExpressionStatement();
+            return RoslynHelper.This(nameof(StaticIndexBase.Reduce)).Assign(indexingFunction).AsExpressionStatement();
         }
 
         private static ArrayCreationExpressionSyntax GetArrayCreationExpression(IEnumerable<string> items)
