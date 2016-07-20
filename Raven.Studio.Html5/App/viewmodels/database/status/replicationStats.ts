@@ -178,12 +178,13 @@ class replicationStats extends viewModelBase {
     detached() {
         super.detached();
 
-        $("#visualizerContainer").off('DynamicHeightSet');
+        $("#visualizerContainer").off("DynamicHeightSet");
         nv.tooltip.cleanup();
     }
 
     getAllReachableDestinationsFrom(sourceServerUrl: string, connections: replicationTopologyConnectionDto[]): string[] {
         var result: string[] = [];
+        result.push(sourceServerUrl);
 
         connections.forEach(connection => {
             if (sourceServerUrl === connection.Source) {
@@ -408,8 +409,12 @@ class replicationStats extends viewModelBase {
             "L" + (targetX - 3.5 * Math.cos(d90 - theta) - 10 * Math.cos(theta)) + "," + (targetY + 3.5 * Math.sin(d90 - theta) - 10 * Math.sin(theta)) + "z";
     }
 
-    linkHasError(d: replicationTopologyConnectionDto) {
-        return d.SourceToDestinationState !== "Online";
+    linkIsOffline(d: replicationTopologyConnectionDto) {
+        return d.SourceToDestinationState === "Offline";
+    }
+
+    linkIsDisabled(d: replicationTopologyConnectionDto) {
+        return d.SourceToDestinationState === "Disabled";
     }
 
     renderTopology(topologyGraph) {
@@ -455,14 +460,15 @@ class replicationStats extends viewModelBase {
         var edgesDom = this.svg.select('.edges').selectAll('.edge').data(mappedEdges, d => d.Source + "_" + d.Destination);
 
         edgesDom.enter()
-            .append('path')
-            .attr('class', 'link')
-            .classed('error', self.linkHasError)
-            .attr('d', d => self.linkWithArrow(d))
+            .append("path")
+            .attr("class", "link")
+            .classed("error", self.linkIsOffline)
+            .classed("warning", self.linkIsDisabled)
+            .attr("d", d => self.linkWithArrow(d))
             .on("click", function (d) {
                 var currentSelection = d3.select(".selected").node();
                 d3.selectAll(".selected").classed("selected", false);
-                d3.select(this).classed('selected', currentSelection != this);
+                d3.select(this).classed("selected", currentSelection != this);
                 self.currentLink(currentSelection != this ? d : null);
                 self.documentToReplicateText(null);
                 self.exportProgress("");

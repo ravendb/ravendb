@@ -25,6 +25,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
         private readonly HttpRavenRequestFactory requestFactory;
 
+        private readonly Guid currentServerId;
+
         public SynchronizationTopologyDiscoverer(RavenFileSystem filesystem, RavenJArray @from, int ttl, ILog log)
         {
             this.filesystem = filesystem;
@@ -32,6 +34,8 @@ namespace Raven.Database.FileSystem.Synchronization
             this.log = log;
             this.@from = @from;
             requestFactory = new HttpRavenRequestFactory();
+
+            currentServerId = filesystem.Storage.Id;
         }
 
         public SynchronizationTopologyRootNode Discover()
@@ -56,9 +60,7 @@ namespace Raven.Database.FileSystem.Synchronization
                 @from.Add(filesystem.SynchronizationTask.FileSystemUrl);
             }
 
-            if (syncDestinations != null)
-                root.Destinations = HandleDestinations(syncDestinations);
-
+            root.Destinations = HandleDestinations(syncDestinations);
             root.Sources = HandleSources(sourceNames, root);
 
             return root;
@@ -70,6 +72,7 @@ namespace Raven.Database.FileSystem.Synchronization
             foreach (var source in sources)
             {
                 RavenJObject sourceAsJson = null;
+
                 filesystem.Storage.Batch(accessor =>
                 {
                     sourceAsJson = accessor.GetConfig(source);
@@ -85,14 +88,16 @@ namespace Raven.Database.FileSystem.Synchronization
                     root.Errors.Add("Could not deserialize source node.");
                 }
 
-                var node = HandleSource(sourceInfo);
+                var sourceDatabaseId = Guid.Parse(source.Split('/').Last());
+                var node = HandleSource(sourceInfo, sourceDatabaseId);
                 nodes.Add(node);
             }
 
             return nodes;
         }
 
-        private SynchronizationTopologySourceNode HandleSource(SourceSynchronizationInformation source)
+        private SynchronizationTopologySourceNode HandleSource(
+            SourceSynchronizationInformation source, Guid sourceDatabaseId)
         {
             if (from.Contains(source.SourceServerUrl))
             {
@@ -100,9 +105,11 @@ namespace Raven.Database.FileSystem.Synchronization
                 switch (state)
                 {
                     case ReplicatonNodeState.Online:
-                        return SynchronizationTopologySourceNode.Online(source.SourceServerUrl, source.DestinationServerId, source.LastSourceFileEtag);
+                        return SynchronizationTopologySourceNode.Online(source.SourceServerUrl,
+                            sourceDatabaseId, currentServerId, source.LastSourceFileEtag);
                     case ReplicatonNodeState.Offline:
-                        return SynchronizationTopologySourceNode.Offline(source.SourceServerUrl, source.DestinationServerId, source.LastSourceFileEtag);
+                        return SynchronizationTopologySourceNode.Offline(source.SourceServerUrl,
+                            sourceDatabaseId, currentServerId, source.LastSourceFileEtag);
                     default:
                         throw new NotSupportedException(state.ToString());
                 }
@@ -112,7 +119,8 @@ namespace Raven.Database.FileSystem.Synchronization
             SynchronizationTopologyRootNode rootNode;
             if (TryGetSchema(source.SourceServerUrl, new RavenConnectionStringOptions(), out rootNode, out error))
             {
-                var node = SynchronizationTopologySourceNode.Online(source.SourceServerUrl, source.DestinationServerId, source.LastSourceFileEtag);
+                var node = SynchronizationTopologySourceNode.Online(source.SourceServerUrl,
+                    sourceDatabaseId, currentServerId, source.LastSourceFileEtag);
                 node.Destinations = rootNode.Destinations;
                 node.Sources = rootNode.Sources;
                 node.Errors = rootNode.Errors;
@@ -120,7 +128,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 return node;
             }
 
-            var offline = SynchronizationTopologySourceNode.Offline(source.SourceServerUrl, source.DestinationServerId, source.LastSourceFileEtag);
+            var offline = SynchronizationTopologySourceNode.Offline(source.SourceServerUrl,
+                sourceDatabaseId, currentServerId, source.LastSourceFileEtag);
 
             if (string.IsNullOrEmpty(error) == false)
                 offline.Errors.Add(error);
@@ -137,21 +146,24 @@ namespace Raven.Database.FileSystem.Synchronization
 
         private SynchronizationTopologyDestinationNode HandleDestination(SynchronizationDestination synchronizationDestination)
         {
-            RavenConnectionStringOptions connectionStringOptions = new RavenConnectionStringOptions
+            var connectionStringOptions = new RavenConnectionStringOptions
             {
                 Credentials = synchronizationDestination.Credentials,
                 ApiKey = synchronizationDestination.ApiKey,
-                Url = synchronizationDestination.ServerUrl
+                Url = synchronizationDestination.ServerUrl,
+                DefaultDatabase = synchronizationDestination.FileSystem
             };
 
             string error;
             string targetServerUrl;
-
+            var serverUrl = synchronizationDestination.Url;
             // since each server can be addresses using both dns and ips we normalize connection string url by fetching target server url
             // it should give us consistent urls
-            if (FetchTargetServerUrl(synchronizationDestination.ServerUrl, connectionStringOptions, out targetServerUrl, out error) == false)
+            Guid? destinationFileSystemId;
+            if (FetchTargetServerUrl(serverUrl, connectionStringOptions, 
+                out targetServerUrl, out destinationFileSystemId, out error) == false)
             {
-                var offlineNode = SynchronizationTopologyDestinationNode.Offline(synchronizationDestination.ServerUrl, filesystem.Storage.Id);
+                var offlineNode = SynchronizationTopologyDestinationNode.Offline(serverUrl, currentServerId, destinationFileSystemId);
 
                 if (string.IsNullOrEmpty(error) == false)
                     offlineNode.Errors.Add(error);
@@ -159,10 +171,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 return offlineNode;
             }
 
-            targetServerUrl = targetServerUrl.ForFilesystem(synchronizationDestination.FileSystem);
-
             if (synchronizationDestination.Enabled == false)
-                return SynchronizationTopologyDestinationNode.Disabled(targetServerUrl, filesystem.Storage.Id);
+                return SynchronizationTopologyDestinationNode.Disabled(targetServerUrl, currentServerId, destinationFileSystemId);
 
             if (from.Contains(targetServerUrl))
             {
@@ -170,19 +180,18 @@ namespace Raven.Database.FileSystem.Synchronization
                 switch (state)
                 {
                     case ReplicatonNodeState.Online:
-                        return SynchronizationTopologyDestinationNode.Online(targetServerUrl, filesystem.Storage.Id);
+                        return SynchronizationTopologyDestinationNode.Online(targetServerUrl, currentServerId, destinationFileSystemId);
                     case ReplicatonNodeState.Offline:
-                        return SynchronizationTopologyDestinationNode.Offline(targetServerUrl, filesystem.Storage.Id);
+                        return SynchronizationTopologyDestinationNode.Offline(targetServerUrl, currentServerId, destinationFileSystemId);
                     default:
                         throw new NotSupportedException(state.ToString());
                 }
             }
 
-            
             SynchronizationTopologyRootNode rootNode;
             if (TryGetSchema(targetServerUrl, connectionStringOptions, out rootNode, out error))
             {
-                var node = SynchronizationTopologyDestinationNode.Online(targetServerUrl, filesystem.Storage.Id);
+                var node = SynchronizationTopologyDestinationNode.Online(targetServerUrl, currentServerId, destinationFileSystemId);
                 node.Destinations = rootNode.Destinations;
                 node.Sources = rootNode.Sources;
                 node.Errors = rootNode.Errors;
@@ -190,7 +199,7 @@ namespace Raven.Database.FileSystem.Synchronization
                 return node;
             }
 
-            var offline = SynchronizationTopologyDestinationNode.Offline(targetServerUrl, filesystem.Storage.Id);
+            var offline = SynchronizationTopologyDestinationNode.Offline(targetServerUrl, currentServerId, destinationFileSystemId);
 
             if (string.IsNullOrEmpty(error) == false)
                 offline.Errors.Add(error);
@@ -198,32 +207,63 @@ namespace Raven.Database.FileSystem.Synchronization
             return offline;
         }
 
-        private bool FetchTargetServerUrl(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out string targetServerUrl, out string error)
+        private bool FetchTargetServerUrl(string serverUrl, RavenConnectionStringOptions connectionStringOptions, 
+            out string targetServerUrl, out Guid? fileSystemId, out string error)
         {
-            var url = string.Format("{0}/debug/config", serverUrl);
-
             try
             {
+                var url = $"{serverUrl}/stats";
+
                 var request = requestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
                 error = null;
                 var ravenConfig = request.ExecuteRequest<RavenJObject>();
                 var serverUrlFromTargetConfig = ravenConfig.Value<string>("ServerUrl");
+                var databaseIdString = ravenConfig.Value<string>("FileSystemId");
+
+                fileSystemId = null;
+                Guid localDatabaseId;
+                if (Guid.TryParse(databaseIdString, out localDatabaseId))
+                    fileSystemId = localDatabaseId;
 
                 // replace host name with target hostname
                 targetServerUrl = new UriBuilder(serverUrl) { Host = new Uri(serverUrlFromTargetConfig).Host }.Uri.ToString();
+                
                 return true;
             }
             catch (Exception e)
             {
                 error = e.Message;
                 targetServerUrl = null;
+                fileSystemId = null;
                 return false;
+            }
+        }
+
+        private Guid? GetFileSystemId(string serverUrl, RavenConnectionStringOptions connectionStringOptions)
+        {
+            try
+            {
+                var fsUrl = serverUrl.ForFilesystem(connectionStringOptions.DefaultDatabase);
+                var url = $"{fsUrl}/stats";
+                var request = requestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
+                var ravenConfig = request.ExecuteRequest<RavenJObject>();
+                var databaseIdString = ravenConfig.Value<string>("FileSystemId");
+
+                Guid localDatabaseId;
+                if (Guid.TryParse(databaseIdString, out localDatabaseId) == false)
+                    return null;
+
+                return localDatabaseId;
+            }
+            catch (Exception e)
+            {
+                return null;
             }
         }
 
         private bool TryGetSchema(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out SynchronizationTopologyRootNode rootNode, out string error)
         {
-            var url = string.Format("{0}/admin/replication/topology/discover?&ttl={1}", serverUrl, ttl - 1);
+            var url = $"{serverUrl}/admin/replication/topology/discover?&ttl={ttl - 1}";
 
             try
             {
@@ -274,13 +314,13 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             try
             {
-                var url = string.Format("{0}/stats", serverUrl);
+                var url = $"{serverUrl}/stats";
                 var request = requestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
                 request.ExecuteRequest();
             }
             catch (Exception e)
             {
-                log.ErrorException(string.Format("Could not connect to '{0}'.", serverUrl), e);
+                log.ErrorException($"Could not connect to '{serverUrl}'.", e);
 
                 return ReplicatonNodeState.Offline;
             }

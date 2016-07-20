@@ -468,6 +468,7 @@ namespace Raven.Database.FileSystem
             var fsStats = new FileSystemStats
             {
                 Name = Name,
+                FileSystemId = Storage.Id,
                 Metrics = CreateMetrics(),
                 ActiveSyncs = SynchronizationTask.Queue.Active.ToList(),
                 PendingSyncs = SynchronizationTask.Queue.Pending.ToList(),

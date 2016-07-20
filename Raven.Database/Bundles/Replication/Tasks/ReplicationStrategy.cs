@@ -121,6 +121,8 @@ namespace Raven.Bundles.Replication.Tasks
 
         public Dictionary<string, string> SpecifiedCollections { get; set; }
 
+        public bool IsETL => SpecifiedCollections != null && SpecifiedCollections.Count > 0;
+
         public string CurrentDatabaseId { get; set; }
 
         public TransitiveReplicationOptions ReplicationOptionsBehavior { get; set; }

@@ -101,6 +101,10 @@
                                                 <dd>Endpoints can communicate each other</dd>
                                             </dl>
                                             <dl>
+                                                <dt class="text-warning"><i class="fa fa-long-arrow-right fa-2x"></i></dt>
+                                                <dd>Replication is disabled</dd>
+                                            </dl>
+                                            <dl>
                                                 <dt class="text-danger"><i class="fa fa-long-arrow-right fa-2x"></i></dt>
                                                 <dd>Error in communication</dd>
                                             </dl>
@@ -124,38 +128,38 @@
                                                 <tbody>
                                                     <tr>
                                                         <td>Source</td>
-                                                        <td data-bind="text: Source"></td>
+                                                        <td data-bind="text: SourceUrl.join(', ')"></td>
                                                     </tr>
                                                     <tr>
                                                         <td>Destination</td>
-                                                        <td data-bind="text: Destination"></td>
+                                                        <td data-bind="text: DestinationUrl.join(', ')"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>SendServerId</td>
-                                                        <td data-bind="text: SendServerId"></td>
+                                                        <td>Source server ID</td>
+                                                        <td data-bind="text: !!SourceServerId ? SourceServerId : 'N/A'"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>StoredServerId</td>
-                                                        <td data-bind="text: StoredServerId"></td>
+                                                        <td>Destination server ID</td>
+                                                        <td data-bind="text: !!DestinationServerId ? DestinationServerId : 'N/A'"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>LastAttachmentEtag</td>
+                                                        <td>Last attachment Etag</td>
                                                         <td data-bind="text: LastAttachmentEtag"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>LastDocumentEtag</td>
+                                                        <td>Last document Etag</td>
                                                         <td data-bind="text: LastDocumentEtag"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>ReplicationBehavior</td>
+                                                        <td>Replication Behavior</td>
                                                         <td data-bind="text: ReplicationBehavior"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>SourceToDestinationState</td>
+                                                        <td>Source to destination state</td>
                                                         <td data-bind="text: SourceToDestinationState"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>DestinationToSourceState</td>
+                                                        <td>Destination to source state</td>
                                                         <td data-bind="text: DestinationToSourceState"></td>
                                                     </tr>
                                                     <tr data-bind="if: !!Errors && Errors.length > 0">
@@ -211,30 +215,30 @@
                                                 <tbody>
                                                     <tr>
                                                         <td>Source</td>
-                                                        <td data-bind="text: Source"></td>
+                                                        <td data-bind="text: SourceUrl.join(', ')"></td>
                                                     </tr>
                                                     <tr>
                                                         <td>Destination</td>
-                                                        <td data-bind="text: Destination"></td>
+                                                        <td data-bind="text: DestinationUrl.join(', ')"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>SendServerId</td>
-                                                        <td data-bind="text: SendServerId"></td>
+                                                        <td>Source server ID</td>
+                                                        <td data-bind="text: !!SourceServerId ? SourceServerId : 'N/A'"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>StoredServerId</td>
-                                                        <td data-bind="text: StoredServerId"></td>
+                                                        <td>Destination server ID</td>
+                                                        <td data-bind="text: !!DestinationServerId ? DestinationServerId : 'N/A'"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>LastSourceFileEtag</td>
+                                                        <td>Last source file Etag</td>
                                                         <td data-bind="text: LastSourceFileEtag"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>SourceToDestinationState</td>
+                                                        <td>Source to destination state</td>
                                                         <td data-bind="text: SourceToDestinationState"></td>
                                                     </tr>
                                                     <tr>
-                                                        <td>DestinationToSourceState</td>
+                                                        <td>Destination to source state</td>
                                                         <td data-bind="text: DestinationToSourceState"></td>
                                                     </tr>
                                                     <tr data-bind="if: !!Errors && Errors.length > 0">

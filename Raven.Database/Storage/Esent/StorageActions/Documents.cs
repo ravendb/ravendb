@@ -373,8 +373,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
         }
 
         public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
-            Func<string, RavenJObject, bool> filterDocument, Reference<bool> earlyExit,
-            CancellationToken cancellationToken, HashSet<string> entityNames = null)
+            Func<string, RavenJObject, Func<JsonDocument>, bool> filterDocument, 
+            Reference<bool> earlyExit, CancellationToken cancellationToken)
         {
             earlyExit.Value = false;
 
@@ -399,20 +399,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
                 var metadata = metadataBuffer.ToJObject();
 
-                if (filterDocument(key, metadata) == false)
-                    continue;
-
-                var returnDocumentKey = entityNames == null;
-                if (entityNames != null)
-                {
-                    var entityName = metadata.Value<string>("Raven-Entity-Name");
-                    if (entityName != null && entityNames.Contains(entityName))
-                    {
-                        returnDocumentKey = true;
-                    }
-                }
-
-                if (returnDocumentKey == false)
+                Func<JsonDocument> getDocument = () => DocumentByKey(key);
+                if (filterDocument(key, metadata, getDocument) == false)
                     continue;
 
                 yield return key;

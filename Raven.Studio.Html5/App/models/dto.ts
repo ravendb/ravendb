@@ -1328,20 +1328,28 @@ interface countersReplicationTopologyDto {
 }
 
 interface replicationTopologyConnectionDto {
-    Destination: string;
-    DestinationToSourceState: string;
-    Errors: string[];
+    SourceUrl: string[];
+    DestinationUrl: string[];
+    SourceServerId: string;
+    DestinationServerId: string;
     LastAttachmentEtag: string;
     LastDocumentEtag: string;
     ReplicationBehavior: string;
-    SendServerId: string;
-    Source: string;
     SourceToDestinationState: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    SendServerId: string;
     StoredServerId: string;
     UiType: string;
+    Source: string;
+    Destination: string;
 }
 
 interface synchronizationTopologyConnectionDto {
+    SourceUrl: string[];
+    DestinationUrl: string[];
+    SourceServerId: string;
+    DestinationServerId: string;
     Destination: string;
     DestinationToSourceState: string;
     Errors: string[];

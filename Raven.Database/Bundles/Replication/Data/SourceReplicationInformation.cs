@@ -44,5 +44,7 @@ namespace Raven.Bundles.Replication.Data
     public class SourceReplicationInformationWithBatchInformation : SourceReplicationInformation
     {
         public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+
+        public Guid? DatabaseId { get; set; }
     }
 }

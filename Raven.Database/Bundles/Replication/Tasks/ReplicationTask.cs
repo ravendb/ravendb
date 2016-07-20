@@ -26,6 +26,7 @@ using Raven.Bundles.Replication.Data;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database;
 using Raven.Database.Bundles.Replication;
+using Raven.Database.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Tasks.Handlers;
 using Raven.Database.Config.Retriever;
 using Raven.Database.Data;
@@ -91,6 +92,8 @@ namespace Raven.Bundles.Replication.Tasks
         private Timer _propagationTimeoutTimer;
         private ThreadLocal<bool> isThreadProcessingReplication = new ThreadLocal<bool>();
 
+        public DatabaseIdsCache DatabaseIdsCache { get; private set; }
+
         /// <summary>
         /// Indicates that this thread is doing replication.
         /// </summary>
@@ -114,6 +117,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             docDb = database;
             _transactionalStorageId = docDb.TransactionalStorage.Id.ToString();
+            DatabaseIdsCache = new DatabaseIdsCache(database, log);
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.WorkContext.CancellationToken);
             _propagationTimeoutTimer = new Timer() {AutoReset = false,Interval = docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds*1000};
@@ -718,7 +722,6 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-
         [Obsolete("Use RavenFS instead.")]
         private bool? ReplicateAttachments(ReplicationStrategy destination,
             SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource,
@@ -786,7 +789,7 @@ namespace Raven.Bundles.Replication.Tasks
 
             var url = destination.ConnectionStringOptions.Url;
             var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(url,
-                x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, $"Replication for URL: {destination.ConnectionStringOptions.DefaultDatabase}"));
+                x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, $"Replication for URL: {destination.ConnectionStringOptions.Url}"));
 
             prefetchingBehavior.AdditionalInfo = $"For destination: {url}. Last replicated etag: {destinationsReplicationInformationForSource.LastDocumentEtag}";
 
@@ -1464,6 +1467,9 @@ namespace Raven.Bundles.Replication.Tasks
                 var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
                 if (log.IsDebugEnabled)
                     log.Debug("Received last replicated document Etag {0} from server {1}", lastReplicatedEtagFrom.LastDocumentEtag, destination.ConnectionStringOptions.Url);
+
+                DatabaseIdsCache.Add(destination.ConnectionStringOptions.Url, lastReplicatedEtagFrom.DatabaseId);
+
                 return lastReplicatedEtagFrom;
             }
             catch (WebException e)
@@ -1596,6 +1602,7 @@ namespace Raven.Bundles.Replication.Tasks
                 Url = url,
                 AuthenticationScheme = destination.AuthenticationScheme,
                 ApiKey = destination.ApiKey,
+                DefaultDatabase = destination.Database
             };
 
             if (destination.SpecifiedCollections != null)
@@ -1646,6 +1653,8 @@ namespace Raven.Bundles.Replication.Tasks
 
         public void Dispose()
         {
+            DatabaseIdsCache.Dispose();
+
             _propagationTimeoutTimer.Enabled = false;
             _propagationTimeoutTimer.Dispose();
             if (IndexReplication != null)

@@ -171,20 +171,29 @@ namespace Raven.Database.Bundles.Replication.Controllers
                             writer.WriteHeader();
                             writer.Write("document-ids-left-to-replicate");
 
-                            var count = 0;
-
+                            long count = 0;
+                            long skipped = 0;
                             Action<string> action = (documentId) =>
                             {
                                 writer.Write(documentId);
 
-                                if (++count%1000 == 0)
-                                {
-                                    status.MarkProgress($"Exported {count:#,#} documents");
-                                    outputStream.Flush();
-                                }
+                                if (++count%1000 != 0)
+                                    return;
+
+                                status.MarkProgress($"Exported {count:#,#} documents");
+                                outputStream.Flush();
                             };
 
-                            documentsToReplicateCalculator.ExtractDocumentIds(serverInfo, action);
+                            Action skippedAction = () =>
+                            {
+                                if (++skipped%100 != 0)
+                                    return;
+
+                                status.MarkProgress($"Skipped {skipped:#,#} documents");
+                                outputStream.Flush();
+                            };
+
+                            documentsToReplicateCalculator.ExtractDocumentIds(serverInfo, action, skippedAction);
 
                             var message = $"Completed export of {count:#,#} document ids";
                             status.MarkCompleted(message, sp.Elapsed);

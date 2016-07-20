@@ -34,8 +34,8 @@ namespace Raven.Database.Storage
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
         Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped);
         IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
-            Func<string, RavenJObject, bool> filterDocument, Reference<bool> earlyExit,
-            CancellationToken cancellationToken, HashSet<string> entityNames = null);
+            Func<string, RavenJObject, Func<JsonDocument>, bool> filterDocument, 
+            Reference<bool> earlyExit, CancellationToken cancellationToken);
 
         IEnumerable<JsonDocument> GetDocuments(int start);
 

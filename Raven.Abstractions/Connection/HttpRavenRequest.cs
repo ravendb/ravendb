@@ -41,7 +41,7 @@ namespace Raven.Abstractions.Connection
             set { webRequest = value; }
         }
 
-                public HttpRavenRequest(string url, HttpMethod httpMethod, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering)
+        public HttpRavenRequest(string url, HttpMethod httpMethod, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering)
         {
             this.url = url;
             this.httpMethod = httpMethod;

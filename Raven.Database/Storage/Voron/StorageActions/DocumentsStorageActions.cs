@@ -266,8 +266,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
         }
 
         public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
-            Func<string, RavenJObject, bool> filterDocument, Reference<bool> earlyExit,
-            CancellationToken cancellationToken, HashSet<string> entityNames = null)
+            Func<string, RavenJObject, Func<JsonDocument>, bool> filterDocument, 
+            Reference<bool> earlyExit, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(etag))
                 throw new ArgumentNullException("etag");
@@ -306,20 +306,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     int metadataSize;
                     var metadata = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize).Metadata;
 
-                    if (filterDocument(key, metadata) == false)
-                        continue;
-
-                    var returnDocumentKey = entityNames == null;
-                    if (entityNames != null)
-                    {
-                        var entityName = metadata.Value<string>("Raven-Entity-Name");
-                        if (entityName != null && entityNames.Contains(entityName))
-                        {
-                            returnDocumentKey = true;
-                        }
-                    }
-
-                    if (returnDocumentKey == false)
+                    Func<JsonDocument> getDocument = () => DocumentByKey(key);
+                    if (filterDocument(key, metadata, getDocument) == false)
                         continue;
 
                     yield return key;

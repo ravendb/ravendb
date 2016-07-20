@@ -661,6 +661,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
                     sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
                 }
 
+                sourceReplicationInformation.DatabaseId = Database.TransactionalStorage.Id;
+
                 var currentEtag = GetQueryStringValue("currentEtag");
                 if (Log.IsDebugEnabled)
                     Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]. LowMemory: {3}. MaxNumberOfItemsToReceiveInSingleBatch: {4}.", src, sourceReplicationInformation.LastDocumentEtag, currentEtag, lowMemory, sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch));
@@ -710,21 +712,20 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 {
                     sourceReplicationInformation = new SourceReplicationInformation
                     {
-                        ServerInstanceId = serverInstanceId,
                         LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
                         LastDocumentEtag = docEtag ?? Etag.Empty,
-                        Source = src,
-                        LastModified = SystemTime.UtcNow
                     };
                 }
                 else
                 {
                     sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-                    sourceReplicationInformation.ServerInstanceId = serverInstanceId;
                     sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
                     sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
-                    sourceReplicationInformation.LastModified = SystemTime.UtcNow;
                 }
+
+                sourceReplicationInformation.ServerInstanceId = serverInstanceId;
+                sourceReplicationInformation.Source = src;
+                sourceReplicationInformation.LastModified = SystemTime.UtcNow;
 
                 var etag = document == null ? Etag.Empty : document.Etag;
                 var metadata = document == null ? new RavenJObject() : document.Metadata;

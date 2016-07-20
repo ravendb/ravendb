@@ -8145,6 +8145,9 @@ footer ul {
 #replicationTopologySection path.link.error {
   stroke: #DF382C;
 }
+#replicationTopologySection path.link.warning {
+  stroke: #EFB73E;
+}
 #replicationTopologySection svg:not(.active):not(.ctrl) path.link {
   cursor: pointer;
 }

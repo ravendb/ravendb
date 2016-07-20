@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Jint.Native;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -11,6 +11,7 @@ using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Actions;
 using Raven.Database.Config.Retriever;
 using Raven.Database.Indexing;
+using Raven.Database.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Impl
@@ -60,13 +61,12 @@ namespace Raven.Database.Bundles.Replication.Impl
             }
 
             var replicationStrategy = ReplicationTask.GetConnectionOptions(replicationDestination, database);
-            if (replicationStrategy.SpecifiedCollections == null || replicationStrategy.SpecifiedCollections.Count == 0)
+            if (replicationStrategy.IsETL == false)
             {
                 return GetDocumentsLeftCount(replicationStrategy, serverInfo.DestinationUrl, serverInfo.DatabaseName);
             }
 
-            var entityNames = replicationStrategy.SpecifiedCollections.Keys.ToHashSet();
-            return GetDocumentsLeftCountForEtl(entityNames, replicationStrategy, serverInfo.DestinationUrl, serverInfo.DatabaseName);
+            return GetDocumentsLeftCountForEtl(replicationStrategy, serverInfo.DestinationUrl, serverInfo.DatabaseName);
         }
 
         private ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> GetReplicationDocument()
@@ -191,9 +191,10 @@ namespace Raven.Database.Bundles.Replication.Impl
             database.TransactionalStorage.Batch(actions =>
             {
                 //get document count since last replicated etag
+                var destinationId = sourcesDocument.ServerInstanceId.ToString();
                 count = actions.Documents.GetDocumentIdsAfterEtag(
                     sourcesDocument.LastDocumentEtag, MaxDocumentsToCheck,
-                    WillDocumentBeReplicated(replicationStrategy, sourcesDocument.ServerInstanceId.ToString()), earlyExit,
+                    WillDocumentBeReplicated(replicationStrategy, destinationId), earlyExit,
                     database.WorkContext.CancellationToken).Count();
             });
 
@@ -205,18 +206,75 @@ namespace Raven.Database.Bundles.Replication.Impl
             };
         }
 
-        private static Func<string, RavenJObject, bool> WillDocumentBeReplicated(
-            ReplicationStrategy replicationStrategy, string destinationId)
+        private Func<string, RavenJObject, Func<JsonDocument>, bool> WillDocumentBeReplicated(
+            ReplicationStrategy strategy, string destinationId, Action skippedAction = null)
         {
-            return (key, metadata) =>
+            return (key, metadata, getDocument) =>
             {
                 string _;
-                return replicationStrategy.FilterDocuments(destinationId, key, metadata, out _);
+                if (strategy.FilterDocuments(destinationId, key, metadata, out _) == false)
+                {
+                    skippedAction?.Invoke();
+                    return false;
+                }
+
+                if (strategy.IsETL == false)
+                {
+                    //not ETL replication
+                    return true;
+                }
+
+                var collection = metadata.Value<string>(Constants.RavenEntityName);
+                string script;
+                if (string.IsNullOrEmpty(collection) ||
+                    strategy.SpecifiedCollections.TryGetValue(collection, out script) == false)
+                {
+                    //document has no collection or this collection will not be replicated
+                    skippedAction?.Invoke();
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(script) || metadata.ContainsKey(Constants.RavenDeleteMarker))
+                {
+                    //no filter script or this document is deleted
+                    return true;
+                }
+
+                if (WillReplicateByScript(script, getDocument()) == false)
+                {
+                    skippedAction?.Invoke();
+                    return false;
+                }
+
+                return true;
             };
         }
 
-        private DocumentCount GetDocumentsLeftCountForEtl(HashSet<string> entityNames, 
-            ReplicationStrategy replicationStrategy, string destinationUrl, string databaseName)
+        private bool WillReplicateByScript(string script, JsonDocument document)
+        {
+            var scriptedPatchRequest = new ScriptedPatchRequest
+            {
+                Script = script
+            };
+
+            var patcher = new ReplicationScriptedJsonPatcher(database, scriptedPatchRequest);
+            using (var scope = new DefaultScriptedJsonPatcherOperationScope(database))
+            {
+                try
+                {
+                    patcher.Apply(scope, document.ToJson(), scriptedPatchRequest, document.SerializedSizeOnDisk);
+                    //null means that we should skip this document
+                    return scope.ActualPatchResult != JsValue.Null;
+                }
+                catch (Exception e)
+                {
+                    //this document will not be replicated
+                    return false;
+                }
+            }
+        }
+
+        private DocumentCount GetDocumentsLeftCountForEtl(ReplicationStrategy replicationStrategy, string destinationUrl, string databaseName)
         {
             var sourcesDocument = replicationTask.GetLastReplicatedEtagFrom(replicationStrategy);
             if (sourcesDocument == null)
@@ -229,10 +287,12 @@ namespace Raven.Database.Bundles.Replication.Impl
             database.TransactionalStorage.Batch(actions =>
             {
                 //get document count since last replicated etag
+                long skipped = 0;
+                var destinationId = sourcesDocument.ServerInstanceId.ToString();
                 storageCount = actions.Documents.GetDocumentIdsAfterEtag(
                     sourcesDocument.LastDocumentEtag, MaxDocumentsToCheck,
-                    WillDocumentBeReplicated(replicationStrategy, sourcesDocument.ServerInstanceId.ToString()), 
-                    earlyExit, database.WorkContext.CancellationToken, entityNames: entityNames).Count();
+                    WillDocumentBeReplicated(replicationStrategy, destinationId), 
+                    earlyExit, database.WorkContext.CancellationToken).Count();
             });
 
             long diffFromIndex = 0;
@@ -240,7 +300,7 @@ namespace Raven.Database.Bundles.Replication.Impl
             {
                 //we couldn't get an accurate document left count from the storage,
                 //we'll try to get an approximation from the index
-
+                var entityNames = replicationStrategy.SpecifiedCollections.Keys.ToHashSet();
                 var query = QueryBuilder.GetQueryForAllMatchingDocumentsForIndex(database, entityNames);
 
                 //get count of documents with specified collections on this server
@@ -288,7 +348,7 @@ namespace Raven.Database.Bundles.Replication.Impl
             return localDocumentCount;
         }
 
-        public void ExtractDocumentIds(ServerInfo serverInfo, Action<string> action)
+        public void ExtractDocumentIds(ServerInfo serverInfo, Action<string> successAction, Action skippedAction)
         {
             var replicationDocument = GetReplicationDocument();
 
@@ -303,12 +363,6 @@ namespace Raven.Database.Bundles.Replication.Impl
             }
 
             var replicationStrategy = ReplicationTask.GetConnectionOptions(replicationDestination, database);
-            HashSet<string> entityNames = null;
-            if (replicationStrategy.SpecifiedCollections != null && replicationStrategy.SpecifiedCollections.Count > 0)
-            {
-                entityNames = replicationStrategy.SpecifiedCollections.Keys.ToHashSet();
-            }
-
             var sourcesDocument = replicationTask.GetLastReplicatedEtagFrom(replicationStrategy);
             if (sourcesDocument == null)
             {
@@ -323,12 +377,12 @@ namespace Raven.Database.Bundles.Replication.Impl
                 //get document count since last replicated etag
                 var documentIds = actions.Documents.GetDocumentIdsAfterEtag(
                     sourcesDocument.LastDocumentEtag, int.MaxValue,
-                    WillDocumentBeReplicated(replicationStrategy, sourcesDocument.ServerInstanceId.ToString()), 
-                    earlyExit, database.WorkContext.CancellationToken, entityNames: entityNames);
+                    WillDocumentBeReplicated(replicationStrategy, sourcesDocument.ServerInstanceId.ToString(), skippedAction), 
+                    earlyExit, database.WorkContext.CancellationToken);
 
                 foreach (var documentId in documentIds)
                 {
-                    action(documentId);
+                    successAction(documentId);
                 }
             });
         }
