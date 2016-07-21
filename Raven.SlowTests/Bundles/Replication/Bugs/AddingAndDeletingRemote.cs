@@ -27,7 +27,7 @@ namespace Raven.SlowTests.Bundles.Replication.Bugs
 
                 store1.DatabaseCommands.Put("test", null, new RavenJObject(), new RavenJObject());
                 var replHistory = store1.DatabaseCommands.Get("test").Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory);
-                Assert.Equal(50, replHistory.Length);
+                Assert.Equal(1, replHistory.Length);
             }
         }
 
@@ -42,7 +42,7 @@ namespace Raven.SlowTests.Bundles.Replication.Bugs
                 }
 
                 var replHistory = store1.DatabaseCommands.Get("test").Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory);
-                Assert.Equal(50, replHistory.Length);
+                Assert.Equal(1, replHistory.Length);
             }
         }
     }

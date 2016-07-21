@@ -399,9 +399,9 @@ namespace Raven.Client.Connection
             return asyncServerClient.ForceReadFromMaster();
         }
 
-        public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
+        public IDatabaseCommands ForDatabase(string database)
         {
-            var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
+            var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database);
             if (asyncServerClient == newAsyncServerClient)
                 return this;
 

@@ -33,6 +33,8 @@ class synchronizationDestinations extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.updateHelpLink("KW8LAF");
        
         if (!this.subscription) {
             this.subscription = changesContext.currentResourceChangesApi()

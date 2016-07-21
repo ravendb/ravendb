@@ -83,10 +83,12 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             RavenJObject resolvedMetadataToSave;
             TExternal resolvedItemToSave;
             if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
-            {
+            {                
                 if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
                    metadata.Value<bool>("Raven-Remove-Document-Marker"))
                 {
+                    if (resolvedMetadataToSave.ContainsKey(Constants.RavenEntityName))
+                        metadata[Constants.RavenEntityName] = resolvedMetadataToSave[Constants.RavenEntityName];
                     DeleteItem(id, null);
                     MarkAsDeleted(id, metadata);
                 }
@@ -146,6 +148,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
                     metadata.Value<bool>("Raven-Remove-Document-Marker"))
                 {
+                    if(resolvedMetadataToSave.ContainsKey(Constants.RavenEntityName))
+                        metadata[Constants.RavenEntityName] = resolvedMetadataToSave[Constants.RavenEntityName];
                     DeleteItem(id, null);
                     MarkAsDeleted(id, metadata);
                 }
@@ -203,7 +207,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring.", id, Src);
                 return;
             }
-
+            if (existingMetadata.ContainsKey(Constants.RavenEntityName))
+                newMetadata[Constants.RavenEntityName] = existingMetadata[Constants.RavenEntityName];
             RavenJObject currentReplicationEntry = null;
             if (newMetadata.ContainsKey(Constants.RavenReplicationVersion) &&
                 newMetadata.ContainsKey(Constants.RavenReplicationSource))
@@ -214,9 +219,12 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     {Constants.RavenReplicationSource, newMetadata[Constants.RavenReplicationSource]}
                 };
             }
+                        
             var existingHistory = ReplicationData.GetHistory(existingMetadata);
             if (currentReplicationEntry != null &&
-                existingHistory.Contains(currentReplicationEntry, RavenJTokenEqualityComparer.Default))
+                existingHistory.Any(x => RavenJTokenEqualityComparer.Default.Equals(
+                    ((RavenJObject)x)[Constants.RavenReplicationSource], currentReplicationEntry[Constants.RavenReplicationSource])
+                    && ((RavenJObject)x)[Constants.RavenReplicationVersion].Value<long>() >= currentReplicationEntry[Constants.RavenReplicationVersion].Value<long>()))
             {
                 if (log.IsDebugEnabled)
                     log.Debug("Replicated delete for {0} already exist in item history, ignoring", id);
@@ -233,19 +241,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     newHistory.Add(currentReplicationEntry);
 
                 //Merge histories
-                foreach (var historyEntry in newHistory)
-                {
-                    if (existingHistory.Contains(historyEntry, RavenJTokenEqualityComparer.Default))
-                        continue;
-
-                    existingHistory.Add(historyEntry);
-                }
-
-                while (newHistory.Length > Constants.ChangeHistoryLength)
-                {
-                    newHistory.RemoveAt(0);
-                }
-                ReplicationData.SetHistory(newMetadata, existingHistory);
+                ReplicationData.SetHistory(newMetadata, Historian.MergeReplicationHistories(newHistory, existingHistory));
+                newMetadata[Constants.RavenReplicationMergedHistory] = true;
                 MarkAsDeleted(id, newMetadata);
 
                 return;

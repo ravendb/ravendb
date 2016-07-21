@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
 {
@@ -46,15 +47,27 @@ namespace Raven.Database.Plugins
         ///  Allow the trigger to perform any logic after the document was deleted but still in the 
         ///  same transaction as the delete.
         ///  This method is called only if a row was actually deleted
+        ///  Since version 3.5 we now send the deleted document metadata as a parameter.
+        ///  Old triggers that didn't implement this ovveride will invoke the old method.
         ///  </summary><remarks>
         ///  Any call to the provided <seealso cref="DocumentDatabase" /> instance will be done under the
         ///  same transaction as the DELETE operation.
         ///  </remarks><param name="transactionInformation">The current transaction, if any</param><param name="key">The document key</param>
+        ///  <param name="metaData">The document metaData</param>
+        public virtual void AfterDelete(string key, TransactionInformation transactionInformation, RavenJObject metaData )
+        {
+            AfterDelete(key, transactionInformation);
+        }
+
+        /// <summary>
+        /// This will be invoked for old triggers that has no ovveride with metadata.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="transactionInformation"></param>
         public virtual void AfterDelete(string key, TransactionInformation transactionInformation)
         {
             
         }
-
         /// <summary>
         ///  Allow the trigger to perform any logic _after_ the transaction was committed.
         ///  For example, by notifying interested parties.

@@ -15,6 +15,8 @@ class row {
     isChecked = ko.observable(false);
     compiledCustomFunctions = {};
 
+    templateNameCache:{ [key:string]:KnockoutObservable<string> } = {};
+
     calculateExternalIdCellColor(cellValue: string) {
         var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf("/")).toLocaleLowerCase();
         var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() === cellCollectionName);
@@ -114,6 +116,9 @@ class row {
             var cellVal: cell = this.cellMap[propertyName];
             cellVal.update(data);
         }
+
+        var cacheKey = this.getOrAddTemplateNameCache(propertyName);
+        cacheKey(this.getCellTemplate(propertyName));
     }
 
     getCellData(cellName: string): any {
@@ -123,6 +128,14 @@ class row {
         }
 
         return "";
+    }
+
+    getOrAddTemplateNameCache(cellName: string) {
+        var cacheKey = this.templateNameCache[cellName];
+        if (!cacheKey) {
+            cacheKey = this.templateNameCache[cellName] = ko.observable<string>("nullTemplate");
+        }
+        return cacheKey;
     }
 
     getCellTemplate(cellName: string): string {

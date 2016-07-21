@@ -406,6 +406,14 @@ html, body {
 }
 
 #resources-page {
+    .databases-summary{
+        color: #af282e;
+    }
+
+    .file-systems-summary{
+        color: @fs-color;
+    }
+
     .btn-toolbar {
         margin-bottom: 20px;
     }
@@ -443,6 +451,10 @@ html, body {
 
                 img {
                     height: 25px;
+                }
+
+                label{
+                    right: -9px;
                 }
             }
 
@@ -1261,11 +1273,17 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         outline: 0;
     }
 
+    .ko-grid-column-container-clip {
+        overflow: hidden;
+    }
+
     .ko-grid-column-container {
         white-space: nowrap;
         overflow: hidden;
+        height: 37px;
 
         .ko-grid-column-header {
+            float: left;
             display: inline-block;
             font-weight: bold;
             padding: 8px;
@@ -1324,6 +1342,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 
     .ko-grid-cell {
+        float: left;
         -ms-text-overflow: ellipsis;
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
@@ -1508,7 +1527,16 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     #goToDocInput {
         width: 9em;
+        -webkit-transition: width 0.5s ease-in-out;
+        -moz-transition:width 0.5s ease-in-out;
+        -o-transition: width 0.5s ease-in-out;
+        transition: width 0.5s ease-in-out;
     }
+
+    #goToDocInput:focus {
+        width: 20em;
+    }
+
     /* When the screen width < 1150, shrink down the padding between the nav bar items. */
     @media (max-width: 1150px) {
         .nav {
@@ -1837,6 +1865,10 @@ footer {
         stroke: @brand-danger;
     }
 
+    path.link.warning {
+        stroke: @brand-warning;
+    }
+
     svg:not(.active):not(.ctrl) path.link {
         cursor: pointer;
     }
@@ -2080,7 +2112,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     bottom: 50px;
     left: 0;
     height: 300px;
-    z-index: 9999;
+    z-index: 500;
     margin-bottom: 0;
     background-color: #f5f5f5;
 }
@@ -2308,21 +2340,23 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     overflow-x: hidden;
 }
 
+@fs-color: #7109AA;
+
 #resources-page .resources-container .resource.fs {
     a.resource-name {
-        color: #7109AA;
+        color: @fs-color;
     }
 
     &:hover {
-        box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
-        -webkit-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
-        -moz-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
+        box-shadow: 0 0 5px 0 lighten(@fs-color, 20%);
+        -webkit-box-shadow: 0 0 5px 0 lighten(@fs-color, 20%);
+        -moz-box-shadow: 0 0 5px 0 lighten(@fs-color, 20%);
     }
 
     &.selected {
-        box-shadow: 0 0 20px 0 #7109AA;
-        -webkit-box-shadow: 0 0 20px 0 #7109AA;
-        -moz-box-shadow: 0 0 20px 0 #7109AA;
+        box-shadow: 0 0 20px 0 @fs-color;
+        -webkit-box-shadow: 0 0 20px 0 @fs-color;
+        -moz-box-shadow: 0 0 20px 0 @fs-color;
     }
 }
 
@@ -3015,7 +3049,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   border-color: @brand-primary;
 }
 
-.checkbo input[type="checkbox"]:indeterminate + label::after,
+.checkbox input[type="checkbox"]:indeterminate + label::after,
 .checkbox input[type="radio"]:indeterminate + label::after {
   background-color: #fff;
 }
@@ -3023,10 +3057,26 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .ko-grid .checkbox label {
     pointer-events: none;
 }
-.ko-grid .checkbox {
+
+.ko-grid .checkbox { 
     margin-top: 0;
     margin-bottom: 0;
 }
+.checkbox label:empty {
+    pointer-events: none;
+}
+.checkbox label::before {
+    pointer-events: auto;
+}
+
+.form-horizontal .radio, .form-horizontal .checkbox {
+   min-height: 20px;
+}
+
+.form-horizontal .radio, .form-horizontal .checkbox, .form-horizontal .radio-inline, .form-horizontal .checkbox-inline {
+    padding-top: 0;
+}
+
 /* Override default awesome bootstrap checkbox style - end */
 
 /**
@@ -3061,3 +3111,55 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     }
 }
 
+.form-condensed {
+    .form-group {
+        margin-bottom: 5px;
+    }
+}
+
+a#uploadQueuePanelToggle {
+    color: white;
+}
+
+#synchronization-conflicts-page {
+    .conflicts-select {
+        text-align: center;
+        background-color: @selectionColor;
+        margin-top: 5px;
+        border: 1px solid;
+        padding: 5px;
+        border: 1px solid @gray-light;
+
+        .select-link {
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    }
+}
+
+.center-progress-text { 
+    font-size: 14px;
+    position:absolute;
+    width: 100%;
+
+    & > span {
+        background-color: rgba(255, 255, 255, 0.6);
+        border-radius: 3px;
+        padding: 0px 6px;
+        font-size: 11px;
+        position: relative;
+        top: -1px;
+    }
+}
+
+
+ .selectable-tooltip {
+        pointer-events: all;
+        -webkit-touch-callout: all;
+        -webkit-user-select: all;
+        -khtml-user-select: all;
+        -moz-user-select: all;
+        -ms-user-select: all;
+        user-select: all;
+        padding: 10px;
+    }

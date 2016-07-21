@@ -76,7 +76,9 @@ namespace Raven.Database.FileSystem.Actions
         {
             if (task.Status == TaskStatus.Created)
                 throw new ArgumentException("Task must be started before it gets added to the database.", "task");
+
             var localId = id = Interlocked.Increment(ref pendingTaskCounter);
+
             pendingTasks.TryAdd(localId, new PendingTaskWithStateAndDescription
             {
                 Task = task,
@@ -84,6 +86,34 @@ namespace Raven.Database.FileSystem.Actions
                 Description = description,
                 TokenSource = tokenSource
             });
+        }
+
+        public void AddTask(Task task, IOperationState state, PendingTaskDescription description, long id, 
+            CancellationTokenSource tokenSource = null, bool skipStatusCheck = false)
+        {
+            if (skipStatusCheck == false && task.Status == TaskStatus.Created)
+                throw new ArgumentException("Task must be started before it gets added to the database.", "task");
+
+            if (id > Interlocked.Read(ref pendingTaskCounter))
+                throw new ArgumentException("Invalid task id: " + id, "id");
+
+            var addResult = pendingTasks.TryAdd(id, new PendingTaskWithStateAndDescription
+            {
+                Task = task,
+                State = state,
+                Description = description,
+                TokenSource = tokenSource
+            });
+
+            if (addResult == false)
+            {
+                throw new InvalidOperationException($"Task with id: {id} already exists");
+            }
+        }
+
+        public long GetNextTaskId()
+        {
+            return Interlocked.Increment(ref pendingTaskCounter);
         }
 
         public void RemoveTask(long taskId)

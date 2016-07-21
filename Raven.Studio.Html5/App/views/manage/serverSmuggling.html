@@ -4,7 +4,8 @@
     </div>
     <div class="panel panel-default" data-bind="visible: settingsAccess.canWrite()">
         <div class="panel-heading panel-info">
-            Server Smuggling
+            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+            <span class="text-height-fix">Server Smuggling</span>
         </div>
         <div class="panel-body">
             <div data-bind="with: targetServer">

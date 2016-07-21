@@ -27,7 +27,7 @@ namespace Raven.Tests.Raft.Client
                             DefaultDatabase = clusterStores[0].DefaultDatabase,
                             Conventions =
                             {
-                                ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader
+                                FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader
                             },
                             FailoverServers = new Abstractions.Data.FailoverServers
                                               {

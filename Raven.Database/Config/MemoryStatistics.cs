@@ -15,6 +15,7 @@ using Raven.Unix.Native;
 
 using Sparrow.Collections;
 using Voron;
+using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Database.Config
 {
@@ -63,6 +64,13 @@ namespace Raven.Database.Config
         private static readonly IntPtr currentProcessHandle = GetCurrentProcess();
         public static readonly FixedSizeConcurrentQueue<LowMemoryCalledRecord> LowMemoryCallRecords = new FixedSizeConcurrentQueue<LowMemoryCalledRecord>(25);
 
+        private static readonly Thread lowMemoryWatcherThread;
+
+        public static System.Threading.ThreadState LowMemoryWatcherThreadState
+        {
+            get { return lowMemoryWatcherThread.ThreadState; }
+        }
+
         static MemoryStatistics()
         {
 
@@ -83,7 +91,7 @@ namespace Raven.Database.Config
             if (LowMemoryNotificationHandle == null)
                 throw new Win32Exception();
 
-            new Thread(() =>
+            lowMemoryWatcherThread = new Thread(() =>
             {
                 const uint WAIT_FAILED = 0xFFFFFFFF;
                 const uint WAIT_TIMEOUT = 0x00000102;
@@ -130,7 +138,9 @@ namespace Raven.Database.Config
             {
                 IsBackground = true,
                 Name = "Low memory notification thread"
-            }.Start();
+            };
+
+            lowMemoryWatcherThread.Start();
         }
 
         private static void MemoryStatisticsForPosix()
@@ -466,7 +476,5 @@ namespace Raven.Database.Config
                 }
             }
         }
-
-
     }
 }

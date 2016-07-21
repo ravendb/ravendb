@@ -20,7 +20,6 @@ class replicationDestination {
     globalConfiguration = ko.observable<replicationDestination>();
 
     specifiedCollections = ko.observableArray<replicationPatchScript>().extend({ required: false });
-    specifiedCollectionsNames = ko.observableArray<string>([]);
     withScripts = ko.observableArray<string>([]);
     enableReplicateOnlyFromCollections = ko.observable<boolean>();
 
@@ -99,7 +98,6 @@ class replicationDestination {
         this.clientVisibleUrl(dto.ClientVisibleUrl);
         this.skipIndexReplication(dto.SkipIndexReplication);
         this.specifiedCollections(this.mapSpecifiedCollections(dto.SpecifiedCollections));
-        this.specifiedCollectionsNames(this.specifiedCollections().map(x => x.collection()));
         this.withScripts(this.specifiedCollections().filter(x => typeof (x.script()) !== "undefined").map(x => x.collection()));
 
         this.enableReplicateOnlyFromCollections = ko.observable<boolean>(this.specifiedCollections().length > 0);
@@ -229,12 +227,6 @@ class replicationDestination {
         return url;
     }
 
-    findEditor(coll: collection) {
-        var collections = this.specifiedCollections();
-        var item = collections.first(c => c.collection() === coll.name);
-        return item.script;
-    }
-    
     copyFromGlobal() {
         if (this.globalConfiguration()) {
             var gConfig = this.globalConfiguration();
@@ -253,9 +245,20 @@ class replicationDestination {
             this.hasLocal(false);
             this.isUserCredentials(gConfig.isUserCredentials());
             this.isApiKeyCredentials(gConfig.isApiKeyCredentials());
+
+            this.specifiedCollections([]);
+            this.withScripts([]);
+            this.enableReplicateOnlyFromCollections(false);
         }
     }
+     
+    addNewCollection() {
+        this.specifiedCollections.push(replicationPatchScript.empty());
+    }
 
+    removeCollection(item: replicationPatchScript) {
+        this.specifiedCollections.remove(item);
+    }
 }
 
 export = replicationDestination;

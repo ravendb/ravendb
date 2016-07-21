@@ -62,6 +62,8 @@ class conflicts extends viewModelBase {
         super.activate(args);
         this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 
+        this.updateHelpLink('5FRRCA');
+
         this.hasAnyConflict = ko.computed(() => {
             var pagedItems = this.currentConflictsPagedItems();
             if (pagedItems) {

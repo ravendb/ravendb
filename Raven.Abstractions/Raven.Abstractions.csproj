@@ -122,7 +122,6 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
       <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
     </Compile>
-    <Compile Include="Cluster\ClusterBehavior.cs" />
     <Compile Include="Cluster\ClusterInformation.cs" />
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
@@ -167,6 +166,7 @@
     <Compile Include="Data\BulkOperationProgress.cs" />
     <Compile Include="Data\CompactStatus.cs" />
     <Compile Include="Data\DatabaseOperationsStatus.cs" />
+    <Compile Include="Data\DeletionBatchInfo.cs" />
     <Compile Include="Data\EtagJsonConverter.cs" />
     <Compile Include="Data\CounterStorageBackupRequest.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
@@ -196,6 +196,7 @@
     <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\IndexingStatus.cs" />
     <Compile Include="Data\OperationStateBase.cs" />
+    <Compile Include="Data\InternalStorageBreakdownState.cs" />
     <Compile Include="Data\ResourceBackupState.cs" />
     <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\ListsInfo.cs" />
@@ -482,7 +483,6 @@
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
-    <Compile Include="Util\ConfigurationManager.cs" />
     <Compile Include="Util\EnvironmentUtils.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
@@ -542,7 +542,6 @@
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <ItemGroup>
-    <Analyzer Include="..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
 </Project>

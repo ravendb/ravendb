@@ -8,10 +8,10 @@ class saveReplicationDocumentCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Saving Replication settings.");
+        this.reportInfo("Saving Replication/ETL settings.");
         return this.saveSetup()
-            .done(() => this.reportSuccess("Saved Replication settings."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save Replication settings.", response.responseText, response.statusText));
+            .done(() => this.reportSuccess("Saved Replication/ETL settings."))
+            .fail((response: JQueryXHR) => this.reportError("Failed to save Replication/ETL settings.", response.responseText, response.statusText));
     }
 
     private saveSetup(): JQueryPromise<any> {

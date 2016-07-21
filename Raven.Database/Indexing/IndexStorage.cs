@@ -22,6 +22,7 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
@@ -1004,6 +1005,21 @@ namespace Raven.Database.Indexing
             UpdateIndexMappingFile();
         }
 
+        public void RenameIndex(IndexDefinition existingIndex, string newIndexName)
+        {
+            var indexId = existingIndex.IndexId;
+            var value = GetIndexInstance(indexId);
+
+            if (log.IsDebugEnabled)
+                log.Debug("Renaming index {0} -> {1}", value.PublicName, newIndexName);
+
+
+            // since all we have to do in storage layer is to update mapping file
+            // we simply call UpdateIndexMappingFile
+            // mapping was already updated in IndexDefinitionStorage.RenameIndex method.
+            UpdateIndexMappingFile();
+        }
+
         public void DeleteIndexData(int id)
         {
             var dirOnDisk = Path.Combine(path, id.ToString(CultureInfo.InvariantCulture));
@@ -1070,8 +1086,8 @@ namespace Raven.Database.Indexing
         private Index TryIndexByName(string name)
         {
             return indexes.Where(index => String.Compare(index.Value.PublicName, name, StringComparison.OrdinalIgnoreCase) == 0)
-            .Select(x => x.Value)
-            .FirstOrDefault();
+                .Select(x => x.Value)
+                .FirstOrDefault();
         }
 
         public IEnumerable<IndexQueryResult> Query(string index,
@@ -1094,26 +1110,25 @@ namespace Raven.Database.Indexing
             if ((value.Priority.HasFlag(IndexingPriority.Idle) || value.Priority.HasFlag(IndexingPriority.Abandoned)) &&
                 value.Priority.HasFlag(IndexingPriority.Forced) == false)
             {
-                documentDatabase.TransactionalStorage.Batch(accessor =>
+                value.Priority = IndexingPriority.Normal;
+                try
                 {
-                    value.Priority = IndexingPriority.Normal;
-                    try
+                    documentDatabase.TransactionalStorage.Batch(accessor =>
                     {
                         accessor.Indexing.SetIndexPriority(value.indexId, IndexingPriority.Normal);
-                    }
-                    catch (Exception e)
-                    {
-                        if (accessor.IsWriteConflict(e) == false)
-                            throw;
-
-                        // we explciitly ignore write conflicts here, it is okay if we got set twice (two concurrent queries, or setting while indexing).
-                    }
-                    documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
-                    documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
-                    {
-                        Name = value.PublicName,
-                        Type = IndexChangeTypes.IndexPromotedFromIdle
                     });
+                }
+                catch (ConcurrencyException)
+                {
+                    //we explicitly ignore write conflicts here, 
+                    //it is okay if we got set twice (two concurrent queries, or setting while indexing).
+                }
+
+                documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
+                documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                {
+                    Name = value.PublicName,
+                    Type = IndexChangeTypes.IndexPromotedFromIdle
                 });
             }
 
@@ -1684,20 +1699,36 @@ namespace Raven.Database.Indexing
 
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
         {
-            var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
-            switch (indexToReplace.LockMode)
+            var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
+            if (indexDefinition == null)
             {
-                case IndexLockMode.LockedIgnore:
-                    return false;
-                case IndexLockMode.LockedError:
-                    throw new InvalidOperationException("An attempt to replace an index, locked with LockedError, by a side by side index was detected.");
+                //the replacing index doesn't exist
+                return true;
             }
+
+            var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
+            if (indexToReplace != null)
+            {
+                switch (indexToReplace.LockMode)
+                {
+                    case IndexLockMode.SideBySide:
+                        //keep the SideBySide lock mode from the replaced index
+                        indexDefinition.LockMode = IndexLockMode.SideBySide;
+                        break;
+                    case IndexLockMode.LockedIgnore:
+                        //we ignore this and need to delete the replacing index
+                        documentDatabase.IndexStorage.DeleteIndex(indexName);
+                        log.Info("An attempt to replace an index with lock mode: LockedIgnore by a side by side index was detected");
+                        return true;
+                    case IndexLockMode.LockedError:
+                        log.Info("An attempt to replace an index with lock mode: LockedError by a side by side index was detected");
+                        throw new InvalidOperationException("An attempt to replace an index, locked with LockedError, by a side by side index was detected.");
+                }
+            }
+
             var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
             if (success == false)
                 return false;
-
-            if (indexToReplace == null)
-                return true;
 
             documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false, isSideBySideReplacement: true);
 

@@ -92,13 +92,12 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="app.config" />
-    <None Include="packages.config" />
+    <None Include="Raven.Client.UniqueConstraints.project.json" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>
-    <Analyzer Include="..\..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
     <Analyzer Include="..\..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />

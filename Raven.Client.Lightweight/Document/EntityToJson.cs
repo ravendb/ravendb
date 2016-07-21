@@ -84,7 +84,9 @@ namespace Raven.Client.Document
                     if (item.Value == null)
                         writer.WriteNull();
                     else
-                        writer.WriteValue(item.Value);
+                        //See issue http://issues.hibernatingrhinos.com/issue/RavenDB-4729                                            
+                        //writer.WriteValue(item.Value); 
+                        item.Value.WriteTo(writer);
                 }
             };
 

@@ -1,4 +1,4 @@
-<div class="panel panel-default" data-bind="visible: data.length === 0">
+<div class="panel panel-default" data-bind="visible: data().length === 0">
     <div class="panel-heading">
         Data subscriptions
     </div>
@@ -43,7 +43,7 @@
 
                     <div data-bind="with: Criteria">
                         <div class="form-group" data-bind="visible: KeyStartsWith !== null">
-                            <label class="col-md-3 col-md-offset-2">Document key has to starts with</label>
+                            <label class="col-md-3 col-md-offset-2">Document key has to start with</label>
                             <div class="col-md-7">
                                 <p data-bind="text: KeyStartsWith"></p>
                             </div>

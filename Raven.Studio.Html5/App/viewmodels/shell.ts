@@ -82,7 +82,7 @@ class shell extends viewModelBase {
     static canReadSettings = ko.observable<boolean>(false);
     static canExposeConfigOverTheWire = ko.observable<boolean>(false);
     maxResourceNameWidth: KnockoutComputed<string>;
-    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
+    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ throttle: 100 });
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
@@ -646,15 +646,15 @@ class shell extends viewModelBase {
 
             var databasesLoadTask = shell.reloadDatabases();
             var fileSystemsLoadTask = shell.reloadFileSystems();
-            var counterStoragesLoadTask = shell.reloadCounterStorages();
-            var timeSeriesLoadTask = shell.reloadTimeSeries();
+            var counterStoragesLoadTask = shell.has40Features() ? shell.reloadCounterStorages() : null;
+            var timeSeriesLoadTask = shell.has40Features() ? shell.reloadTimeSeries() : null;
 
             $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
                 .done(() => {
                     var connectedResource = this.currentConnectedResource;
                     var resourceObservableArray: any = shell.databases;
                     var activeResourceObservable: any = this.activeDatabase;
-                    var isNotDatabase = !(connectedResource instanceof database);
+                    var isNotDatabase = !(connectedResource instanceof database); 
                     if (isNotDatabase && connectedResource instanceof fileSystem) {
                         resourceObservableArray = shell.fileSystems;
                         activeResourceObservable = this.activeFilesystem;
@@ -876,8 +876,8 @@ class shell extends viewModelBase {
         var serverConfigsLoadTask: JQueryPromise<any> = this.loadServerConfig();
         var databasesLoadTask: JQueryPromise<any> = this.loadDatabases();
         var fileSystemsLoadTask: JQueryPromise<any> = this.loadFileSystems();
-        var counterStoragesLoadTask: JQueryPromise<any> = this.loadCounterStorages();
-        var timeSeriesLoadTask: JQueryPromise<any> = this.loadTimeSeries();
+        var counterStoragesLoadTask: JQueryPromise<any> = shell.has40Features() ? this.loadCounterStorages() : null;
+        var timeSeriesLoadTask: JQueryPromise<any> = shell.has40Features() ? this.loadTimeSeries() : null;
         $.when(serverConfigsLoadTask, databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
             .always(() => {
                 var locationHash = window.location.hash;

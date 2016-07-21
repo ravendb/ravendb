@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection;
@@ -34,7 +35,7 @@ namespace Raven.Tests.Raft.Client
         [PropertyData("Nodes")]
         public void PutAndDeleteShouldBePropagated(int numberOfNodes)
         {
-            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader);
 
             SetupClusterConfiguration(clusterStores);
 
@@ -58,7 +59,10 @@ namespace Raven.Tests.Raft.Client
                 replicationRequest.ExecuteRequest();
             }
 
-            clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetIndex("Test/Index") != null, TimeSpan.FromMinutes(1)));
+            using (ForceNonClusterRequests(clusterStores))
+            {
+                clusterStores.ForEach(store => WaitFor(store.DatabaseCommands, commands => commands.GetIndex("Test/Index") != null, TimeSpan.FromMinutes(1)));
+            }
 
             store1.DatabaseCommands.DeleteIndex("Test/Index");
             if (numberOfNodes > 1)
@@ -67,7 +71,10 @@ namespace Raven.Tests.Raft.Client
                 replicationRequest.ExecuteRequest();
             }
 
-            clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands => commands.GetIndex("Test/Index") == null, TimeSpan.FromMinutes(1)));
+            using (ForceNonClusterRequests(clusterStores))
+            {
+                clusterStores.ForEach(store => WaitFor(store.DatabaseCommands, commands => commands.GetIndex("Test/Index") == null, TimeSpan.FromMinutes(1)));
+            }
         }
     }
 }

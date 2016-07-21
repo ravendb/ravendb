@@ -162,7 +162,7 @@
       <Name>Rachis.Tests</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
-      <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
@@ -200,10 +200,6 @@
     <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
       <Project>{ea32fd05-8537-4a31-879e-20a0f2c87479}</Project>
       <Name>Raven.Tests.MailingList</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests.Raft\Raven.Tests.Raft.csproj">
-      <Project>{99d596eb-a15d-4407-bd28-da46d5635773}</Project>
-      <Name>Raven.Tests.Raft</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>

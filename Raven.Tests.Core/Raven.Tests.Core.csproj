@@ -154,6 +154,7 @@
     <Compile Include="Auth\WindowsAuthenticationUserInfo.cs" />
     <Compile Include="BulkInsert\ChunkedBulkInsert.cs" />
     <Compile Include="Bundles\MoreLikeThis.cs" />
+    <Compile Include="ChangesApi\ActionObserver.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="ChangesApi\WebsocketsTests.cs" />
@@ -162,6 +163,7 @@
     <Compile Include="Commands\Querying.cs" />
     <Compile Include="Commands\Transformers.cs" />
     <Compile Include="Configuration\ConfigurationTests.cs" />
+    <Compile Include="Indexing\IndexCreationTests.cs" />
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />

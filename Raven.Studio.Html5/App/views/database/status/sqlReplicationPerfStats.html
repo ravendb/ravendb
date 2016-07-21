@@ -40,7 +40,7 @@
 </style>
 <section id="replicationStatsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div class="page-header" data-bind="visible: statsAvailable() == false">
-        <h3><i class="fa fa-info-circle text-info"></i> No SQL Replication stats available. <small>Either this database isn't <a target="_blank" href="http://ravendb.net/docs/server/scaling-out/sql-replication">setup for SQL Replication</a> or it hasn't occurred in some time.</small></h3>
+        <h3><i class="fa fa-info-circle text-info"></i> No SQL Replication stats available. <small>Either this database isn't <a target="_blank" data-bind="attr: { href: documentationLink }">setup for SQL Replication</a> or it hasn't occurred in some time.</small></h3>
     </div>
     
     <div data-bind="visible: statsAvailable()">

@@ -24,17 +24,6 @@ namespace Raven.Database.FileSystem.Extensions
             return JsonExtensions.JsonDeserialization<T>(value);
         }
 
-        public static IEnumerable<T> GetConfigurationValuesStartWithPrefix<T>(this IStorageActionsAccessor accessor, string prefix, int start, int take)
-        {
-            var values = accessor.GetConfigsStartWithPrefix(prefix, start, take);
-            if (typeof(T).IsValueType || typeof(T) == typeof(string))
-            {
-                return values.Select(x => x.Value<T>("Value"));
-            }
-
-            return values.Select(x => JsonExtensions.JsonDeserialization<T>(x));
-        }
-
         public static bool TryGetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, out T result)
         {
             try

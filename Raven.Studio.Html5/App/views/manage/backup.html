@@ -26,11 +26,11 @@
                             <div class="form-group">
                                 <label for="databaseName" class="col-sm-2 control-label">Database to backup</label>
                                 <div class="col-sm-5">
-                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to backup">
+                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="textInput: resourceName, customValidity: nameCustomValidityError" placeholder="Database name to backup">
                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
                                         <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                             <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
+                                                <span class="text" data-bind="text: $data"></span>
                                             </a>
                                         </li>
                                     </ul>
@@ -81,11 +81,11 @@
                             <div class="form-group">
                                 <label for="filesystemName" class="col-sm-2 control-label">File System to backup</label>
                                 <div class="col-sm-5">
-                                    <input tabindex="2" autocomplete="off" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to backup">
+                                    <input tabindex="2" autocomplete="off" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="textInput: resourceName, customValidity: nameCustomValidityError" placeholder="Filesystem name to backup">
                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
                                         <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                             <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
+                                                <span class="text" data-bind="text: $data"></span>
                                             </a>
                                         </li>
                                     </ul>
@@ -136,11 +136,11 @@
                             <div class="form-group">
                                 <label for="countersstoragename" class="col-sm-2 control-label">Counter Storage to backup</label>
                                 <div class="col-sm-5">
-                                    <input tabindex="2" autocomplete="off" required type="text" name="countersstoragename" class="form-control" id="countersstoragename" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to backup">
+                                    <input tabindex="2" autocomplete="off" required type="text" name="countersstoragename" class="form-control" id="countersstoragename" data-bind="textInput: resourceName, customValidity: nameCustomValidityError" placeholder="Filesystem name to backup">
                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#countersstoragename', foreach: searchResults">
                                         <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                             <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind="text: $data"></span>
+                                                <span class="text" data-bind="text: $data"></span>
                                             </a>
                                         </li>
                                     </ul>

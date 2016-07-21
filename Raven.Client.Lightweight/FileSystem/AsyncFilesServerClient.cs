@@ -709,10 +709,6 @@ namespace Raven.Client.FileSystem
                     }
                 }).ConfigureAwait(false);
 
-                if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
-                {
-                    throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
-                }
 
                 try
                 {

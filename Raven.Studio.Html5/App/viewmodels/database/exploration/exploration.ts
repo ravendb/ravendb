@@ -45,6 +45,8 @@ class exploration extends viewModelBase {
 
     activate(args?: string) {
         super.activate(args);
+
+        this.updateHelpLink("FP59PJ");
     }
 
     exportCsv() {

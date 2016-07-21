@@ -33,32 +33,66 @@ namespace Raven.Database.Bundles.Replication.Triggers
                 if (documentMetadata != null)
                 {
                     var history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
-                    metadata[Constants.RavenReplicationHistory] = history;
 
-                    if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
-                        documentMetadata.ContainsKey(Constants.RavenReplicationSource))
+                    if (documentMetadata.ContainsKey(Constants.RavenReplicationMergedHistory) == false)
                     {
-                        var historyEntry = new RavenJObject
+                        if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) &&
+                            documentMetadata.ContainsKey(Constants.RavenReplicationSource))
                         {
-                            {Constants.RavenReplicationVersion, documentMetadata[Constants.RavenReplicationVersion]},
-                            {Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
-                        };
-                        if (history.Contains(historyEntry, RavenJTokenEqualityComparer.Default) == false)
-                            history.Add(historyEntry);
+                            history.Add(new RavenJObject
+                            {
+                                {Constants.RavenReplicationVersion, documentMetadata[Constants.RavenReplicationVersion]},
+                                {Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
+                            });
+                        }
+                        else
+                        {
+                            history.Add(new RavenJObject
+                            {
+                                {Constants.RavenReplicationVersion, 0},
+                                {Constants.RavenReplicationSource, RavenJToken.FromObject(Database.TransactionalStorage.Id)}
+                            });
+                        }
+
+                        var sources = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
+                        int pos = history.Length - 1;
+                        for (; pos >= 0; pos--)
+                        {
+                            var source = ((RavenJObject)history[pos])[Constants.RavenReplicationSource];
+                            if (sources.Contains(source))
+                            {
+                                history.RemoveAt(pos);
+                                continue;
+                            }
+                            sources.Add(source);
+
+                        }                        
+                        metadata[Constants.RavenReplicationMergedHistory] = true;
+                        metadata[Constants.RavenReplicationHistory] = history;
                     }
-                    else 
+                    //If we have the flag we must have Constants.RavenReplicationVersion and Constants.RavenReplicationSource too
+                    //Here we assume that the replication history is in the form of a "sorted dictionary" so we just need to remove
+                    //the entry with the current source id and insert the new version at the end of the history.
+                    else
                     {
+                        int i = history.Length - 1;
+                        for (; i >= 0; i--)
+                        {
+                            var currentEntry = history[i];
+                            if (RavenJTokenEqualityComparer.Default.Equals(((RavenJObject) currentEntry)
+                                [Constants.RavenReplicationSource], documentMetadata[Constants.RavenReplicationSource]))
+                                break;
+                        }
+                        if(i!=-1)
+                            history.RemoveAt(i);
                         history.Add(new RavenJObject
-                        {
-                            {Constants.RavenReplicationVersion, 0},
-                            {Constants.RavenReplicationSource, RavenJToken.FromObject(Database.TransactionalStorage.Id)}
-                        });
+                            {
+                                {Constants.RavenReplicationVersion, documentMetadata[Constants.RavenReplicationVersion]},
+                                {Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
+                            });
+                        metadata[Constants.RavenReplicationHistory] = history;
                     }
-
-                    while (history.Length > Constants.ChangeHistoryLength)
-                    {
-                        history.RemoveAt(0);
-                    }
+                    
                 }
 
                 metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(ReplicationHiLo.NextId(Database));

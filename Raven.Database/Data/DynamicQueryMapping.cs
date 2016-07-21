@@ -6,14 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Database.Indexing;
-using Raven.Database.Server;
 using Raven.Database.Util;
 
 namespace Raven.Database.Data
@@ -170,12 +168,12 @@ namespace Raven.Database.Data
                 {
                     var field = sortedField.Field;
 
-                    if (field == Constants.TemporaryScoreValue)
+                    if (field.StartsWith(Constants.RandomFieldName) ||
+                        field.StartsWith(Constants.CustomSortFieldName) ||
+                        field.StartsWith(Constants.TemporaryScoreValue))
                         continue;
 
-                    if (field.StartsWith(Constants.AlphaNumericFieldName) ||
-                        field.StartsWith(Constants.RandomFieldName) ||
-                        field.StartsWith(Constants.CustomSortFieldName))
+                    if (field.StartsWith(Constants.AlphaNumericFieldName))
                     {
                         field = SortFieldHelper.CustomField(field).Name;
                     }

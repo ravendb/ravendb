@@ -49,6 +49,17 @@ namespace Raven.Database.Util
             return true;
         }
 
+        public void Clear()
+        {
+            while (queue.Count > 0)
+            {
+                T result;
+                if (queue.TryDequeue(out result) == false) break;
+                object value;
+                dic.TryRemove(result, out value);
+            }
+        }
+
         public bool TryRemove(T item)
         {
             object value;

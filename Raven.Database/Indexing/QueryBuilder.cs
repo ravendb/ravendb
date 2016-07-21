@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Indexing.LuceneIntegration;
 using Version = Lucene.Net.Util.Version;
 using System.Linq;
+using Raven.Database.Queries;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
@@ -551,6 +552,43 @@ namespace Raven.Database.Indexing
             }
 
             return queryStringBuilder != null ? queryStringBuilder.ToString() : query;
+        }
+
+        public static string GetQueryForAllMatchingDocumentsForIndex(DocumentDatabase database, HashSet<string> entityNames)
+        {
+            var sb = new StringBuilder();
+            GetQueryForAllMatchingDocumentsForIndex(database, entityNames, sb);
+            return sb.ToString();
+        }
+
+        private static void GetQueryForAllMatchingDocumentsForIndex(
+            DocumentDatabase database, HashSet<string> entityNames, StringBuilder sb)
+        {
+            var terms = new TermsQueryRunner(database)
+                .GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
+
+            foreach (var entityName in entityNames)
+            {
+                bool added = false;
+                foreach (var term in terms)
+                {
+                    if (string.Equals(entityName, term, StringComparison.OrdinalIgnoreCase))
+                    {
+                        AppendTermToQuery(term, sb);
+                        added = true;
+                    }
+                }
+                if (added == false)
+                    AppendTermToQuery(entityName, sb);
+            }
+        }
+
+        private static void AppendTermToQuery(string term, StringBuilder sb)
+        {
+            if (sb.Length != 0)
+                sb.Append(" OR ");
+
+            sb.Append("Tag:[[").Append(term).Append("]]");
         }
     }
 }

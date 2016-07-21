@@ -80,6 +80,11 @@ namespace Raven.Client.Connection.Request
 
         }
 
+        public void SetReadStripingBase(int strippingBase)
+        {
+            this.readStripingBase = strippingBase;
+        }
+
         private static string ToRemoteUrl(string primaryUrl)
         {
             var uriBuilder = new UriBuilder(primaryUrl);

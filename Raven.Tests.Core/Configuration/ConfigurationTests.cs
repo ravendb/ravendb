@@ -200,7 +200,6 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value, actual => actual.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
             configurationComparer.Assert(expected => expected.Voron.AllowIncrementalBackups.Value, actual => actual.Storage.Voron.AllowIncrementalBackups);
             configurationComparer.Assert(expected => expected.Voron.AllowOn32Bits.Value, actual => actual.Storage.Voron.AllowOn32Bits);
-            configurationComparer.Assert(expected => expected.Voron.SkipConsistencyChecks.Value, actual => actual.Storage.SkipConsistencyCheck);
             configurationComparer.Assert(expected => expected.Voron.InitialFileSize.Value, actual => actual.Storage.Voron.InitialFileSize);
             configurationComparer.Assert(expected => expected.Voron.ScratchBufferSizeNotificationThreshold.Value, actual => actual.Storage.Voron.ScratchBufferSizeNotificationThreshold);
             configurationComparer.Assert(expected => expected.Voron.MaxBufferPoolSize.Value, actual => actual.Storage.Voron.MaxBufferPoolSize);
@@ -331,6 +330,7 @@ namespace Raven.Tests.Core.Configuration
             
             configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
             configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
+            configurationComparer.Ignore(x => x.Storage.SkipConsistencyCheck);
             configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
             configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
             configurationComparer.Ignore(x => x.TransactionMode);
@@ -351,6 +351,7 @@ namespace Raven.Tests.Core.Configuration
             Assert.True(inMemoryConfiguration.CreatePluginsDirectoryIfNotExisting);
             Assert.Equal(null, inMemoryConfiguration.Storage.Esent.JournalsStoragePath);
             Assert.Equal(null, inMemoryConfiguration.Storage.Voron.JournalsStoragePath);
+            Assert.Equal(false, inMemoryConfiguration.Storage.SkipConsistencyCheck);
 
             configurationComparer.Validate();
         }

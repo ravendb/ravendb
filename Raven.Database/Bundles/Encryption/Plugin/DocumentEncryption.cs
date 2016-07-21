@@ -39,5 +39,10 @@ namespace Raven.Bundles.Encryption.Plugin
 
             return settings.Codec.Decode(key, dataStream);
         }
+
+        public void SetSettings(EncryptionSettings newSettings)
+        {
+            settings = newSettings;
+        }
     }
 }

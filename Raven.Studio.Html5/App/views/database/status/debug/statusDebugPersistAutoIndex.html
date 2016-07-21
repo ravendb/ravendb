@@ -1,27 +1,30 @@
 <section>
-    <form class="form-horizontal" role="form">
+    <form class="form-horizontal" role="form" data-bind="visible: onRamIndexes().length">
         <div class="form-group">
-            <div class="form-group">
-                <label class="col-sm-2 control-label">Index to persist:</label>
-                <div class="col-sm-10">
-                     <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                            <span data-bind="text: indexName"></span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu scrollable-resource-menu" role="menu">
-                            <!-- ko foreach: onRamIndexes -->
-                            <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
-                            <!-- /ko -->
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="form-group">
-                <div class="col-sm-10 col-sm-offset-2">
-                    <button class="btn btn-default" data-bind="click: persistIndex, enable: buttonEnabled"><i class="fa fa-hdd-o"></i> Persist index</button>
+            <label class="col-sm-2 control-label">Index to persist:</label>
+            <div class="col-sm-10">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        <span data-bind="text: indexName"></span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu scrollable-resource-menu" role="menu">
+                        <!-- ko foreach: onRamIndexes -->
+                        <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                        <!-- /ko -->
+                    </ul>
                 </div>
             </div>
         </div>
+        <div class="form-group">
+            <div class="col-sm-10 col-sm-offset-2">
+                <button class="btn btn-default" data-bind="click: persistIndex, enable: buttonEnabled"><i class="fa fa-hdd-o"></i> Persist index</button>
+            </div>
+        </div>
     </form>
+    
+    <div class="page-header" data-bind="visible: !onRamIndexes().length">
+        <h3 class="text-center"><i class="fa fa-info-circle text-info"></i> No auto indexes to persist were detected.</h3>
+    </div>
+
 </section>

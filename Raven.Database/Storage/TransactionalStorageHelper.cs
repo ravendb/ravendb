@@ -61,6 +61,7 @@ namespace Raven.Database.Storage
             var esentErrorException = exception as EsentErrorException;
             if (esentErrorException == null)
                 return false;
+
             switch (esentErrorException.Error)
             {
                 case JET_err.OutOfMemory:
@@ -70,6 +71,7 @@ namespace Raven.Database.Storage
                 case JET_err.VersionStoreOutOfMemoryAndCleanupTimedOut:
                     return true;
             }
+
             return false;
         }
     }

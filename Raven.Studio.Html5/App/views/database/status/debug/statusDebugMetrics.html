@@ -206,7 +206,11 @@
             </div>
             <div class="panel-collapse collapse in" id="metricsReplication"  >
                 <div class="panel-body">
-                    <ul class="nav nav-tabs" data-bind="foreach: $root.replicationDestinations">
+                    <div class="text-center" data-bind="visible: !$root.replicationDestinations().length">
+                        <h3 class="text-info">No replication destinations found. </h3>
+                    </div>
+
+                    <ul class="nav nav-tabs" data-bind="visible: $root.replicationDestinations().length, foreach: $root.replicationDestinations">
                         <li data-bind="css: { active: $index() == 0 }"><a data-bind="attr: { href: '#replication-tab-' + $index() }, text: $data" data-toggle="tab"></a></li>
                     </ul>
                     <div class="tab-content" data-bind="foreach: $root.replicationDestinations">
@@ -308,38 +312,6 @@
                                     <div class="panel-collapse collapse in" data-bind="attr: { id: 'metrics-rep-' + $index() + '-duration' }">
                                         <div class="panel-body">
                                             <div class="form-horizontal" role="form" >
-                                                <div class="col-md-6" data-bind="with: $root.data().ReplicationDurationMeter[$data]"> 
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Count</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Count"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Mean rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: MeanRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">One minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: OneMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Five minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: FiveMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Fifteen minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: FifteenMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                </div>
                                                 <div class="col-md-6" data-bind="with: $root.data().ReplicationDurationHistogram[$data]">
                                                     <div class="form-group">
                                                         <label class="col-md-4 control-label">Counter</label>

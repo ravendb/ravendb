@@ -22,6 +22,7 @@ class cell {
             data = data.toLocaleString('en-US');
         }
         this.data(data);
+        this.resetFlag = true;
     }
 
     private isNumber(o) {

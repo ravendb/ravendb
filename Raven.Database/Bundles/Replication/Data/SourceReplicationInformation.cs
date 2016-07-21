@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Bundles.Replication.Data
 {
@@ -25,6 +26,9 @@ namespace Raven.Bundles.Replication.Data
 
         public string SourceCollections { get; set; }
 
+        [JsonIgnore]
+        public bool IsETL => string.IsNullOrEmpty(SourceCollections) == false;
+
         public override string ToString()
         {
             return string.Format("LastDocumentEtag: {0}, LastAttachmentEtag: {1}", LastDocumentEtag, LastAttachmentEtag);
@@ -40,5 +44,7 @@ namespace Raven.Bundles.Replication.Data
     public class SourceReplicationInformationWithBatchInformation : SourceReplicationInformation
     {
         public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+
+        public Guid? DatabaseId { get; set; }
     }
 }

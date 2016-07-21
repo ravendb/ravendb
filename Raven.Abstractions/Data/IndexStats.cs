@@ -210,6 +210,10 @@ namespace Raven.Abstractions.Data
 
         UpdateDocumentReferences,
 
+        Delete_DeleteMappedResultsForDocumentId,
+        Delete_Documents,
+        Delete_IndexUpdateTriggers,
+
         Extension_Suggestions,
 
         StorageCommit,

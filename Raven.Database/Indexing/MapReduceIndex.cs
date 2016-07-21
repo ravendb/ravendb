@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
             token.ThrowIfCancellationRequested();
 
             var count = 0;
-            var sourceCount = 0;
+            var sourceCount = batch.Docs.Count;
             var deleted = new Dictionary<ReduceKeyAndBucket, int>();
             var performance = RecordCurrentBatch("Current Map", "Map", batch.Docs.Count);
             var performanceStats = new List<BasePerformanceStats>();
@@ -112,29 +112,38 @@ namespace Raven.Database.Indexing
                 };
             }
 
-            var deleteMappedResultsDuration = new Stopwatch();
-            var documentsWrapped = batch.Docs.Select(doc =>
+            List<dynamic> documentsWrapped;
+
+            if (actions.MapReduce.HasMappedResultsForIndex(indexId) == false)
             {
-                token.ThrowIfCancellationRequested();
-
-                sourceCount++;
-                var documentId = doc.__document_id;
-
-                using (StopwatchScope.For(deleteMappedResultsDuration))
+                //new index
+                documentsWrapped = batch.Docs.Where(x => x is FilteredDocument == false).ToList();
+            }
+            else
+            {
+                var deleteMappedResultsDuration = new Stopwatch();
+                documentsWrapped = batch.Docs.Select(doc =>
                 {
-                    actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
-                }
+                    token.ThrowIfCancellationRequested();
 
-                return doc;
-            })
-            .Where(x => x is FilteredDocument == false)
-            .ToList();
+                    var documentId = doc.__document_id;
 
-            performanceStats.Add(new PerformanceStats
-            {
-                Name = IndexingOperation.Map_DeleteMappedResults,
-                DurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
-            });
+                    using (StopwatchScope.For(deleteMappedResultsDuration))
+                    {
+                        actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
+                    }
+
+                    return doc;
+                })
+                .Where(x => x is FilteredDocument == false)
+                .ToList();
+
+                performanceStats.Add(new PerformanceStats
+                {
+                    Name = IndexingOperation.Map_DeleteMappedResults,
+                    DurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
+                });
+            }
 
             var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
             var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
@@ -236,7 +245,7 @@ namespace Raven.Database.Indexing
                     allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
                     allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
                 }
-            }, description: string.Format("Reducing index {0} up to Etag {1}, for {2} documents", this.PublicName, batch.HighestEtagBeforeFiltering, documentsWrapped.Count));
+            }, description: $"Reducing index {PublicName} up to etag {batch.HighestEtagBeforeFiltering}, for {documentsWrapped.Count} documents");
 
             performanceStats.Add(new ParallelPerformanceStats
             {
@@ -269,24 +278,27 @@ namespace Raven.Database.Indexing
                 reduceKeyToCount[reduceKey] = reduceKeyToCount.GetOrDefault(reduceKey) + singleDeleted.Value;
             }
 
-            context.Database.MappingThreadPool.ExecuteBatch(reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
-            {
-                while (enumerator.MoveNext())
+            context.Database.MappingThreadPool.ExecuteBatch(reduceKeyStats, enumerator =>
+                context.TransactionalStorage.Batch(accessor =>
                 {
-                    var reduceKeyStat = enumerator.Current;
-                    var value = 0;
-                    reduceKeyToCount.TryRemove(reduceKeyStat.Key, out value);
-
-                    var changeValue = reduceKeyStat.Count - value;
-                    if (changeValue == 0)
+                    while (enumerator.MoveNext())
                     {
-                        // nothing to change
-                        continue;
-                    }
+                        var reduceKeyStat = enumerator.Current;
+                        var value = 0;
+                        reduceKeyToCount.TryRemove(reduceKeyStat.Key, out value);
 
-                    accessor.MapReduce.IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, changeValue);
-                }
-            }), description: string.Format("Incrementing Reducing key counter fo index {0} for operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
+                        var changeValue = reduceKeyStat.Count - value;
+                        if (changeValue == 0)
+                        {
+                            // nothing to change
+                            continue;
+                        }
+
+                        accessor.MapReduce.IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, changeValue);
+                    }
+                }), 
+                description: $"Incrementing reducing key counter fo index {PublicName} for operation " +
+                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}");
 
             foreach (var keyValuePair in reduceKeyToCount)
             {
@@ -300,27 +312,30 @@ namespace Raven.Database.Indexing
             var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
             var parallelReductionStart = SystemTime.UtcNow;
 
-            context.Database.MappingThreadPool.ExecuteBatch(changed, enumerator => context.TransactionalStorage.Batch(accessor =>
-            {
-                var parallelStats = new ParallelBatchStats
+            context.Database.MappingThreadPool.ExecuteBatch(changed, enumerator =>
+                context.TransactionalStorage.Batch(accessor =>
                 {
-                    StartDelay = (long)(SystemTime.UtcNow - parallelReductionStart).TotalMilliseconds
-                };
-
-                var scheduleReductionsDuration = new Stopwatch();
-
-                using (StopwatchScope.For(scheduleReductionsDuration))
-                {
-                    while (enumerator.MoveNext())
+                    var parallelStats = new ParallelBatchStats
                     {
-                        accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
-                        accessor.General.MaybePulseTransaction();
-                    }
-                }
+                        StartDelay = (long) (SystemTime.UtcNow - parallelReductionStart).TotalMilliseconds
+                    };
 
-                parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
-                parallelReductionOperations.Enqueue(parallelStats);
-            }), description: string.Format("Map Scheduling Reducitions for index {0} after operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
+                    var scheduleReductionsDuration = new Stopwatch();
+
+                    using (StopwatchScope.For(scheduleReductionsDuration))
+                    {
+                        while (enumerator.MoveNext())
+                        {
+                            accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+                            accessor.General.MaybePulseTransaction();
+                        }
+                    }
+
+                    parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
+                    parallelReductionOperations.Enqueue(parallelStats);
+                }),
+                description: $"Schedule reductions for index {PublicName} after operation " +
+                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}");
 
             performanceStats.Add(new ParallelPerformanceStats
             {
@@ -512,22 +527,66 @@ namespace Raven.Database.Indexing
 
         public override void Remove(string[] keys, WorkContext context)
         {
-            context.TransactionalStorage.Batch(actions =>
+            DeletionBatchInfo deletionBatchInfo = null;
+            try
             {
-                var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
-                foreach (var key in keys)
-                {
-                    actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
-                    context.CancellationToken.ThrowIfCancellationRequested();
-                }
+                deletionBatchInfo = context.ReportDeletionBatchStarted(PublicName, keys.Length);
 
-                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);
-                foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
+                context.TransactionalStorage.Batch(actions =>
                 {
-                    actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
-                    context.CancellationToken.ThrowIfCancellationRequested();
+                    var storageCommitDuration = new Stopwatch();
+
+                    actions.BeforeStorageCommit += storageCommitDuration.Start;
+
+                    actions.AfterStorageCommit += () =>
+                    {
+                        storageCommitDuration.Stop();
+
+                        deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
+                    };
+
+                    var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
+
+                    var deleteMappedResultsDuration = new Stopwatch();
+
+                    using (StopwatchScope.For(deleteMappedResultsDuration))
+                    {
+                        if (actions.MapReduce.HasMappedResultsForIndex(indexId))
+                        {
+                            foreach (var key in keys)
+                            {
+                                actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
+                                context.CancellationToken.ThrowIfCancellationRequested();
+                            }
+                        }
+                    }
+
+                    deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.Delete_DeleteMappedResultsForDocumentId, deleteMappedResultsDuration.ElapsedMilliseconds));
+
+                    actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);
+
+                    var scheduleReductionsDuration = new Stopwatch();
+
+                    using (StopwatchScope.For(scheduleReductionsDuration))
+                    {
+                        foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
+                        {
+                            actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
+                            context.CancellationToken.ThrowIfCancellationRequested();
+                        }
+                    }
+
+                    deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.Reduce_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
+                });
+            }
+            finally
+            {
+                if (deletionBatchInfo != null)
+                {
+                    context.ReportDeletionBatchCompleted(deletionBatchInfo);
                 }
-            });
+            }
+            
         }
 
         public class ReduceDocuments

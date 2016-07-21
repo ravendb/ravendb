@@ -39,7 +39,7 @@ namespace Raven.Client.Document
     /// <summary>
     ///   A query against a Raven index
     /// </summary>
-    public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
+    public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         protected bool isSpatialQuery;
@@ -211,21 +211,7 @@ namespace Raven.Client.Document
         /// </summary>
         protected bool shouldExplainScores;
 
-        /// <summary>
-        ///   Get the name of the index being queried
-        /// </summary>
-        public string IndexQueried
-        {
-            get { return indexName; }
-        }
-
-        /// <summary>
-        ///   Get the name of the index being queried
-        /// </summary>
-        public string AsyncIndexQueried
-        {
-            get { return indexName; }
-        }
+        public bool IsDistinct { get { return isDistinct; } }
 
         /// <summary>
         ///   Grant access to the database commands
@@ -257,11 +243,6 @@ namespace Raven.Client.Document
         public IDocumentSession Session
         {
             get { return (IDocumentSession)theSession; }
-        }
-
-        InMemoryDocumentSessionOperations IRavenQueryInspector.Session
-        {
-            get { return theSession; }
         }
 
         protected Action<QueryResult> afterQueryExecutedCallback;
@@ -626,54 +607,6 @@ namespace Raven.Client.Document
             var indexQuery = GenerateIndexQuery(query);
             return indexQuery;
         }
-        public FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
-        {
-            var q = GetIndexQuery(false);
-            return DatabaseCommands.GetFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
-        }
-
-        public FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
-        {
-            var q = GetIndexQuery(false);
-            return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
-        }
-
-        public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
-        {
-            var q = GetIndexQuery(true);
-            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize, token);
-        }
-
-        public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
-        {
-            var q = GetIndexQuery(true);
-            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize, token);
-        }
-
-        /// <summary>
-        ///   Gets the query result
-        ///   Execute the query the first time that this is called.
-        /// </summary>
-        /// <value>The query result.</value>
-        public QueryResult QueryResult
-        {
-            get
-            {
-                InitSync();
-
-                return queryOperation.CurrentQueryResults.CreateSnapshot();
-            }
-        }
-
-        protected virtual void InitSync()
-        {
-            if (queryOperation != null)
-                return;
-            ClearSortHints(DatabaseCommands);
-            ExecuteBeforeQueryListeners();
-            queryOperation = InitializeQueryOperation();
-            ExecuteActualQuery();
-        }
 
         protected void ClearSortHints(IDatabaseCommands dbCommands)
         {
@@ -681,26 +614,6 @@ namespace Raven.Client.Document
             {
                 dbCommands.OperationsHeaders.Remove(key);
             }
-        }
-
-        protected virtual void ExecuteActualQuery()
-        {
-            theSession.IncrementRequestCount();
-            while (true)
-            {
-                using (queryOperation.EnterQueryContext())
-                {
-                    queryOperation.LogQuery();
-                    var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
-                    if (queryOperation.IsAcceptable(result) == false)
-                    {
-                        Thread.Sleep(100);
-                        continue;
-                    }
-                    break;
-                }
-            }
-            InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
         }
 
         protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
@@ -711,18 +624,9 @@ namespace Raven.Client.Document
             }
         }
 
-        /// <summary>
-        /// Register the query as a lazy query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
-        public Lazy<IEnumerable<T>> Lazily()
-        {
-            return Lazily(null);
-        }
-
         //the assumption here that there is only one of them is not null
         //and even if not, they should have the same operation headers 
-        private NameValueCollection GetOperationHeaders()
+        protected NameValueCollection GetOperationHeaders()
         {
             if (DatabaseCommands != null)
                 return DatabaseCommands.OperationsHeaders;
@@ -731,79 +635,6 @@ namespace Raven.Client.Document
                 AsyncDatabaseCommands.OperationsHeaders : new NameValueCollection(0);
         }
 
-        /// <summary>
-        /// Register the query as a lazy query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
-        public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
-        {
-            if (queryOperation == null)
-            {
-                ExecuteBeforeQueryListeners();
-                queryOperation = InitializeQueryOperation();
-            }
-
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
-            return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
-        }
-
-        /// <summary>
-        /// Register the query as a lazy query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
-        public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
-        {
-            if (queryOperation == null)
-            {
-                ExecuteBeforeQueryListeners();
-                queryOperation = InitializeQueryOperation();
-            }
-
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
-            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
-        }
-
-
-        /// <summary>
-        /// Register the query as a lazy-count query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
-        public virtual Lazy<int> CountLazily()
-        {
-            if (queryOperation == null)
-            {
-                ExecuteBeforeQueryListeners();
-                Take(0);
-                queryOperation = InitializeQueryOperation();
-            }
-
-
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
-
-            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
-        }
-
-        /// <summary>
-        ///   Gets the query result
-        ///   Execute the query the first time that this is called.
-        /// </summary>
-        /// <value>The query result.</value>
-        public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
-        {
-            var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
-            return result.CurrentQueryResults.CreateSnapshot();
-        }
-
-        protected virtual async Task<QueryOperation> InitAsync()
-        {
-            if (queryOperation != null)
-                return queryOperation;
-            ClearSortHints(AsyncDatabaseCommands);
-            ExecuteBeforeQueryListeners();
-
-            queryOperation = InitializeQueryOperation();
-            return await ExecuteActualQueryAsync().ConfigureAwait(false);
-        }
 
         protected void ExecuteBeforeQueryListeners()
         {
@@ -984,44 +815,6 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
-        ///   Gets the enumerator.
-        /// </summary>
-        public virtual IEnumerator<T> GetEnumerator()
-        {
-            InitSync();
-            while (true)
-            {
-                try
-                {
-                    return queryOperation.Complete<T>().GetEnumerator();
-                }
-                catch (Exception e)
-                {
-                    if (queryOperation.ShouldQueryAgain(e) == false)
-                        throw;
-                    ExecuteActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
-                }
-            }
-        }
-
-        private async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
-        {
-            try
-            {
-                var list = currentQueryOperation.Complete<T>();
-                return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
-            }
-            catch (Exception e)
-            {
-                if (queryOperation.ShouldQueryAgain(e) == false)
-                    throw;
-            }
-
-            var result = await ExecuteActualQueryAsync().ConfigureAwait(false);
-            return await ProcessEnumerator(result).ConfigureAwait(false);
-        }
-
-        /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name = "path">The path.</param>
@@ -1066,23 +859,6 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
-        ///   that is nearly always a mistake.
-        /// </summary>
-        [Obsolete(
-            @"
-You cannot issue an in memory filter - such as Count() - on IDocumentQuery. 
-This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
-Consider using session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.Advanced.DocumentQuery<T>() is intended for lower level API access.
-If you really want to do in memory filtering on the data returned from the query, you can use: session.Advanced.DocumentQuery<T>().ToList().Count()
-"
-            , true)]
-        public int Count()
-        {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <param name = "path">The path.</param>
@@ -1109,36 +885,6 @@ If you really want to do in memory filtering on the data returned from the query
         public void Skip(int count)
         {
             start = count;
-        }
-
-        public T First()
-        {
-            return ExecuteQueryOperation(1).First();
-        }
-
-        public T FirstOrDefault()
-        {
-            return ExecuteQueryOperation(1).FirstOrDefault();
-        }
-
-        public T Single()
-        {
-            return ExecuteQueryOperation(2).Single();
-        }
-
-        public T SingleOrDefault()
-        {
-            return ExecuteQueryOperation(2).SingleOrDefault();
-        }
-
-        private IEnumerable<T> ExecuteQueryOperation(int take)
-        {
-            if (!pageSize.HasValue || pageSize > take)
-                Take(take);
-
-            InitSync();
-
-            return queryOperation.Complete<T>();
         }
 
         /// <summary>
@@ -2340,26 +2086,6 @@ If you really want to do in memory filtering on the data returned from the query
         {
             CustomSortUsing(typeName, descending);
             return this;
-        }
-
-        /// <summary>
-        /// Returns a list of results for a query asynchronously. 
-        /// </summary>
-        public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
-        {
-            var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
-            var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
-            return tuple.Item2;
-        }
-
-        /// <summary>
-        /// Gets the total count of records for this query
-        /// </summary>
-        public async Task<int> CountAsync(CancellationToken token = default(CancellationToken))
-        {
-            Take(0);
-            var result = await QueryResultAsync(token).ConfigureAwait(false);
-            return result.TotalResults;
         }
 
         public string GetMemberQueryPathForOrderBy(Expression expression)

@@ -1,0 +1,31 @@
+<div class="messageBox" tabindex="-1">
+    
+    <form data-bind="submit: applyFilter">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Add search filter</h4>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Folder path:</label>
+                <div class="col-sm-12">
+                    <input autocomplete="off" type="text" id="inFolderAutocomplete" autofocus class="form-control" data-bind="value: inputs[0], valueUpdate: 'afterkeydown'" />
+                    <ul style="display: none" class="dropdown-menu" role="menu" data-bind="autoComplete: '#inFolderAutocomplete', foreach: searchResults">
+                        <li role="presentation" data-bind="click: $root.setInput.bind($root, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" data-bind="enable: enabled()" class="btn btn-primary">Apply</button>
+            <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
+        </div>
+    </form>
+
+</div>

@@ -23,15 +23,11 @@ namespace Raven.Client.Indexes
     /// <summary>
     /// Helper class for creating indexes from implementations of <see cref="AbstractIndexCreationTask"/>.
     /// </summary>
-    public static class IndexCreation
+    public static partial class IndexCreation
     {
 #if !DNXCORE50
-        private readonly static ILog Log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog Log = LogManager.GetLogger(typeof(IndexCreation));
-#endif
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-#if !DNXCORE50
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
@@ -297,7 +293,7 @@ namespace Raven.Client.Indexes
                 foreach (var task in tasks)
                     await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
             }
-                // For old servers that don't have the new endpoint for executing multiple indexes
+            // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception)
             {
                 failed = true;
@@ -458,7 +454,6 @@ namespace Raven.Client.Indexes
             }
         }
 #endif
-
         public static IndexToAdd[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConvention conventions)
         {
             var indexesToAdd = indexCreationTasks

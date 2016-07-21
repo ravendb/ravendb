@@ -19,6 +19,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
+using Raven.Database.Util;
 
 namespace Raven.Database.Prefetching
 {
@@ -80,10 +81,17 @@ namespace Raven.Database.Prefetching
             MemoryStatistics.RegisterLowMemoryHandler(this);
             LastTimeUsed = DateTime.MinValue;
 
-            ingestMeter = context.MetricsCounters.DbMetrics.Meter("metrics",
-                "ingest/sec", "In memory documents held by this prefetcher", TimeUnit.Seconds);
-            returnedDocsMeter = context.MetricsCounters.DbMetrics.Meter("metrics",
-                  "returned docs/sec", "Documents being served by this prefetcher", TimeUnit.Seconds);
+            ingestMeterName = "ingest/sec for " + prefetchingUserDescription;
+            returnedDocsMeterName = "returned docs/sec " + prefetchingUserDescription;
+
+            ingestMeter = context.MetricsCounters.DbMetrics.Meter(MeterContext,
+                ingestMeterName, "In memory documents held by this prefetcher", TimeUnit.Seconds);
+            MetricsTicker.Instance.AddMeterMetric(ingestMeter);
+
+            returnedDocsMeter = context.MetricsCounters.DbMetrics.Meter(MeterContext,
+                  returnedDocsMeterName, "Documents being served by this prefetcher", TimeUnit.Seconds);
+            MetricsTicker.Instance.AddMeterMetric(returnedDocsMeter);
+
 
             if (isDefault)
             {
@@ -98,6 +106,9 @@ namespace Raven.Database.Prefetching
         public bool IsDefault { get; private set; }
         private readonly Func<int> getPrefetchintBehavioursCount;
         private readonly Func<PrefetchingSummary> getPrefetcherSummary;
+        private const string MeterContext = "metrics";
+        private readonly string ingestMeterName;
+        private readonly string returnedDocsMeterName;
         public List<IndexToWorkOn> Indexes { get; set; }
         public string LastIndexedEtag { get; set; }
         public DateTime LastTimeUsed { get; private set; }
@@ -125,6 +136,11 @@ namespace Raven.Database.Prefetching
 
         public void Dispose()
         {
+            MetricsTicker.Instance.RemoveMeterMetric(ingestMeter);
+            MetricsTicker.Instance.RemoveMeterMetric(returnedDocsMeter);
+            context.MetricsCounters.DbMetrics.RemoveMeter(MeterContext, ingestMeterName);
+            context.MetricsCounters.DbMetrics.RemoveMeter(MeterContext, returnedDocsMeterName);
+
             foreach (var futureIndexBatch in futureIndexBatches)
             {
                 var cts = futureIndexBatch.Value.CancellationTokenSource;
@@ -777,7 +793,7 @@ namespace Raven.Database.Prefetching
             // ensure we don't do TOO much future caching
             if (MemoryStatistics.AvailableMemoryInMb < context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
             {
-                log.Info("Skipping background prefetching because we have {0}mb of availiable memory and the availiable memory for raising the batch size limit is: {1}mb",
+                log.Info("Skipping background prefetching because we have {0}mb of available memory and the available memory for raising the batch size limit is: {1}mb",
                         MemoryStatistics.AvailableMemoryInMb, context.Configuration.AvailableMemoryForRaisingBatchSizeLimit / 1024 / 1024);
                 return;
             }

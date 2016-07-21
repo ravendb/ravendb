@@ -686,12 +686,15 @@ namespace Raven.Abstractions.Smuggler
             var reportInterval = TimeSpan.FromSeconds(2);
             var reachedMaxEtag = false;
             Operations.ShowProgress("Exporting Documents");
-            int numberOfSkippedDocs = 0;
+            var numberOfSkippedDocs = 0;
+            var totalOfSkippedDocs = 0;
             var lastForcedFlush = SystemTime.UtcNow;
             var maxFlushInterval = TimeSpan.FromSeconds(1);
 
             while (true)
             {
+                Options.CancelToken.Token.ThrowIfCancellationRequested();
+
                 bool hasDocs = false;
                 try
                 {
@@ -705,7 +708,8 @@ namespace Raven.Abstractions.Smuggler
                             {
                                 if (numberOfSkippedDocs > 0 && (SystemTime.UtcNow - lastForcedFlush) > maxFlushInterval)
                                 {
-                                    Operations.ShowProgress("Skipped {0:#,#} documents", numberOfSkippedDocs);
+                                    totalOfSkippedDocs += numberOfSkippedDocs;
+                                    Operations.ShowProgress("Skipped {0:#,#} documents", totalOfSkippedDocs);
                                     var currentJsonTextWriter = jsonWriter.GetCurrentJsonTextWriter();
                                     currentJsonTextWriter.WriteWhitespace(" ");
                                     currentJsonTextWriter.Flush();
@@ -765,7 +769,7 @@ namespace Raven.Abstractions.Smuggler
 
                                 if (status.NumberOfExportedItems % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
                                 {
-                                    Operations.ShowProgress("Exported {0} documents", status.NumberOfExportedItems);
+                                    Operations.ShowProgress("Exported {0:#,#} documents", status.NumberOfExportedItems);
                                     lastReport = SystemTime.UtcNow;
                                 }
                             }

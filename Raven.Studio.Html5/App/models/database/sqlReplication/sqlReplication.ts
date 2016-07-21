@@ -34,9 +34,10 @@ class sqlReplication extends document {
     connectionStringName = ko.observable<string>(null);
     connectionStringSettingName = ko.observable<string>(null);
     connectionStringSourceFieldName: KnockoutComputed<string>;
-
+    
     collections = ko.observableArray<string>();
     searchResults: KnockoutComputed<string[]>;
+    isVisible = ko.observable<boolean>(true);
     
     showReplicationConfiguration = ko.observable<boolean>(false);
 

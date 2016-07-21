@@ -4,6 +4,7 @@ import moment = require("moment");
 import document = require("models/database/documents/document");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import logEntry = require("models/database/debug/logEntry");
+import tableNavigationTrait = require("common/tableNavigationTrait");
 
 class logs extends viewModelBase {
 
@@ -26,6 +27,8 @@ class logs extends viewModelBase {
     columnWidths: Array<KnockoutObservable<number>>;
     showLogDetails = ko.observable<boolean>(false);
 
+    tableNavigation: tableNavigationTrait<logEntry>;
+
     constructor() {
         super();
 
@@ -42,6 +45,8 @@ class logs extends viewModelBase {
 
         this.sortColumn.subscribe(() => this.sortInPlace());
         this.sortAsc.subscribe(() => this.sortInPlace());
+
+        this.tableNavigation = new tableNavigationTrait<logEntry>("#logRecords", this.selectedLog, this.allLogs, i => "#logRecords > div:nth-child(" + (i + 1) + ")");
     }
 
     activate(args) {
@@ -95,7 +100,6 @@ class logs extends viewModelBase {
     }
 
     processLogResults(results: logDto[]) {
-
         var mappedResults = results.map(r => {
             var mapped = new logEntry(r, this.now);
             mapped['isVisible'] = ko.pureComputed(() => {
@@ -155,49 +159,6 @@ class logs extends viewModelBase {
     unSelectLog(log: logEntry) {
         this.selectedLog(null);
         this.showLogDetails(false);
-    }
-
-    tableKeyDown(sender: any, e: KeyboardEvent) {
-        var isKeyUp = e.keyCode === 38;
-        var isKeyDown = e.keyCode === 40;
-        if (isKeyUp || isKeyDown) {
-            e.preventDefault();
-
-            var oldSelection = this.selectedLog();
-            if (oldSelection) {
-                var oldSelectionIndex = this.allLogs.indexOf(oldSelection);
-                var newSelectionIndex = oldSelectionIndex;
-                if (isKeyUp && oldSelectionIndex > 0) {
-                    newSelectionIndex--;
-                } else if (isKeyDown && oldSelectionIndex < this.allLogs().length - 1) {
-                    newSelectionIndex++;
-                }
-
-                this.selectedLog(this.allLogs()[newSelectionIndex]);
-                var newSelectedRow = $("#logRecords > div:nth-child(" + (newSelectionIndex + 1) + ")");
-                if (newSelectedRow) {
-                    this.ensureRowVisible(newSelectedRow);
-                }
-            }
-        }
-        return true;
-    }
-
-    ensureRowVisible(row: JQuery) {
-        var table = $("#logRecords");
-        var scrollTop = table.scrollTop();
-        var scrollBottom = scrollTop + table.height();
-        var scrollHeight = scrollBottom - scrollTop;
-
-        var rowPosition = row.position();
-        var rowTop = rowPosition.top;
-        var rowBottom = rowTop + row.height();
-
-        if (rowTop < 0) {
-            table.scrollTop(scrollTop + rowTop);
-        } else if (rowBottom > scrollHeight) {
-            table.scrollTop(scrollTop + (rowBottom - scrollHeight));
-        }
     }
 
     setFilterAll() {

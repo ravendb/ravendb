@@ -14,6 +14,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Async;
 using Raven.Client.Document.Batches;
+using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Spatial;
@@ -73,6 +74,13 @@ namespace Raven.Client.Document
                 NegateNext();
                 return this;
             }
+        }
+        /// <summary>
+        ///   Get the name of the index being queried
+        /// </summary>
+        public string AsyncIndexQueried
+        {
+            get { return indexName; }
         }
 
         /// <summary>
@@ -471,7 +479,7 @@ namespace Raven.Client.Document
         /// <param name="latitude">The latitude.</param>
         /// <param name="longitude">The longitude.</param>
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+        public IAsyncDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits)
         {
             return GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
         }
@@ -479,7 +487,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Filter matches to be inside the specified radius
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+        public IAsyncDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits)
         {
             return GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
         }
@@ -841,7 +849,7 @@ namespace Raven.Client.Document
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken))
+        public virtual Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken))
         {
             if (queryOperation == null)
             {
@@ -869,7 +877,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Adds an ordering by score for a specific field to the query
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScore()
+        public IAsyncDocumentQuery<T> OrderByScore()
         {
             AddOrder(Constants.TemporaryScoreValue, false);
             return this;
@@ -878,7 +886,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Adds an ordering by score descending for a specific field to the query
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScoreDescending()
+        public IAsyncDocumentQuery<T> OrderByScoreDescending()
         {
             AddOrder(Constants.TemporaryScoreValue, true);
             return this;
@@ -1048,7 +1056,7 @@ namespace Raven.Client.Document
             return this;
         }
 
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ExplainScores()
+        public IAsyncDocumentQuery<T> ExplainScores()
         {
             shouldExplainScores = true;
             return this;
@@ -1114,5 +1122,125 @@ namespace Raven.Client.Document
             return documentQuery;
         }
 
+        public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery(true);
+            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize, token);
+        }
+
+        public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery(true);
+            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize, token);
+        }
+
+        /// <summary>
+        /// Returns a list of results for a query asynchronously. 
+        /// </summary>
+        public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
+        {
+            var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
+            return tuple.Item2;
+        }
+
+        
+        public async Task<T> FirstAsync()
+        {
+            var operation = await ExecuteQueryOperation(1).ConfigureAwait(false);
+            return operation.First();
+        }
+
+        public async Task<T> FirstOrDefaultAsync()
+        {
+            var operation = await ExecuteQueryOperation(1).ConfigureAwait(false);
+            return operation.FirstOrDefault();
+        }
+
+        public async Task<T> SingleAsync()
+        {
+            var operation = await ExecuteQueryOperation(2).ConfigureAwait(false);
+            return operation.Single();
+        }
+
+        public async Task<T> SingleOrDefaultAsync()
+        {
+            var operation = await ExecuteQueryOperation(2).ConfigureAwait(false);
+            return operation.SingleOrDefault();
+        }
+
+        protected async Task<IEnumerable<T>> ExecuteQueryOperation(int take)
+        {
+            if (!pageSize.HasValue || pageSize > take)
+                Take(take);
+
+            var operation = await InitAsync().ConfigureAwait(false);
+            return operation.Complete<T>();
+        }
+
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
+        {
+            if (queryOperation == null)
+            {
+                ExecuteBeforeQueryListeners();
+                queryOperation = InitializeQueryOperation();
+            }
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
+        }
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        public async Task<int> CountAsync(CancellationToken token = default(CancellationToken))
+        {
+            Take(0);
+            var result = await QueryResultAsync(token).ConfigureAwait(false);
+            return result.TotalResults;
+        }
+
+        protected async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
+        {
+            try
+            {
+                var list = currentQueryOperation.Complete<T>();
+                return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
+            }
+            catch (Exception e)
+            {
+                if (queryOperation.ShouldQueryAgain(e) == false)
+                    throw;
+            }
+
+            var result = await ExecuteActualQueryAsync().ConfigureAwait(false);
+            return await ProcessEnumerator(result).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        ///   Gets the query result
+        ///   Execute the query the first time that this is called.
+        /// </summary>
+        /// <value>The query result.</value>
+        public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
+        {
+            var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            return result.CurrentQueryResults.CreateSnapshot();
+        }
+
+        protected virtual async Task<QueryOperation> InitAsync()
+        {
+            if (queryOperation != null)
+                return queryOperation;
+            ClearSortHints(AsyncDatabaseCommands);
+            ExecuteBeforeQueryListeners();
+
+            queryOperation = InitializeQueryOperation();
+            return await ExecuteActualQueryAsync().ConfigureAwait(false);
+        }
     }
 }

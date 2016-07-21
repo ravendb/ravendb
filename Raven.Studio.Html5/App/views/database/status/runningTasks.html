@@ -25,18 +25,18 @@
         <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.fetchTasks.bind($root), active:true }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterTypeAll">
-                <input type="radio" name="options" id="option0"> <span data-bind="text: 'All tasks (' + allTasks().length + ')'"></span>
+                <input type="radio" name="options" id="option0"> All tasks <span class="badge" data-bind="text: allTasks().length"></span>
             </label>
             <!-- ko foreach: taskTypes -->
             <label class="btn btn-default" data-bind="click: $root.setFilterType.bind($root, name)">
-                <input type="radio" name="options"> <span data-bind="text:  name + ' (' + count + ')'"></span>
+                <input type="radio" name="options"> <span data-bind="text: name"></span> <span class="badge" data-bind="text:  count"></span>
             </label>
             <!-- /ko -->
         </div>
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
-        <div id="runningTasksTableContainer" class="no-outline" tabindex="-1" data-bind="event: { keydown: tableKeyDown }" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
+        <div id="runningTasksTableContainer" class="no-outline" tabindex="-1" data-bind="event: { keydown: tableNavigation.tableKeyDown.bind(tableNavigation) }" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
             <div style="white-space: nowrap">
                 <div class="column column-header"  style="width: 40px;">
                     <span>Kill</span>

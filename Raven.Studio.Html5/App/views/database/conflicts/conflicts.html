@@ -1,13 +1,15 @@
 <div class="conflicts-page">
     <div class="row">
         <div class="btn-toolbar">
+            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+
             <div class="btn-group">
                 <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" data-trigger="hover" data-placement="bottom" data-bind="enable: hasAnyConflict()">
                     Resolve all conflicts <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
                     <li><a href="#" data-bind="click: resolveToLocal">Resolve to local <span data-bind="visible: serverConflictResolution() === 'ResolveToLocal'">(default)</span></a></li>
-                    <li><a href="#" data-bind="click: resolveToNewestRemote">Resolve to newest remote <span data-bind="visible: serverConflictResolution() === 'ResolveToRemote'">(default)</span></li>
+                    <li><a href="#" data-bind="click: resolveToNewestRemote">Resolve to newest remote <span data-bind="visible: serverConflictResolution() === 'ResolveToRemote'">(default)</span></a></li>
                     <li><a href="#" data-bind="click: resolveToLatest">Resolve to latest <span data-bind="visible: serverConflictResolution() === 'ResolveToLatest'">(default)</span></a></li>
                 </ul>
             </div>

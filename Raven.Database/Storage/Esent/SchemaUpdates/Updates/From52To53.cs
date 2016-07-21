@@ -1,12 +1,11 @@
 // -----------------------------------------------------------------------
-//  <copyright file="From50To51.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="From52To53.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Storage.Esent;

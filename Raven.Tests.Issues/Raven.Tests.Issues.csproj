@@ -62,6 +62,9 @@
     <Reference Include="Lucene.Net">
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
+    <Reference Include="Lucene.Net.Contrib.Analyzers">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Analyzers.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Owin, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
       <Private>True</Private>
@@ -135,6 +138,10 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-4802.cs" />
+    <Compile Include="RavenDB-4705.cs" />
+    <Compile Include="RavenDB_4645.cs" />
+    <Compile Include="RavenDb_4706.cs" />
     <Compile Include="RavenDB-4613.cs" />
     <Compile Include="RavenDB-4607.cs" />
     <Compile Include="RavenDb4583.cs" />
@@ -145,7 +152,9 @@
     <Compile Include="RavenDB-3979.cs" />
     <Compile Include="RavenDB-3987.cs" />
     <Compile Include="RavenDB-4165.cs" />
+    <Compile Include="RavenDB_4025.cs" />
     <Compile Include="RavenDB_3620.cs" />
+    <Compile Include="RavenDB_3899.cs" />
     <Compile Include="RavenDB_3878.cs" />
     <Compile Include="RavenDB_3663.cs" />
     <Compile Include="RavenDB_3744.cs" />
@@ -533,6 +542,10 @@
     <Compile Include="RavenDB_4388.cs" />
     <Compile Include="RavenDB_4432.cs" />
     <Compile Include="RavenDB_4487.cs" />
+    <Compile Include="RavenDB_4708.cs" />
+    <Compile Include="RavenDB_4708_Conventions.cs" />
+    <Compile Include="RavenDB_4729.cs" />
+    <Compile Include="RavenDB_4748.cs" />
     <Compile Include="RavenDB_478.cs" />
     <Compile Include="RavenDB_483.cs" />
     <Compile Include="RavenDB_505.cs" />
@@ -574,6 +587,7 @@
     <Compile Include="RavenDB_2907.cs" />
     <Compile Include="RavenDB_3555.cs" />
     <Compile Include="RavenDB_3994.cs" />
+    <Compile Include="RavenDB_4836.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
@@ -626,7 +640,7 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
-      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">

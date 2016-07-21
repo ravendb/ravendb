@@ -24,6 +24,8 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import queryUtil = require("common/queryUtil");
 import recentPatchesStorage = require("common/recentPatchesStorage");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
+import killRunningTaskCommand = require('commands/operations/killRunningTaskCommand');
+import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 
 type indexInfo = {
     name: string;
@@ -63,6 +65,17 @@ class patch extends viewModelBase {
     putDocuments = ko.observableArray<any>();
     outputLog = ko.observableArray<string>();
 
+    runningPatchesCount = ko.observable<number>();
+    runningTasksUrl = ko.computed(() => appUrl.forRunningTasks(this.activeDatabase()));
+    runningPatchesText = ko.computed(() => {
+        var count = this.runningPatchesCount();
+        if (count > 1) {
+            return count + ' patches in progress';
+        }
+        return count + ' patch in progress';
+    });
+    runningPatchesPollingHandle: number;
+
     isExecuteAllowed: KnockoutComputed<boolean>;
     isMapReduceIndexSelected: KnockoutComputed<boolean>;
     documentKey = ko.observable<string>();
@@ -70,9 +83,13 @@ class patch extends viewModelBase {
 
     isPatchingInProgress = ko.observable<boolean>(false);
     showPatchingProgress = ko.observable<boolean>(false);
+    patchOperationId = ko.observable<number>();
     patchingProgress = ko.observable<number>(0);
     patchingProgressPercentage: KnockoutComputed<string>;
     patchingProgressText = ko.observable<string>();
+    patchSuccess = ko.observable<boolean>(false);
+    patchFailure = ko.observable<boolean>(false);
+    patchKillInProgress = ko.observable<boolean>(false);
 
     static gridSelector = "#matchingDocumentsGrid";
 
@@ -194,8 +211,8 @@ class patch extends viewModelBase {
         });
 
         this.selectedDocumentIndices.subscribe(list => {
-            var firstCheckedOnList = list.last();
-            if (firstCheckedOnList != null) {
+            if (list.length === 1) {
+                var firstCheckedOnList = list.first();
                 this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
                     .done(document => {
                         // load document directly from server as documents on list are loaded using doc-preview endpoint, which doesn't display entire document
@@ -213,6 +230,7 @@ class patch extends viewModelBase {
         if (!!db) {
             this.fetchRecentPatches();
             this.fetchAllPatches();
+            this.fetchRunningPatches();
         }
 
         if (recentPatchHash) {
@@ -249,6 +267,28 @@ class patch extends viewModelBase {
         new getPatchesCommand(this.activeDatabase())
             .execute()
             .done((patches: patchDocument[]) => this.savedPatches(patches));
+    }
+
+    private fetchRunningPatches() {
+        if (this.runningPatchesPollingHandle)
+            return;
+
+        new getRunningTasksCommand(this.activeDatabase())
+            .execute()
+            .done((tasks: runningTaskDto[]) => {
+                var count = tasks.filter(x => x.TaskType === "IndexBulkOperation" && !x.Completed).length;
+                this.runningPatchesCount(count);
+
+                // we enable polling only if at least one patch is in progress
+                if (count > 0) {
+                    this.runningPatchesPollingHandle = setTimeout(() => {
+                        this.runningPatchesPollingHandle = null;
+                        this.fetchRunningPatches();
+                    }, 5000);
+                } else {
+                    this.runningPatchesPollingHandle = null;
+                }
+            });
     }
 
     private fetchRecentPatches() {
@@ -534,6 +574,9 @@ class patch extends viewModelBase {
 
         var values = {};
 
+        this.patchSuccess(false);
+        this.patchFailure(false);
+
         this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;
@@ -551,6 +594,15 @@ class patch extends viewModelBase {
                 this.resetProgressBar();
                 this.isPatchingInProgress(true);
                 this.showPatchingProgress(true);
+                this.fetchRunningPatches();
+            });
+
+        patchByQueryCommand.getPatchOperationId()
+            .done(operationId => this.patchOperationId(operationId));
+
+        patchByQueryCommand.getPatchCompletedTask()
+            .always(() => {
+                this.patchOperationId(null);
             });
 
         this.recordPatchRun();
@@ -567,12 +619,27 @@ class patch extends viewModelBase {
         if (status.OperationProgress != null) {
             var progressValue = Math.round(100 * (status.OperationProgress.ProcessedEntries / status.OperationProgress.TotalEntries));
             this.patchingProgress(progressValue);
-            this.patchingProgressText(status.OperationProgress.ProcessedEntries.toLocaleString() + " / " + status.OperationProgress.TotalEntries.toLocaleString() + " (" + progressValue + "%)");
+            var progressPrefix = "";
+            if (status.Completed) {
+                if (status.Canceled) {
+                    progressPrefix = "Patch canceled: ";
+                    this.patchFailure(true);
+                } else if (status.Faulted) {
+                    progressPrefix = "Patch failed: ";
+                    this.patchFailure(true);
+                } else {
+                    progressPrefix = "Patch completed: ";
+                    this.patchSuccess(true);
+                }
+            }
+            if (status.OperationProgress.TotalEntries) {
+                this.patchingProgressText(progressPrefix + status.OperationProgress.ProcessedEntries.toLocaleString() + " / " + status.OperationProgress.TotalEntries.toLocaleString() + " (" + progressValue + "%)");    
+            }
         }
 
         if (status.Completed) {
+            this.patchKillInProgress(false);
             this.isPatchingInProgress(false);
-            setTimeout(() => this.showPatchingProgress(false), 2000);
         }
     }
 
@@ -584,7 +651,7 @@ class patch extends viewModelBase {
 
     private executePatch(keys: string[]) {
         var values = {};
-        var patchDtos = this.patchDocument().parameters().map(param => {
+        this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;
         });
@@ -665,6 +732,23 @@ class patch extends viewModelBase {
 
     }
 
+    killPatch() {
+        var operationToKill = this.patchOperationId();
+        if (operationToKill) {
+            this.confirmationMessage("Are you sure?", "You are stopping patch execution.")
+                .done(() => {
+                    if (this.patchOperationId()) {
+                        new killRunningTaskCommand(this.activeDatabase(), operationToKill)
+                            .execute()
+                            .done(() => {
+                                if (this.patchOperationId()) {
+                                    this.patchKillInProgress(true);
+                                }
+                            });
+                    }
+                });
+        }
+    }
 
     fetchIndexFields(indexName: string) {
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.

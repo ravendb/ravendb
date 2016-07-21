@@ -1,16 +1,16 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Sparrow.Tryout")]
+[assembly: AssemblyTitle("IndexCleaner")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Sparrow.Tryout")]
-[assembly: AssemblyCopyright("Copyright �  2015")]
+[assembly: AssemblyProduct("IndexCleaner")]
+[assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("7c1fcb33-a40f-4110-8c52-e377f6b66772")]
+[assembly: Guid("c7ba5ae5-dfa1-4e60-8970-2f9aa5dd96ab")]
 
 // Version information for an assembly consists of the following four values:
 //

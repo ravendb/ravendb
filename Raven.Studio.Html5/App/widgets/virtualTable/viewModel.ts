@@ -21,6 +21,8 @@ import timeSeriesType = require("models/timeSeries/timeSeriesType");
 class ctor {
 
     static idColumnWidth = 200;
+    static selectColumnWidth = 38;
+    static optionalScrollSize = 20;
 
     $window = $(window);
 
@@ -30,7 +32,9 @@ class ctor {
     borderHeight = 2;
     virtualHeight: KnockoutComputed<number>;
     viewportHeight = ko.observable(0);
+    virtualWidth: KnockoutComputed<number>;
     virtualRowCount = ko.observable(0);
+    tableXScroll = ko.observable(0);
     grid: JQuery;
     focusableGridSelector: string;
     columns = ko.observableArray<column>();
@@ -46,6 +50,7 @@ class ctor {
     ensureColumnsAnimationFrameHandle = 0;
     bottomMargin: KnockoutComputed<number>;
     headerVisible = ko.observable(false);
+    shiftPressed = ko.observable<boolean>(false);
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -109,6 +114,9 @@ class ctor {
             this.headerVisible($(".ko-grid-column-container", this.grid).is(":visible"));
         });
 
+        this.$window.on('keydown.virtualTable', e => this.shiftPressed(e.shiftKey));
+        this.$window.on('keyup.virtualTable', e => this.shiftPressed(e.shiftKey));
+
         if (!!settings.isIndexMapReduce) {
             this.isIndexMapReduce = settings.isIndexMapReduce;
         } else {
@@ -119,19 +127,22 @@ class ctor {
         this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
+        this.virtualWidth = ko.computed(() => this.columns().map(x => x.width()).reduce((a, b) => a + b, 0));
         this.refreshIdAndCheckboxColumn();
 
         this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
                 this.recycleRows.valueHasMutated();
-                this.columns.valueHasMutated();
                 r.isInUse(false);
             });
+            this.columns.valueHasMutated();
             this.items = list;
             this.settings.selectedIndices.removeAll();
             this.columns.remove(c => (c.binding !== "Id" && c.binding !== "__IsChecked"));
-            this.gridViewport.scrollTop(0);
+            if (this.gridViewport) {
+                this.gridViewport.scrollTop(0);    
+            }
             this.onGridScrolled();
 
             this.refreshIdAndCheckboxColumn();
@@ -158,6 +169,7 @@ class ctor {
 
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
         this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
+        this.gridViewport.on('scroll', () => this.tableXScroll(this.gridViewport.scrollLeft()));
         this.gridViewport.scroll(() => this.onGridScrolled());
 
         this.setupKeyboardShortcuts();
@@ -170,6 +182,11 @@ class ctor {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
 
         this.gridViewport.off('DynamicHeightSet');
+        this.gridViewport.off('scroll');
+
+        this.$window.off('keydown.virtualTable');
+        this.$window.off('keyup.virtualTable');
+
         if (this.itemsSourceSubscription) {
             this.itemsSourceSubscription.dispose();
         }
@@ -248,7 +265,7 @@ class ctor {
                     // Select any right-clicked row.
 
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
-                        this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                        this.toggleRowChecked(rightClickedElement, false);
                     }
                 } else {
                     if (rightClickedElement) {
@@ -266,7 +283,7 @@ class ctor {
         if (!containsId && !this.isIndexMapReduce()) {
             var containsCheckbox = this.columns().first(x => x.binding === "__IsChecked");
             if (!containsCheckbox && this.settings.showCheckboxes) {
-                this.columns.push(new column("__IsChecked", 38));
+                this.columns.push(new column("__IsChecked", ctor.selectColumnWidth));
             }
             if (this.settings.showIds !== false) {
                 this.columns.push(new column("Id", ctor.idColumnWidth));
@@ -484,28 +501,34 @@ class ctor {
             columnsCurrentTotalWidth += existingColumns[i].width();
         }
 
-        var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
+        var checkboxesWidth = this.settings.showCheckboxes ? ctor.selectColumnWidth : 0;
+        var availiableWidth = this.grid.width() - checkboxesWidth - ctor.idColumnWidth * idColumnExists - columnsCurrentTotalWidth - ctor.optionalScrollSize;
         var freeWidth = availiableWidth;
         var fontSize = parseInt(this.grid.css("font-size"), 10);
         var columnCount = 0;
         for (var binding in columnsNeeded) {
-            var curColWidth = (binding.length + 2) * fontSize;
-            if (freeWidth - curColWidth < 0) {
-                break;
+            if (columnsNeeded.hasOwnProperty(binding)) {
+                var curColWidth = (binding.length + 2) * fontSize;
+                
+                if (!hasOverrides && freeWidth < curColWidth) {
+                    break;
+                }
+                freeWidth -= curColWidth;
+                columnCount++;
             }
-            freeWidth -= curColWidth;
-            columnCount++;
         }
-        var freeWidthPerColumn = (freeWidth / (columnCount + 1));
+        var freeWidthPerColumn = hasOverrides ? 0 : Math.floor((freeWidth / (columnCount + 1)));
 
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
             var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
             var columnWidth = this.getColumnWidth(binding, curColWidth);
+           
             availiableWidth -= columnWidth;
-            if (availiableWidth <= 0) {
+            if (!hasOverrides && availiableWidth <= 0) {
                 break;
             }
+
             var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
@@ -616,7 +639,8 @@ class ctor {
         return undefined;
     }
 
-    toggleRowChecked(row: row, isShiftSelect = false) {
+    toggleRowChecked(row: row, eventFromCheckbox: boolean) {
+        var isShiftSelect = this.shiftPressed();
         if (this.settings.isAllAutoSelected()) {
             var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
             this.settings.selectedIndices(cachedIndeices);
@@ -629,7 +653,16 @@ class ctor {
         var isChecked = row.isChecked();
         var firstIndex = this.settings.selectedIndices.first();
         var toggledIndices: Array<number> = isShiftSelect && this.settings.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
+
+        if (eventFromCheckbox) {
+            // since checkbox generates event after check we have to invert condition
+            isChecked = !isChecked;
+        }
+
         if (isChecked) {
+            // Going from checked to unchecked.
+            this.settings.selectedIndices.removeAll(toggledIndices);
+        } else {
             // Going from unchecked to checked.
             if (this.settings.selectedIndices.indexOf(rowIndex) === -1) {
                 toggledIndices
@@ -637,9 +670,6 @@ class ctor {
                     .reverse()
                     .forEach(i => this.settings.selectedIndices.unshift(i));
             }
-        } else {
-            // Going from checked to unchecked.
-            this.settings.selectedIndices.removeAll(toggledIndices);
         }
 
         this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
@@ -740,7 +770,7 @@ class ctor {
     }
 
     refreshCollectionData() {
-        this.settings.itemsSource.valueHasMutated();
+        //this.settings.itemsSource.valueHasMutated();
         this.items.invalidateCache(); // Causes the cache of items to be discarded.
         this.onGridScrolled(); // Forces a re-fetch of the rows in view.
         this.onWindowHeightChanged();

@@ -103,6 +103,7 @@ interface filesystemHistoryItemDto {
 interface filesystemConflictItemDto {
     FileName: string;
     RemoteServerUrl: string;
+    ResolveUsingRemote: boolean;
 
     RemoteHistory: filesystemHistoryItemDto[];
     CurrentHistory: filesystemHistoryItemDto[];
@@ -169,13 +170,8 @@ interface synchronizationConflictNotification {
     FileSystemName: string;
     FileName: string;
     SourceServerUrl: string;
-    Status: conflictStatus;
+    Status: string;
     RemoteFileHeader: any;
-}
-
-const enum conflictStatus {
-    Detected = 0,
-    Resolved = 1
 }
 
 interface fileChangeNotification {

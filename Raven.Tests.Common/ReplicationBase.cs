@@ -497,13 +497,19 @@ namespace Raven.Tests.Common
                 using (var session = store.OpenSession(db))
                 {
                     var e = session.Load<object>(id);
-                    if (e == null)
+                    if (e != null)
                     {
                         if (changedSince != null)
                         {
                             if (session.Advanced.GetEtagFor(e) != changedSince)
                                 break;
+
+                            Thread.Sleep(100);
+                            continue;
                         }
+                    }
+                    else
+                    {
                         Thread.Sleep(100);
                         continue;
                     }

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
@@ -105,7 +106,7 @@ namespace Raven.Tests.Core.Replication
                 // resolve by using first
 
                 var resolution = destination.DatabaseCommands.Get(conflictException.ConflictedVersionIds[0]);
-
+                resolution.Metadata.Remove(Constants.RavenReplicationConflictDocument);
                 destination.DatabaseCommands.Put("docs/1", null, resolution.DataAsJson, resolution.Metadata);
 
                 destination.DatabaseCommands.GetAttachment("docs/1");

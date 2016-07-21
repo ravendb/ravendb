@@ -7,8 +7,9 @@
         <div data-bind="if: !clusterMode()">
             <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
                 <div class="panel-heading">
-                    <div class="pull-right text-warning" data-bind="visible: developerLicense">Enterprise feature</div>
-                    Cluster configuration
+                    <a target="_blank" style="margin-left: 15px" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+                    <div class="pull-right text-warning text-height-fix" data-bind="visible: developerLicense">Enterprise feature</div>
+                    <span class="text-height-fix">Cluster configuration</span>
                 </div>
                 <div class="panel-body">
                     <div class="text-center">
@@ -43,7 +44,7 @@
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu" role="menu">
-                            <li><a href="#" data-bind="click: initializeNewCluster">Cecede from cluster - rude step down into a single node cluster</a></li>
+                            <li><a href="#" data-bind="click: initializeNewCluster">Secede from cluster - rude step down into a single node cluster</a></li>
                             <li><a href="#" data-bind="click: addAnotherServerToCluster.bind($root, true)">Kidnap node into cluster - force a node to the current cluster</a></li>
                             <li><a href="#" data-bind="click: removeClustering.bind($root)">Remove cluster entirely and perform cleanup.</a></li>
                         </ul>

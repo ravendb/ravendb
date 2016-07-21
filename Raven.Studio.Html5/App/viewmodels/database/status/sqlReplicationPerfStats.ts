@@ -11,6 +11,8 @@ class sqlReplicationPerfStats extends viewModelBase {
     statsAvailable: KnockoutComputed<boolean>;
     hasReplicationEnabled = ko.observable(false);
 
+    documentationLink = "http://ravendb.net/l/RVGRQB/" + viewModelBase.clientVersion() + "/";
+
     jsonData: any[] = [];
     rawJsonData: any[] = [];
     hiddenNames = d3.set([]);
@@ -318,6 +320,10 @@ class sqlReplicationPerfStats extends viewModelBase {
                 var leftScroll = $("#replicationStatsContainer").scrollLeft();
                 var containerOffset = $("#replicationStatsContainer").offset();
                 nv.tooltip.show([offset.left - containerOffset.left + leftScroll + self.barWidth, offset.top - containerOffset.top], self.getTooltip(d), 's', 5, document.getElementById("replicationStatsContainer"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings({ tooltipClose: nv.tooltip.cleanup }, elem);
+                });
+
             })
             .transition()
             .attr("height", d => self.height - self.yScale(d.BatchSize))
@@ -372,7 +378,8 @@ class sqlReplicationPerfStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return "<strong>Replication Name:</strong> <span>" + d.ReplicationName + "</span><br />"
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>'
+            + "<strong>Replication Name:</strong> <span>" + d.ReplicationName + "</span><br />"
             + "<strong>Duration milliseconds:</strong> <span>" + d.DurationMilliseconds + "</span><br />"
             + "<strong>Batch size:</strong> <span>" + d.BatchSize + "</span><br />"
             ;

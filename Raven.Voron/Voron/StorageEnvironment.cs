@@ -528,14 +528,19 @@ namespace Voron
             return results;
         }
 
-        public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
+        public StorageReport GenerateReport(Transaction tx, bool computeExactSizes, Action<string> progress, CancellationToken token)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx).Count;
 
             var trees = new List<Tree>();
+
+            progress("Reading trees");
+
             using (var rootIterator = tx.Root.Iterate())
             {
+                token.ThrowIfCancellationRequested();
+
                 if (rootIterator.Seek(Slice.BeforeAllKeys))
                 {
                     do
@@ -548,6 +553,8 @@ namespace Voron
                 }
             }
 
+            token.ThrowIfCancellationRequested();
+
             var generator = new StorageReportGenerator(tx);
 
             return generator.Generate(new ReportInput
@@ -558,7 +565,7 @@ namespace Voron
                 Journals = Journal.Files.ToList(),
                 Trees = trees,
                 IsLightReport = !computeExactSizes
-            });
+            }, progress, token);
         }
 
         public EnvironmentStats Stats()

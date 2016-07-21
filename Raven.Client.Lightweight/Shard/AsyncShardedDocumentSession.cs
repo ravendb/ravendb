@@ -754,7 +754,7 @@ namespace Raven.Client.Shard
 
         public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default (CancellationToken))
         {
-            throw new NotSupportedException("Async kazy requests are not supported for sharded store");
+            throw new NotSupportedException("Async lazy requests are not supported for sharded store");
         }
 
         public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)

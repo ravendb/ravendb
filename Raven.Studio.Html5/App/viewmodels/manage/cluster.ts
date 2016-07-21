@@ -61,6 +61,12 @@ class cluster extends viewModelBase {
         return deferred;
     }
 
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("11HBHO");
+    }
+
     refresh() {
         return this.fetchClusterTopology(appUrl.getSystemDatabase())
             .done(() => this.fetchStatus(appUrl.getSystemDatabase()));
@@ -162,8 +168,8 @@ class cluster extends viewModelBase {
     editNode(node: nodeConnectionInfo) {
         var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
-            .done(nci => {
-                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
+            .done((nci: nodeConnectionInfo) => {
+                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
             });

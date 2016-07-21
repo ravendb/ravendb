@@ -36,9 +36,11 @@ namespace Raven.Database.Indexing
 
         private long nextIndexingBatchInfoId = 0;
         private long nextReducingBatchInfoId = 0;
+        private long nextDeletionBatchInfoId = 0;
 
         private SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo;
         private SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo;
+        private SizeLimitedConcurrentSet<DeletionBatchInfo> lastActualDeletionBatchInfo;
         private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
         private readonly ConcurrentDictionary<int, object> indexingErrorLocks = new ConcurrentDictionary<int, object>();
         private readonly object waitForWork = new object();
@@ -371,6 +373,43 @@ namespace Raven.Database.Indexing
             ReplicationResetEvent.Dispose();
         }
 
+        public void HandleIndexRename(string oldIndexName, string newIndexName, IStorageActionsAccessor accessor)
+        {
+            // remap indexing errors (if any)
+            var indexesToRename = indexingErrors.Where(x => x.IndexName == oldIndexName).ToList();
+            foreach (var indexingError in indexesToRename)
+            {
+                indexingError.IndexName = newIndexName;
+            }
+
+            var oldListName = "Raven/Indexing/Errors/" + oldIndexName;
+            
+            var existingErrors = accessor.Lists.Read(oldListName, Etag.Empty, null, 5000).ToList();
+            if (existingErrors.Any())
+            {
+                var timestamp = SystemTime.UtcNow;
+                var newListName = "Raven/Indexing/Errors/" + newIndexName;
+                foreach (var existingError in existingErrors)
+                {
+                    accessor.Lists.Set(newListName, existingError.Key, existingError.Data, UuidType.Indexing);
+                }
+                accessor.Lists.RemoveAllOlderThan(oldListName, timestamp);
+            }
+
+            // update queryTime
+            var queryTime = accessor.Lists.Read("Raven/Indexes/QueryTime", oldIndexName);
+            if (queryTime != null)
+            {
+                accessor.Lists.Set("Raven/Indexes/QueryTime", newIndexName, queryTime.Data, UuidType.Indexing);
+                accessor.Lists.Remove("Raven/Indexes/QueryTime", oldIndexName);
+            }
+
+            // discard index/reduce/deletion stats, instead of updating them
+            LastActualIndexingBatchInfo.Clear();
+            LastActualReducingBatchInfo.Clear();
+            LastActualDeletionBatchInfo.Clear();
+        }
+
         public void ClearErrorsFor(string indexName)
         {
             var list = new List<IndexingError>();
@@ -453,6 +492,24 @@ namespace Raven.Database.Indexing
             LastActualReducingBatchInfo.Add(batchInfo);
         }
 
+        public DeletionBatchInfo ReportDeletionBatchStarted(string indexName, int documentCount)
+        {
+            return new DeletionBatchInfo
+            {
+                IndexName = indexName,
+                TotalDocumentCount = documentCount,
+                StartedAt = SystemTime.UtcNow,
+                PerformanceStats = new List<PerformanceStats>()
+            };
+        }
+
+        public void ReportDeletionBatchCompleted(DeletionBatchInfo batchInfo)
+        {
+            batchInfo.BatchCompleted();
+            batchInfo.Id = Interlocked.Increment(ref nextDeletionBatchInfoId);
+            LastActualDeletionBatchInfo.Add(batchInfo);
+        }
+
         public ConcurrentSet<FutureBatchStats> FutureBatchStats
         {
             get { return futureBatchStats; }
@@ -484,6 +541,18 @@ namespace Raven.Database.Indexing
                     lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
                 }
                 return lastActualReducingBatchInfo;
+            }
+        }
+
+        public SizeLimitedConcurrentSet<DeletionBatchInfo> LastActualDeletionBatchInfo
+        {
+            get
+            {
+                if (lastActualDeletionBatchInfo == null)
+                {
+                    lastActualDeletionBatchInfo = new SizeLimitedConcurrentSet<DeletionBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
+                }
+                return lastActualDeletionBatchInfo;
             }
         }
 

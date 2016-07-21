@@ -93,6 +93,11 @@
         <div class="btn-group">
             <select data-bind="options: visibleOptions, optionsText: 'name', optionsValue: 'value', value: visibleResource" class="form-control"></select>
         </div>
+        <div class="btn-group">
+            <span class="databases-summary text-height-fix" data-bind="text: databasesSummary"></span>
+            <span class="text-height-fix" data-bind="visible: isCommaNeeded">|</span>
+            <span class="file-systems-summary  text-height-fix" data-bind="text: fileSystemsSummary"></span>
+        </div>
         <div class="btn-group pull-right">
             <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: canNavigateToAdminSettings">Manage Your Server</button>
         </div>
@@ -207,7 +212,7 @@
                 </a>
                 <ul class="dropdown-menu" role="menu">
                     <li role="presentation">
-                        <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
+                        <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected File System' : 'Disable Selected File System' }">
                             <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
                             <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
                         </a>

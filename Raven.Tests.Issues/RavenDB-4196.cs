@@ -271,7 +271,7 @@ namespace Raven.Tests.Issues
 
                 var smugglerApi = new SmugglerDatabaseApi();
 
-                var filename = "large-attachment-test.ravendump";
+                var filename = "large-attachment-test.ravendbdump";
                 using (var fs = new FileStream(filename, FileMode.Create))
                 {
                     smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
@@ -375,7 +375,7 @@ namespace Raven.Tests.Issues
 
                 var smugglerApi = new SmugglerDatabaseApi();
 
-                var filename = "large-attachment-test.ravendump";
+                var filename = "large-attachment-test.ravendbdump";
                 using (var fs = new FileStream(filename, FileMode.Create))
                 {
                     smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>

@@ -225,6 +225,10 @@
     <Reference Include="System.Web">
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
+    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.Helpers.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
       <Private>True</Private>
@@ -259,9 +263,12 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\Impl\ServerInfo.cs" />
+    <Compile Include="Bundles\Replication\Impl\DocumentsLeftToReplicate.cs" />
     <Compile Include="Bundles\Replication\RavenConflictDocumentsTransformer.cs" />
     <Compile Include="Bundles\Replication\RavenConflictDocuments.cs" />
     <Compile Include="Bundles\Replication\Data\GlobalReplicationTopologyRequest.cs" />
+    <Compile Include="Bundles\Replication\Tasks\DatabaseIdsCache.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterReplicatedDocs.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\IReplicatedDocsHandler.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterAndTransformSpecifiedCollections.cs" />
@@ -557,6 +564,7 @@
     <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From53To54.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From52To53.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From51To52.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
@@ -569,6 +577,7 @@
     <Compile Include="Storage\Voron\Schema\Updates\From12To13.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\From13To14.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\DocumentReferencesFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\IndexingWorkStatsFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\LastIndexedStatsFields.cs" />
@@ -607,6 +616,7 @@
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\MetricsTicker.cs" />
     <Compile Include="Util\MiniDumper.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
@@ -1474,7 +1484,7 @@
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
-      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
@@ -1483,7 +1493,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Analyzer Include="..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
   <ItemGroup Label="LuceneQuery-Raven-Database-IndexingFiles">

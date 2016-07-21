@@ -127,6 +127,7 @@ namespace Raven.Tests.Raft
                 var url = node.SystemDatabase.ServerUrl.ForDatabase(databaseName);
                 var serverHash = ServerHash.GetServerHash(url);
                 ReplicationInformerLocalCache.ClearClusterNodesInformationLocalCache(serverHash);
+                ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
             }
 
             return nodes
@@ -197,6 +198,25 @@ namespace Raven.Tests.Raft
                 throw new InvalidOperationException("Cluster is stale.");
         }
 
+        protected IDisposable ForceNonClusterRequests(List<DocumentStore> stores)
+        {
+            var conventionsRestoreInfo = stores.Select(x => new
+            {
+                Store = x,
+                Convention = x.Conventions.FailoverBehavior
+            }).ToDictionary(x => x.Store, x => x.Convention);
+
+            stores.ForEach(store => store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately);
+
+            return new DisposableAction(() =>
+            {
+                foreach (var restoreInfo in conventionsRestoreInfo)
+                {
+                    restoreInfo.Key.Conventions.FailoverBehavior = restoreInfo.Value;
+                }
+            });
+        }
+
         protected void WaitForClusterToBecomeNonStale(int numberOfNodes)
         {
             servers.ForEach(server => Assert.True(SpinWait.SpinUntil(() =>
@@ -206,7 +226,7 @@ namespace Raven.Tests.Raft
             }, TimeSpan.FromSeconds(15)),$"Node didn't become unstale in time, {server}"));
         }
 
-        protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true)
+        protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true, Dictionary<string, string> databaseSettings = null)
         {
             var clusterStore = clusterStores[0];
             var requestFactory = new HttpRavenRequestFactory();
@@ -215,22 +235,30 @@ namespace Raven.Tests.Raft
             {
                 Url = clusterStore.Url
             });
-            replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = enableReplication }));
+            replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration
+            {
+                EnableReplication = enableReplication,
+                DatabaseSettings = databaseSettings
+            }));
             replicationRequest.ExecuteRequest();
 
             clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
-            clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands =>
+            using (ForceNonClusterRequests(clusterStores))
             {
-                using (var request = commands.CreateRequest("/configuration/replication", HttpMethod.Get))
+                clusterStores.ForEach(store => WaitFor(store.DatabaseCommands, commands =>
                 {
-                    var replicationDocumentJson = request.ReadResponseJson() as RavenJObject;
-                    if (replicationDocumentJson == null) 
-                        return false;
+                    using (var request = commands.CreateRequest("/configuration/replication", HttpMethod.Get))
+                    {
+                        var replicationDocumentJson = request.ReadResponseJson() as RavenJObject;
+                        if (replicationDocumentJson == null)
+                            return false;
 
-                    var replicationDocument = replicationDocumentJson.JsonDeserialization<ReplicationDocument>();
-                    return replicationDocument.Destinations.Count == clusterStores.Count - 1;
-                }
-            }));
+                        var replicationDocument = replicationDocumentJson.JsonDeserialization<ReplicationDocument>();
+                        return replicationDocument.Destinations.Count == clusterStores.Count - 1;
+                    }
+                }));
+            }
         }
     }
 }
+

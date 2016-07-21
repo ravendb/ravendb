@@ -197,6 +197,10 @@ namespace Raven.Abstractions.Data
 
         public const string RavenReplicationHistory = "Raven-Replication-History";
 
+        //Indicates that the replication history has been merged so old documents won't 
+        //Conflict with new documents
+        public const string RavenReplicationMergedHistory = "Raven-Replication-Merged-History";
+
         public const string RavenReplicationConflict = "Raven-Replication-Conflict";
 
         public const string RavenReplicationConflictSkipResolution = "Raven-Replication-Conflict-Skip-Resolution";
@@ -226,8 +230,6 @@ namespace Raven.Abstractions.Data
 
         [Obsolete("Use RavenFS instead.")]
         public const string RavenPeriodicExportsAttachmentsTombstones = "Raven/PeriodicExports/Attachments/Tombstones";
-
-        public const int ChangeHistoryLength = 50;
 
         //Spatial
         public const string DefaultSpatialFieldName = "__spatial";
@@ -404,8 +406,9 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
 
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
+
             public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
-            public const string SkipConsistencyChecks = "Raven/Voron/SkipConsistencyChecks";
+
             public const string ScratchBufferSizeNotificationThreshold = "Raven/Voron/ScratchBufferSizeNotificationThreshold";
         }
 

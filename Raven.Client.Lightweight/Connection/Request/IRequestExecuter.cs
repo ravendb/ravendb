@@ -25,5 +25,6 @@ namespace Raven.Client.Connection.Request
         event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
 
         void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl);
+        void SetReadStripingBase(int strippingBase);
     }
 }

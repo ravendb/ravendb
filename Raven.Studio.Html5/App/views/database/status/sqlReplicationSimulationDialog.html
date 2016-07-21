@@ -11,7 +11,7 @@
                 <div class="collapse navbar-collapse btn-toolbar">
                     <div class="col-sm-4">
                         <input id="docIdInput" title="Document to run simulation with" placeholder="Document ID"
-                               type="text" class="form-control" data-bind="value: documentId, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                               type="text" class="form-control" data-bind="textInput: documentId" autocomplete="off" />
 
                         <div data-bind="visible:isAutoCompleteVisible">
                             <ul class="dropdown-menu" role="menu" style="display: none;"
@@ -19,7 +19,7 @@
                                 <li role="presentation" data-bind="click:function(){$root.documentIdSubmitted($data['@metadata']['@id']); }">
                                     <a role="menuitem" tabindex="-1" href="#">
                                         <span class="collection-color-strip" data-bind="css: $root.getDocCssClass($data)"></span>
-                                        <span data-bind="text: $data['@metadata']['@id']"></span>
+                                        <span class="text" data-bind="text: $data['@metadata']['@id']"></span>
                                     </a>
                                 </li>
                             </ul>

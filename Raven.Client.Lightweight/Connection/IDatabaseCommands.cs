@@ -123,7 +123,7 @@ namespace Raven.Client.Connection
         ///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact
         ///     with the specified database
         /// </summary>
-        IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
+        IDatabaseCommands ForDatabase(string database);
 
         /// <summary>
         ///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact

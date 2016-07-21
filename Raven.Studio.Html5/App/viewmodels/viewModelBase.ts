@@ -14,7 +14,7 @@ import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
-import downloader = require("common/downloader")
+import downloader = require("common/downloader");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -364,11 +364,11 @@ class viewModelBase {
         }
     }
 
-    public AddNotification(subscription: changeSubscription) {
+    public addNotification(subscription: changeSubscription) {
         this.notifications.push(subscription);
     }
 
-    public RemoveNotification(subscription: changeSubscription) {
+    public removeNotification(subscription: changeSubscription) {
         this.notifications.remove(subscription);
     }
 

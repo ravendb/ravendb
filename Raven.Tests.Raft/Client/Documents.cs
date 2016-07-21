@@ -11,6 +11,7 @@ using System.Threading;
 
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection.Async;
@@ -27,28 +28,33 @@ namespace Raven.Tests.Raft.Client
         [PropertyData("Nodes")]
         public void CanReadFromMultipleServers1(int numberOfNodes)
         {
-            CanReadFromMultipleServersInternal(numberOfNodes, ClusterBehavior.ReadFromAllWriteToLeader);
+            CanReadFromMultipleServersInternal(numberOfNodes, FailoverBehavior.ReadFromAllWriteToLeader);
         }
 
         [Theory]
         [PropertyData("Nodes")]
         public void CanReadFromMultipleServers2(int numberOfNodes)
         {
-            CanReadFromMultipleServersInternal(numberOfNodes, ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers);
+            CanReadFromMultipleServersInternal(numberOfNodes, FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers);
         }
 
-        private void CanReadFromMultipleServersInternal(int numberOfNodes, ClusterBehavior clusterBehavior)
+        private void CanReadFromMultipleServersInternal(int numberOfNodes, FailoverBehavior failoverBehavior)
         {
-            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = clusterBehavior);
+            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = failoverBehavior);
 
             SetupClusterConfiguration(clusterStores);
             Enumerable.Range(0,numberOfNodes).ForEach(i=> clusterStores[0].DatabaseCommands.Put($"keys/{i}", null, new RavenJObject(), new RavenJObject()));
-            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), $"keys/{numberOfNodes-1}"));
+
+            using (ForceNonClusterRequests(clusterStores))
+            {
+                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, $"keys/{numberOfNodes - 1}"));
+            }
+
             //Here i want to fetch the topology after a leader was elected so all stores will have latest topology.
             clusterStores.ForEach(store =>
             {
                 var client = ((AsyncServerClient)store.AsyncDatabaseCommands);
-                AsyncHelpers.RunSync(()=>client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client,true));
+                AsyncHelpers.RunSync(()=>client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client));
             });
             var tasks = new List<ReplicationTask>();
             foreach (var server in servers)
@@ -65,10 +71,13 @@ namespace Raven.Tests.Raft.Client
 
             servers.ForEach(server => server.Options.RequestManager.ResetNumberOfRequests());
 
-            for (int i = 0; i < clusterStores.Count; i++)
+            using (ForceNonClusterRequests(clusterStores))
             {
-                var store = clusterStores[i];
-                Enumerable.Range(0, numberOfNodes).ForEach(j => store.DatabaseCommands.Get($"keys/{j}"));
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    var store = clusterStores[i];
+                    Enumerable.Range(0, numberOfNodes).ForEach(j => store.DatabaseCommands.Get($"keys/{j}"));
+                }
             }
 
             servers.ForEach(server =>
@@ -81,7 +90,7 @@ namespace Raven.Tests.Raft.Client
         [PropertyData("Nodes")]
         public void PutShouldBePropagated(int numberOfNodes)
         {
-            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader);
 
             SetupClusterConfiguration(clusterStores);
 
@@ -92,17 +101,20 @@ namespace Raven.Tests.Raft.Client
                 store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
             }
 
-            for (int i = 0; i < clusterStores.Count; i++)
+            using (ForceNonClusterRequests(clusterStores))
             {
-                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/" + i));
-            }
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + i));
+                }
+            }    
         }
 
         [Theory]
         [PropertyData("Nodes")]
         public void DeleteShouldBePropagated(int numberOfNodes)
         {
-            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader);
 
             SetupClusterConfiguration(clusterStores);
 
@@ -113,9 +125,12 @@ namespace Raven.Tests.Raft.Client
                 store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
             }
 
-            for (int i = 0; i < clusterStores.Count; i++)
+            using (ForceNonClusterRequests(clusterStores))
             {
-                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/" + i));
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + i));
+                }
             }
 
             for (int i = 0; i < clusterStores.Count; i++)
@@ -125,9 +140,13 @@ namespace Raven.Tests.Raft.Client
                 store.DatabaseCommands.Delete("keys/" + i, null);
             }
 
-            for (int i = 0; i < clusterStores.Count; i++)
+
+            using (ForceNonClusterRequests(clusterStores))
             {
-                clusterStores.ForEach(store => WaitForDelete(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/" + i));
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    clusterStores.ForEach(store => WaitForDelete(store.DatabaseCommands, "keys/" + i));
+                }
             }
         }
     }

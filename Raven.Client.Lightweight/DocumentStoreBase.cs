@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Linq;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
@@ -394,13 +393,15 @@ namespace Raven.Client
 
         protected void InitializeEncryptor()
         {
-            var setting = ConfigurationManager.GetAppSetting("Raven/Encryption/FIPS");
+#if !DNXCORE50
+            var setting = System.Configuration.ConfigurationManager.AppSettings["Raven/Encryption/FIPS"];
 
             bool fips;
             if (string.IsNullOrEmpty(setting) || !bool.TryParse(setting, out fips))
                 fips = UseFipsEncryptionAlgorithms;
 
             Encryptor.Initialize(fips);
+#endif
         }
 
         public abstract void InitializeProfiling();

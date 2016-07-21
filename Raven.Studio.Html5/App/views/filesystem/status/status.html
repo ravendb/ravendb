@@ -1,4 +1,5 @@
 <ul class="breadcrumb">
+    <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>    
     <li>
         <h3>
             <a href="#resources">
@@ -213,17 +214,17 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h4 class="panel-title">
-                        <span>Synchronization sources</span>
+                        Synchronization sources
                     </h4>
                 </div>
                 <div class="panel-body">
                     <div>
-                        <ul class="nav nav-tabs" data-bind="foreach: sourceSynchronizationInformations">
+                        <ul class="nav nav-tabs" data-bind="foreach: sourceSynchronizationInformations, visible: sourceSynchronizationInformations().length">
                             <li data-bind="css: { active:  $index() == 0 }">
                                 <a data-toggle="tab" data-bind="text: SourceServerUrl, attr: { href: '#source-tabs-' + $index() }"></a>
                             </li>
                         </ul>
-                        <div class="tab-content" data-bind="foreach: sourceSynchronizationInformations">
+                        <div class="tab-content" data-bind="foreach: sourceSynchronizationInformations, visible: sourceSynchronizationInformations().length">
                             <div class="tab-pane fade in" data-bind="attr: { id: 'source-tabs-' + $index() }, css: { active:  $index() == 0 }">
                                 <form class="form-horizontal col-md-12" role="form">
                                     <div class="form-group">
@@ -235,6 +236,7 @@
                                 </form>
                             </div>
                         </div>
+                        <h4 class="text-info text-center" data-bind="visible: !sourceSynchronizationInformations().length">No synchronization sources found.</h4>
                     </div>
                 </div>
             </div>

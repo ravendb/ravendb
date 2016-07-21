@@ -7,6 +7,7 @@ using System.Collections.Generic;
 
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Replication;
 using Raven.Json.Linq;
 
 using Xunit.Extensions;
@@ -19,7 +20,7 @@ namespace Raven.Tests.Raft.Client
         [PropertyData("Nodes")]
         public void BatchCommandsShouldWork(int numberOfNodes)
         {
-            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
+            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader);
 
             SetupClusterConfiguration(clusterStores);
 
@@ -43,8 +44,13 @@ namespace Raven.Tests.Raft.Client
                                               },
                                           });
 
-            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/1"));
-            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/2"));
+            using (ForceNonClusterRequests(clusterStores))
+            {
+                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/1"));
+                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/2"));
+            }
+
+               
 
             store1.DatabaseCommands.Batch(new List<ICommandData>
                                           {
@@ -55,8 +61,11 @@ namespace Raven.Tests.Raft.Client
                                               }
                                           });
 
-            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/1"));
-            clusterStores.ForEach(store => WaitForDelete(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/2"));
+            using (ForceNonClusterRequests(clusterStores))
+            {
+                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/1"));
+                clusterStores.ForEach(store => WaitForDelete(store.DatabaseCommands, "keys/2"));
+            }
         }
     }
 }

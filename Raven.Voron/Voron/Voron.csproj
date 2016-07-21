@@ -105,6 +105,7 @@
     <Compile Include="Structure.cs" />
     <Compile Include="StructureReader.cs" />
     <Compile Include="StructureSchema.cs" />
+    <Compile Include="Trees\ParentPageAction.cs" />
     <Compile Include="Trees\PageIterator.cs" />
     <Compile Include="Trees\PrefixInfoSection.cs" />
     <Compile Include="Trees\PrefixNodeHeader.cs" />
@@ -189,7 +190,6 @@
     <Content Include="Util\Conversion\readme.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -202,11 +202,8 @@
   -->
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Sparrow\Sparrow\Sparrow.csproj">
-      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Analyzer Include="..\..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
   </ItemGroup>
 </Project>

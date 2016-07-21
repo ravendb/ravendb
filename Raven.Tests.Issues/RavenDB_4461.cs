@@ -3,7 +3,6 @@ using System.Linq;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client;
 using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
@@ -13,23 +12,18 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_4461 : RavenTestBase
     {
-        private readonly IDocumentStore store;
-
-        public RavenDB_4461()
-        {
-            store = NewDocumentStore();
-        }
-
         [Fact]
         public void AdditionalQueryFiltersResults()
         {
-            store.ExecuteIndex(new Posts_ByPostCategory());
-
-            using (var session = store.OpenSession())
+            using (var store = NewDocumentStore())
             {
-                var dataQueriedFor = new MockPost { Id = "posts/123", Body = "This is a test. Isn't it great? I hope I pass my test!", Category = "IT" };
+                store.ExecuteIndex(new Posts_ByPostCategory());
 
-                var someData = new List<MockPost>
+                using (var session = store.OpenSession())
+                {
+                    var dataQueriedFor = new MockPost { Id = "posts/123", Body = "This is a test. Isn't it great? I hope I pass my test!", Category = "IT" };
+
+                    var someData = new List<MockPost>
                 {
                     dataQueriedFor,
                     new MockPost { Id = "posts/234", Body = "I have a test tomorrow. I hate having a test", Category = "School"},
@@ -38,29 +32,30 @@ namespace Raven.Tests.Issues
                     new MockPost { Id = "posts/3458", Body = "test", Category = "Test" },
                     new MockPost { Id = "posts/3459", Body = "test", Category = "Test" }
                 };
-                someData.ForEach(session.Store);
+                    someData.ForEach(session.Store);
 
-                session.SaveChanges();
-            }
+                    session.SaveChanges();
+                }
 
-            WaitForIndexing(store);
+                WaitForIndexing(store);
 
-            using (var session = store.OpenSession())
-            {
-                Assert.NotEmpty(session.Advanced
-                    .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery
-                    {
-                        DocumentId = "posts/123",
-                        Fields = new[] { "Body" }
-                    }).ToList());
+                using (var session = store.OpenSession())
+                {
+                    Assert.NotEmpty(session.Advanced
+                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery
+                        {
+                            DocumentId = "posts/123",
+                            Fields = new[] { "Body" }
+                        }).ToList());
 
-                Assert.Empty(session.Advanced
-                    .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery
-                    {
-                        DocumentId = "posts/123",
-                        Fields = new[] { "Body" },
-                        AdditionalQuery = "Category:IT"
-                    }).ToList());
+                    Assert.Empty(session.Advanced
+                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery
+                        {
+                            DocumentId = "posts/123",
+                            Fields = new[] { "Body" },
+                            AdditionalQuery = "Category:IT"
+                        }).ToList());
+                }
             }
         }
     }

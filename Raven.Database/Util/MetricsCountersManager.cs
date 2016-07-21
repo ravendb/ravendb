@@ -8,12 +8,10 @@ using System.Linq;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
-
 using metrics;
 using metrics.Core;
 
@@ -60,17 +58,30 @@ namespace Raven.Database.Util
             StaleIndexReduces = dbMetrics.Histogram("metrics", "stale index reduces");
 
             ConcurrentRequests = dbMetrics.Meter("metrics", "req/sec", "Concurrent Requests Meter", TimeUnit.Seconds);
+            MetricsTicker.Instance.AddMeterMetric(ConcurrentRequests);
 
             RequestDurationLastMinute = new OneMinuteMetric();
 
             RequestDurationMetric = dbMetrics.Histogram("metrics", "req duration");
 
             DocsPerSecond = dbMetrics.TimedCounter("metrics", "docs/sec", "Docs Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(DocsPerSecond);
+
             FilesPerSecond = dbMetrics.TimedCounter("metrics", "files/sec", "Files Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(FilesPerSecond);
+
             RequestsPerSecondCounter = dbMetrics.TimedCounter("metrics", "req/sec counter", "Requests Per Second");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(RequestsPerSecondCounter);
+
             RequestsPerSecondTimeSeries = dbMetrics.TimedCounter("metrics", "req/sec counter", "Requests Per Second");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(RequestsPerSecondTimeSeries);
+
             ReducedPerSecond = dbMetrics.TimedCounter("metrics", "reduces/sec", "Reduced Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(ReducedPerSecond);
+
             IndexedPerSecond = dbMetrics.TimedCounter("metrics", "indexed/sec", "Index Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(IndexedPerSecond);
+
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
@@ -102,12 +113,30 @@ namespace Raven.Database.Util
         public void Dispose()
         {
             dbMetrics.Dispose();
+
+            MetricsTicker.Instance.RemoveMeterMetric(ConcurrentRequests);
+            foreach (var batchSizeMeter in ReplicationBatchSizeMeter)
+            {
+                MetricsTicker.Instance.RemoveMeterMetric(batchSizeMeter.Value);
+            }
+
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(DocsPerSecond);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(FilesPerSecond);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(RequestsPerSecondCounter);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(RequestsPerSecondTimeSeries);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(ReducedPerSecond);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(IndexedPerSecond);
         }
 
         public MeterMetric GetReplicationBatchSizeMetric(ReplicationStrategy destination)
         {
             return ReplicationBatchSizeMeter.GetOrAdd(destination.ConnectionStringOptions.Url,
-                s => dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes));
+                s =>
+                {
+                    var newMetric = dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes);
+                    MetricsTicker.Instance.AddMeterMetric(newMetric);
+                    return newMetric;
+                });
         }
 
         public HistogramMetric GetReplicationBatchSizeHistogram(ReplicationStrategy destination)

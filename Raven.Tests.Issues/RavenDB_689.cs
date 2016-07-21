@@ -1,3 +1,4 @@
+using Raven.Abstractions.Data;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Common;
 
@@ -294,6 +295,7 @@ namespace Raven.Tests.Issues
                 var c1 = store.DatabaseCommands.Get(e.ConflictedVersionIds[0]);
                 var c2 = store.DatabaseCommands.Get(e.ConflictedVersionIds[1]);
 
+                c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
                 store.DatabaseCommands.Put("users/1", null, c1.DataAsJson, c1.Metadata);
 
                 expectedTick = long.Parse(c1.DataAsJson["Tick"].ToString());

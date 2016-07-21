@@ -17,6 +17,7 @@ using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Bundles.MoreLikeThis;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -102,7 +103,10 @@ namespace Raven.Database.Queries
                 RavenPerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
                 try
                 {
-                    perFieldAnalyzerWrapper = index.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
+                    var defaultAnalyzer = !string.IsNullOrWhiteSpace(query.DefaultAnalyzerName) 
+                        ? IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, query.DefaultAnalyzerName) 
+                        : new LowerCaseKeywordAnalyzer();
+                    perFieldAnalyzerWrapper = index.CreateAnalyzer(defaultAnalyzer, toDispose, true);
                     mlt.Analyzer = perFieldAnalyzerWrapper;
 
                     var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -21,6 +22,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Config;
 using Raven.Database.Common;
@@ -390,6 +392,16 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
+        [RavenRoute("debug/deletion-batch-stats")]
+        [RavenRoute("databases/{databaseName}/debug/deletion-batch-stats")]
+        public HttpResponseMessage DeletionBatchStats(int lastId = 0)
+        {
+            var deletionBatches = Database.WorkContext.LastActualDeletionBatchInfo.ToArray();
+            var deletionBatchesTrimmed = deletionBatches.SkipWhile(x => x.Id < lastId).ToArray();
+            return GetMessageWithObject(deletionBatchesTrimmed);
+        }
+
+        [HttpGet]
         [RavenRoute("debug/plugins")]
         [RavenRoute("databases/{databaseName}/debug/plugins")]
         public HttpResponseMessage Plugins()
@@ -673,13 +685,39 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/debug/sl0w-d0c-c0unts")]
         public HttpResponseMessage SlowDocCounts()
         {
-            DebugDocumentStats stat = null;
-            Database.TransactionalStorage.Batch(accessor =>
+            
+
+            var cts = new CancellationTokenSource();
+            var state = new DebugDocumentStatsState();
+
+            var statsTask = Task.Factory.StartNew(() =>
             {
-                stat = accessor.Documents.GetDocumentStatsVerySlowly();
+                try
+                {
+                    Database.TransactionalStorage.Batch(accessor =>
+                    {
+                        state.Stats = accessor.Documents.GetDocumentStatsVerySlowly(msg => state.MarkProgress(msg), cts.Token);
+                    });
+                    state.MarkCompleted();
+                }
+                catch (Exception e)
+                {
+                    state.MarkFaulted(e.Message, e);
+                }
             });
 
-            return GetMessageWithObject(stat);
+            long taskId;
+            Database.Tasks.AddTask(statsTask, state, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.SlowDocCounts,
+                Description = "Slow Documents Counts"
+            }, out taskId, cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = taskId
+            }, HttpStatusCode.Accepted);
         }
 
         [HttpGet]

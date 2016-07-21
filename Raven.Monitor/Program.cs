@@ -147,7 +147,7 @@ namespace Raven.Monitor
                     MonitoringManager.MonitorManager = manager;
                     using (WebApp.Start<MonitorHost>("http://localhost:9091/"))
                     {
-                        Console.WriteLine("Running as server, press any key to stop...");
+                        Console.WriteLine("Running as server, listening to port 9091.\nPress any key to stop...");
                         Console.ReadLine();
                     }
                 }

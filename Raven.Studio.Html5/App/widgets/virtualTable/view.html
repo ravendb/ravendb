@@ -8,23 +8,26 @@
         height: 30px;
         font-size: 25px;
         text-align: center; "></div>
-    <div class="ko-grid-column-container" data-bind="visible: noResults() === false, foreach: columns">
-        <!-- ko if: binding === '__IsChecked' -->
-        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }">
+    <div class="ko-grid-column-container-clip" style="overflow: hidden">
+        <div class="ko-grid-column-container" data-bind="visible: noResults() === false, foreach: columns, style: { marginLeft: (-1 * tableXScroll()) + 'px' }">
+            <!-- ko if: binding === '__IsChecked' -->
+            <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }">
 
+            </div>
+            <!-- /ko -->
+            <!-- ko if: binding !== '__IsChecked' -->
+            <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, attr: { title: header }">
+                <span class="ko-grid-column-handle" data-bind="attr: { 'column': $index }"></span>
+                <span data-bind="text: header"></span>
+            </div>
+            <!-- /ko -->
         </div>
-        <!-- /ko -->
-        <!-- ko if: binding !== '__IsChecked' -->
-        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, attr: { title: header }">
-            <span class="ko-grid-column-handle" data-bind="attr: { 'column': $index }"></span>
-            <span data-bind="text: header"></span>
-        </div>
-        <!-- /ko -->
     </div>
+   
     <div class="ko-grid-viewport-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: settings.dynamicHeightTargetSelector, bottomMargin: bottomMargin, container: settings.container }, style: { 'max-height': settings.maxHeight }">
-        <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px' }">
-            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
-                <div class="ko-grid-cell" data-bind="template: { name: $parent.getCellTemplate(binding) }, style: { width: width() + 'px' }, attr: { title: ($parent.getCellTemplate(binding) !== 'customTemplate') ? $parent.getCellData(binding) : '' }">
+        <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }">
+            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px', width: $parent.virtualWidth() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
+                <div class="ko-grid-cell" data-bind="template: { name: $parent.getOrAddTemplateNameCache(binding)() }, style: { width: width() + 'px' }, attr: { title: ($parent.getCellTemplate(binding) !== 'customTemplate') ? $parent.getCellData(binding) : '' }">
 
                 </div>
             </div>
@@ -50,8 +53,8 @@
             <a tabindex="-1" href="#" data-bind="click: resetCounter">Reset</a>
         </li>
         <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems') || (settings.contextMenuOptions.contains('Reset') && settings.selectedIndices().length == 1)" class="divider"></li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('Delete')">
-            <a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: deleteSelectedItems">Delete</a>
+        <li data-bind="visible: !isIndexMapReduce() && settings.contextMenuOptions.contains('Delete')">
+            <a tabindex="-1" href="#" data-bind="click: deleteSelectedItems">Delete</a>
         </li>
     </ul>
 </div>
@@ -67,7 +70,7 @@
 
 <script id="checkboxTemplate" type="text/template">
     <div class="checkbox" data-bind="visible: $parents[1].settings.selectionEnabled">
-        <input type="checkbox" class="styled" data-bind="attr: { id: 'virtualTable_' + $parentContext.$index() }, checked: $parent.isChecked, event: { change: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }}">
+        <input type="checkbox" class="styled" data-bind="attr: { id: 'virtualTable_' + $parentContext.$index() }, checked: $parent.isChecked, event: { change: function(sender, e) { $parents[1].toggleRowChecked($parent, true) }}">
         <label data-bind="attr: { for:  'virtualTable_' + $parentContext.$index() }">&nbsp;</label>
     </div>
 </script>

@@ -9,6 +9,8 @@ class SubscriptionsTask extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.updateHelpLink("23PHKW");
         this.activeDatabase.subscribe(() => this.fetchSubscriptions());
         return this.fetchSubscriptions();
     }

@@ -405,15 +405,14 @@ namespace Raven.Client.Document.Async
 
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)query);
-            var indexQuery = ravenQueryInspector.GetIndexQuery(true);
+            var indexQuery = query.GetIndexQuery(true);
             bool waitForNonStaleResultsWasSetGloably = this.Advanced.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite;
             if (!waitForNonStaleResultsWasSetGloably && (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow))
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 
 
-            var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
+            var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(query.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
             queryOperation.DisableEntitiesTracking = true;
             return new QueryYieldStream<T>(this, enumerator, queryOperation,query, token);

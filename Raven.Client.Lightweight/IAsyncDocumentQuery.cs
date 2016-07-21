@@ -16,6 +16,8 @@ namespace Raven.Client
     /// </summary>
     public interface IAsyncDocumentQuery<T> : IDocumentQueryBase<T, IAsyncDocumentQuery<T>>
     {
+        string AsyncIndexQueried { get; }
+
         /// <summary>
         /// Register the query as a lazy-count query and return a lazy instance that will evaluate the query when needed.
         /// </summary>
@@ -109,5 +111,32 @@ namespace Raven.Client
         /// </summary>
         IAsyncDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new();
-    }
+
+        
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty.
+        /// </summary>
+        Task<T> FirstAsync();
+
+        /// <summary>
+        ///     Returns first element or default value for type if sequence is empty.
+        /// </summary>
+        Task<T> FirstOrDefaultAsync();
+
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty or contains more than one element.
+        /// </summary>
+        Task<T> SingleAsync();
+
+        /// <summary>
+        ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
+        ///     one element.
+        /// </summary>
+        Task<T> SingleOrDefaultAsync();
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        Task<int> CountAsync(CancellationToken token = default(CancellationToken));
+    } 
 }

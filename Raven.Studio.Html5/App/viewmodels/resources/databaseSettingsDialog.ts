@@ -26,7 +26,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
                 this.currentModel = new model();
                 this.content.activateItem(this.currentModel);
             })
-            );
+        );
 
         this.routes = [];
         if (bundles.contains("Quotas")) {

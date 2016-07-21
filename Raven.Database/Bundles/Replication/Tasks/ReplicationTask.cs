@@ -26,6 +26,7 @@ using Raven.Bundles.Replication.Data;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database;
 using Raven.Database.Bundles.Replication;
+using Raven.Database.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Tasks.Handlers;
 using Raven.Database.Config.Retriever;
 using Raven.Database.Data;
@@ -91,6 +92,8 @@ namespace Raven.Bundles.Replication.Tasks
         private Timer _propagationTimeoutTimer;
         private ThreadLocal<bool> isThreadProcessingReplication = new ThreadLocal<bool>();
 
+        public DatabaseIdsCache DatabaseIdsCache { get; private set; }
+
         /// <summary>
         /// Indicates that this thread is doing replication.
         /// </summary>
@@ -113,6 +116,9 @@ namespace Raven.Bundles.Replication.Tasks
         public void Execute(DocumentDatabase database)
         {
             docDb = database;
+            _transactionalStorageId = docDb.TransactionalStorage.Id.ToString();
+            DatabaseIdsCache = new DatabaseIdsCache(database, log);
+
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.WorkContext.CancellationToken);
             _propagationTimeoutTimer = new Timer() {AutoReset = false,Interval = docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds*1000};
             _propagationTimeoutTimer.Elapsed += (o, s) => { docDb.WorkContext.ReplicationResetEvent.Set(); };
@@ -716,7 +722,6 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-
         [Obsolete("Use RavenFS instead.")]
         private bool? ReplicateAttachments(ReplicationStrategy destination,
             SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource,
@@ -784,7 +789,7 @@ namespace Raven.Bundles.Replication.Tasks
 
             var url = destination.ConnectionStringOptions.Url;
             var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(url,
-                x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, $"Replication for URL: {destination.ConnectionStringOptions.DefaultDatabase}"));
+                x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, $"Replication for URL: {destination.ConnectionStringOptions.Url}"));
 
             prefetchingBehavior.AdditionalInfo = $"For destination: {url}. Last replicated etag: {destinationsReplicationInformationForSource.LastDocumentEtag}";
 
@@ -800,7 +805,7 @@ namespace Raven.Bundles.Replication.Tasks
                             // we don't notify remote server about updates to system docs, see: RavenDB-715
                             if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0
                                 || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
-                                || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
+                                || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromOtherDestinations > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555, RavenDB-4750
                             {
                                 using (scope.StartRecording("Notify"))
                                 {
@@ -904,7 +909,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             var url = destination.ConnectionStringOptions.Url + endpoint + "?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
 
-            if (destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count > 0)
+            if (destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count == 0)
                 return url;
 
             return url + ("&collections=" + string.Join(";", destination.SpecifiedCollections.Keys));
@@ -1119,9 +1124,11 @@ namespace Raven.Bundles.Replication.Tasks
             public DateTime LastLastModified { get; set; }
             public RavenJArray Documents { get; set; }
             public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
-            public int CountOfFilteredDocumentsWhichOriginFromDestination { get; set; }
+            public int CountOfFilteredDocumentsWhichOriginFromOtherDestinations { get; set; }
             public List<JsonDocument> LoadedDocs { get; set; }
         }
+
+        private string _transactionalStorageId;
 
         private JsonDocumentsToReplicate GetJsonDocuments(
             SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource,
@@ -1170,8 +1177,8 @@ namespace Raven.Bundles.Replication.Tasks
                         docsSinceLastReplEtag += fetchedDocs.Count;
                         result.CountOfFilteredDocumentsWhichAreSystemDocuments +=
                             fetchedDocs.Count(doc => destination.IsSystemDocumentId(doc.Key));
-                        result.CountOfFilteredDocumentsWhichOriginFromDestination +=
-                            fetchedDocs.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
+                        result.CountOfFilteredDocumentsWhichOriginFromOtherDestinations +=
+                            fetchedDocs.Count(doc => destination.OriginatedAtOtherDestinations(_transactionalStorageId, doc.Metadata) && !destination.IsSystemDocumentId(doc.Key));
 
                         if (fetchedDocs.Count > 0)
                         {
@@ -1460,6 +1467,9 @@ namespace Raven.Bundles.Replication.Tasks
                 var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
                 if (log.IsDebugEnabled)
                     log.Debug("Received last replicated document Etag {0} from server {1}", lastReplicatedEtagFrom.LastDocumentEtag, destination.ConnectionStringOptions.Url);
+
+                DatabaseIdsCache.Add(destination.ConnectionStringOptions.Url, lastReplicatedEtagFrom.DatabaseId);
+
                 return lastReplicatedEtagFrom;
             }
             catch (WebException e)
@@ -1592,6 +1602,7 @@ namespace Raven.Bundles.Replication.Tasks
                 Url = url,
                 AuthenticationScheme = destination.AuthenticationScheme,
                 ApiKey = destination.ApiKey,
+                DefaultDatabase = destination.Database
             };
 
             if (destination.SpecifiedCollections != null)
@@ -1614,6 +1625,8 @@ namespace Raven.Bundles.Replication.Tasks
             ResetFailureForHeartbeat(src);
 
             heartbeatDictionary.AddOrUpdate(src, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+
+            docDb.WorkContext.ReplicationResetEvent.Set();
         }
 
         public bool IsHeartbeatAvailable(string src, DateTime lastCheck)
@@ -1640,6 +1653,8 @@ namespace Raven.Bundles.Replication.Tasks
 
         public void Dispose()
         {
+            DatabaseIdsCache.Dispose();
+
             _propagationTimeoutTimer.Enabled = false;
             _propagationTimeoutTimer.Dispose();
             if (IndexReplication != null)

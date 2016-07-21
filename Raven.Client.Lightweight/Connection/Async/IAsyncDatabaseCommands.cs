@@ -134,7 +134,7 @@ namespace Raven.Client.Connection.Async
         ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
         ///     with the specified database
         /// </summary>
-        IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
+        IAsyncDatabaseCommands ForDatabase(string database);
 
         /// <summary>
         ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts

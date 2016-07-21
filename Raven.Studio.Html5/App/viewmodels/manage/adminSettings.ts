@@ -56,7 +56,7 @@ class adminSettings extends viewModelBase {
         var compactRoute = { route: 'compact', moduleId: 'viewmodels/manage/compact', title: 'Compact', nav: true, hash: appUrl.forCompact(), enabled: isGlobalAdmin };
         var restoreRoute = { route: 'restore', moduleId: 'viewmodels/manage/restore', title: 'Restore', nav: true, hash: appUrl.forRestore(), enabled: isGlobalAdmin };
         var adminLogsRoute = { route: 'adminLogs', moduleId: 'viewmodels/manage/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs(), enabled: isGlobalAdmin };
-        var topologyRoute = { route: 'topology', moduleId: 'viewmodels/manage/topology', title: 'Server topology', nav: true, hash: appUrl.forServerTopology(), enabled: isGlobalAdmin };
+        var topologyRoute = { route: 'topology', moduleId: 'viewmodels/manage/topology', title: 'Server Topology', nav: true, hash: appUrl.forServerTopology(), enabled: isGlobalAdmin };
         var trafficWatchRoute = { route: 'trafficWatch', moduleId: 'viewmodels/manage/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch(), enabled: isGlobalAdmin };
         var licenseInformation = { route: 'licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation(), enabled: canReadOrWrite };
         var debugInfoRoute = { route: 'debugInfo', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo(), enabled: isGlobalAdmin };

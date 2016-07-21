@@ -4,27 +4,19 @@ import appUrl = require("common/appUrl");
 import replicationDestination = require("models/database/replication/replicationDestination");
 
 class replicateTransformersCommand extends commandBase {
-    private destination: replicationDestination;
-    constructor(private db: database, destination: replicationDestination) {
+    constructor(private db: database, private destination: replicationDestination) {
         super();
-        this.destination = destination;
     }
 
-    execute(): JQueryPromise<any> {
-        var promise = $.Deferred();
-        
+    execute(): JQueryPromise<void> {
         var transformersUrl = '/databases/' + this.db.name + '/replication/replicate-transformers?op=replicate-all-to-destination';
         var destinationJson = JSON.stringify(this.destination.toDto());
-        this.post(transformersUrl, destinationJson, appUrl.getSystemDatabase())
+        return this.post(transformersUrl, destinationJson, appUrl.getSystemDatabase(), { dataType: undefined })
             .fail((response: JQueryXHR) => {
-            this.reportError("Failed to send replicate transformers command!", response.responseText, response.statusText);
-            promise.reject();
-        }).done(() => {
+                this.reportError("Failed to send replicate transformers command!", response.responseText, response.statusText);
+            }).done(() => {
                 this.reportSuccess("Sent replicate transformers command");
-                promise.resolve();
-        });
-        
-        return promise;
+            });
     }
 }
 

@@ -3,10 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -40,7 +42,7 @@ namespace Voron.Debugging
             _tx = tx;
         }
 
-        public StorageReport Generate(ReportInput input)
+        public StorageReport Generate(ReportInput input, Action<string> progress, CancellationToken token)
         {
             var unallocatedPagesAtEndOfFile = input.NumberOfAllocatedPages - input.NextPageNumber;
 
@@ -55,6 +57,9 @@ namespace Voron.Debugging
 
             foreach (var tree in input.Trees)
             {
+                progress("Computing stats for tree: " + tree.Name);
+                token.ThrowIfCancellationRequested();
+
                 List<double> densities = null;
 
                 if (input.IsLightReport == false)
@@ -66,7 +71,7 @@ namespace Voron.Debugging
 
                 if (tree.State.Flags == TreeFlags.MultiValueTrees)
                 {
-                    multiValues = CreateMultiValuesReport(tree);
+                    multiValues = CreateMultiValuesReport(tree, token);
                 }
 
                 var state = tree.State;
@@ -100,7 +105,7 @@ namespace Voron.Debugging
             };
         }
 
-        private MultiValuesReport CreateMultiValuesReport(Tree tree)
+        private MultiValuesReport CreateMultiValuesReport(Tree tree, CancellationToken token)
         {
             var multiValues = new MultiValuesReport();
 
@@ -110,6 +115,8 @@ namespace Voron.Debugging
                 {
                     do
                     {
+                        token.ThrowIfCancellationRequested();
+
                         var currentNode = multiTreeIterator.Current;
 
                         switch (currentNode->Flags)

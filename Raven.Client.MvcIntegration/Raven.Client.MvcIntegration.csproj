@@ -145,6 +145,6 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>$(ProjectDir)js\tools\node.exe $(ProjectDir)js\tools\r.js -o $(ProjectDir)js\app.build.js out=$(ProjectDir)Content\ravendb-profiler.min.js</PreBuildEvent>
+    <PreBuildEvent>"$(ProjectDir)js\tools\node.exe" "$(ProjectDir)js\tools\r.js" -o "$(ProjectDir)js\app.build.js" out="$(ProjectDir)Content\ravendb-profiler.min.js"</PreBuildEvent>
   </PropertyGroup>
 </Project>

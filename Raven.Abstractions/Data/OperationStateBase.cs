@@ -5,9 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -47,6 +44,27 @@ namespace Raven.Abstractions.Data
                 MarkProgressInternal(state);
             }
             Completed = true;
+        }
+
+        public void MarkCompleted(string initialMessage, TimeSpan elapsed)
+        {
+            initialMessage += ", took: ";
+
+            var fullMessage = false;
+            if (elapsed.Hours > 0)
+            {
+                initialMessage += $"{elapsed.Hours} hours, ";
+                fullMessage = true;
+            }
+
+            if (fullMessage || elapsed.Minutes > 0)
+            {
+                initialMessage += $"{elapsed.Minutes} minutes and ";
+            }
+
+            initialMessage += $"{elapsed.Seconds} seconds";
+
+            MarkCompleted(initialMessage);
         }
 
         public void MarkFaulted(string error = null, Exception exception = null)

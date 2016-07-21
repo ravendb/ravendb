@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -157,10 +158,12 @@ for(var customFunction in customFunctions) {{
                 fileName = fileContent.Headers.ContentDisposition.FileName.Replace("\"", string.Empty);
             }
 
-            var status = new ImportOperationStatus();
+            var status = new DataDumperOperationStatus();
             var cts = new CancellationTokenSource();
 
             var user = CurrentOperationContext.User.Value;
+            if (user == null)
+                user = RequestContext.Principal;
             var requestDisposables = CurrentOperationContext.RequestDisposables.Value;
             var headers = CurrentOperationContext.Headers.Value;
 
@@ -213,7 +216,7 @@ for(var customFunction in customFunctions) {{
                     }
                     else if (e is JsonReaderException)
                     {
-                        status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
+                        status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendbdump file, exported by smuggler (aka database export). If you are importing a .ravendbdump file then the file may be corrupted";
                     }
                     else if (e is OperationVetoedException && e.Message.Contains(VersioningPutTrigger.CreationOfHistoricalRevisionIsNotAllowed))
                     {
@@ -238,7 +241,7 @@ for(var customFunction in customFunctions) {{
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
-                TaskType = TaskActions.PendingTaskType.ImportDatabase,
+                TaskType = TaskActions.PendingTaskType.ExportDatabase,
                 Description = fileName
             }, out id, cts);
 
@@ -253,7 +256,10 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
         public Task<HttpResponseMessage> ExportDatabase([FromBody] ExportData smugglerOptionsJson)
         {
-            var requestString = smugglerOptionsJson.SmugglerOptions;
+            var result = GetEmptyMessage();
+
+            var taskId = smugglerOptionsJson.ProgressTaskId;
+            var requestString = smugglerOptionsJson.DownloadOptions;
             SmugglerDatabaseOptions smugglerOptions;
 
             using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
@@ -262,35 +268,71 @@ for(var customFunction in customFunctions) {{
                 smugglerOptions = (SmugglerDatabaseOptions) serializer.Deserialize(jsonReader, typeof (SmugglerDatabaseOptions));
             }
 
-            var result = GetEmptyMessage();
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                $"Dump of {DatabaseName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
+                smugglerOptions.NoneDefaultFileName;
 
-            // create PushStreamContent object that will be called when the output stream will be ready.
+            //create PushStreamContent object that will be called when the output stream will be ready.
             result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
             {
+                var status = new DataDumperOperationStatus();
+                var tcs = new TaskCompletionSource<object>();
+                var sp = Stopwatch.StartNew();
+
                 try
                 {
+                    Database.Tasks.AddTask(tcs.Task, status, new TaskActions.PendingTaskDescription
+                    {
+                        StartTime = SystemTime.UtcNow,
+                        TaskType = TaskActions.PendingTaskType.ExportDatabase,
+                        Description = "Exporting database, file name: " + fileName
+                    }, taskId, smugglerOptions.CancelToken, skipStatusCheck: true);
+
                     var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
+                    dataDumper.Progress += s => status.MarkProgress(s);
                     await dataDumper.ExportData(
                         new SmugglerExportOptions<RavenConnectionStringOptions>
                         {
                             ToStream = outputStream
                         }).ConfigureAwait(false);
+
+                    const string message = "Completed export";
+                    status.MarkCompleted(message, sp.Elapsed);
+                }
+                catch (OperationCanceledException e)
+                {
+                    status.MarkCanceled(e.Message);
+                }
+                catch (Exception e)
+                {
+                    status.ExceptionDetails = e.ToString();
+                    status.MarkFaulted(e.ToString());
+
+                    throw;
                 }
                 finally
                 {
+                    tcs.SetResult("Completed");
                     outputStream.Close();
                 }
             });
 
-            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
-                smugglerOptions.NoneDefaultFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = fileName + ".ravendump"
+                FileName = fileName + ".ravendbdump"
             };
 
             return new CompletedTask<HttpResponseMessage>(result);
+        }
+
+        [HttpGet]
+        [RavenRoute("studio-tasks/next-operation-id")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/next-operation-id")]
+        public HttpResponseMessage GetNextTaskId()
+        {
+            var result = Database.Tasks.GetNextTaskId();
+            var response = Request.CreateResponse(HttpStatusCode.OK, result);
+            return response;
         }
 
         [HttpPost]
@@ -366,6 +408,38 @@ for(var customFunction in customFunctions) {{
                 return GetMessageWithObjectAsTask(new
                 {
                     Error = "Connection failed",
+                    Exception = ex
+                }, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpPost]
+        [RavenRoute("studio-tasks/sql-replication-toggle-disable")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/sql-replication-toggle-disable")]
+        public Task<HttpResponseMessage> SqlReplicationToggleDisable(bool disable)
+        {
+            try
+            {
+                Database.TransactionalStorage.Batch(actions =>
+                {
+                    var documents = actions.Documents.GetDocumentsWithIdStartingWith(
+                        "Raven/SqlReplication/Configuration/", 0, int.MaxValue, null);
+
+                    foreach (var document in documents)
+                    {
+                        document.DataAsJson["Disabled"] = disable;
+                        actions.Documents.AddDocument(document.Key, document.Etag, document.DataAsJson, document.Metadata);
+                    }
+                });
+
+                return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                var action = disable ? "disable" : "enable";
+                return GetMessageWithObjectAsTask(new
+                {
+                    Error = $"Failed to {action} all SQL Replications",
                     Exception = ex
                 }, HttpStatusCode.BadRequest);
             }
@@ -810,10 +884,12 @@ for(var customFunction in customFunctions) {{
 
         public class ExportData
         {
-            public string SmugglerOptions { get; set; }
+            public string DownloadOptions { get; set; }
+
+            public long ProgressTaskId { get; set; }
         }
 
-        private class ImportOperationStatus : OperationStateBase
+        private class DataDumperOperationStatus : OperationStateBase
         {
             public string ExceptionDetails { get; set; }
         }
