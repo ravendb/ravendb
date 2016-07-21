@@ -839,12 +839,12 @@ namespace Voron
             tx.Commit();
         }
 
-        internal void EnsureTransactionLockFairnessForFlush()
+        internal void IncreaseTheChanceForGettingTheTransactionLock()
         {
             Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, Thread.CurrentThread.ManagedThreadId);
         }
 
-        internal void DisableTransactionLockFairnessForFlush()
+        internal void ResetTheChanceForGettingTheTransactionLock()
         {
             Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, -1);
         }

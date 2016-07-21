@@ -568,7 +568,7 @@ namespace Voron.Impl.Journal
                         tryEnterReadLock = _waj._env.FlushInProgressLock.TryEnterWriteLock(timeout);
                     try
                     {
-                        _waj._env.EnsureTransactionLockFairnessForFlush();
+                        _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
                         using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
                             _lastSyncedJournal = lastProcessedJournal;
@@ -601,7 +601,7 @@ namespace Voron.Impl.Journal
                     }
                     finally
                     {
-                        _waj._env.DisableTransactionLockFairnessForFlush();
+                        _waj._env.ResetTheChanceForGettingTheTransactionLock();
                         if(tryEnterReadLock)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
