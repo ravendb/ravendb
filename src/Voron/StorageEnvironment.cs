@@ -64,7 +64,14 @@ namespace Voron
         /// to actually capture the lock, do its work, and then reset it.
         /// </summary>
         private int _otherThreadsShouldWaitBeforeGettingWriteTxLock = -1;
-        
+
+        /// <summary>
+        /// Accessing the Thread.CurrentThread.ManagedThreadId can be expensive,
+        /// so we cache it.
+        /// </summary>
+        [ThreadStatic]
+        private static int _localThreadIdCopy;
+
         private readonly StorageEnvironmentOptions _options;
 
         private readonly ConcurrentSet<LowLevelTransaction> _activeTransactions = new ConcurrentSet<LowLevelTransaction>();
@@ -368,12 +375,7 @@ namespace Voron
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
 
-                    // See comment on the variable for the details
-                    var localCopy = Volatile.Read(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock);
-                    if (localCopy != -1 && localCopy != Thread.CurrentThread.ManagedThreadId)
-                    {
-                        Thread.Sleep(1);
-                    }
+                    GiveFlusherChanceToRunIfNeeded();
 
                     if (FlushInProgressLock.IsWriteLockHeld == false)
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
@@ -428,6 +430,20 @@ namespace Voron
                 }
                 throw;
             }
+        }
+
+        private void GiveFlusherChanceToRunIfNeeded()
+        {
+            // See comment on the _otherThreadsShouldWaitBeforeGettingWriteTxLock variable for the details
+            var localCopy = Volatile.Read(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock);
+            if (localCopy == -1)
+                return;
+            if (_localThreadIdCopy == 0)
+            {
+                _localThreadIdCopy = Thread.CurrentThread.ManagedThreadId;
+            }
+            if (_localThreadIdCopy != localCopy)
+                Thread.Sleep(1);
         }
 
 
