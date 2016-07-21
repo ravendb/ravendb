@@ -369,7 +369,7 @@ namespace Raven.Database.Indexing
             var alreadySingleStepQueue = new ConcurrentQueue<HashSet<string>>();
 
             if (Log.IsDebugEnabled)
-                Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Count, string.Join(", ", keysToReduce)));
+                Log.Debug(() => $"Executing single step reducing for {keysToReduce.Count} keys [{string.Join(", ", keysToReduce)}]");
 
             var batchTimeWatcher = Stopwatch.StartNew();
 
@@ -389,6 +389,11 @@ namespace Raven.Database.Indexing
 
                 context.Database.ReducingThreadPool.ExecuteBatch(keysToReduce, enumerator =>
                 {
+                    var parallelStats = new ParallelBatchStats
+                    {
+                        StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
+                    };
+
                     while (enumerator.MoveNext())
                     {
                         var localKeys = new HashSet<string>();
@@ -404,11 +409,6 @@ namespace Raven.Database.Indexing
 
                         if (localKeys.Count == 0)
                             return;
-
-                        var parallelStats = new ParallelBatchStats
-                        {
-                            StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
-                        };
 
                         var localNeedToMoveToSingleStep = new HashSet<string>();
                         needToMoveToSingleStepQueue.Enqueue(localNeedToMoveToSingleStep);
@@ -504,9 +504,9 @@ namespace Raven.Database.Indexing
                             }
 
                             parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_RemoveReduceResults, removeReduceResultsDuration.ElapsedMilliseconds));
-
-                            parallelOperations.Enqueue(parallelStats);
                         });
+
+                        parallelOperations.Enqueue(parallelStats);
                     }
                 }, description: $"Performing single step reduction for index {index.Index.PublicName} from etag {index.Index.GetLastEtagFromStats()} for {keysToReduce.Count} keys");
 
@@ -517,17 +517,17 @@ namespace Raven.Database.Indexing
                     BatchedOperations = parallelOperations.ToList()
                 });
 
-                var getMappedResultsDuration = new Stopwatch();				
+                var getMappedResultsDuration = new Stopwatch();
 
                 var reductionPerformanceStats = new List<IndexingPerformanceStats>();
                 
-                var keysLeftToReduce = new HashSet<string>(keysToReduce);                                              
+                var keysLeftToReduce = new HashSet<string>(keysToReduce);
                 while (keysLeftToReduce.Count > 0)
                 {
-                    var keysReturned = new HashSet<string>();       
+                    var keysReturned = new HashSet<string>();
 
                     // Try to diminish the allocations happening because of .Resize()
-                    var mappedResults = new List<MappedResultInfo>(keysLeftToReduce.Count);                             
+                    var mappedResults = new List<MappedResultInfo>(keysLeftToReduce.Count);
                     
                     context.TransactionalStorage.Batch(actions =>
                     {

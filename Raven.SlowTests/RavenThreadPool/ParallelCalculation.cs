@@ -190,8 +190,8 @@ namespace Raven.SlowTests.RavenThreadPool
                     Thread.Sleep((int)Math.Pow(input, 4) * 5);
                 }, allowPartialBatchResumption: true);
                 var waitingTasksAmount = tp.GetAllWaitingTasks().Count();
-                var runnintTasksAmount = tp.RunningTasksAmount;
-                Assert.NotEqual(waitingTasksAmount + runnintTasksAmount, 0);
+                var runningTasksAmount = tp.RunningTasksAmount;
+                Assert.NotEqual(waitingTasksAmount + runningTasksAmount, 0);
                 while (tp.GetAllWaitingTasks().Count() != 0 || tp.RunningTasksAmount != 0)
                 {
                     Thread.Sleep(100);

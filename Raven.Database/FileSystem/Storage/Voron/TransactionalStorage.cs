@@ -209,6 +209,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var snapshotRef = new Reference<SnapshotReader>();
             var writeBatchRef = new Reference<WriteBatch>();
 
+            var errorInUserAction = false;
             try
             {
                 snapshotRef.Value = tableStorage.CreateSnapshot();
@@ -217,10 +218,18 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 if (disableBatchNesting.Value == null)
                     current.Value = storageActionsAccessor;
 
+                errorInUserAction = true;
                 action(storageActionsAccessor);
+                errorInUserAction = false;
                 storageActionsAccessor.Commit();
 
                 tableStorage.Write(writeBatchRef.Value);
+            }
+            catch (Exception e)
+            {
+                if (errorInUserAction == false)
+                    Log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                throw;
             }
             finally
             {

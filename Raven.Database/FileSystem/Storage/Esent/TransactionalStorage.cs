@@ -410,6 +410,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         private void ExecuteBatch(Action<IStorageActionsAccessor> action)
         {
+            var errorInUserAction = false;
+
             try
             {
                 using (var storageActionsAccessor = new StorageActionsAccessor(tableColumnsCache, instance, database, uuidGenerator, fileCodecs))
@@ -417,9 +419,17 @@ namespace Raven.Database.FileSystem.Storage.Esent
                     if (disableBatchNesting.Value == null)
                         current.Value = storageActionsAccessor;
 
+                    errorInUserAction = true;
                     action(storageActionsAccessor);
+                    errorInUserAction = false;
                     storageActionsAccessor.Commit();
                 }
+            }
+            catch (Exception e)
+            {
+                if (errorInUserAction == false)
+                    log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                throw;
             }
             finally
             {

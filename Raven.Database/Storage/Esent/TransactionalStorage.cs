@@ -870,7 +870,7 @@ namespace Raven.Storage.Esent
             if (transactionContext != null)
                 Monitor.Enter(transactionContext, ref lockTaken);
 
-            bool errorInUserAction = false;
+            var errorInUserAction = false;
             try
             {
                 using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
