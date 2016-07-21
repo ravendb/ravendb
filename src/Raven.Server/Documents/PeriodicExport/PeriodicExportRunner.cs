@@ -208,7 +208,8 @@ namespace Raven.Server.Documents.PeriodicExport
 
                         var dataExporter = new DatabaseDataExporter(_database)
                         {
-                            Limit = _exportLimit,
+                            DocumentsLimit = _exportLimit,
+                            VersioningRevisionsLimit = _exportLimit,
                         };
 
                         string exportFilePath;
