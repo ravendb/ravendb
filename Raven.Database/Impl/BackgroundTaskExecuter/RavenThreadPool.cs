@@ -399,6 +399,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             else
                 batchesCountdown.Reset(numOfBatches);
 
+            var localTasks = new List<ThreadTask>();
             for (var i = 0; i < src.Count; i += pageSize)
             {
                 var rangeStart = i;
@@ -437,6 +438,13 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     QueuedAt = now,
                     DoneEvent = batchesCountdown
                 };
+                localTasks.Add(threadTask);
+            }
+            // we must add the tasks to the global tasks after we added all the ranges
+            // to prevent the tasks from completing the range fast enough that it won't
+            // see the next range, see: http://issues.hibernatingrhinos.com/issue/RavenDB-4829
+            foreach (var threadTask in localTasks)
+            {
                 _tasks.Add(threadTask, _ct);
             }
             WaitForBatchToCompletion(batchesCountdown);
