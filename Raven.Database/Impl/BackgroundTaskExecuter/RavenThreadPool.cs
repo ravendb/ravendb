@@ -23,7 +23,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         private readonly object _locker = new object();
         private readonly ConcurrentDictionary<ThreadTask, object> _runningTasks = new ConcurrentDictionary<ThreadTask, object>();
         private readonly BlockingCollection<ThreadTask> _tasks = new BlockingCollection<ThreadTask>();
-        private readonly AutoResetEvent _threadHasNoWorkToDo = new AutoResetEvent(false);
+        private readonly AutoResetEvent _threadHasNoWorkToDo = new AutoResetEvent(true);
         private readonly ILog logger = LogManager.GetCurrentClassLogger();
         public readonly string Name;
         private int _currentWorkingThreadsAmount;
@@ -63,13 +63,12 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         })
                         {
                             Priority = ThreadPriority.Normal,
-                            Name = string.Format("{0} U {1}", name, copy),
+                            Name = $"{name} U {copy}",
                             IsBackground = true
                         }
                     };
                 }
             }
-
 
             for (var i = UnstoppableTasksCount; i < _threads.Length; i++)
             {
@@ -85,6 +84,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     }
                 };
             }
+
             _currentWorkingThreadsAmount = maxLevelOfParallelism;
             this.database = database;
             CpuStatistics.RegisterCpuUsageHandler(this);
@@ -125,7 +125,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         if (thread.Thread.Priority != ThreadPriority.Normal)
                             continue;
 
-                        var reason = string.Format("Reduced thread #{0} priority was changed to below normal priority {1} because of high CPU Usage", thread.Thread.ManagedThreadId, ThreadPriority.BelowNormal);
+                        var reason = $"Reduced thread #{thread.Thread.ManagedThreadId} priority was changed to below normal priority {ThreadPriority.BelowNormal} because of high CPU Usage";
                         database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         thread.Thread.Priority = ThreadPriority.BelowNormal;
                         return;
@@ -136,13 +136,13 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         _threads[_currentWorkingThreadsAmount - 1].StopWork.Reset();
                         var prevThreads = _currentWorkingThreadsAmount;
                         _currentWorkingThreadsAmount--;
-                        var reason = string.Format("Current working threads amount was decreased from {0} to {1} because of high CPU Usage", prevThreads, _currentWorkingThreadsAmount);
+                        var reason = $"Current working threads amount was decreased from {prevThreads} to {_currentWorkingThreadsAmount} because of high CPU Usage";
                         database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                     }
                 }
                 catch (Exception e)
                 {
-                    logger.ErrorException(string.Format("Error occured while throttling down RTP named {0}", Name), e);
+                    logger.ErrorException($"Error occured while throttling down RTP named {Name}", e);
                     throw;
                 }
             }
@@ -161,7 +161,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         _threads[_currentWorkingThreadsAmount].StopWork.Set();
                         var prevThreads = _currentWorkingThreadsAmount;
                         _currentWorkingThreadsAmount++;
-                        var reason = string.Format("Current working threads amount was increased from {0} to {1} because of low CPU Usage", prevThreads, _currentWorkingThreadsAmount);
+                        var reason = $"Current working threads amount was increased from {prevThreads} to {_currentWorkingThreadsAmount} because of low CPU Usage";
                         database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         return;
                     }
@@ -173,7 +173,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         if (thread.Thread.Priority != ThreadPriority.BelowNormal)
                             continue;
 
-                        var reason = string.Format("Thread #{0} priority was changed to normal priority {1} because of low CPU Usage", thread.Thread.ManagedThreadId, ThreadPriority.Normal);
+                        var reason = $"Thread #{thread.Thread.ManagedThreadId} priority was changed to normal priority {ThreadPriority.Normal} because of low CPU Usage";
                         database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         thread.Thread.Priority = ThreadPriority.Normal;
                         return;
@@ -181,7 +181,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 }
                 catch (Exception e)
                 {
-                    logger.ErrorException(string.Format("Error occured while throttling up RTP named {0}", Name), e);
+                    logger.ErrorException($"Error occured while throttling up RTP named {Name}", e);
                     throw;
                 }
             }
@@ -220,7 +220,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 }
                 catch (Exception e)
                 {
-                    logger.ErrorException(string.Format("Error occured while disposing RTP named {0}", Name), e);
+                    logger.ErrorException($"Error occured while disposing RTP named {Name}", e);
                     throw;
                 }
             }
@@ -285,6 +285,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         {
             try
             {
+                _freedThreadsValue.Value = true;
                 while (_ct.IsCancellationRequested == false) // cancellation token
                 {
                     selfData.StopWork.Wait(_ct);
@@ -309,13 +310,14 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         private void ExecuteWorkOnce(bool shouldWaitForWork = true)
         {
             ThreadTask threadTask = null;
-            if (!shouldWaitForWork && _tasks.TryTake(out threadTask) == false)
+            if (shouldWaitForWork == false && _tasks.TryTake(out threadTask) == false)
             {
                 return;
             }
 
             if (threadTask == null)
                 threadTask = GetNextTask();
+
             if (threadTask == null)
                 return;
 
@@ -339,9 +341,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             catch (Exception e)
             {
                 logger.ErrorException(
-                    string.Format(
-                        "Error occured while executing RavenThreadPool task; ThreadPool name :{0} ; Task queued at: {1} ; Task Description: {2} ",
-                        Name, threadTask.QueuedAt, threadTask.Description), e);
+                    $"Error occured while executing RavenThreadPool task ; ThreadPool name: {Name} ; " + 
+                    $"Task queued at: {threadTask.QueuedAt} ; Task Description: {threadTask.Description}", e);
             }
         }
 
@@ -383,10 +384,11 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             if (src.Count == 0)
                 return;
 
-            // if we have only none or less than pageSize , we should execute it in current thread, without using RTP threads
             if (src.Count <= pageSize)
             {
-                ExecuteSingleBatchSynchroniously(src, action, description);
+                //if we have only none or less than pageSize,
+                //we should execute it in the current thread, without using RTP threads
+                ExecuteSingleBatchSynchronously(src, action, description);
                 return;
             }
 
@@ -401,6 +403,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 batchesCountdown.Reset(numOfBatches);
 
             var localTasks = new List<ThreadTask>();
+            var exceptions = new List<Exception>();
+            
             for (var i = 0; i < src.Count; i += pageSize)
             {
                 var rangeStart = i;
@@ -420,6 +424,11 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
                             action(YieldFromRange(ranges, range, src, numOfBatchesUsed));
                         }
+                        catch (Exception e)
+                        {
+                            exceptions.Add(e);
+                            throw;
+                        }
                         finally
                         {
                             var numOfBatchesUsedValue = numOfBatchesUsed.Value;
@@ -434,8 +443,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     {
                         Type = OperationDescription.OperationType.Range,
                         PlainText = description,
-                        From = i*pageSize,
-                        To = i*(pageSize + 1),
+                        From = rangeStart,
+                        To = rangeEnd,
                         Total = src.Count
                     },
                     BatchStats = new BatchStatistics
@@ -448,6 +457,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 };
                 localTasks.Add(threadTask);
             }
+
             // we must add the tasks to the global tasks after we added all the ranges
             // to prevent the tasks from completing the range fast enough that it won't
             // see the next range, see: http://issues.hibernatingrhinos.com/issue/RavenDB-4829
@@ -455,10 +465,14 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             {
                 _tasks.Add(threadTask, _ct);
             }
+
             WaitForBatchToCompletion(batchesCountdown);
+
+            if (exceptions.Count > 0)
+                throw new AggregateException(exceptions);
         }
 
-        private void ExecuteSingleBatchSynchroniously<T>(IList<T> src, Action<IEnumerator<T>> action, string description)
+        private void ExecuteSingleBatchSynchronously<T>(IList<T> src, Action<IEnumerator<T>> action, string description)
         {
             using (var enumerator = src.GetEnumerator())
             {
@@ -471,6 +485,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         Completed = 0
                     },
                     EarlyBreak = false,
+                    QueuedAt = DateTime.UtcNow,
                     Description = new OperationDescription
                     {
                         From = 1,
@@ -480,7 +495,6 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     }
                 };
 
-                object _;
                 try
                 {
                     threadTask.Action();
@@ -490,12 +504,14 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 catch (Exception e)
                 {
                     logger.ErrorException(
-                        string.Format(
-                            "Error occured while executing RavenThreadPool task; ThreadPool name :{0} ; Task queued at: {1} ; Task Description: {2} ",
-                            Name, threadTask.QueuedAt, threadTask.Description), e);
+                        $"Error occured while executing RavenThreadPool task ; ThreadPool name: {Name} ; " +
+                        $"Task queued at: {threadTask.QueuedAt} ; Task Description: {threadTask.Description}", e);
+
+                    throw;
                 }
                 finally
                 {
+                    object _;
                     _runningTasks.TryRemove(threadTask, out _);
                 }
             }
@@ -516,50 +532,15 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         public void ExecuteBatch<T>(IList<T> src, Action<T> action, string description = null,
             bool allowPartialBatchResumption = false, int completedMultiplier = 2, int freeThreadsMultiplier = 2, int maxWaitMultiplier = 1)
         {
-            if (src.Count == 0)
-                return;
-
-            if (allowPartialBatchResumption && src.Count == 1)
+            switch (src.Count)
             {
-                var threadTask = new ThreadTask
-                {
-                    Action = () => { action(src[0]); },
-                    BatchStats = new BatchStatistics
-                    {
-                        Total = 1,
-                        Completed = 0
-                    },
-                    EarlyBreak = false,
-                    Description = new OperationDescription
-                    {
-                        From = 1,
-                        To = 1,
-                        Total = 1,
-                        PlainText = description
-                    }
-                };
-
-                object _;
-                try
-                {
-                    threadTask.Action();
-                    threadTask.BatchStats.Completed++;
-                    _runningTasks.TryAdd(threadTask, null);
-                }
-                catch (Exception e)
-                {
-                    logger.ErrorException(
-                        string.Format(
-                            "Error occured while executing RavenThreadPool task; ThreadPool name :{0} ; Task queued at: {1} ; Task Description: {2} ",
-                            Name, threadTask.QueuedAt, threadTask.Description), e);
-                }
-                finally
-                {
-                    _runningTasks.TryRemove(threadTask, out _);
-                }
-
-
-                return;
+                case 0:
+                    return;
+                case 1:
+                    //if we have only one source to go through,
+                    //we should execute it in the current thread, without using RTP threads
+                    ExecuteSingleBatchSynchronously(src, action, description);
+                    return;
             }
 
             var now = DateTime.UtcNow;
@@ -577,7 +558,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             else
                 lastEvent.Reset(src.Count);
 
-
+            var exceptions = new List<Exception>();
+            
             for (; itemsCount < src.Count && _ct.IsCancellationRequested == false; itemsCount++)
             {
                 var copy = itemsCount;
@@ -588,6 +570,11 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         try
                         {
                             action(src[copy]);
+                        }
+                        catch (Exception e)
+                        {
+                            exceptions.Add(e);
+                            throw;
                         }
                         finally
                         {
@@ -607,16 +594,63 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     QueuedAt = now,
                     DoneEvent = lastEvent
                 };
-                _tasks.Add(threadTask, _ct);
+
+                _tasks.Add(threadTask);
             }
 
             if (allowPartialBatchResumption == false)
             {
                 WaitForBatchToCompletion(lastEvent);
-                return;
+            }
+            else
+            {
+                WaitForBatchAllowingPartialBatchResumption(lastEvent, batch, completedMultiplier, freeThreadsMultiplier, maxWaitMultiplier);
             }
 
-            WaitForBatchAllowingPartialBatchResumption(lastEvent, batch, completedMultiplier, freeThreadsMultiplier, maxWaitMultiplier);
+            if (exceptions.Count > 0)
+                throw new AggregateException(exceptions);
+        }
+
+        private void ExecuteSingleBatchSynchronously<T>(IList<T> src, Action<T> action, string description)
+        {
+            var threadTask = new ThreadTask
+            {
+                Action = () => { action(src[0]); },
+                BatchStats = new BatchStatistics
+                {
+                    Total = 1,
+                    Completed = 0
+                },
+                EarlyBreak = false,
+                QueuedAt = DateTime.UtcNow,
+                Description = new OperationDescription
+                {
+                    From = 1,
+                    To = 1,
+                    Total = 1,
+                    PlainText = description
+                }
+            };
+
+            try
+            {
+                threadTask.Action();
+                threadTask.BatchStats.Completed++;
+                _runningTasks.TryAdd(threadTask, null);
+            }
+            catch (Exception e)
+            {
+                logger.ErrorException(
+                    $"Error occured while executing RavenThreadPool task ; ThreadPool name: {Name} ; " +
+                    $"Task queued at: {threadTask.QueuedAt} ; Task Description: {threadTask.Description}", e);
+
+                throw;
+            }
+            finally
+            {
+                object _;
+                _runningTasks.TryRemove(threadTask, out _);
+            }
         }
 
         private void WaitForBatchToCompletion(CountdownEvent completionEvent)
@@ -628,7 +662,9 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     do
                     {
                         ExecuteWorkOnce(shouldWaitForWork: false);
+
                     } while (completionEvent.IsSet == false && _ct.IsCancellationRequested == false);
+
                     return;
                 }
 
@@ -640,7 +676,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             }
         }
 
-        private void WaitForBatchAllowingPartialBatchResumption(CountdownEvent completionEvent, BatchStatistics batch, int completedMultiplier = 2, int freeThreadsMultiplier = 2, int maxWaitMultiplier = 1)
+        private void WaitForBatchAllowingPartialBatchResumption(CountdownEvent completionEvent, BatchStatistics batch, 
+            int completedMultiplier = 2, int freeThreadsMultiplier = 2, int maxWaitMultiplier = 1)
         {
             Interlocked.Increment(ref _hasPartialBatchResumption);
             try
@@ -682,7 +719,6 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     Interlocked.Exchange(ref _partialMaxWait, Math.Max(Thread.VolatileRead(ref _partialMaxWait) / 2, 10));
                 }
 
-
                 Interlocked.Exchange(ref _partialMaxWaitChangeFlag, Thread.VolatileRead(ref _partialMaxWaitChangeFlag) * -1);
 
                 // completionEvent is explicitly left to the finalizer
@@ -718,7 +754,6 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             public Thread Thread;
             public bool Unstoppable;
         }
-
 
         public class ThreadsSummary
         {
