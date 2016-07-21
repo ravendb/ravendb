@@ -9,6 +9,7 @@ using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -32,11 +33,13 @@ namespace Raven.Server.Smuggler
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
             {
-                var buffer = context.GetParsingBuffer();
                 string operateOnType = "__top_start_object";
                 var batchPutCommand = new MergedBatchPutCommand(_database);
                 var batchVerioningRevisionsPutCommand = new MergedBatchVerioningRevisionsPutCommand(_database);
                 var identities = new Dictionary<string, long>();
+                VersioningStorage versioningStorage = null;
+
+                var buffer = context.GetParsingBuffer();
                 while (true)
                 {
                     if (parser.Read() == false)
@@ -84,7 +87,10 @@ namespace Raven.Server.Smuggler
                                     }
                                     break;
                                 case "VersioningRevisions":
-                                    result.DocumentsCount++;
+                                    if (versioningStorage == null)
+                                        break;
+
+                                    result.VersioningRevisionDocumentsCount++;
                                     var versioningRevisionsBuilder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "VersioningRevisions", parser, state);
                                     versioningRevisionsBuilder.ReadNestedObject();
                                     while (versioningRevisionsBuilder.Read() == false)
@@ -220,6 +226,11 @@ namespace Raven.Server.Smuggler
                                         batchPutCommand.Dispose();
                                         batchPutCommand = null;
                                     }
+
+                                    // We are taking a reference here since the documents import can activate or disable the versioning.
+                                    // We holad a local copy because the user can disable the bundle during the import process, exteranly.
+                                    // In this case we want to continue to import the revisions documents.
+                                    versioningStorage = _database.BundleLoader.VersioningStorage;
                                     break;
                                 case "VersioningRevisions":
                                     if (batchVerioningRevisionsPutCommand.Count > 0)

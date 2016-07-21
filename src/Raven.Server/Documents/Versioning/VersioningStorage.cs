@@ -320,5 +320,11 @@ namespace Raven.Server.Documents.Versioning
 
             return result;
         }
+
+        public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
+        {
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+            return table.GetNumberEntriesFor(_docsSchema.FixedSizeIndexes["Etag"]);
+        }
     }
 }

@@ -42,6 +42,11 @@ namespace Raven.Client.Data
         public long CountOfDocuments { get; set; }
 
         /// <summary>
+        /// Total number of versioning revision documents in database.
+        /// </summary>
+        public long? CountOfVersioningRevisionDocuments { get; set; }
+
+        /// <summary>
         /// List of stale index names in database..
         /// </summary>
         public string[] StaleIndexes => Indexes?.Where(x => x.IsStale).Select(x => x.Name).ToArray();
