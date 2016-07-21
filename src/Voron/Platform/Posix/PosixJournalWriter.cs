@@ -136,6 +136,12 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
             }
+            result = Syscall.fsync(_fd);
+            if (result == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
 
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(_filename) == -1)
             {

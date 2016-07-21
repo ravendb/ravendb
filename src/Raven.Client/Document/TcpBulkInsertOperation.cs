@@ -14,6 +14,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -38,6 +39,7 @@ namespace Raven.Client.Document
         private bool _isThrottling;
         private readonly long _maxDiffSizeBeforeThrottling = 20L*1024*1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
         private TcpClient _tcpClient;
+        private string _url;
 
 
         ~TcpBulkInsertOperation()
@@ -85,19 +87,13 @@ namespace Raven.Client.Document
         private async Task<Stream> ConnectToServer(AsyncServerClient asyncServerClient)
         {
             var connectionInfo = await asyncServerClient.GetTcpInfoAsync();
-            await _tcpClient.ConnectAsync(new Uri(connectionInfo.Url).Host, connectionInfo.Port);
+            _url = asyncServerClient.Url;
+            await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port);
 
             _tcpClient.NoDelay = true;
             _tcpClient.SendBufferSize = 32*1024;
             _tcpClient.ReceiveBufferSize = 4096;
             var networkStream = _tcpClient.GetStream();
-
-            var buffer = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
-            {
-                DatabaseName = MultiDatabase.GetDatabaseName(asyncServerClient.Url),
-                Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
-            }).ToString());
-            await networkStream.WriteAsync(buffer,0, buffer.Length);
 
             return networkStream;
         }
@@ -107,10 +103,16 @@ namespace Raven.Client.Document
             const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
             var buffer = _jsonOperationContext.GetManagedBuffer();
-            var streamNetworkBuffer = new MemoryStream();
+            var streamNetworkBuffer = new BufferedStream(serverStream, 32 * 1024);
+            var writeToStreamBuffer = new byte[32*1024];
+            var header = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
+            {
+                DatabaseName = MultiDatabase.GetDatabaseName(_url),
+                Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
+            }).ToString());
+            streamNetworkBuffer.Write(header, 0, header.Length);
             using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
             {
-                ArraySegment<byte> arraySegment;
                 while (_documents.IsCompleted == false)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
@@ -125,6 +127,8 @@ namespace Raven.Client.Document
                     {
                         break;
                     }
+
+                    var needToThrottle = _throttlingEvent.Wait(0) == false;
 
                     using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
@@ -144,22 +148,37 @@ namespace Raven.Client.Document
                         _buffers.Add(jsonBuffer);
                         builder.FinalizeDocument();
                         WriteVariableSizeInt(streamNetworkBuffer, builder.SizeInBytes);
-                        builder.CopyTo(streamNetworkBuffer);
+                        WriteToStream(streamNetworkBuffer, builder, writeToStreamBuffer);
                     }
 
-                    if (streamNetworkBuffer.Length > 32 * 1024)
+                    if (needToThrottle)
                     {
-                        streamNetworkBuffer.TryGetBuffer(out arraySegment);
-                        serverStream.Write(arraySegment.Array, 0, arraySegment.Count);
-                        streamNetworkBuffer.SetLength(0);
-                        // first flush, then throttle (in case first buffer to send is big enough to throttle and we rely continuation on server's response)
-                        _throttlingEvent.Wait();
+                        streamNetworkBuffer.Flush();
+                        _throttlingEvent.Wait(500);
                     }
                 }
+                streamNetworkBuffer.WriteByte(0);//done
+                streamNetworkBuffer.Flush();
+            }
+        }
 
-                streamNetworkBuffer.TryGetBuffer(out arraySegment);
-                serverStream.Write(arraySegment.Array, 0, arraySegment.Count);
-                serverStream.WriteByte(0);// done
+        private static unsafe void WriteToStream(BufferedStream networkBufferedStream, BlittableJsonDocumentBuilder builder,
+            byte[] buffer)
+        {
+            using (var reader = builder.CreateReader())
+            {
+                fixed (byte* pBuffer = buffer)
+                {
+                    var bytes = reader.BasePointer;
+                    var remainingSize = reader.Size;
+                    while (remainingSize > 0)
+                    {
+                        var size = Math.Min(remainingSize, buffer.Length);
+                        Memory.Copy(pBuffer, bytes + (reader.Size - remainingSize), size);
+                        remainingSize -= size;
+                        networkBufferedStream.Write(buffer, 0, size);
+                    }
+                }
             }
         }
 
@@ -307,33 +326,36 @@ namespace Raven.Client.Document
         {
             _cts.Token.ThrowIfCancellationRequested();
 
-            if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
-            {
-                await _getServerResponseTask.ConfigureAwait(false);
-                return;// we should never actually get here, the await will throw
-            }
-
-            if (_writeToServerTask.IsFaulted || _writeToServerTask.IsCanceled)
-            {
-                await _getServerResponseTask.ConfigureAwait(false);
-                return;// we should never actually get here, the await will throw
-            }
-
-            if (_getServerResponseTask.IsCompleted)
-            {
-                // we can only get here if we closed the connection
-                throw new ObjectDisposedException(nameof(TcpBulkInsertOperation));
-            }
+            await AssertValidServerConnection();// we should never actually get here, the await will throw
 
             metadata[Constants.MetadataDocId] = id;
             data[Constants.Metadata] = metadata;
 
-            var jsonBuffer = _buffers.Take();
+            MemoryStream jsonBuffer;
+            while (true)
+            {
+                if (_buffers.TryTake(out jsonBuffer, 250))
+                    break;
+                await AssertValidServerConnection();
+            }
             jsonBuffer.SetLength(0);
 
             data.WriteTo(jsonBuffer);
             jsonBuffer.Position = 0;
             _documents.Add(jsonBuffer);
+        }
+
+        private async Task AssertValidServerConnection()
+        {
+            if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
+                await _getServerResponseTask.ConfigureAwait(false);
+
+            if (_writeToServerTask.IsFaulted || _writeToServerTask.IsCanceled)
+                await _getServerResponseTask.ConfigureAwait(false);
+
+            if (_getServerResponseTask.IsCompleted)
+                // we can only get here if we closed the connection
+                throw new ObjectDisposedException(nameof(TcpBulkInsertOperation));
         }
 
         public void Dispose()
@@ -364,7 +386,7 @@ namespace Raven.Client.Document
                             break;
                         if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(60))
                         {
-                            // TODO: Waited to much for close msg from server in bulk insert.. can happen in huge bulk insert ratios.
+                            // Waited to much for close msg from server in bulk insert.. can happen in huge bulk insert ratios.
                             throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
                         }
                     }

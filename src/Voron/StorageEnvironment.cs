@@ -32,8 +32,6 @@ namespace Voron
 {
     public class StorageEnvironment : IDisposable
     {
-        private readonly LoggerSetup _loggerSetup;
-
         private static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
         {
             var flusher = new GlobalFlushingBehavior();
@@ -88,6 +86,7 @@ namespace Voron
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
+        private Logger _log;
 
         public Guid DbId { get; set; }
 
@@ -98,7 +97,7 @@ namespace Voron
         {
             try
             {
-                _loggerSetup = loggerSetup;
+                _log = loggerSetup.GetLogger<StorageEnvironment>(options.BasePath);
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
@@ -770,6 +769,9 @@ namespace Voron
         {
             var oldMode = Options.TransactionsMode;
 
+            if (_log.IsOperationsEnabled)
+                _log.Operations($"Setting transaction mode to {mode}. Old mode is {oldMode}");
+
             if (oldMode == mode)
                 return TransactionsModeResult.ModeAlreadySet;
 
@@ -800,9 +802,8 @@ namespace Voron
                     case TransactionsMode.Safe:
                     case TransactionsMode.Lazy:
                         {
-                            Options.PosixOpenFlags = OpenFlags.O_DSYNC | OpenFlags.O_DIRECT;
-                            Options.WinOpenFlags = Win32NativeFileAttributes.Write_Through |
-                                                   Win32NativeFileAttributes.NoBuffering;
+                            Options.PosixOpenFlags = StorageEnvironmentOptions.SafePosixOpenFlags;
+                            Options.WinOpenFlags = StorageEnvironmentOptions.SafeWin32OpenFlags;
                         }
                         break;
 
