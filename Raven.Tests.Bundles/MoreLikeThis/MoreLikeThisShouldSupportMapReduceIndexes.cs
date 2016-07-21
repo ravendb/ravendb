@@ -92,6 +92,25 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             }
         }
 
+        [Fact]
+        public void CanMakeDynamicDocumentQueries()
+        {
+            using (var session = store.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<IndexDocument, MapReduceIndex>(
+                    new MoreLikeThisQuery
+                    {
+                        Document = "{ \"Text\": \"C#: The Good Good Parts\" }",
+                        Fields = new[] { "Text" },
+                        MinimumTermFrequency = 1,
+                        MinimumDocumentFrequency = 1
+                    });
+
+                Assert.Equal(2, list.Count());
+                Assert.Contains("Javascript: The Good Parts", list.First().Text);
+            }
+        }
+
         private class Book
         {
             public string Id { get; set; }
@@ -139,11 +158,11 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                 Reduce = documents => from doc in documents
                                       group doc by doc.BookId
                                           into g
-                                          select new IndexDocument()
-                                          {
-                                              BookId = g.Key,
-                                              Text = string.Join(" ", g.Select(d => d.Text))
-                                          };
+                                      select new IndexDocument()
+                                      {
+                                          BookId = g.Key,
+                                          Text = string.Join(" ", g.Select(d => d.Text))
+                                      };
 
 
                 Index(x => x.Text, FieldIndexing.Analyzed);

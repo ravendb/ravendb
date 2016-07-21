@@ -245,6 +245,12 @@ task Hotfix {
     $global:configuration = "Release"
 }
 
+task Custom {
+    $global:uploadCategory = "RavenDB-Custom"
+    $global:uploadMode = "Unstable"
+    $global:configuration = "Release"
+}
+
 task RunTests -depends Test
 
 task PullRequest {
