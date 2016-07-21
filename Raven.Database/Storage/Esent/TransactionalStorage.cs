@@ -870,6 +870,7 @@ namespace Raven.Storage.Esent
             if (transactionContext != null)
                 Monitor.Enter(transactionContext, ref lockTaken);
 
+            bool errorInUserAction = false;
             try
             {
                 using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
@@ -880,7 +881,9 @@ namespace Raven.Storage.Esent
                     var storageActionsAccessor = new StorageActionsAccessor(pht, dtcSnapshot);
                     if (disableBatchNesting.Value == null)
                         current.Value = storageActionsAccessor;
+                    errorInUserAction = true;
                     action(storageActionsAccessor);
+                    errorInUserAction = false;
                     storageActionsAccessor.SaveAllTasks();
                     pht.ExecuteBeforeStorageCommit();
 
@@ -899,7 +902,8 @@ namespace Raven.Storage.Esent
             }
             catch (Exception e)
             {
-                log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                if(errorInUserAction == false)
+                    log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
                 throw;
             }
             finally
