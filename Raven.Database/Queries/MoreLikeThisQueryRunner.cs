@@ -48,29 +48,35 @@ namespace Raven.Database.Queries
             if (index == null)
                 throw new InvalidOperationException("The index " + query.IndexName + " cannot be found");
 
-            if (string.IsNullOrEmpty(query.DocumentId) && query.MapGroupFields.Count == 0)
-                throw new InvalidOperationException("The document id or map group fields are mandatory");
+            if (string.IsNullOrEmpty(query.DocumentId) && query.MapGroupFields.Count == 0 && string.IsNullOrEmpty(query.Document))
+                throw new InvalidOperationException("The document id, map group fields or document are mandatory");
 
             IndexSearcher searcher;
             using (database.IndexStorage.GetCurrentIndexSearcher(index.indexId, out searcher))
             {
-                var documentQuery = new BooleanQuery();
-
-                if (string.IsNullOrEmpty(query.DocumentId) == false)
+                int? baseDocId = null;
+                if (string.IsNullOrEmpty(query.DocumentId) == false || query.MapGroupFields.Count > 0)
                 {
-                    documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
+                    var documentQuery = new BooleanQuery();
+
+                    if (string.IsNullOrEmpty(query.DocumentId) == false)
+                    {
+                        documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
+                    }
+
+                    foreach (string key in query.MapGroupFields.Keys)
+                    {
+                        documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
+                    }
+
+                    var td = searcher.Search(documentQuery, 1);
+
+                    // get the current Lucene docid for the given RavenDB doc ID
+                    if (td.ScoreDocs.Length == 0)
+                        throw new InvalidOperationException("Document " + query.DocumentId + " could not be found");
+
+                    baseDocId = td.ScoreDocs[0].Doc;
                 }
-
-                foreach (string key in query.MapGroupFields.Keys)
-                {
-                    documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
-                }
-
-                var td = searcher.Search(documentQuery, 1);
-
-                // get the current Lucene docid for the given RavenDB doc ID
-                if (td.ScoreDocs.Length == 0)
-                    throw new InvalidOperationException("Document " + query.DocumentId + " could not be found");
 
                 var ir = searcher.IndexReader;
                 var mlt = new RavenMoreLikeThis(ir);
@@ -103,13 +109,16 @@ namespace Raven.Database.Queries
                 RavenPerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
                 try
                 {
-                    var defaultAnalyzer = !string.IsNullOrWhiteSpace(query.DefaultAnalyzerName) 
-                        ? IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, query.DefaultAnalyzerName) 
+                    var defaultAnalyzer = !string.IsNullOrWhiteSpace(query.DefaultAnalyzerName)
+                        ? IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, query.DefaultAnalyzerName)
                         : new LowerCaseKeywordAnalyzer();
                     perFieldAnalyzerWrapper = index.CreateAnalyzer(defaultAnalyzer, toDispose, true);
                     mlt.Analyzer = perFieldAnalyzerWrapper;
 
-                    var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
+                    var mltQuery = baseDocId.HasValue
+                        ? mlt.Like(baseDocId.Value)
+                        : mlt.Like(RavenJObject.Parse(query.Document));
+
                     var tsdc = TopScoreDocCollector.Create(pageSize, true);
 
 
@@ -119,13 +128,15 @@ namespace Raven.Database.Queries
                         mltQuery = new BooleanQuery
                         {
                             {mltQuery, Occur.MUST},
-                            {additionalQuery, Occur.MUST}, 
+                            {additionalQuery, Occur.MUST},
                         };
                     }
 
                     searcher.Search(mltQuery, tsdc);
                     var hits = tsdc.TopDocs().ScoreDocs;
-                    var jsonDocuments = GetJsonDocuments(query, searcher, index, query.IndexName, hits, td.ScoreDocs[0].Doc);
+                    var jsonDocuments = baseDocId.HasValue
+                        ? GetJsonDocuments(query, searcher, index, query.IndexName, hits, baseDocId.Value)
+                        : GetJsonDocuments(searcher, index, query.IndexName, hits);
 
                     var result = new MultiLoadResult();
 
@@ -232,10 +243,30 @@ namespace Raven.Database.Queries
                 .Select(hit => new JsonDocument
                 {
                     DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.Doc),
-                                                                new FieldsToFetch(fields, false, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
+                        new FieldsToFetch(fields, false, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
                     Etag = etag
                 })
                 .ToArray();
+        }
+
+        private JsonDocument[] GetJsonDocuments(IndexSearcher searcher, Index index, string indexName, ScoreDoc[] scoreDocs)
+        {
+            if (scoreDocs.Any())
+            {
+                // Since we don't have a document we get the fields from the first hit
+                var fields = searcher.Doc(scoreDocs.First().Doc).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray();
+                var etag = database.Indexes.GetIndexEtag(indexName, null);
+                return scoreDocs
+                    .Select(hit => new JsonDocument
+                    {
+                        DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.Doc),
+                            new FieldsToFetch(fields, false, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
+                        Etag = etag
+                    })
+                    .ToArray();
+            }
+
+            return new JsonDocument[0];
         }
 
         private static void AssignParameters(Lucene.Net.Search.Similar.MoreLikeThis mlt, MoreLikeThisQuery parameters)
