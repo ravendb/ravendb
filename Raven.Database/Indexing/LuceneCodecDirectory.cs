@@ -385,7 +385,6 @@ namespace Raven.Database.Indexing
             {
                 try
                 {
-                    Log.Error("~CodecIndexOutput() " + file.FullName + "!");
                     Dispose(false);
                 }
                 catch (Exception e)

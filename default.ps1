@@ -14,8 +14,8 @@ properties {
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
-    $nowarn = "1591 1573 1591"
-
+    $nowarn = "1591,1573"
+    
     $dotnet = "dotnet"
     $dotnetLib = "netstandard1.6"
     $dotnetApp = "netcoreapp1.0"
@@ -77,8 +77,9 @@ task Compile -depends Init, CompileHtml5 {
     $commit = Get-Git-Commit-Full
 
     Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-
-    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    
 
     Write-Host "msbuild exit code: $LastExitCode"
 
@@ -99,8 +100,9 @@ task CompileHtml5 {
 
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
 
-    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
 
+    
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
 
@@ -239,6 +241,12 @@ task Stable {
 
 task Hotfix {
     $global:uploadCategory = "RavenDB-Hotfix"
+    $global:uploadMode = "Unstable"
+    $global:configuration = "Release"
+}
+
+task Custom {
+    $global:uploadCategory = "RavenDB-Custom"
     $global:uploadMode = "Unstable"
     $global:configuration = "Release"
 }

@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Controllers
             if (MatchEtag(indexEtag))
                 return GetEmptyMessage(HttpStatusCode.NotModified);
 
-            
+
             var result = Database.ExecuteMoreLikeThisQuery(parameters, GetRequestTransaction(), GetPageSize(Database.Configuration.MaxPageSize));
 
             if (MatchEtag(result.Etag))
@@ -67,19 +67,23 @@ namespace Raven.Database.Server.Controllers
                 MinimumTermFrequency = query.Get("minTermFreq").ToNullableInt(),
                 MinimumWordLength = query.Get("minWordLen").ToNullableInt(),
                 StopWordsDocumentId = query.Get("stopWords"),
-                AdditionalQuery= query.Get("query"),
-                DefaultAnalyzerName = query.Get("defaultAnalyzer")
+                AdditionalQuery = query.Get("query"),
+                DefaultAnalyzerName = query.Get("defaultAnalyzer"),
+                Document = query.Get("document")
             };
 
-            var keyValues = query.Get("docid").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var keyValue in keyValues)
+            if (string.IsNullOrEmpty(query.Get("docid")) == false)
             {
-                var split = keyValue.IndexOf('=');
+                var keyValues = query.Get("docid").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var keyValue in keyValues)
+                {
+                    var split = keyValue.IndexOf('=');
 
-                if (split >= 0)
-                    results.MapGroupFields.Add(keyValue.Substring(0, split), keyValue.Substring(split + 1));
-                else
-                    results.DocumentId = keyValue;
+                    if (split >= 0)
+                        results.MapGroupFields.Add(keyValue.Substring(0, split), keyValue.Substring(split + 1));
+                    else
+                        results.DocumentId = keyValue;
+                }
             }
 
             return results;
@@ -105,7 +109,7 @@ namespace Raven.Database.Server.Controllers
         public static float? ToNullableFloat(this string value)
         {
             float ret;
-            if (value == null || !float.TryParse(value,NumberStyles.Number, CultureInfo.InvariantCulture, out ret)) return null;
+            if (value == null || !float.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out ret)) return null;
             return ret;
         }
     }

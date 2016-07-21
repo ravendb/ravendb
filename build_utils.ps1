@@ -63,6 +63,9 @@ function Get-InformationalVersion($version, $label, $category)
     elseif ($category.EndsWith("-Hotfix")) {
         $result = "$version-hotfix-$label"
     }
+    elseif ($category.EndsWith("-Custom")) {
+        $result = "$version-custom-$label"
+    }
     elseif ($category -eq "RavenDB") {
         $result = "$version"
     }
