@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Lucene.Net.Analysis.Tokenattributes;
@@ -22,6 +23,7 @@ using System.Linq;
 using Lucene.Net.Index;
 using Lucene.Net.Support;
 using Lucene.Net.Util;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using IndexReader = Lucene.Net.Index.IndexReader;
 using Term = Lucene.Net.Index.Term;
@@ -29,6 +31,7 @@ using Analyzer = Lucene.Net.Analysis.Analyzer;
 using TokenStream = Lucene.Net.Analysis.TokenStream;
 using StandardAnalyzer = Lucene.Net.Analysis.Standard.StandardAnalyzer;
 using Document = Lucene.Net.Documents.Document;
+using Version = Lucene.Net.Util.Version;
 
 namespace Lucene.Net.Search.Similar
 {
@@ -802,7 +805,23 @@ namespace Lucene.Net.Search.Similar
 
                 if (value == null) continue;
 
-                AddTermFrequencies(new StringReader(value.ToString()), words, fieldName);
+                switch (value.Type)
+                {
+                    case JTokenType.Array:
+                        foreach (var item in (RavenJArray)value)
+                        {
+                            if (item.Type != JTokenType.String)
+                            {
+                                throw new InvalidOperationException($"The '{fieldName}' array items type '{item.Type}' is not supported on MoreLikeThis queries.");
+                            }
+                            AddTermFrequencies(new StringReader(item.Value<string>()), words, fieldName);
+                        }
+                        break;
+                    case JTokenType.String:
+                        AddTermFrequencies(new StringReader(value.Value<string>()), words, fieldName);
+                        break;
+                    default: throw new InvalidOperationException($"The '{fieldName}' field type '{value.Type}' is not supported on MoreLikeThis queries.");
+                }
             }
 
             return CreateQueue(words);
