@@ -1,8 +1,16 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Indexes;
+#if v35
+using Raven.Abstractions.Data;
+#else
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+#endif
 
 namespace Indexing.Benchmark
 {
@@ -29,29 +37,53 @@ namespace Indexing.Benchmark
 
                 var sw = Stopwatch.StartNew();
 
-                var isStale = true;
-                TimeSpan lastCheck = TimeSpan.Zero;
+                var stalenessTimeout = TimeSpan.FromMinutes(5);
+                QueryResult result = null;
 
-                while (isStale)
+#if !v35
+                //Task.Factory.StartNew(() =>
+                //{
+                //    do
+                //    {
+                //        var stats = _store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+
+                //        Console.WriteLine($"{nameof(stats.MapAttempts)}: {stats.MapAttempts}");
+                //        Console.WriteLine($"{nameof(stats.ReduceAttempts)}: {stats.ReduceAttempts}");
+
+                //        Thread.Sleep(500);
+                //    } while ((result != null && result.IsStale == false) || sw.Elapsed > stalenessTimeout);
+                //}, TaskCreationOptions.LongRunning);
+
+                result = _store.DatabaseCommands.Query(index.IndexName, new IndexQuery()
                 {
-                    Thread.Sleep(1000);
 
-                    isStale = _store.DatabaseCommands.GetStatistics().StaleIndexes.Length != 0;
+                    WaitForNonStaleResultsTimeout = stalenessTimeout,
 
-                    if (sw.Elapsed - lastCheck > TimeSpan.FromSeconds(1))
+                    PageSize = 0,
+                    Start = 0
+                });
+
+#else
+                do
+                {
+                    result = _store.DatabaseCommands.Query(index.IndexName, new IndexQuery()
                     {
-                        lastCheck = sw.Elapsed;
+                        PageSize = 0,
+                        Start = 0
+                    });
 
-                        //var stats = _store.DatabaseCommands.GetIndexStatistics(ordersByCompany.IndexName);
+                    Thread.Sleep(100);
+                } while (result.IsStale || sw.Elapsed > stalenessTimeout);
+#endif
 
-                        //Console.WriteLine($"{nameof(stats.MapAttempts)}: {stats.MapAttempts} of {numberOfDocuments}");
-                        //Console.WriteLine($"{nameof(stats.ReduceAttempts)}: {stats.ReduceAttempts}");
-                    }
+                if (result.IsStale)
+                {
+                    throw new InvalidOperationException($"Index is stale after {stalenessTimeout}");
                 }
 
                 sw.Stop();
 
-                Console.WriteLine($"Index became non-stale. It took {sw.Elapsed} to index ... docs"); // use stats
+                Console.WriteLine($"It took {sw.Elapsed} to return non stale result");
             }
         }
     }
