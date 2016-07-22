@@ -18,10 +18,10 @@ namespace Raven.Server.Web.System
                 DynamicJsonValue output;
                 try
                 {
-                    var ip = await Server.GetTcpServerPortAsync();
+                    var port = await Server.GetTcpServerPortAsync();
                     output = new DynamicJsonValue
                     {
-                        ["Port"] = ip.Port,
+                        ["Port"] = port,
                         ["Url"] = Server.Configuration.Core.TcpServerUrl
                     };
                 }

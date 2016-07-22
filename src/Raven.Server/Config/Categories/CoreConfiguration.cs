@@ -25,8 +25,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/ServerUrl")]
         public string ServerUrl { get; set; }
 
-	    [Description("The URLs which the server should listen to. By default we listen to localhost:8081")]
-        [DefaultValue("tcp://localhost:8081")]
+        [Description("The URLs which the server should listen to. By default we listen to localhost:8081")]
+        [DefaultValue("tcp://localhost:0")]
         [ConfigurationEntry("Raven/ServerUrl/TCP")]
         public string TcpServerUrl { get; set; }
 
