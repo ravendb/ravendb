@@ -6,6 +6,7 @@
 using System;
 
 using Raven.Client.Data;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -20,6 +21,13 @@ namespace Raven.Abstractions.Data
 
     public class DocumentChangeNotification : Notification
     {
+        private string _key;
+
+        [JsonIgnore]
+        public Func<object, string> MaterializeKey;
+
+        public object MaterializeKeyState;
+
         /// <summary>
         /// Type of change that occurred on document.
         /// </summary>
@@ -28,7 +36,20 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Identifier of document for which notification was created.
         /// </summary>
-        public string Key { get; set; }
+        public string Key
+        {
+            get
+            {
+                if (_key == null && MaterializeKey != null)
+                {
+                    _key = MaterializeKey(MaterializeKeyState);
+                    MaterializeKey = null;
+                    MaterializeKeyState = null;
+                }
+                return _key;
+            }
+            set { _key = value; }
+        }
 
         /// <summary>
         /// Document collection name.

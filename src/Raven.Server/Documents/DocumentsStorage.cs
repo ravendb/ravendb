@@ -388,9 +388,16 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
+            var loweredKey = GetSliceFromKey(context, key);
+
+            return Get(context, loweredKey);
+        }
+
+        public Document Get(DocumentsOperationContext context, Slice loweredKey)
+        {
             var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
 
-            var tvr = table.ReadByKey(GetSliceFromKey(context, key));
+            var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
                 return null;
 
@@ -498,7 +505,7 @@ namespace Raven.Server.Documents
 
         private Slice GetSliceFromKey(DocumentsOperationContext context, string key)
         {
-            // REVIEW: Can we do better here?
+            // TODO: Can we do better here?
 
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
             if (byteCount > 255)
@@ -634,18 +641,23 @@ namespace Raven.Server.Documents
 
         public bool Delete(DocumentsOperationContext context, string key, long? expectedEtag)
         {
-            var doc = Get(context, key);
+            return Delete(context, GetSliceFromKey(context, key), expectedEtag);
+        }
+
+        public bool Delete(DocumentsOperationContext context, Slice loweredKey, long? expectedEtag)
+        {
+            var doc = Get(context, loweredKey);
             if (doc == null)
             {
                 if (expectedEtag != null)
                     throw new ConcurrencyException(
-                        $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                        $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
                 return false;
             }
             if (expectedEtag != null && doc.Etag != expectedEtag)
             {
                 throw new ConcurrencyException(
-                    $"Document {key} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
             }
 
             if (doc.Etag == _lastEtag)
@@ -657,14 +669,14 @@ namespace Raven.Server.Documents
 
             string originalCollectionName;
             bool isSystemDocument;
-            var collectionName = GetCollectionName(key, doc.Data, out originalCollectionName, out isSystemDocument);
+            var collectionName = GetCollectionName(loweredKey, doc.Data, out originalCollectionName, out isSystemDocument);
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
             CreateTombstone(context, table, doc, originalCollectionName);
 
             if (isSystemDocument == false)
             {
-                _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, originalCollectionName, key);
+                _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, originalCollectionName, loweredKey);
             }
             table.Delete(doc.StorageId);
 
@@ -672,7 +684,8 @@ namespace Raven.Server.Documents
             {
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
-                Key = key,
+                MaterializeKey = state => ((Slice)state).ToString(),
+                MaterializeKeyState = loweredKey,
                 CollectionName = originalCollectionName,
                 IsSystemDocument = isSystemDocument,
             });
@@ -859,6 +872,17 @@ namespace Raven.Server.Documents
         }
 
         private static string GetCollectionName(string key, BlittableJsonReaderObject document, out string originalCollectionName, out bool isSystemDocument)
+        {
+            var collectionName = Document.GetCollectionName(key, document, out isSystemDocument);
+
+            originalCollectionName = collectionName;
+
+            // TODO: we have to have some way to distinguish between dynamic tree names
+            // and our fixed ones, otherwise a collection call Docs will corrupt our state
+            return "@" + collectionName;
+        }
+
+        private static string GetCollectionName(Slice key, BlittableJsonReaderObject document, out string originalCollectionName, out bool isSystemDocument)
         {
             var collectionName = Document.GetCollectionName(key, document, out isSystemDocument);
 

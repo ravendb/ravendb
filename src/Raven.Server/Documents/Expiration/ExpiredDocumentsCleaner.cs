@@ -148,10 +148,10 @@ namespace Raven.Server.Documents.Expiration
                                         break;
                                     }
 
-                                    keysToDelete.Add(multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator));
+                                    var clonedKey = multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator);
+                                    keysToDelete.Add(clonedKey);
 
-                                    var key = multiIt.CurrentKey.ToString();
-                                    var document = _database.DocumentsStorage.Get(context, key);
+                                    var document = _database.DocumentsStorage.Get(context, clonedKey);
                                     if (document == null)
                                         continue;
 
@@ -169,11 +169,11 @@ namespace Raven.Server.Documents.Expiration
                                     if (currentTime < date)
                                         continue;
 
-                                    var deleted = _database.DocumentsStorage.Delete(context, key, null);
+                                    var deleted = _database.DocumentsStorage.Delete(context, clonedKey, null);
                                     count++;
                                     if (Log.IsDebugEnabled && deleted == false)
                                         Log.Debug(
-                                            $"Tried to delete expired document '{key}' but document was not found.");
+                                            $"Tried to delete expired document '{clonedKey}' but document was not found.");
                                 } while (multiIt.MoveNext());
                             }
                         }

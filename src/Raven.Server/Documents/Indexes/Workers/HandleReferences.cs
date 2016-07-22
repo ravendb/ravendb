@@ -137,11 +137,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 lastEtag = referencedDocument.Etag;
                                 count++;
 
-                                var documents = _indexStorage
-                                    .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction)
-                                    .Select(key => _documentsStorage.Get(databaseContext, key))
-                                    .Where(doc => doc != null)
-                                    .Where(doc => doc.Etag <= lastIndexedEtag);
+                                var documents = new List<Document>();
+                                foreach (var key in _indexStorage
+                                    .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
+                                {
+                                    var doc = _documentsStorage.Get(databaseContext, key);
+                                    if(doc != null && doc.Etag <= lastIndexedEtag)
+                                        documents.Add(doc);
+                                }
 
                                 using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                                 {
