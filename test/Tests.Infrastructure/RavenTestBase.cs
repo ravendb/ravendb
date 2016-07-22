@@ -13,7 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
-using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -44,7 +43,7 @@ namespace FastTests
         private int NonReusedTcpServerPort { get; set; }
         private const int MaxParallelServer = 79;
         private static readonly List<int> _usedServerPorts = new List<int>();
-        private static List<int> _availableServerPorts;
+        private static List<int> _availableServerPorts = Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
@@ -61,16 +60,6 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    if (_availableServerPorts == null)
-                    {
-                        lock (AvailableServerPortsLocker)
-                        {
-                            if (_availableServerPorts == null)
-                                _availableServerPorts =
-                                    Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
-                        }
-                    }
-
                     NonReusedServerPort = GetAvailablePort();
                     NonReusedTcpServerPort = GetAvailablePort();
                     _localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
@@ -87,7 +76,7 @@ namespace FastTests
                     if (_globalServer == null)
                     {
                         Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
-                        var globalServer = CreateServer(8080, 9090);
+                        var globalServer = CreateServer(GetAvailablePort(), GetAvailablePort());
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
                             globalServer.Dispose();
