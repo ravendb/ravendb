@@ -10,13 +10,13 @@ class sqlReplicationStats {
 
      
     constructor(replicationStats: sqlReplicationStatsDto) {
-        if (!!replicationStats.Statistics.LastErrorTime && replicationStats.Statistics.LastErrorTime == "0001-01-01T00:00:00.0000000") {
+        if (replicationStats.Statistics && replicationStats.Statistics.LastErrorTime && replicationStats.Statistics.LastErrorTime === "0001-01-01T00:00:00.0000000") {
             replicationStats.Statistics.LastErrorTime = "No Errors";
         }
         this.statistics(replicationStats.Statistics);
         this.name(replicationStats.Name);
         this.metrics(replicationStats.Metrics);
-         this.rateMetrics = ko.computed(() => {
+        this.rateMetrics = ko.computed(() => {
              var computedRateMetrics = [];
              var generalMetrics = this.metrics().GeneralMetrics;
              var tablesMetrics = this.metrics().TablesMetrics;
@@ -39,7 +39,7 @@ class sqlReplicationStats {
              if (!!tablesMetrics) {
                  $.map(tablesMetrics, (tablesMetricsData: dictionary<metricsDataDto>, tableMetricsKey: string) => {
                     $.map(tablesMetricsData, (value, key) => {
-                        if (value.Type == "Meter") {
+                        if (value.Type === "Meter") {
                             var newMetric = value;
                             newMetric["Name"] = key;
                             value["Table"] = tableMetricsKey;
@@ -64,7 +64,7 @@ class sqlReplicationStats {
 
              if (!!generalMetrics) {
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
-                     if (value.Type == "Histogram") {
+                     if (value.Type === "Histogram") {
                          value["Name"] = key;
                          value["Table"] = "";
                          value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {

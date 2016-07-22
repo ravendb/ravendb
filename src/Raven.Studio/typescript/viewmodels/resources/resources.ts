@@ -30,6 +30,7 @@ import counterStorage = require("models/counter/counterStorage");
 import createCounterStorageCommand = require("commands/resources/createCounterStorageCommand");
 import timeSeries = require("models/timeSeries/timeSeries");
 import createTimeSeriesCommand = require("commands/resources/createTimeSeriesCommand");
+import license = require("models/auth/license");
 
 class resources extends viewModelBase {
     resources: KnockoutComputed<resource[]>;
@@ -41,8 +42,7 @@ class resources extends viewModelBase {
     searchText = ko.observable("");
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
-    isAnyResourceSelected: KnockoutComputed<boolean>;
-    hasAllResourcesSelected: KnockoutComputed<boolean>;
+    resourcesSelection: KnockoutComputed<checkbox>;
     allCheckedResourcesDisabled: KnockoutComputed<boolean>;
     isCheckboxVisible: KnockoutComputed<boolean>;
     systemDb: database;
@@ -50,25 +50,37 @@ class resources extends viewModelBase {
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
-    canNavigateToAdminSettings: KnockoutComputed<boolean>;
     clusterMode = ko.computed(() => shell.clusterMode());
-    showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
+    developerLicense = ko.computed(() => !license.licenseStatus() || !license.licenseStatus().IsCommercial);
+    showCreateCluster = ko.computed(() => !shell.clusterMode());
+    canCreateCluster = ko.computed(() => license.licenseStatus() && (!license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true"));
+    canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     databaseType = database.type;
     fileSystemType = fileSystem.type;
     counterStorageType = counterStorage.type;
     timeSeriesType = timeSeries.type;
     visibleResource = ko.observable("");
-    visibleOptions = [
-        { value: "", name: "Show all" }, 
-        { value: database.type, name: "Show databases" }, 
-        { value: fileSystem.type, name: "Show file systems" }, 
-        { value: counterStorage.type, name: "Show counter storages" },
-        { value: timeSeries.type, name: "Show time series" }
-    ];
+    has40Features = ko.computed(() => shell.has40Features());
+    visibleOptions: { value:string, name: string }[];
+    databasesSummary: KnockoutComputed<string>;
+    fileSystemsSummary: KnockoutComputed<string>;
+    isCommaNeeded: KnockoutComputed<boolean>;
 
     constructor() {
         super();
+
+        this.visibleOptions = [
+            { value: "", name: "Show all" },
+            { value: database.type, name: "Show databases" },
+            { value: fileSystem.type, name: "Show file systems" }
+        ];
+        if (this.has40Features()) {
+            this.visibleOptions.pushAll([
+                { value: counterStorage.type, name: "Show counter storages" },
+                { value: timeSeries.type, name: "Show time series" }
+            ]);
+        }
 
         this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
 
@@ -77,6 +89,9 @@ class resources extends viewModelBase {
         this.counterStorages = shell.counterStorages;
         this.timeSeries = shell.timeSeries;
         this.resources = shell.resources;
+
+        // uncheck all during page load
+        this.resources().forEach(resource => resource.isChecked(false));
         
         this.appUrls = appUrl.forCurrentDatabase(); 
         this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterResources());
@@ -104,23 +119,15 @@ class resources extends viewModelBase {
         var updatedUrl = appUrl.forResources();
         this.updateUrl(updatedUrl);
 
-        this.hasAllResourcesSelected = ko.computed(() => {
+        this.resourcesSelection = ko.computed(() => {
             var resources = this.resources();
-            for (var i = 0; i < resources.length; i++) {
-                var rs: resource = resources[i];
-                if (rs.isDatabase() && (<any>rs).isSystem) {
-                    continue;
-                }
-
-                if (rs.isChecked() == false) {
-                    return false;
-                }
+            if (resources.length === 0) {
+                return checkbox.UnChecked;
             }
-            return true;
-        });
 
-        this.isAnyResourceSelected = ko.computed(() => {
-            var resources = this.resources();
+            var allSelected = true;
+            var anySelected = false;
+
             for (var i = 0; i < resources.length; i++) {
                 var rs: resource = resources[i];
                 if (rs.isDatabase() && (<any>rs).isSystem) {
@@ -128,10 +135,18 @@ class resources extends viewModelBase {
                 }
 
                 if (rs.isChecked()) {
-                    return true;
+                    anySelected = true;
+                } else {
+                    allSelected = false;
                 }
             }
-            return false;
+
+            if (allSelected) {
+                return checkbox.Checked;
+            } else if (anySelected) {
+                return checkbox.SomeChecked;
+            }
+            return checkbox.UnChecked;
         });
 
         this.allCheckedResourcesDisabled = ko.computed(() => {
@@ -141,7 +156,7 @@ class resources extends viewModelBase {
                 if (rs.isChecked()) {
                     if (disabledStatus == null) {
                         disabledStatus = rs.disabled();
-                    } else if (disabledStatus != rs.disabled()) {
+                    } else if (disabledStatus !== rs.disabled()) {
                         return null;
                     }
                 }
@@ -151,7 +166,7 @@ class resources extends viewModelBase {
         });
 
         this.isCheckboxVisible = ko.computed(() => {
-            if (this.isGlobalAdmin() == false)
+            if (!this.isGlobalAdmin())
                 return false;
 
             var resources = this.resources();
@@ -163,16 +178,40 @@ class resources extends viewModelBase {
             return false;
         });
 
+        this.databasesSummary = ko.computed(() => this.getResourcesSummary(this.databases(), "database"));
+        this.fileSystemsSummary = ko.computed(() => this.getResourcesSummary(this.fileSystems(), "file system"));
+        this.isCommaNeeded = ko.computed(() => 
+            this.databases().filter(x => x.isVisible()).length > 0 &&
+            this.fileSystems().filter(x => x.isVisible()).length > 0);
+
         this.fetchAlerts();
         this.visibleResource.subscribe(() => this.filterResources());
         this.filterResources();
     }
 
+    private getResourcesSummary(resourcesCollection: Array<resource>, type: string) {
+        var summary = "";
+
+        var resources = resourcesCollection.filter(x => x.isVisible());
+        if (resources.length > 0) {
+            summary += resources.length + " "  + type;
+            if (resources.length > 1) {
+                summary += "s";
+            }
+
+            var disabled = resources.filter(x => x.disabled()).length;
+            if (disabled > 0) {
+                summary += " (" + disabled + " disabled)";
+            }
+        }
+
+        return summary;
+    }
+
     private fetchAlerts() {
-        // TODO: Should be implemented using the new alerts store
-        /*new getOperationAlertsCommand(appUrl.getSystemDatabase())
+        new getOperationAlertsCommand(null)
             .execute()
-            .then((result: alert[]) => this.alerts(result));*/
+            .then((result: alert[]) => this.alerts(result));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -188,11 +227,13 @@ class resources extends viewModelBase {
     }
 
     private resourcesLoaded() {
-        //Show it only when cluster bundle is not present
+        /*
+
+        Show it only when cluster bundle is not present
         // If we have no databases (except system db), show the "create a new database" screen.
-        if (this.resources().length === 0 && this.isGlobalAdmin()) {
+        if (this.resources().length === 1 && this.isGlobalAdmin()) {
             this.newResource();
-        } 
+        } */
     }
 
     filterResources() {
@@ -200,7 +241,7 @@ class resources extends viewModelBase {
         var filterLower = filter.toLowerCase();
         this.databases().forEach((db: database) => {
             var typeMatch = !this.visibleResource() || this.visibleResource() === database.type;
-            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
+            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && db.name !== "<system>" && typeMatch;
             db.isVisible(isMatch);
         });
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
@@ -279,7 +320,7 @@ class resources extends viewModelBase {
         }
 
         if ((this.resources().length > 0) && (this.resources().contains(this.selectedResource()) === false)) {
-            this.selectResource(this.resources().first());
+            ko.postbox.publish("SelectNone");
         }
     }
 
@@ -306,12 +347,16 @@ class resources extends viewModelBase {
     toggleSelectAll() {
         var check = true;
 
-        if (this.isAnyResourceSelected()) {
+        if (this.resourcesSelection() !== checkbox.UnChecked) {
             check = false;
         }
 
         for (var i = 0; i < this.resources().length; i++) {
             var rs: resource = this.resources()[i];
+            if (rs.isDatabase()) {
+                rs.isChecked(false);
+                continue;
+            }
             if (rs.isVisible()) {   
                 rs.isChecked(check);
             }
@@ -388,32 +433,38 @@ class resources extends viewModelBase {
     }
 
     dismissAlert(uniqueKey: string) {
-        // TODO: Should be implemented using the new alerts store
-        // new dismissAlertCommand(appUrl.getSystemDatabase(), uniqueKey).execute();
+        new dismissAlertCommand(null, uniqueKey).execute();
     }
 
     urlForAlert(alert: alert) {
-        // TODO: Should be implemented using the new alerts store
         var index = this.alerts().indexOf(alert);
-        return appUrl.forAlerts(appUrl.getDatabase()) + "&item=" + index;
+        return appUrl.forAlerts(null) + "&item=" + index;
     }
 
     newResource() {
         var createResourceViewModel = new createResource();
         createResourceViewModel.createDatabasePart
             .creationTask
-            .done((databaseName: string, databasePath: string, databaseLogs: string, databaseIndexes: string, tempPath: string, incrementalBackup: boolean
+            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, tempPath: string, storageEngine: string, incrementalBackup: boolean
                 , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
-                var settings = {};
-               
+                var settings = {
+                    "Raven/ActiveBundles": bundles.join(";")
+                };
+                if (storageEngine) {
+                    settings["Raven/StorageTypeName"] = storageEngine;
+                }
                 if (!clusterWide) {
                     settings["Raven-Non-Cluster-Database"] = "true";
                 }
-                if (incrementalBackup) {                    
-                    settings["Raven/Storage/AllowIncrementalBackups"] = "true";
+                if (incrementalBackup) {
+                    if (storageEngine === "esent") {
+                        settings["Raven/Esent/CircularLog"] = "false";
+                    } else {
+                        settings["Raven/Voron/AllowIncrementalBackups"] = "true";
+                    }
                 }
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Storage/TempPath"] = tempPath;
+                    settings["Raven/Voron/TempPath"] = tempPath;
                 }
                 if (alertTimeout !== "") {
                     settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
@@ -423,29 +474,33 @@ class resources extends viewModelBase {
                 }
                 settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/" + databaseName;
                 if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
-                    settings["Raven/Storage/TransactionJournalsPath"] = databaseLogs;
+                    settings["Raven/Esent/LogsPath"] = databaseLogs;
                 }
                 if (!this.isEmptyStringOrWhitespace(databaseIndexes)) {
                     settings["Raven/IndexStoragePath"] = databaseIndexes;
                 }
 
-                this.showDbCreationAdvancedStepsIfNecessary(databaseName, settings, clusterWide);
+                this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings, clusterWide);
             });
 
         createResourceViewModel.createFileSystemPart
             .creationTask
-            .done((fileSystemName: string, fileSystemPath: string, filesystemLogs: string, tempPath: string) => {
-                var settings = {}
+            .done((fileSystemName: string, bundles: string[], fileSystemPath: string, filesystemLogs: string, tempPath: string, storageEngine: string) => {
+                var settings = {
+                    "Raven/ActiveBundles": bundles.join(";")
+                }
 
                 settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(fileSystemPath)) ? fileSystemPath : "~\\FileSystems\\" + fileSystemName;
-
+                if (storageEngine) {
+                    settings["Raven/FileSystem/Storage"] = storageEngine;
+                }
                 if (!this.isEmptyStringOrWhitespace(filesystemLogs)) {
                     settings["Raven/TransactionJournalsPath"] = filesystemLogs;
                 }
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Storage/TempPath"] = tempPath;
+                    settings["Raven/Voron/TempPath"] = tempPath;
                 }
-                this.showFsCreationAdvancedStepsIfNecessary(fileSystemName, settings);
+                this.showFsCreationAdvancedStepsIfNecessary(fileSystemName, bundles, settings);
             });
 
         createResourceViewModel.createCounterStoragePart
@@ -454,12 +509,12 @@ class resources extends viewModelBase {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
-                settings["Raven/Counter/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
+                settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Storage/TempPath"] = tempPath;
+                    settings["Raven/Voron/TempPath"] = tempPath;
                 }
 
-                this.showCsCreationAdvancedStepsIfNecessary(counterStorageName, settings);
+                this.showCsCreationAdvancedStepsIfNecessary(counterStorageName, bundles, settings);
             });
 
         createResourceViewModel.createTimeSeriesPart
@@ -470,7 +525,7 @@ class resources extends viewModelBase {
                 }
                 settings["Raven/TimeSeries/DataDir"] = (!this.isEmptyStringOrWhitespace(timeSeriesPath)) ? timeSeriesPath : "~\\TimeSeries\\" + timeSeriesName;
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Storage/TempPath"] = tempPath;
+                    settings["Raven/Voron/TempPath"] = tempPath;
                 }
 
                 this.showTsCreationAdvancedStepsIfNecessary(timeSeriesName, bundles, settings);
@@ -479,13 +534,12 @@ class resources extends viewModelBase {
         app.showDialog(createResourceViewModel);
     }
 
-    private showDbCreationAdvancedStepsIfNecessary(databaseName: string, settings: {}, clusterWide: boolean) {
+    private showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}, clusterWide: boolean) {
         var securedSettings = {};
         var savedKey;
 
         var encryptionDeferred = $.Deferred();
 
-        /* TODO: Implement
         if (bundles.contains("Encryption")) {
             var createEncryptionViewModel = new createEncryption();
             createEncryptionViewModel
@@ -502,14 +556,14 @@ class resources extends viewModelBase {
                 });
             app.showDialog(createEncryptionViewModel);
         } else {
-        }*/
-        encryptionDeferred.resolve();
+            encryptionDeferred.resolve();
+        }
 
         encryptionDeferred.done(() => {
             new createDatabaseCommand(databaseName, settings, securedSettings)
                 .execute()
                 .done(() => {
-                    var newDatabase = this.addNewDatabase(databaseName, clusterWide);
+                    var newDatabase = this.addNewDatabase(databaseName, bundles, clusterWide);
                     this.selectResource(newDatabase);
 
                     var encryptionConfirmationDialogPromise = $.Deferred();
@@ -522,21 +576,27 @@ class resources extends viewModelBase {
                         encryptionConfirmationDialogPromise.resolve();
                     }
 
-                    this.createDefaultDatabaseSettings(newDatabase).always(() => {
-                        encryptionConfirmationDialogPromise.always(() => {
-                            var settingsDialog = new databaseSettingsDialog();
-                            app.showDialog(settingsDialog);
-                        });
+                    this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
+                        if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
+                            encryptionConfirmationDialogPromise.always(() => {
+                                // schedule dialog using setTimeout to avoid issue with dialog width
+                                // (it isn't recalculated when dialog is already opened)
+                                setTimeout(() => {
+                                        var settingsDialog = new databaseSettingsDialog(bundles);
+                                        app.showDialog(settingsDialog);
+                                    }, 1);
+                            });
+                        }
                     });
                 });
         });
     }
 
-    private addNewDatabase(databaseName: string, clusterWide: boolean): database {
+    private addNewDatabase(databaseName: string, bundles: string[], clusterWide: boolean): database {
         var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
         if (!foundDatabase) {
-            var newDatabase = new database(databaseName, true, false, undefined, undefined, clusterWide);
+            var newDatabase = new database(databaseName, true, false, bundles, undefined, undefined, clusterWide);
             this.databases.unshift(newDatabase);
             this.filterResources();
             return newDatabase;
@@ -544,16 +604,16 @@ class resources extends viewModelBase {
         return foundDatabase;
     }
 
-    private createDefaultDatabaseSettings(db: database): JQueryPromise<any> {
+    private createDefaultDatabaseSettings(db: database, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new createDefaultDbSettingsCommand(db).execute()
+        new createDefaultDbSettingsCommand(db, bundles).execute()
             .always(() => deferred.resolve());
         return deferred;
     }
 
-    private createDefaultFilesystemSettings(fs: fileSystem): JQueryPromise<any> {
+    private createDefaultFilesystemSettings(fs: fileSystem, bundles: Array<string>): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new createDefaultFsSettingsCommand(fs).execute()
+        new createDefaultFsSettingsCommand(fs, bundles).execute()
             .always(() => deferred.resolve());
         return deferred;
     }
@@ -580,13 +640,13 @@ class resources extends viewModelBase {
         return fullEncryptionName;
     }
 
-    private showFsCreationAdvancedStepsIfNecessary(filesystemName: string, settings: {}) {
+    private showFsCreationAdvancedStepsIfNecessary(filesystemName: string, bundles: string[], settings: {}) {
         var securedSettings = {};
         var savedKey;
 
         var encryptionDeferred = $.Deferred();
 
-        /*TODO: if (bundles.contains("Encryption")) {
+        if (bundles.contains("Encryption")) {
             var createEncryptionViewModel = new createEncryption();
             createEncryptionViewModel
                 .creationEncryption
@@ -603,13 +663,13 @@ class resources extends viewModelBase {
             app.showDialog(createEncryptionViewModel);
         } else {
             encryptionDeferred.resolve();
-        }*/
+        }
 
         encryptionDeferred.done(() => {
             new createFilesystemCommand(filesystemName, settings, securedSettings)
                 .execute()
                 .done(() => {
-                    var newFileSystem = this.addNewFileSystem(filesystemName);
+                    var newFileSystem = this.addNewFileSystem(filesystemName, bundles);
                     this.selectResource(newFileSystem);
 
                     var encryptionConfirmationDialogPromise = $.Deferred();
@@ -622,24 +682,23 @@ class resources extends viewModelBase {
                         encryptionConfirmationDialogPromise.resolve();
                     }
 
-                    this.createDefaultFilesystemSettings(newFileSystem).always(() => {
-                        // TODO: Not sure if we encryption anymore
-                        /*if (bundles.contains("Versioning")) {
+                    this.createDefaultFilesystemSettings(newFileSystem, bundles).always(() => {
+                        if (bundles.contains("Versioning")) {
                             encryptionConfirmationDialogPromise.always(() => {
                                 var settingsDialog = new filesystemSettingsDialog(bundles);
                                 app.showDialog(settingsDialog);
                             });
-                        }*/
+                        }
                     });
                 });
         });
     }
 
-    private addNewFileSystem(fileSystemName: string): fileSystem {
+    private addNewFileSystem(fileSystemName: string, bundles: string[]): fileSystem {
         var foundFileSystem = this.fileSystems.first((fs: fileSystem) => fs.name === fileSystemName);
 
         if (!foundFileSystem) {
-            var newFileSystem = new fileSystem(fileSystemName, true, false, false);
+            var newFileSystem = new fileSystem(fileSystemName, true, false, false, bundles);
             this.fileSystems.unshift(newFileSystem);
             this.filterResources();
             return newFileSystem;
@@ -647,21 +706,21 @@ class resources extends viewModelBase {
         return foundFileSystem;
     }
 
-    private showCsCreationAdvancedStepsIfNecessary(counterStorageName: string, settings: {}) {
+    private showCsCreationAdvancedStepsIfNecessary(counterStorageName: string, bundles: string[], settings: {}) {
         new createCounterStorageCommand(counterStorageName, settings)
             .execute()
             .done(() => {
-                var newCounterStorage = this.addNewCounterStorage(counterStorageName);
+                var newCounterStorage = this.addNewCounterStorage(counterStorageName, bundles);
                 this.selectResource(newCounterStorage);
             });
     }
 
-    private addNewCounterStorage(counterStorageName: string): counterStorage {
+    private addNewCounterStorage(counterStorageName: string, bundles: string[]): counterStorage {
         var foundCounterStorage = this.counterStorages.first((cs: counterStorage) => cs.name === counterStorageName);
         if (!!foundCounterStorage)
             return foundCounterStorage;
 
-        var newCounterStorage = new counterStorage(counterStorageName, true, false);
+        var newCounterStorage = new counterStorage(counterStorageName, true, false, bundles);
         this.counterStorages.unshift(newCounterStorage);
         this.filterResources();
         return newCounterStorage;
@@ -681,7 +740,7 @@ class resources extends viewModelBase {
         if (!!foundTimeSeries)
             return foundTimeSeries;
 
-        var newTimeSeries = new timeSeries(timeSeriesName, true, false);
+        var newTimeSeries = new timeSeries(timeSeriesName, true, false, bundles);
         this.timeSeries.unshift(newTimeSeries);
         this.filterResources();
         return newTimeSeries;

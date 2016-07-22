@@ -21,6 +21,7 @@ import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand"
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import filesystemEditFile = require("viewmodels/filesystem/files/filesystemEditFile");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
+import queryUtil = require("common/queryUtil");
 
 class filesystemFiles extends viewModelBase {
 
@@ -40,11 +41,15 @@ class filesystemFiles extends viewModelBase {
     uploadQueue = ko.observableArray<uploadItem>();
     folderNotificationSubscriptions = {};
     hasFiles: KnockoutComputed<boolean>;
+    filesSelection: KnockoutComputed<checkbox>;
     hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
     isAnyFilesAutoSelected = ko.observable<boolean>(false);
     isAllFilesAutoSelected = ko.observable<boolean>(false);
     inRevisionsFolder = ko.observable<boolean>(false);
+
+    anyUploadInProgess: KnockoutComputed<boolean>;
+    uploadsStatus: KnockoutComputed<string>;
 
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
@@ -102,10 +107,55 @@ class filesystemFiles extends viewModelBase {
             var filesCount = this.filesCount();
             return filesCount > 0 && filesCount === this.selectedFilesIndices().length;
         });
+
+        this.filesSelection = ko.computed(() => {
+            var selected = this.selectedFilesIndices();
+            if (this.hasAllFilesSelected()) {
+                return checkbox.Checked;
+            }
+            if (selected.length > 0) {
+                return checkbox.SomeChecked;
+            }
+            return checkbox.UnChecked;
+        });
+
+        this.anyUploadInProgess = ko.pureComputed(() => {
+            var queue = this.uploadQueue();
+            for (var i = 0; i < queue.length; i++) {
+                if (queue[i].status() === uploadQueueHelper.uploadingStatus) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        this.uploadsStatus = ko.pureComputed(() => {
+            var queue = this.uploadQueue();
+
+            if (queue.length === 0) {
+                return 'panel-info';
+            }
+
+            var allSuccess = true;
+
+            for (var i = 0; i < queue.length; i++) {
+                if (queue[i].status() === uploadQueueHelper.failedStatus) {
+                    return 'panel-danger';
+                }
+
+                if (queue[i].status() !== uploadQueueHelper.uploadedStatus) {
+                    allSuccess = false;
+                }
+            }
+
+            return allSuccess ? 'panel-success' : 'panel-info';
+        });
     }
 
     activate(args) {
         super.activate(args);
+
+        this.updateHelpLink("Y1TNKH");
 
         this.appUrls = appUrl.forCurrentFilesystem();
         this.hasAnyFilesSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
@@ -144,12 +194,11 @@ class filesystemFiles extends viewModelBase {
             newFolder = "/";
         }
 
-        if (!this.folderNotificationSubscriptions[newFolder] && changesContext.currentResourceChangesApi() !== null) {
+        if (!this.folderNotificationSubscriptions[newFolder] && changesContext.currentResourceChangesApi() != null) {
             this.folderNotificationSubscriptions[newFolder] = changesContext.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
                     var callbackFolder = new folder(newFolder);
-                    if (!callbackFolder)
-                        return;
+
                     switch (e.Action) {
 
                     case "Add":
@@ -232,7 +281,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
-        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), this.escapeQueryString(directory), skip, take).execute();
+        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
         return task;
     }
 
@@ -330,14 +379,8 @@ class filesystemFiles extends viewModelBase {
         var grid = this.getFilesGrid();
         if (grid) {
             var selectedItem = <documentBase>grid.getSelectedItems(1).first();
-            var selectedFolder = this.selectedFolder();
-
-            if (selectedFolder == null)
-                selectedFolder = "";
-
             var fs = this.activeFilesystem();
-            var fileName = selectedItem.getId();
-            var url = appUrl.forResourceQuery(fs) + "/files" + selectedFolder + "/" + encodeURIComponent(fileName);
+            var url = appUrl.forResourceQuery(fs) + "/files/" + encodeURIComponent(selectedItem.getUrl());
             this.downloader.download(fs, url);
         }
     }
@@ -434,10 +477,10 @@ class filesystemFiles extends viewModelBase {
             // Run the query so that we have an idea of what we'll be deleting.
             var query: string;
             if (recursive) {
-                query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+                query = "__directoryName:" + queryUtil.escapeTerm(this.selectedFolder());
             }else{
                 var folder = !this.selectedFolder() ? "/" : this.selectedFolder();
-                query = "__directory:" + this.escapeQueryString(folder);
+                query = "__directory:" + queryUtil.escapeTerm(folder);
             }
 
             new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
@@ -450,11 +493,6 @@ class filesystemFiles extends viewModelBase {
                 }
             });
         }
-    }
-
-    private escapeQueryString(query: string): string {
-        if (!query) return null;
-        return query.replace(/([ \-\_\.])/g, '\\$1');
     }
 
     promptDeleteFilesMatchingQuery(resultCount: number, query: string) {

@@ -1,10 +1,9 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
-import database = require("models/resources/database");
 import resource = require("models/resources/resource");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
-
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class consoleJs extends viewModelBase {
 
@@ -16,6 +15,8 @@ class consoleJs extends viewModelBase {
     responseText = ko.observable<string>();
     script = ko.observable<string>();
     results = ko.observable<string>();
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     predefinedSamples = ko.observableArray<consoleJsSampleDto>([]);
 
@@ -59,6 +60,12 @@ class consoleJs extends viewModelBase {
 
             return errorMessage;
         });
+    }
+
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("6BJCAJ");
     }
 
     compositionComplete() {

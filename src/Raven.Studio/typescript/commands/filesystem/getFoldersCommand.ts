@@ -10,12 +10,12 @@ class getFoldersStatsCommand extends commandBase {
     execute(): JQueryPromise<folderNodeDto[]> {
 
         var url = "/folders/Subdirectories";
-        if (this.directory) {
-            url += "?directory="+this.directory;
-        }
-        var args = {
+        var args :any = {
             start: this.skip,
             pageSize: this.take
+        }
+        if (this.directory) {
+            args.directory = this.directory;
         }
         
         return this.query<folderNodeDto[]>(url, args, this.fs, (result: string[]) => result.map((x: string) =>

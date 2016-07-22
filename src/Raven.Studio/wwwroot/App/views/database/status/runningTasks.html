@@ -22,103 +22,76 @@
 </style>
 <section id="runningTasksContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div style="height: 65%; position: relative;">
-        <button type="button" class="btn btn-default" data-bind="click: fetchTasks"><i class="fa fa-refresh"></i></button>
+        <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.fetchTasks.bind($root), active:true }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterTypeAll">
-                <input type="radio" name="options" id="option0"> <span data-bind="text: 'All tasks (' + allTasks().length + ')'"></span>
+                <input type="radio" name="options" id="option0"> All tasks <span class="badge" data-bind="text: allTasks().length"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeSuggestionQuery, visible: suggestionQueryCount() > 0">
-                <input type="radio" name="options" id="option1"> <span data-bind="text: 'Suggestion Query (' + suggestionQueryCount() + ')'"></span>
+            <!-- ko foreach: taskTypes -->
+            <label class="btn btn-default" data-bind="click: $root.setFilterType.bind($root, name)">
+                <input type="radio" name="options"> <span data-bind="text: name"></span> <span class="badge" data-bind="text:  count"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeBulkInsert, visible: bulkInsertCount() > 0">
-                <input type="radio" name="options" id="option2"> <span data-bind="text: 'Bulk insert (' + bulkInsertCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeIndexBulkOperation, visible: indexBulkOperationCount() > 0">
-                <input type="radio" name="options" id="option3"> <span data-bind="text: 'Bulk operation (' + indexBulkOperationCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeIndexDeleteOperation, visible: indexDeleteOperationCount() > 0">
-                <input type="radio" name="options" id="option4"> <span data-bind="text: 'Index delete (' + indexDeleteOperationCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeImportDatabase, visible: importDatabaseCount() > 0">
-                <input type="radio" name="options" id="option5"> <span data-bind="text: 'Import database (' + importDatabaseCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeRestoreDatabase, visible: restoreDatabaseCount() > 0">
-                <input type="radio" name="options" id="option6"> <span data-bind="text: 'Restore database (' + restoreDatabaseCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeRestoreFilesystem, visible: restoreFilesystemCount() > 0">
-                <input type="radio" name="options" id="option7"> <span data-bind="text: 'Restore filesystem (' + restoreFilesystemCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeCompactDatabase, visible: compactDatabaseCount() > 0">
-                <input type="radio" name="options" id="option8"> <span data-bind="text: 'Compact database (' + compactDatabaseCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeCompactFilesystem, visible: compactFilesystemCount() > 0">
-                <input type="radio" name="options" id="option9"> <span data-bind="text: 'Compact filesystem (' + compactFilesystemCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeIoTest, visible: ioTestCount() > 0">
-                <input type="radio" name="options" id="option10"> <span data-bind="text: 'IO test (' + ioTestCount() + ')'"></span>
-            </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeNewIndexPrecomputedBatch, visible: newIndexPrecomputedBatchCount() > 0">
-                <input type="radio" name="options" id="option11"> <span data-bind="text: 'New Index (' + newIndexPrecomputedBatchCount() + ')'"></span>
-            </label>
+            <!-- /ko -->
         </div>
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
-        <div id="runningTasksTableContainer" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
-            <span style="white-space: nowrap">
+        <div id="runningTasksTableContainer" class="no-outline" tabindex="-1" data-bind="event: { keydown: tableNavigation.tableKeyDown.bind(tableNavigation) }" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
+            <div style="white-space: nowrap">
                 <div class="column column-header"  style="width: 40px;">
                     <span>Kill</span>
                 </div>
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + 'px' }">
                     <span class="column-handle" column="0"></span>
-                    <span data-bind="click: $root.sortBy.bind($root, 'TaskType')">Type</span>
-                    <span data-bind="visible: $root.sortColumn() === 'TaskType'">
+                    <span data-bind="click: $root.sortBy.bind($root, 'taskType')">Type</span>
+                    <span data-bind="visible: $root.sortColumn() === 'taskType'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
                 </div>
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + 'px' }">
                     <span class="column-handle" column="1"></span>
-                    <span data-bind="click: $root.sortBy.bind($root, 'TimeStamp')">Started</span>
-                    <span data-bind="visible: $root.sortColumn() === 'TimeStamp'">
+                    <span data-bind="click: $root.sortBy.bind($root, 'description')">Description</span>
+                    <span data-bind="visible: $root.sortColumn() === 'description'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
                 </div>
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + 'px' }">
                     <span class="column-handle" column="2"></span>
-                    <span data-bind="click: $root.sortBy.bind($root, 'TaskStatus')">Status</span>
-                    <span data-bind="visible: $root.sortColumn() === 'TaskStatus'">
+                    <span data-bind="click: $root.sortBy.bind($root, 'fullStatus')">Status</span>
+                    <span data-bind="visible: $root.sortColumn() === 'fullStatus'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
                 </div>
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + 'px' }">
                     <span class="column-handle" column="3"></span>
-                    <span data-bind="click: $root.sortBy.bind($root, 'Payload')">Payload</span>
-                    <span data-bind="visible: $root.sortColumn() === 'Payload'">
+                    <span data-bind="click: $root.sortBy.bind($root, 'startTime')">Started</span>
+                    <span data-bind="visible: $root.sortColumn() === 'startTime'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
                 </div>
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + 'px' }">
                     <span class="column-handle" column="4"></span>
-                    <span data-bind="click: $root.sortBy.bind($root, 'ExceptionText')">Exception</span>
-                    <span data-bind="visible: $root.sortColumn() === 'ExceptionText'">
+                    <span data-bind="click: $root.sortBy.bind($root, 'exceptionText')">Exception</span>
+                    <span data-bind="visible: $root.sortColumn() === 'exceptionText'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
                 </div>
-                
-            </span>
-            <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedTasks, delegatedHandler: 'click'">
-                <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectTask" data-bind="visible: IsVisible, css: { warning: TaskStatus === 'Canceled', danger: TaskStatus === 'Faulted', 'selected': $data === $parent.selectedTask() }">
-                    <div class="column" style="width: 40px"><button  data-bind="visible: Killable, click: $root.taskKill.bind($root, $data)" class="btn btn-link negative-margin"><i class="fa fa-bolt"></i></button></div>
-                    <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: TaskType"></div> 
-                    <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
-                    <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: TaskStatus"></div>
-                    <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: Payload"></div>
-                    <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }, text: ExceptionText, attr: { title: ExceptionText }"></div>
+            </div>
+            <div id="runningTasksItemsContainer" style="white-space: nowrap" data-bind="foreach: filteredAndSortedTasks, delegatedHandler: 'click'">
+                <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectTask" data-bind="css: { warning: canceled, danger: faulted, 'selected': $data === $parent.selectedTask() }">
+                    <div class="column" style="width: 40px"><button data-bind="visible: killable, click: $root.taskKill.bind($root, $data)" class="btn btn-link negative-margin"><i class="fa fa-bolt"></i></button>
+                    </div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: taskType"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: description"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: fullStatus"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: timeStampText, attr: { title: timeStampText }"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }"><i data-bind="visible: exceptionText" class="fa fa-exclamation"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -128,37 +101,32 @@
             <div class="form-group">
                 <label class="col-md-2 text-right control-label">Type</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
-                    <p class="form-control-static" data-bind="text: TaskType"></p>
+                    <p class="form-control-static" data-bind="text: taskType"></p>
                 </div>
             </div>
             <div class="form-group">
                 <label class="col-md-2 text-right control-label">Started</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
-                    <p class="form-control-static" data-bind="text: TimeStampText"></p>
+                    <p class="form-control-static" data-bind="text: timeStampText"></p>
                 </div>
             </div>
             <div class="form-group">
                 <label class="col-md-2 text-right control-label">Status</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
-                    <p class="form-control-static" data-bind="text: TaskStatus"></p>
+                    <p class="form-control-static" data-bind="text: fullStatus"></p>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-md-2 text-right control-label">Payload</label>
+                <label class="col-md-2 text-right control-label">Description</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
-                    <p class="form-control-static" data-bind="text: Payload"></p>
+                    <p class="form-control-static" data-bind="text: description"></p>
                 </div>
             </div>
             <div class="form-group">
                 <label class="col-md-2 text-right control-label">Exception</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
                     <p class="form-control-static">
-                        <!-- ko if: $root.noExceptionText -->
-                        <span data-bind="text: ExceptionText"></span>
-                        <!-- /ko -->
-                        <!-- ko ifnot: $root.noExceptionText -->
-                        <span>-</span>
-                        <!-- /ko -->
+                        <span data-bind="text: exceptionText"></span>
                     </p>
                 </div>
             </div>

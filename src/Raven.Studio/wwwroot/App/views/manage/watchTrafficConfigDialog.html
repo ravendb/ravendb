@@ -1,5 +1,5 @@
 <div class="messageBox" tabindex="-1" style="width: 715px;">
-    <form class="form-horizontal" data-bind="submit: confirmConfig" id="log-config-form" onkeypress="return event.keyCode != 13;">
+    <form class="form-horizontal" data-bind="submit: confirmConfig" id="log-config-form" onkeypress="return event.keyCode !== 13;">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="fa fa-times"></i>
@@ -7,50 +7,39 @@
             <h4 class="modal-title">Custom logging</h4>
         </div>
         <div class="modal-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <div class="col-sm-3"><label for="maxEntries" class="control-label">Maximum number of displayed entries</label></div>
-                        <div class="col-sm-9">
-                            <input type="number" data-bind="value: maxEntries" class="form-control" id="maxEntries" required max="30000" min="1">
-                        </div>
-                    </div>
+            <div class="form-group">
+                <label for="maxEntries" class="control-label col-sm-4">Maximum number of displayed entries</label>
+                <div class="col-sm-8">
+                    <input type="number" data-bind="value: maxEntries" class="form-control" id="maxEntries" required max="30000" min="1">
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <div class="col-sm-12"><label for="maxEntries" class="control-label">Watched Resource:</label></div>
-                        <div class="col-sm-12">
-                            <div class="col-sm-3">
-                                <label title="Resource name, might be a database and/or a filesystem">
-                                    <input type="radio" value="SingleResourceView" data-bind="checked: watchedResourceMode" />Single Resource
-                                </label>
-                            </div>
-                            <div class="col-sm-9">
-                                <input id="watchedResource" placeholder="Resource name" type="text" class="form-control"
-                                       data-bind="enable: watchedResourceMode()=='SingleResourceView', customValidity: nameCustomValidityError, value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off" />
-                                <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;"
-                                    data-bind="autoComplete: '#watchedResource', foreach: searchResults">
-                                    <li role="presentation" data-bind="click: function(){ $root.resourceName($data); }">
-                                        <a role="menuitem" tabindex="-1" href="#">
-                                            <span role="menuitem" tabindex="-1">
-                                                <span data-bind="text: $data"></span>
-                                            </span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-sm-12">
-                            <div class="col-sm-12">
-                                <label title="Allows watching all incoming Requests. Requires Machine Admin authentication" class="text-danger">
-                                    <input type="radio" value="AdminView" data-bind="checked:watchedResourceMode" />All (Admin View)
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+
+            <div class="form-group">
+                <label class="control-label col-sm-4">Watched Resource:</label>
+            </div>
+            <div class="form-group">
+                <label class="control-label col-sm-4" title="Resource name, might be a database and/or a filesystem">
+                    <input type="radio" value="SingleResourceView" data-bind="checked: watchedResourceMode"/> Single Resource
+                </label>
+                <div class="col-sm-8">
+                    <input id="watchedResource" placeholder="Resource name" type="text" class="form-control"
+                           data-bind="enable: watchedResourceMode() === 'SingleResourceView', customValidity: nameCustomValidityError, textInput: resourceName" autocomplete="off"/>
+                    <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;"
+                        data-bind="autoComplete: '#watchedResource', foreach: searchResults">
+                        <li role="presentation" data-bind="click: function(){ $root.resourceName($data); }">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span role="menuitem" tabindex="-1">
+                                    <span class="text" data-bind="text: $data"></span>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
+            </div>
+            <div class="form-group">
+                <label title="Allows watching all incoming Requests. Requires Machine Admin authentication" class="text-danger control-label col-sm-4">
+                    <input type="radio" value="AdminView" data-bind="checked: watchedResourceMode" /> All (Admin View)
+                </label>
             </div>
         </div>
         <div class="modal-footer">

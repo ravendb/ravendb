@@ -1,7 +1,7 @@
 <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
 
     <div class="panel-group">
-        <div class="panel panel-default">
+        <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
             <div class="panel-heading">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled() || isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S">
                     <i class="fa fa-save"></i>
@@ -17,7 +17,7 @@
             </div>
             <div class="panel-body">
                 <div class="form-group" data-bind="visible: hasGlobalValues">
-                    <div class="col-md-2">
+                    <div class="col-md-2 text-right">
                         <strong>Property</strong>
                     </div>
                     <div class="col-md-5">
@@ -31,40 +31,72 @@
                     <label for="conflictResolutionSelector" class="col-sm-2 control-label">Client failover behaviour</label>
                     <div class="col-sm-5">
                         <div class="btn-group" data-bind="with: replicationsSetup">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
-                                <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal()">
+                                <span data-bind="visible: !clientFailoverBehaviour()">Let client decide</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
-                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed'">Allow reads from secondaries when request time threshold is surpassed</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow reads from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
-                                <span data-bind="visible: $root.readFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
+                                <span data-bind="visible: readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached()">Read from all servers but switch when request time SLA threshold is reached</span>
+                                <span data-bind="visible: readFromAllAllowWriteToSecondaries()">Read from all servers and allow write to secondaries</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromLeaderWriteToLeader'">Read from leader write to leader</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromLeaderWriteToLeaderWithFailovers'">Read from leader write to leader with failovers</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllWriteToLeader'">Read from all write to leader</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllWriteToLeaderWithFailovers'">Read from all write to leader with failovers</span>
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, null)">Let client decide</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, '')">Let client decide</a></li>
                                 <li class="divider"></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed')">Allow reads from secondaries when request time threshold is surpassed</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')">Allow reads from secondaries when request time SLA threshold is reached</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'FailImmediately')">Fail immediately</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached,ReadFromAllServers')">Read from all servers but switch when request time SLA threshold is reached</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeader')">Read from leader write to leader</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeaderWithFailovers')">Read from leader write to leader with failovers</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeader')">Read from all write to leader</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeaderWithFailovers')">Read from all write to leader with failovers</a></li>
                             </ul>
                         </div>
                     </div>
                     <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues">
                         <div class="btn-group" data-bind="with: replicationsSetup">
                             <button disabled="disabled" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="visible: $root.globalClientFailoverBehaviour() == null">Let client decide</span>
+                                <span data-bind="visible: !$root.globalClientFailoverBehaviour()">Let client decide</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
-                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed'">Allow reads from secondaries when request time threshold is surpassed</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow reads from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
+                                <span data-bind="visible: $root.globalReadFromAllButSwitchWhenRequestTimeSlaThresholdIsReached">Read from all servers but switch when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.globalReadFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromLeaderWriteToLeader'">Read from leader write to leader</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromLeaderWriteToLeaderWithFailovers'">Read from leader write to leader with failovers</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllWriteToLeader'">Read from all write to leader</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllWriteToLeaderWithFailovers'">Read from all write to leader with failovers</span>
                                 <span class="caret"></span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="if: showRequestTimeoutRow()">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Request Time SLA Threshold</label>
+                        <div class="col-sm-5">
+                            <div class="input-group" data-bind="visible: replicationsSetup().showRequestTimeSlaThreshold()">
+                                <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false" />
+                                <span class="input-group-addon">ms</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientRequestTimeSlaThreshold()">
+                            <div class="input-group">
+                                <input disabled="disabled" type="number" class="form-control" data-bind="value: $root.globalClientRequestTimeSlaThreshold()" />
+                                <span class="input-group-addon">ms</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -102,6 +134,15 @@
                 </div>
 
                 <div class="form-group">
+                    <div class="col-sm-10 col-sm-offset-2">
+                        <div class="checkbox">
+                            <input type="checkbox" id="globalSkipIndexReplicatonForAll" class="styled" data-bind="checked: skipIndexReplicationForAll, enable: !$root.usingGlobal()">
+                            <label for="globalSkipIndexReplicatonForAll">Skip index replication for all destinations</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label class="col-sm-2 control-label">Replication destinations</label>
                     <div class="col-sm-10">
                         <button type="button" class="btn btn-default" data-bind="enable: $root.usingGlobal() == false, click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
@@ -110,11 +151,11 @@
                         <br />
                         <br />
                         <div data-bind="with: replicationsSetup">
-                            <p data-bind="visible: destinations().length === 0">
+                            <p data-bind="visible: !hasAnyReplicationDestination()">
                                 <i class="fa fa-warning text-warning"></i> <span class="text-muted">You haven't created any replication destinations.</span>
                             </p>
                             <div data-bind="foreach: destinations">
-                                <div class="panel" data-bind="css: { 'panel-warning': disabled(), 'panel-default': !disabled(), 'panel-info': hasLocal() == false && hasGlobal() }">
+                                <div class="panel" data-bind="visible: !enableReplicateOnlyFromCollections(), css: { 'panel-warning': disabled(), 'panel-default': !disabled(), 'panel-info': hasLocal() == false && hasGlobal() }">
                                     <div class="panel-heading">
                                         <h3 class="panel-title">
                                             <span title="Overridden from global configuration" data-bind="visible: hasLocal() == false && hasGlobal()"><i class="fa fa-arrow-down"></i></span>
@@ -223,65 +264,16 @@
                                                     <input type="text" class="form-control" data-bind="value: clientVisibleUrl, enable: canEdit, valueUpdate: 'afterkeydown'" />
                                                 </div>
                                             </div>
-                                            <div class="form-group">
-                                                <label class="col-sm-2 control-label">Skip Index Replication</label>
-                                                <div class="col-sm-9">
-                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="enable: canEdit, checked: skipIndexReplication" />
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="col-sm-2 control-label">Customize collection replication</label>
-                                                <div class="col-sm-9">
-                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="enable: canEdit, checked: enableReplicateOnlyFromCollections" />
-                                                    <div data-bind="visible: enableReplicateOnlyFromCollections">
-                                                        <table class="table table-striped">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th class="col-sm-2">Replicate collection</th>
-                                                                    <th class="col-sm-2">Transform / Filter</th>
-                                                                    <th class="col-sm-8">Script <i class="fa fa-info-circle text-info scriptPopover"></i></th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody data-bind="foreach: $parents[1].collections">
-                                                                <tr>
-                                                                    <td>
-                                                                        <!-- ko if:  $parent.isSelected($data) -->
-                                                                        <button type="button" class="btn btn-default active" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onReplicateToCollectionClick($parents[0],$data.name); }">
-                                                                            <i data-bind="css:{ 'fa-check': true  }" class="fa fa-fw"></i>
-                                                                        </button>
-                                                                        <!-- /ko -->
-                                                                        <!-- ko if:  $parent.isSelected($data) == false -->
-                                                                        <button type="button" class="btn btn-default" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onReplicateToCollectionClick($parents[0],$data.name); }">
-                                                                            <i data-bind="css:{ 'fa-check': false  }" class="fa fa-fw"></i>
-                                                                        </button>
-                                                                        <!-- /ko -->
-                                                                        <span data-bind="text: name"></span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <div data-bind="visible: $parent.isSelected($data)">
-                                                                            <!-- ko if:  $parent.hasScript($data) -->
-                                                                            <button type="button" class="btn btn-default active" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onTransformCollectionClick($parents[0],$data.name); }">
-                                                                                <i data-bind="css:{ 'fa-check': true  }" class="fa fa-fw"></i>
-                                                                            </button>
-                                                                            <!-- /ko -->
-                                                                            <!-- ko if:  $parent.hasScript($data) == false -->
-                                                                            <button type="button" class="btn btn-default" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onTransformCollectionClick($parents[0],$data.name); }">
-                                                                                <i data-bind="css:{ 'fa-check': false  }" class="fa fa-fw"></i>
-                                                                            </button>
-                                                                            <!-- /ko -->
-                                                                        </div>
-                                                                    </td>
-                                                                    <td data-bind="if: $parent.hasScript($data) ">
-                                                                        <pre class="form-control" data-bind="aceEditor: { lang: 'ace/mode/javascript', readOnly: false, code: $parent.findEditor($data), allowResize: true }"></pre>
-                                                                    </td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
 
-
+                                            <div class="form-group">
+                                                <div class="col-sm-9 col-sm-offset-2">
+                                                    <div class="checkbox">
+                                                        <input type="checkbox" class="styled" data-bind="checked: skipIndexReplication, enable: canEdit, attr: { id: 'skipIndexReplicaton_' + $index() } ">
+                                                        <label data-bind="attr: { for: 'skipIndexReplicaton_' + $index() }">Skip Index Replication</label>
                                                     </div>
                                                 </div>
                                             </div>
+
                                             <div class="form-group" style="margin-left: 10px">
                                                 <button data-bind="click:function(event,data){ $parents[1].sendReplicateCommand($data,$parents[1]); }" type="submit" class="btn btn-primary" title="Replicate to this destination">
                                                     <i class="fa fa-share-square-o"></i>
@@ -332,11 +324,13 @@
                 </div>
             </div>
         </div>
-        <div class="panel panel-default">
+        <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
             <div class="panel-heading">
-                <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
+                <button type="submit" data-bind="click:sendResolveAllConflictsCommand" class="btn btn-primary" title="Resolve all existing conflict acording to the current conflict resolution">
+                    <i class="fa fa-send"></i>
+                </button>
                 <span style="margin-left: 5px;">
-                    Skip index replication for all destinations
+                    Resolve all existing conflict acording to the current conflict resolution
                 </span>
             </div>
             <div class="panel-heading">
@@ -348,7 +342,7 @@
                 </span>
             </div>
         </div>
-        <div class="panel panel-default">
+        <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
             <div class="panel-heading">
                 <button data-bind="click: saveServerPrefixForHiLo, enable: isServerPrefixForHiLoSaveEnabled" type="submit" class="btn btn-primary" title="Save changes">
                     <i class="fa fa-save"></i>
@@ -371,6 +365,17 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="panel panel-default" data-bind="if:!replicationEnabled(), visible: !replicationEnabled()">
+            <div class="panel-heading">
+                Replication is disabled
+            </div>
+            <div class="panel-body">
+                <div class="text-center">
+                    <h3 class="text-info">Replication bundle is disabled. <small>Go ahead and <a href="#" data-bind="click: enableReplication">enable replication for this database</a>.</small></h3>
+                </div>
+            </div>
+
         </div>
     </div>
 

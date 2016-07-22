@@ -37,9 +37,9 @@
                                 <label class="col-sm-4 control-label">Override:</label>
                                 <div class="col-sm-7">
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal()">
                                             <span data-bind="visible: canEdit()">Yes</span>
-                                            <span data-bind="visible: canEdit()==false">No</span>
+                                            <span data-bind="visible: !canEdit()">No</span>
                                             <span class="caret"></span>
                                         </button>
                                         <ul class="dropdown-menu" role="menu">

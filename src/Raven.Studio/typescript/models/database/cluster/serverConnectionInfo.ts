@@ -32,16 +32,30 @@ class serverConnectionInfo {
     useUserCredentials() {
         this.isUserCredentials(true);
         this.isApiKeyCredentials(false);
+        this.clearApiKeyCredentials();
     }
 
     useApiKeyCredentials() {
         this.isApiKeyCredentials(true);
         this.isUserCredentials(false);
+        this.clearUserCredentials();
     }
 
     useNoCredentials() {
         this.isUserCredentials(false);
         this.isApiKeyCredentials(false);
+        this.clearApiKeyCredentials();
+        this.clearUserCredentials();
+    }
+
+    private clearApiKeyCredentials() {
+        this.apiKey(undefined);
+    }
+
+    private clearUserCredentials() {
+        this.username(undefined);
+        this.password(undefined);
+        this.domain(undefined);
     }
 
     toDto(): serverConnectionInfoDto {

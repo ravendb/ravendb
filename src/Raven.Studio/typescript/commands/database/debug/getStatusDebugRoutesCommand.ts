@@ -9,8 +9,7 @@ class getStatusDebugConfigCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         var url = "/debug/routes";
-        var db = appUrl.getSystemDatabase();
-        return this.query<any>(url, null, db);
+        return this.query<any>(url, null, null);
     }
 }
 

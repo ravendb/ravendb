@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/database/replication/replicationsSetup");
 import replicationConfig = require("models/database/replication/replicationConfig")
 import replicationDestination = require("models/database/replication/replicationDestination");
-import collection = require("models/database/documents/collection");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
 import updateServerPrefixHiLoCommand = require("commands/database/documents/updateServerPrefixHiLoCommand");
@@ -16,20 +15,20 @@ import deleteLocalReplicationsSetupCommand = require("commands/database/globalCo
 import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import appUrl = require("common/appUrl");
-import database = require("models/resources/database");
-import replicationPatchScript = require("models/database/replication/replicationPatchScript");
-import collectionsStats = require("models/database/documents/collectionsStats");
+import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
+import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 
 class replications extends viewModelBase {
+
+    replicationEnabled = ko.observable<boolean>(false);
 
     prefixForHilo = ko.observable<string>("");
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
     globalClientFailoverBehaviour = ko.observable<string>(null);
+    globalClientRequestTimeSlaThreshold = ko.observable<number>();
     globalReplicationConfig = ko.observable<replicationConfig>();
-    collections = ko.observableArray<collection>();
 
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -40,8 +39,9 @@ class replications extends viewModelBase {
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
     skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
-
     skipIndexReplicationForAll = ko.observable<boolean>();
+
+    showRequestTimeoutRow: KnockoutComputed<boolean>;
 
     private skipIndexReplicationForAllSubscription: KnockoutSubscription;
 
@@ -56,19 +56,14 @@ class replications extends viewModelBase {
     }
 
     private getIndexReplicationStatusForAllDestinations(): string {
-        var countOfSkipIndexReplication: number = 0;
-        ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
-            if (dest.skipIndexReplication() === true) {
-                countOfSkipIndexReplication++;
-            }
-        });
+        var nonEtlDestinations = this.replicationsSetup().destinations().filter(x => !x.enableReplicateOnlyFromCollections());
+        var nonEtlWithSkipedIndexReplicationCount = nonEtlDestinations.filter(x => x.skipIndexReplication()).length;
 
-        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
-            return 'all';
-
-        // ReSharper disable once ConditionIsAlwaysConst
-        if (countOfSkipIndexReplication === 0)
+        if (nonEtlWithSkipedIndexReplicationCount === 0)
             return 'none';
+
+        if (nonEtlWithSkipedIndexReplicationCount === nonEtlDestinations.length)
+            return 'all';
 
         return 'mixed';
     }
@@ -76,36 +71,50 @@ class replications extends viewModelBase {
     usingGlobal = ko.observable<boolean>(false);
     hasGlobalValues = ko.observable<boolean>(false);
 
-    readFromAllAllowWriteToSecondaries = ko.computed(() => {
-        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",");
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
-    });
-
     globalReadFromAllAllowWriteToSecondaries = ko.computed(() => {
         var behaviour = this.globalClientFailoverBehaviour();
         if (behaviour == null) {
             return false;
         }
-        var tokens = behaviour.split(",");
+        var tokens = behaviour.split(",").map(x => x.trim());
         return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
+    });
+
+    globalReadFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
+        var behaviour = this.globalClientFailoverBehaviour();
+        if (behaviour == null) {
+            return false;
+        }
+        var tokens = behaviour.split(",").map(x => x.trim());
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
     });
 
     constructor() {
         super();
         aceEditorBindingHandler.install();
+
+        this.showRequestTimeoutRow = ko.computed(() => {
+            var localSetting = this.replicationsSetup().showRequestTimeSlaThreshold();
+            var globalSetting = this.hasGlobalValues() && this.globalClientFailoverBehaviour() &&
+                this.globalClientFailoverBehaviour().contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
+            return localSetting || globalSetting;
+        });
     }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            if (db.activeBundles.contains("Replication")) {
+                this.replicationEnabled(true);
+                $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                    .done(() => deferred.resolve({ can: true }))
+                    .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            } else {
+                this.replicationEnabled(false);
+                deferred.resolve({ can: true });
+            }
+
         }
         return deferred;
     }
@@ -121,13 +130,6 @@ class replications extends viewModelBase {
 
         var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.usingGlobal];
 
-        $.each(this.replicationsSetup().destinations(), (i, dest) => {
-            replicationSetupDirtyFlagItems.push(<any>dest.specifiedCollections);
-            dest.specifiedCollections.subscribe(array => {
-                dest.ignoredClient(dest.specifiedCollections.length > 0);
-            });
-            this.addScriptHelpPopover();
-        });
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
 
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
@@ -139,11 +141,11 @@ class replications extends viewModelBase {
             return rc || rs || sp;
         });
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag, this.usingGlobal]);
+    }
 
-        var db = this.activeDatabase();
-        this.fetchCollectionsStats(db).done(results => {
-            this.collections(results.collections);
-        });
+    attached() {
+        super.attached();
+        $.each(this.replicationsSetup().destinations(), this.addScriptHelpPopover);
     }
 
     private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
@@ -171,6 +173,8 @@ class replications extends viewModelBase {
 
     fetchReplications(db): JQueryPromise<any> {
         var deferred = $.Deferred();
+        ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
+
         new getReplicationsCommand(db)
             .execute()
             .done((repSetup: configurationDocumentDto<replicationsDto>) => {
@@ -179,9 +183,8 @@ class replications extends viewModelBase {
                 this.hasGlobalValues(repSetup.GlobalExists);
                 if (repSetup.GlobalDocument && repSetup.GlobalDocument.ClientConfiguration) {
                     this.globalClientFailoverBehaviour(repSetup.GlobalDocument.ClientConfiguration.FailoverBehavior);
+                    this.globalClientRequestTimeSlaThreshold(repSetup.GlobalDocument.ClientConfiguration.RequestTimeSlaThresholdInMilliseconds);
                 }
-
-                ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
 
                 var status = this.getIndexReplicationStatusForAllDestinations();
                 if (status === 'all')
@@ -199,10 +202,11 @@ class replications extends viewModelBase {
         $(".scriptPopover").popover({
             html: true,
             trigger: 'hover',
+            container: ".form-horizontal",
             content:
-            'Return <code>null</code> in transform script to skip document from replication. <br />' +
-            'Example: ' +
-            '<pre>if (this.Region !== "Europe") { <br />   return null; <br />}<br/>this.Currency = "EUR"; </pre>'
+            '<p>Return <code>null</code> in transform script to skip document from replication. </p>' +
+            '<p>Example: </p>' +
+            '<pre><span class="code-keyword">if</span> (<span class="code-keyword">this</span>.Region !== <span class="code-string">"Europe"</span>) { <br />   <span class="code-keyword">return null</span>; <br />}<br/><span class="code-keyword">this</span>.Currency = <span class="code-string">"EUR"</span>; </pre>'
         });
     }
 
@@ -214,20 +218,6 @@ class replications extends viewModelBase {
             item.script("");
         } else {
             item.script(undefined);
-        }
-
-        destination.specifiedCollections.notifySubscribers();
-    }
-
-    public onReplicateToCollectionClick(destination: replicationDestination, collectionName: string) {
-        var collections = destination.specifiedCollections();
-        var item = collections.first(c => c.collection() === collectionName);
-        if (item) {
-            collections.remove(item);
-        } else {
-            var patchScript = replicationPatchScript.empty();
-            patchScript.collection(collectionName);
-            collections.push(patchScript);
         }
 
         destination.specifiedCollections.notifySubscribers();
@@ -282,17 +272,19 @@ class replications extends viewModelBase {
         if (db) {
             new saveReplicationDocumentCommand(this.replicationsSetup().toDto(), db)
                 .execute()
-                .done(() => this.replicationsSetupDirtyFlag().reset());
+                .done(() => {
+                    this.replicationsSetupDirtyFlag().reset();
+                    this.dirtyFlag().reset();
+                });
         }
-    }
-
-    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db, this.collections()).execute();
     }
 
     toggleIndexReplication(skipReplicationValue: boolean) {
         this.replicationsSetup().destinations().forEach(dest => {
-            dest.skipIndexReplication(skipReplicationValue);
+            // since we are on replications page filter toggle to non-etl destinations only
+            if (!dest.enableReplicateOnlyFromCollections()) {
+                dest.skipIndexReplication(skipReplicationValue);    
+            }
         });
     }
 
@@ -315,6 +307,15 @@ class replications extends viewModelBase {
             alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
         }
 
+    }
+
+    sendResolveAllConflictsCommand() {
+        var db = this.activeDatabase();
+        if (db) {
+            new resolveAllConflictsCommand(db).execute();
+        } else {
+            alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
+        }
     }
 
     saveServerPrefixForHiLo() {
@@ -353,12 +354,36 @@ class replications extends viewModelBase {
     }
 
     useGlobal() {
+        // using global configuration will discard all ETL configurations, if you find any warning user about this. 
+        if (this.replicationsSetup().destinations().filter(x => x.enableReplicateOnlyFromCollections()).length) {
+            this.confirmationMessage("Are you sure?",
+                    "All ETL destinations will be discarded when using global configuration.")
+                .done(() => this.proceedWithUseGlobal());
+        } else {
+            this.proceedWithUseGlobal();
+        }
+    }
+
+    private proceedWithUseGlobal() {
         this.usingGlobal(true);
         if (this.globalReplicationConfig()) {
             this.replicationConfig().documentConflictResolution(this.globalReplicationConfig().documentConflictResolution());
         }
 
-        this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour());
+        this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour(), this.globalClientRequestTimeSlaThreshold());
+    }
+
+    enableReplication() {
+        new enableReplicationCommand(this.activeDatabase())
+            .execute()
+            .done((bundles) => {
+                var db = this.activeDatabase();
+                db.activeBundles(bundles);
+                this.replicationEnabled(true);
+                this.fetchServerPrefixForHiLoCommand(db);
+                this.fetchAutomaticConflictResolution(db);
+                this.fetchReplications(db);
+            });
     }
 
 }

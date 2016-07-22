@@ -3,6 +3,7 @@ import getSingleTransformerCommand = require("commands/database/transformers/get
 import database = require("models/resources/database");
 import transformer = require("models/database/index/transformer");
 
+
 class saveTransformerCommand extends commandBase {
     constructor(private trans: transformer, private db: database) {
         super();

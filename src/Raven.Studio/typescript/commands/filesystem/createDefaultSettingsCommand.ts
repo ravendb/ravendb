@@ -6,7 +6,7 @@ import commandBase = require("commands/commandBase");
 import saveVersioningCommand = require("commands/filesystem/saveVersioningCommand");
 
 class createDefaultSettingsCommand extends commandBase {
-    constructor(private fs: filesystem) {
+    constructor(private fs: filesystem, private bundles) {
         super();
     }
 
@@ -14,7 +14,9 @@ class createDefaultSettingsCommand extends commandBase {
         this.reportInfo("Creating default settings for '" + this.fs.name + "'...");
         
         var tasksToWatch = []; 
-        tasksToWatch.push(this.saveVersioningConfiguration());
+        if (this.bundles.contains("Versioning")) {
+            tasksToWatch.push(this.saveVersioningConfiguration());
+        }
 
         if (tasksToWatch.length > 0) {
             return $.when.apply(null, tasksToWatch);

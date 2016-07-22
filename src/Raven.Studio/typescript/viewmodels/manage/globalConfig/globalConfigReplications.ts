@@ -10,8 +10,14 @@ import getAutomaticConflictResolutionDocumentCommand = require("commands/databas
 import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import shell = require("viewmodels/shell");
 
 class globalConfigReplications extends viewModelBase {
+
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
 
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
@@ -22,30 +28,66 @@ class globalConfigReplications extends viewModelBase {
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
+    settingsAccess = new settingsAccessAuthorizer();
+
+    isInCluster = shell.clusterMode;
+
     activated = ko.observable<boolean>(false);
 
-    readFromAllAllowWriteToSecondaries = ko.computed(() => {
-        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",");
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
-    });
+    skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
+
+    skipIndexReplicationForAll = ko.observable<boolean>();
+
+    private skipIndexReplicationForAllSubscription: KnockoutSubscription;
+
+    private refereshSkipIndexReplicationForAllDestinations() {
+        if (this.skipIndexReplicationForAllSubscription != null)
+            this.skipIndexReplicationForAllSubscription.dispose();
+
+        var newStatus = this.getIndexReplicationStatusForAllDestinations();
+        this.skipIndexReplicationForAll(newStatus === 'all');
+
+        this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
+    }
+
+    private getIndexReplicationStatusForAllDestinations(): string {
+        var countOfSkipIndexReplication: number = 0;
+        ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
+            if (dest.skipIndexReplication()) {
+                countOfSkipIndexReplication++;
+            }
+        });
+
+        // ReSharper disable once ConditionIsAlwaysConst
+        if (countOfSkipIndexReplication === 0)
+            return 'none';
+
+        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
+            return 'all';
+
+        return 'mixed';
+    }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = null;
         if (db) {
-            $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
-                .done(() => deferred.resolve({ can: true }) )
-                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            //TODO:
+            if (this.settingsAccess.isForbidden()) {
+                deferred.resolve({ can: true });
+            } else {
+                $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                    .done(() => deferred.resolve({ can: true }))
+                    .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            }
         }
         return deferred;
     }
 
     attached() {
+        super.attached();
         this.bindPopover();
+        this.refereshSkipIndexReplicationForAllDestinations();
     }
 
     bindPopover() {
@@ -62,8 +104,8 @@ class globalConfigReplications extends viewModelBase {
         
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour]);
-        this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.replicationsSetup().requestTimeSlaThreshold, this.replicationsSetup().showRequestTimeSlaThreshold]);
+        this.isSetupSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.replicationsSetupDirtyFlag().isDirty());
 
         var combinedFlag = ko.computed(() => {
             var f1 = this.replicationConfigDirtyFlag().isDirty();
@@ -75,18 +117,22 @@ class globalConfigReplications extends viewModelBase {
 
     fetchAutomaticConflictResolution(db): JQueryPromise<any> {
         var deferred = $.Deferred();
+        /* TODO:
         new getAutomaticConflictResolutionDocumentCommand(db, true)
             .execute()
             .done(repConfig => {
                 this.replicationConfig(new replicationConfig(repConfig));
                 this.activated(true);
             })
-            .always(() => deferred.resolve({ can: true }));
+            .always(() => deferred.resolve({ can: true }));*/
         return deferred;
     }
 
     fetchReplications(db): JQueryPromise<any> {
         var deferred = $.Deferred();
+
+        ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
+
         new getGlobalConfigReplicationsCommand(db)
             .execute()
             .done((repSetup: replicationsDto) => {
@@ -99,10 +145,12 @@ class globalConfigReplications extends viewModelBase {
             })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
+
     }
 
     createNewDestination() {
         this.replicationsSetup().destinations.unshift(replicationDestination.empty("{databaseName}"));
+        this.refereshSkipIndexReplicationForAllDestinations();
         this.bindPopover();
     }
 
@@ -115,10 +163,10 @@ class globalConfigReplications extends viewModelBase {
     }
 
     syncChanges(deleteConfig: boolean) {
-        /*if (deleteConfig) {
-            var task1 = new deleteDocumentCommand("Raven/Global/Replication/Config", appUrl.getSystemDatabase())
+        if (deleteConfig) {
+            var task1 = new deleteDocumentCommand("Raven/Global/Replication/Config", null)
                 .execute();
-            var task2 = new deleteDocumentCommand("Raven/Global/Replication/Destinations", appUrl.getSystemDatabase())
+            var task2 = new deleteDocumentCommand("Raven/Global/Replication/Destinations", null)
                 .execute();
             var combinedTask = $.when(task1, task2);
             combinedTask.done(() => messagePublisher.reportSuccess("Global Settings were successfully saved!"));
@@ -133,17 +181,20 @@ class globalConfigReplications extends viewModelBase {
                 if (this.replicationsSetup().source()) {
                     this.saveReplicationSetup();
                 } else {
-                    var db = appUrl.getSystemDatabase();
-                    if (db) {
-                        new getDatabaseStatsCommand(db)
-                            .execute()
-                            .done(result=> {
-                                this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                            });
-                    }
+                    new getDatabaseStatsCommand(null)
+                        .execute()
+                        .done(result=> {
+                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                        });
                 }
             }
-        }*/
+        }
+    }
+
+    toggleIndexReplication(skipReplicationValue: boolean) {
+        this.replicationsSetup().destinations().forEach(dest => {
+            dest.skipIndexReplication(skipReplicationValue);
+        });
     }
 
     private prepareAndSaveReplicationSetup(source: string) {
@@ -191,6 +242,7 @@ class globalConfigReplications extends viewModelBase {
         this.replicationConfigDirtyFlag().reset();
         this.replicationsSetupDirtyFlag().reset();
     }
+
 }
 
 export = globalConfigReplications; 

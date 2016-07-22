@@ -3,7 +3,10 @@
         <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
             <i class="fa fa-times"></i>
         </button>
-        <h4 class="modal-title" data-bind="text: title"></h4>
+        <h3 class="modal-title">Are you sure?</h3>
+    </div>
+    <div class="modal-body">
+        <p class="confirmationMessage" data-bind="text: message"></p>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>

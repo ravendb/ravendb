@@ -1,12 +1,11 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import moment = require("moment");
-/* TODO
 import d3 = require('d3');
 import nv = require('nvd3');
-*/
+
 class indexPrefetches extends viewModelBase {
-/* TODO
+    /*
     currentStats: KnockoutObservable<databaseStatisticsDto> = ko.observable(null);
 
     prefetchesChart: any = null;
@@ -50,7 +49,7 @@ class indexPrefetches extends viewModelBase {
                 payload: prefeches[i]
             };
 
-            var match = values.first(e => e.x == item.x && e.y == item.y);
+            var match = values.first(e => e.x === item.x && e.y === item.y);
             if (!match) {
                 values.push(item);
             }
@@ -82,10 +81,10 @@ class indexPrefetches extends viewModelBase {
                 chart.tooltipContent(function (key, x, y, data) {
                     var ff = d3.format(",f");
                     return '<h4>' + key + '</h4>'
-                        + 'Timestamp: ' + data.point.payload.Timestamp + '<br />'
-                        + 'Duration: ' + data.point.payload.Duration + '<br />'
-                        + 'Size: ' + ff(data.point.payload.Size) + '<br />'
-                        + 'Retries: ' + ff(data.point.payload.Retries);
+                        + '<strong>Timestamp:</strong> ' + data.point.payload.Timestamp + '<br />'
+                        + '<strong>Duration:</strong> ' + data.point.payload.Duration + '<br />'
+                        + '<strong>Size:</strong> ' + ff(data.point.payload.Size) + '<br />'
+                        + '<strong>Retries:</strong> ' + ff(data.point.payload.Retries);
                 });
 
                 chart.dispatch.on('controlsChange', function (e) {
@@ -119,9 +118,7 @@ class indexPrefetches extends viewModelBase {
         }
         return null;
     }
-
     */
-
 }
 
 export = indexPrefetches; 

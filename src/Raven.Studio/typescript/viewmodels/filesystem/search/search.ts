@@ -1,16 +1,18 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
+import searchInFolderClause = require("viewmodels/filesystem/files/searchInFolderClause");
 import searchSingleInputClause = require("viewmodels/filesystem/files/searchSingleInputClause");
 import searchFileSizeRangeClause = require("viewmodels/filesystem/files/searchFileSizeRangeClause");
 import searchHasMetadataClause = require("viewmodels/filesystem/files/searchHasMetadataClause");
 import searchLastModifiedBetweenClause = require("viewmodels/filesystem/files/searchLastModifiedBetweenClause");
 import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
+import resetIndexConfirm = require("viewmodels/filesystem/search/resetIndexConfirm");
+import queryUtil = require("common/queryUtil");
 
 class search extends viewModelBase {
 
@@ -33,14 +35,8 @@ class search extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink("SRTQ8C");
         this.appUrls = appUrl.forCurrentFilesystem();
-
-        this.activeFilesystem.subscribe((fs: filesystem) => {
-            this.searchFiles("");
-            this.searchText("");
-        });
-       
         this.loadFiles();
     }
 
@@ -74,7 +70,7 @@ class search extends viewModelBase {
         var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename starts with: ");
         searchSingleInputClauseViewModel
             .applyFilterTask
-            .done((input: string) => this.addToSearchInput("__fileName:" + this.escapeQueryString(input) + "*"));
+                .done((input: string) => this.addToSearchInput("__fileName:" + queryUtil.escapeTerm(input) + "*"));
         app.showDialog(searchSingleInputClauseViewModel);
     }
 
@@ -82,7 +78,7 @@ class search extends viewModelBase {
         var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
         searchSingleInputClauseViewModel
             .applyFilterTask
-            .done((input: string) => this.addToSearchInput("__rfileName:" + this.escapeQueryString(String.prototype.reverse(input)) + "*"));
+                .done((input: string) => this.addToSearchInput("__rfileName:" + queryUtil.escapeTerm(String.prototype.reverse(input)) + "*"));
         app.showDialog(searchSingleInputClauseViewModel);
     }
 
@@ -98,20 +94,22 @@ class search extends viewModelBase {
         var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause(this.activeFilesystem());
         searchHasMetadataClauseViewModel
             .applyFilterTask
-            .done((input: string) => this.addToSearchInput(this.escapeQueryString(input)));
+                .done((input: string) => this.addToSearchInput(queryUtil.escapeTerm(input)));
         app.showDialog(searchHasMetadataClauseViewModel);
     }
 
     inFolder() {
-        var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
-        searchSingleInputClauseViewModel
+        var inFolderViewModel: searchInFolderClause = new searchInFolderClause(this.activeFilesystem());
+        inFolderViewModel 
             .applyFilterTask
             .done((input: string) => {
-                if (!input.startsWith("/")) input = "/" + input;
-                var escaped = this.escapeQueryString(input);
+                if (!input.startsWith("/")) {
+                    input = "/" + input;
+                }
+                var escaped = queryUtil.escapeTerm(input);
                 this.addToSearchInput("__directoryName:" + escaped);
             });
-        app.showDialog(searchSingleInputClauseViewModel);
+        app.showDialog(inFolderViewModel);
     }
 
     lastModifiedBetween() {
@@ -128,11 +126,6 @@ class search extends viewModelBase {
             currentSearchText += " AND ";
         this.searchText(currentSearchText + input);
     }
-
-    private escapeQueryString(query: string) : string {
-        return query.replace(/([ \-\_\.])/g, '\\$1');
-    }
-
 
     deleteFilesMatchingQuery() {
         // Run the query so that we have an idea of what we'll be deleting.
@@ -153,6 +146,11 @@ class search extends viewModelBase {
         app
             .showDialog(viewModel)
             .done(() => this.search());
+    }
+
+    resetIndex() {
+        var resetIndexVm = new resetIndexConfirm(this.activeFilesystem());
+        app.showDialog(resetIndexVm);
     }
 }
 

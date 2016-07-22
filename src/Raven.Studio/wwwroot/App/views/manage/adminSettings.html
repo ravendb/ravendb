@@ -1,15 +1,12 @@
 <br/>
-<div class="settings-container row">
+<div class="settings-container row admin-settings-container">
     <div class="col-md-2">
         <ul class="nav nav-pills nav-stacked">
             <!-- ko foreach: router.navigationModel -->
-            <li data-bind="css: { active: isActive() }">
+            <li data-bind="css: { active: isActive(), disabled: !enabled }">
                 <a data-bind="attr: { href: hash }, text: title"></a>
             </li>
             <!-- /ko -->
-            <li>
-                <a href="#" data-bind="click: navigateToSystemDatabase, visible: isSystemDatabaseForbidden() == false">To System Database</a>
-            </li>
         </ul>
     </div>
     <div class="col-md-10" data-bind="router: { cacheViews: false }">

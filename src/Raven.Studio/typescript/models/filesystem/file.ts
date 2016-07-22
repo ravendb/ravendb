@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 import fileMetadata = require("models/filesystem/fileMetadata");
 
 class file implements documentBase {

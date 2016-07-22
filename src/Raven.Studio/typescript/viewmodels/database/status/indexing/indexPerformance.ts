@@ -2,18 +2,20 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
 import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexingBatchStatsCommand");
 import getReducingBatchStatsCommand = require("commands/database/debug/getReducingBatchStatsCommand");
+import getDeletionBatchStatsCommand = require("commands/database/debug/getDeletionBatchStatsCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getFilteredOutIndexStatsCommand = require("commands/database/debug/getFilteredOutIndexStatsCommand");
-import d3 = require('d3');
 import nv = require('nvd3');
 import app = require("durandal/app");
 import changeSubscription = require('common/changeSubscription');
 import mapBatchInfo = require("viewmodels/database/status/indexing/perfDialogs/mapBatchInfo");
 import reduceBatchInfo = require("viewmodels/database/status/indexing/perfDialogs/reduceBatchInfo");
+import deletionBatchInfo = require("viewmodels/database/status/indexing/perfDialogs/deletionBatchInfo");
 import mapStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/mapStatsInfo");
 import reduceStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/reduceStatsInfo");
 import prefetchInfo = require("viewmodels/database/status/indexing/perfDialogs/prefetchInfo");
 import filteredOutIndexInfo = require("viewmodels/database/status/indexing/perfDialogs/filteredOutIndexInfo");
+import awesomeMultiselect = require("common/awesomeMultiselect");
 
 class dateRange {
     constructor(public start: Date, public end: Date) {
@@ -45,7 +47,7 @@ class gapFinder {
     }
 
     public constructScale() {
-        if (this.domain.length == 0) {
+        if (this.domain.length === 0) {
             return d3.time.scale();
         } else {
             return d3.time.scale()
@@ -90,15 +92,16 @@ class gapFinder {
                     this.pushRegion(new dateRange(s, e));
                     s = newRange.start;
                 }
-                e = newRange.end;
+                if (newRange.end.getTime() > e.getTime()) {
+                    e = newRange.end;
+                }
             }
             this.pushRegion(new dateRange(s, e));
         }
     }
 }
 class metrics extends viewModelBase { 
-/*TODO
-
+    /*
     static reduce_bar_names = 
         ['linq_map_bar', 'linq_reduce_bar',
         'l_delete_bar', 'l_convert_bar', 'l_add_bar', 'l_flush_bar', 'l_recreate_bar',
@@ -118,12 +121,16 @@ class metrics extends viewModelBase {
 
     mapGroupOffset = 0;
     reduceGroupOffset = 0;
+    deletionGroupOffset = 0;
     
     mapJsonData: indexingBatchInfoDto[] = [];
     rawMapJsonData: indexingBatchInfoDto[] = [];
 
     reduceJsonData: reducingBatchInfoDto[] = [];
     rawReduceJsonData: reducingBatchInfoDto[] = [];
+
+    deletionJsonData: deletionBatchInfoDto[] = [];
+    rawDeletionJsonData: deletionBatchInfoDto[] = [];
 
     prefetchJsonData: futureBatchStatsDto[] = [];
     rawPrefetchJsonData: futureBatchStatsDto[] = [];
@@ -133,11 +140,13 @@ class metrics extends viewModelBase {
     
     mapAllIndexNames = ko.observableArray<string>();
     reduceAllIndexNames = ko.observableArray<string>();
+    deletionAllIndexNames = ko.observableArray<string>();
 
-    allIndexNames = ko.computed(() => d3.set(this.mapAllIndexNames().concat(this.reduceAllIndexNames())).values());
+    allIndexNames = ko.computed(() => d3.set(this.mapAllIndexNames().concat(this.reduceAllIndexNames(), this.deletionAllIndexNames())).values());
     selectedIndexNames = ko.observableArray<string>();
     selectedMapIndexNames = ko.computed(() => this.selectedIndexNames().filter(x => this.mapAllIndexNames().contains(x)));
     selectedReduceIndexes = ko.computed(() => this.selectedIndexNames().filter(x => this.reduceAllIndexNames().contains(x)));
+    selectedDeletionIndexes = ko.computed(() => this.selectedIndexNames().filter(x => this.deletionAllIndexNames().contains(x)));
 
     static batchesColors = ['#ececec', '#c2c2c2', '#959595'];
 
@@ -153,27 +162,30 @@ class metrics extends viewModelBase {
     isoFormat = d3.time.format.iso;
     xTickFormat = d3.time.format("%H:%M:%S");	
 
-    private xScale: d3.time.Scale<number, number>;
-    private yMapScale: d3.scale.Ordinal<string, number>;
-    private yReduceScale: d3.scale.Ordinal<string, number>;
-    private yPrefetchScale: d3.scale.Ordinal<string, number>;
+    xScale: D3.Scale.TimeScale;
+    yMapScale: D3.Scale.OrdinalScale;
+    yReduceScale: D3.Scale.OrdinalScale;
+    yDeletionScale: D3.Scale.OrdinalScale;
+    yPrefetchScale: D3.Scale.OrdinalScale;
 
-    private xAxis: d3.svg.Axis;
-    private yMapAxis: d3.svg.Axis;
-    private yReduceAxis: d3.svg.Axis;
-    private yPrefetchAxis: d3.svg.Axis;
+    xAxis: D3.Svg.Axis;
+    yMapAxis: D3.Svg.Axis;
+    yReduceAxis: D3.Svg.Axis;
+    yDeletionAxis: D3.Svg.Axis;
+    yPrefetchAxis: D3.Svg.Axis;
 
-    private svg: d3.Selection<any>;
+    svg: D3.Selection;
 
     lastIndexingId: number = 0;
     lastReducingId: number = 0;
+    lastDeletionId: number = 0;
 
     private refreshGraphObservable = ko.observable<number>();
     private refreshSubscription: KnockoutSubscription;
 
     constructor() {
         super();
-        this.pixelsPerSecond.throttle(100).subscribe((value) => {
+        this.pixelsPerSecond.throttle(100).subscribe(() => {
             nv.tooltip.cleanup();
             this.redrawGraph();
         });
@@ -185,6 +197,10 @@ class metrics extends viewModelBase {
 
     fetchReduceJsonData() {
         return new getReducingBatchStatsCommand(this.activeDatabase(), this.lastReducingId).execute();
+    }
+
+    fetchDeletionJsonData() {
+        return new getDeletionBatchStatsCommand(this.activeDatabase(), this.lastDeletionId).execute();
     }
 
     fetchPrefetcherJsonData() {
@@ -219,16 +235,21 @@ class metrics extends viewModelBase {
         this.updateHelpLink('QCVU81');
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#metricsContainer").scroll(() => this.graphScrolled());
-        this.refresh();
-        this.refreshSubscription = this.refreshGraphObservable.throttle(5000).subscribe((e) => this.refresh());
+        
+        this.refreshSubscription = this.refreshGraphObservable.throttle(5000).subscribe(() => this.refresh());
+      
+        awesomeMultiselect.build($("#visibleIndexesSelector"));
+        this.svg = d3.select("#indexPerformanceGraph");
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
         this.selectedIndexNames.subscribe((v) => {
             this.filterJsonData();
             nv.tooltip.cleanup();
             this.redrawGraph();
         });
-        $("#visibleIndexesSelector").multiselect();
-        this.svg = d3.select("#indexPerformanceGraph");
-       
+        this.refresh();
     }
 
     createNotifications(): Array<changeSubscription> {
@@ -236,7 +257,7 @@ class metrics extends viewModelBase {
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
-        if (e.Type === "MapCompleted" || e.Type === "ReduceCompleted") {
+        if (e.Type === "MapCompleted" || e.Type === "ReduceCompleted" || e.Type === "RemoveFromIndex") {
             this.refreshGraphObservable(new Date().getTime());
         }
     }
@@ -244,6 +265,7 @@ class metrics extends viewModelBase {
     filterJsonData() {
         this.mapJsonData = [];
         this.reduceJsonData = [];
+        this.deletionJsonData = [];
         this.prefetchJsonData = [];
         this.filteredOutIndexesJsonData = [];
         var selectedIndexes = this.selectedIndexNames();
@@ -263,6 +285,7 @@ class metrics extends viewModelBase {
                 this.reduceJsonData.push(rawCopy);
             }
         });
+        this.deletionJsonData = this.rawDeletionJsonData.filter(x => selectedIndexes.contains(x.IndexName));
         this.rawPrefetchJsonData.forEach(rawData => {
             this.prefetchJsonData.push(rawData);
         });
@@ -276,6 +299,7 @@ class metrics extends viewModelBase {
     showHideNoData(show: boolean) {
         if (show) {
             var metricsContainer = $("#metricsContainer");
+            this.svg.select('.no_data').remove();
             this.svg.append('text')
                 .attr('class', 'no_data')
                 .text('No data available')
@@ -295,9 +319,10 @@ class metrics extends viewModelBase {
         var reduceTask = this.fetchReduceJsonData();
         var prefetchTask = this.fetchPrefetcherJsonData();
         var filterTask = this.fetchFilteredOutJsonData();
+        var deletionTask = this.fetchDeletionJsonData();
 
-        $.when(mapTask, reduceTask, prefetchTask, filterTask)
-            .done((mapResult: any[], reduceResult: any[], prefetches: futureBatchStatsDto[], filteredOutIndexes: filteredOutIndexStatDto[]) => {
+        $.when(mapTask, reduceTask, prefetchTask, filterTask, deletionTask)
+            .done((mapResult: any[], reduceResult: any[], prefetches: futureBatchStatsDto[], filteredOutIndexes: filteredOutIndexStatDto[], deletionResult: any[]) => {
                 var oldAllIndexes = this.allIndexNames();
 
                 if (mapResult.length > 0) {
@@ -305,6 +330,9 @@ class metrics extends viewModelBase {
                 }
                 if (reduceResult.length > 0) {
                     this.lastReducingId = d3.max(reduceResult, x => x.Id);
+                }
+                if (deletionResult.length > 0) {
+                    this.lastDeletionId = d3.max(deletionResult, x => x.Id);
                 }
 
                 if (oldAllIndexes.length === 0) {
@@ -323,6 +351,11 @@ class metrics extends viewModelBase {
 
                 this.rawMapJsonData = this.mergeMapJsonData(this.rawMapJsonData, mapResult);
                 var mapIndexes = this.findIndexNames(this.rawMapJsonData);
+                var filteredOutResourcesIndexNames = this.rawFilteredOutIndexesJsonData.map(x => x.IndexName);
+
+                // merge filtered out resources with map index names as we display them in map section
+                mapIndexes = d3.set(mapIndexes.concat(filteredOutResourcesIndexNames)).values();
+
                 var oldMapAllIndexes = this.mapAllIndexNames();
                 var newMapIndexes = mapIndexes.filter(i => !oldMapAllIndexes.contains(i));
                 this.mapAllIndexNames.pushAll(newMapIndexes);
@@ -333,12 +366,18 @@ class metrics extends viewModelBase {
                 var newReduceIndexes = reduceIndexes.filter(i => !oldReduceAllIndexes.contains(i));
                 this.reduceAllIndexNames.pushAll(newReduceIndexes);
 
-                var newIndexes = d3.set(mapIndexes.concat(reduceIndexes)).values().filter(i => !oldAllIndexes.contains(i));
+                this.rawDeletionJsonData = this.mergeDeletionJsonData(this.rawDeletionJsonData, deletionResult);
+                var deletionIndexes = d3.set(this.rawDeletionJsonData.map(x => x.IndexName)).values();
+                var oldDeletionAllIndexes = this.deletionAllIndexNames();
+                var newDeletionIndexes = deletionIndexes.filter(i => !oldDeletionAllIndexes.contains(i));
+                this.deletionAllIndexNames.pushAll(newDeletionIndexes);
+
+                var newIndexes = d3.set(mapIndexes.concat(reduceIndexes, deletionIndexes)).values().filter(i => !oldAllIndexes.contains(i));
 
                 // this will filterJsonData and redrawGraph
                 this.selectedIndexNames(this.selectedIndexNames().concat(newIndexes));
                 // refresh multiselect widget:
-                $("#visibleIndexesSelector").multiselect('rebuild');
+                awesomeMultiselect.rebuild($("#visibleIndexesSelector"));
             });
     }
 
@@ -348,13 +387,13 @@ class metrics extends viewModelBase {
 
     private mergeFilteredOutIndexesJsonData(currentData: filteredOutIndexStatDto[], incomingData: filteredOutIndexStatDto[]) {
         // create lookup map to avoid O(n^2)
-        var dateLookup = d3.map<number>();
+        var dateLookup = d3.map();
 
         currentData.forEach((d, i) => {
             dateLookup.set(this.createFilteredOutCacheKey(d), i);
         });
 
-        incomingData.forEach((d: filteredOutIndexStatDto) => {
+        incomingData.forEach(d => {
             var cacheKey = this.createFilteredOutCacheKey(d);
             if (dateLookup.has(cacheKey)) {
                 var index = dateLookup.get(cacheKey);
@@ -369,12 +408,17 @@ class metrics extends viewModelBase {
 
     private mergePrefetchJsonData(currentData: futureBatchStatsDto[], incomingData: futureBatchStatsDto[]) {
         // create lookup map to avoid O(n^2)
-        var dateLookup = d3.map<number>();
+        var dateLookup = d3.map();
         currentData.forEach((d, i) => {
             dateLookup.set(d.Timestamp, i);
         });
 
         incomingData.forEach(d => {
+
+            // we have to filter out future batches that are not completed
+            if (!d.Duration) {
+                return;
+            }
 
             this.computePrefetchCache(d);
             if (dateLookup.has(d.Timestamp)) {
@@ -391,7 +435,7 @@ class metrics extends viewModelBase {
     private mergeMapJsonData(currentData: indexingBatchInfoDto[], incomingData: indexingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
         var self = this;
-        var dateLookup = d3.map<number>();
+        var dateLookup = d3.map();
         currentData.forEach((d, i) => {
             dateLookup.set(d.StartedAt, i);
         });
@@ -413,7 +457,7 @@ class metrics extends viewModelBase {
     private mergeReduceJsonData(currentData: reducingBatchInfoDto[], incomingData: reducingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
         var self = this;
-        var dateLookup = d3.map<number>();
+        var dateLookup = d3.map();
         currentData.forEach((d, i) => {
             dateLookup.set(d.StartedAt, i);
         });
@@ -428,6 +472,16 @@ class metrics extends viewModelBase {
                 currentData.push(d);
             }
         });
+        return currentData;
+    }
+
+    private mergeDeletionJsonData(currentData: deletionBatchInfoDto[], incomingData: deletionBatchInfoDto[]) {
+        var maxIdInCurrentData = currentData.length === 0 ? -1 : currentData[currentData.length - 1].Id;
+        var newItems = incomingData.filter(x => x.Id > maxIdInCurrentData);
+
+        newItems.forEach(item => this.computeDeletionCache(item));
+
+        currentData.pushAll(newItems);
         return currentData;
     }
 
@@ -475,6 +529,20 @@ class metrics extends viewModelBase {
         }
     }
 
+    computeDeletionCache(input: deletionBatchInfoDto) {
+        var currentOffset = 0;
+
+        var timings = input.PerformanceStats.map(o => o.DurationMs);
+        for (var i = 0; i < timings.length; i++) {
+            var currentWidth = Math.max(timings[i], 0);
+            var stat = input.PerformanceStats[i];
+            stat.CacheWidth = currentWidth;
+            stat.CacheCumulativeSum = currentOffset;
+
+            currentOffset += currentWidth;
+        }
+    }
+
     computePrefetchCache(input: futureBatchStatsDto) {
         var inputAny = <any>input;
 
@@ -509,6 +577,9 @@ class metrics extends viewModelBase {
         this.svg.select('.y.axis.prefetch')
             .attr("transform", "translate(" + leftScroll + ",0)");
 
+        this.svg.select('.y.axis.deletion')
+            .attr("transform", "translate(" + leftScroll + ",0)");
+
         this.svg.select('#dataClip rect')
             .attr('x', leftScroll);
 
@@ -530,10 +601,13 @@ class metrics extends viewModelBase {
         var reduceDateRange = this.reduceJsonData.map(
             j => new dateRange(j.StartedAtDate, new Date(j.StartedAtDate.getTime() + j.TotalDurationMs)));
 
+        var deletionDateRange = this.deletionJsonData.map(
+            j => new dateRange(j.StartedAtDate, new Date(j.StartedAtDate.getTime() + j.TotalDurationMs)));
+
         var filteredOutDateRange = this.filteredOutIndexesJsonData.map(
             j => new dateRange(j.TimestampParsed, new Date(j.TimestampParsed.getTime() + 10)));
 
-        var mergedDateRange = mapDateRange.concat(reduceDateRange).concat(filteredOutDateRange).sort((a, b) => a.start.getTime() - b.start.getTime());
+        var mergedDateRange = mapDateRange.concat(reduceDateRange, filteredOutDateRange, deletionDateRange).sort((a, b) => a.start.getTime() - b.start.getTime());
 
         var gapsFinder = new gapFinder(mergedDateRange, self.pixelsPerSecond(), metrics.minGapTime);
 
@@ -551,6 +625,8 @@ class metrics extends viewModelBase {
             + self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2)
             + self.margin.between
             + self.selectedReduceIndexes().length * (self.yBarHeight + self.yBarMargin * 2)
+            + self.margin.between
+            + self.selectedDeletionIndexes().length * (self.yBarHeight + self.yBarMargin * 2)
             + self.margin.top
             + self.margin.bottom;
         this.svg = d3.select("#indexPerformanceGraph");
@@ -564,11 +640,15 @@ class metrics extends viewModelBase {
 
         self.mapGroupOffset = self.prefetchingLineHeight;
         self.reduceGroupOffset = self.mapGroupOffset + self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between;
+        self.deletionGroupOffset = self.reduceGroupOffset + self.selectedReduceIndexes().length * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between;
 
         this.svg.selectAll('.map_group')
             .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
 
         this.svg.selectAll('.reduce_group')
+            .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
+
+        this.svg.selectAll('.deletion_group')
             .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
 
         $("#metricsContainer").css('overflow-x', totalWidthWithMargins > this.width ? 'scroll' : 'hidden');
@@ -648,6 +728,17 @@ class metrics extends viewModelBase {
         reduceGroup.append('g')
             .attr('class', 'ops');
 
+        var deletionGroup = svgEnter.append('g')
+            .attr('class', 'deletion_group')
+            .attr('clip-path', "url(#dataClip)")
+            .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
+
+        deletionGroup.append('g')
+            .attr('class', 'batches');
+
+        deletionGroup.append('g')
+            .attr('class', 'ops');
+
         svgEnter.append('g')
             .attr('class', 'prefetch_group')
             .attr('clip-path', "url(#dataClip)")
@@ -669,21 +760,26 @@ class metrics extends viewModelBase {
         this.updateXAxis(controllsEnter, gapsFinder.totalWidth);
         this.updateYMapAxis(controllsEnter);
         this.updateYReduceAxis(controllsEnter);
+        this.updateYDeletionAxis(controllsEnter);
         this.updateYPrefetchAxis(controllsEnter);
         this.updateMapBatchesRanges();
         this.updateReduceBatchesRanges();
+        this.updateDeletionBatchesRanges();
         this.updateMapOperations();
         this.updateReduceOperations();
+        this.updateDeletionOperations();
         this.updatePrefetchOperations();
         this.updateFilteredOutIndexesOperations();
         this.updateGaps(gapsFinder.gapsPositions);
-        this.showHideNoData(this.rawMapJsonData.length == 0 && this.rawReduceJsonData.length == 0);
+        this.showHideNoData(this.rawMapJsonData.length === 0 && this.rawReduceJsonData.length === 0 && this.rawDeletionJsonData.length === 0);
     }
 
     private updateGroupNames(controllsEnter: D3.Selection, totalWidth: number) {
         var self = this;
         var mapHeight = self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2);
         var reduceHeight = self.selectedReduceIndexes().length * (self.yBarHeight + self.yBarMargin * 2);
+        var deletionHeight = self.selectedDeletionIndexes().length * (self.yBarHeight + self.yBarMargin * 2);
+
         self.svg.select('.map_text')
             .transition()
             .attr('x', -self.mapGroupOffset - mapHeight / 2)
@@ -693,6 +789,11 @@ class metrics extends viewModelBase {
             .transition()
             .attr('x', -self.reduceGroupOffset - reduceHeight / 2)
             .style('opacity', reduceHeight > 0 ? 1 : 0);
+
+        self.svg.select('.deletion_text')
+            .transition()
+            .attr('x', -self.deletionGroupOffset - deletionHeight / 2)
+            .style('opacity', deletionHeight > 0 ? 1 : 0);
 
         var textsEnter = controllsEnter.append('g')
             .attr('class', 'left_texts');
@@ -716,6 +817,16 @@ class metrics extends viewModelBase {
             .style("text-anchor", "middle")
             .text('Reduce')
             .style('opacity', reduceHeight > 0 ? 1 : 0);
+
+        textsEnter.append('text')
+            .attr('class', 'deletion_text')
+            .attr("transform", "rotate(-90)")
+            .attr("dy", ".71em")
+            .attr('x', -self.deletionGroupOffset - deletionHeight / 2)
+            .attr('y', -self.margin.left)
+            .style("text-anchor", "middle")
+            .text('Deletion')
+            .style('opacity', deletionHeight > 0 ? 1 : 0);
 
         textsEnter.append('text')
             .attr('class', 'prefetch_text')
@@ -794,6 +905,28 @@ class metrics extends viewModelBase {
             .call(self.yReduceAxis);
     }
 
+    private updateYDeletionAxis(controllsEnter) {
+        var self = this;
+
+        controllsEnter.append('g')
+            .attr('class', 'y axis deletion')
+            .attr('transform', "translate(0,0)");
+
+        var indexCount = self.selectedDeletionIndexes().length;
+
+        self.yDeletionScale = d3.scale.ordinal()
+            .domain(self.selectedDeletionIndexes())
+            .rangeBands([self.deletionGroupOffset, self.deletionGroupOffset + indexCount * (self.yBarHeight + self.yBarMargin * 2)]);
+
+        self.yDeletionAxis = d3.svg.axis()
+            .scale(self.yDeletionScale)
+            .orient("left");
+
+        self.svg.select(".y.axis.deletion")
+            .transition()
+            .call(self.yDeletionAxis);
+    }
+
     private updateYPrefetchAxis(controllsEnter) {
         var self = this;
 
@@ -843,7 +976,7 @@ class metrics extends viewModelBase {
                 .attr('class', 'batchRange')
                 .on('click', self.mapBatchInfoClicked.bind(self))
             .append('rect')
-                .attr('x', d => self.xScale(d.StartedAtDate))
+                .attr('x', (d: indexingBatchInfoDto) => self.xScale(d.StartedAtDate))
                 .attr('y', (d: indexingBatchInfoDto) => d3.min(d.PerfStats, v => self.yMapScale(v.indexName)))
                 .attr('width', 0)
                 .attr('height', (d: indexingBatchInfoDto) => {
@@ -866,7 +999,7 @@ class metrics extends viewModelBase {
         batches.select('rect')
             .transition()
             .attr('x', (d: reducingBatchInfoDto) => self.xScale(d.StartedAtDate))
-            .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, (v, i) => self.yReduceScale(v.indexName)))
+            .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, v => self.yReduceScale(v.indexName)))
             .attr('width', (d: reducingBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs))
             .attr('height', (d: reducingBatchInfoDto) => {
                 var extent = d3.extent(d.PerfStats, v => self.yReduceScale(v.indexName));
@@ -890,6 +1023,35 @@ class metrics extends viewModelBase {
             .attr('width', (d: reducingBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs));
     }
 
+    private updateDeletionBatchesRanges() {
+        var self = this;
+        var batches = self.svg.select('.deletion_group').select(".batches")
+            .selectAll(".batchRange")
+            .data(self.deletionJsonData, d => d.Id);
+
+        batches.exit().remove();
+
+        batches.select('rect')
+            .transition()
+            .attr('x', (d: deletionBatchInfoDto) => self.xScale(d.StartedAtDate))
+            .attr('y', (d: deletionBatchInfoDto) => self.yDeletionScale(d.IndexName))
+            .attr('width', (d: deletionBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs))
+            .attr('height', (d: deletionBatchInfoDto) => self.yBarHeight + self.yBarMargin * 2);
+
+        batches.enter()
+            .append('g')
+            .attr('class', 'batchRange')
+            .on('click', self.deletionBatchInfoClicked.bind(self)) 
+            .append('rect')
+            .attr('x', (d: deletionBatchInfoDto) => self.xScale(d.StartedAtDate))
+            .attr('y', (d: deletionBatchInfoDto) => self.yDeletionScale(d.IndexName))
+            .attr('width', 0)
+            .attr('height', (d: deletionBatchInfoDto) => self.yBarHeight + self.yBarMargin * 2)
+            .style("fill", d => self.color(d.StartedAt))
+            .transition()
+            .attr('width', (d: deletionBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs));
+    }
+
     private updateMapOperations() {
         var self = this;
         var batches = self.svg.select('.map_group').select(".ops").selectAll(".opGroup")
@@ -897,7 +1059,7 @@ class metrics extends viewModelBase {
 
         batches.exit().remove();
 
-        var enteringOpsGroups = batches
+        batches
             .enter()
             .append('g')
             .attr('class', 'opGroup');
@@ -914,7 +1076,6 @@ class metrics extends viewModelBase {
                 (d: indexNameAndMapPerformanceStats) =>
                     "translate(" + self.xScale(self.isoFormat.parse(d.stats.Started)) + "," + self.yMapScale(d.indexName) + ")");
 
-        
         opTransition.select('.main_bar')
             .attr('width', (d: indexNameAndMapPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
         
@@ -926,7 +1087,7 @@ class metrics extends viewModelBase {
             .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
         
         opTransition.selectAll('.mto_items')
-            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)")
+            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
         
         opTransition.selectAll('.mto_item')
             .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
@@ -1021,17 +1182,16 @@ class metrics extends viewModelBase {
             .attr('class', 'opGroup');
 
         var op = batches.selectAll('.op_g')
-            .data((d: reducingBatchInfoDto) => d.PerfStats);
+            .data((d: reducingBatchInfoDto) => d.PerfStats, d => d.indexName + "/" + d.stats.ReduceType);
 
         op.exit().remove();
 
         var opTransition =
             op
-                .selectAll('.op')
+                .selectAll('.op') 
                 .transition()
-                .attr("transform",
-                (d: reduceLevelPeformanceStatsDto) =>
-                    "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
+                .attr("transform", 
+                (d: reduceLevelPeformanceStatsDto) => "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
 
         opTransition.select('.main_bar')
             .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));
@@ -1044,7 +1204,7 @@ class metrics extends viewModelBase {
             .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
         opTransition.selectAll('.mto_items')
-            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)")
+            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
 
         opTransition.selectAll('.mto_item')
             .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
@@ -1135,6 +1295,55 @@ class metrics extends viewModelBase {
             .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
     }
 
+    private updateDeletionOperations() {
+        var self = this;
+        var batches = self.svg.select('.deletion_group').select(".ops").selectAll(".op")
+            .data(self.deletionJsonData, d => d.Id); 
+
+        batches.exit().remove();
+
+        var opTransition = batches
+            .transition()
+            .attr("transform", (d: deletionBatchInfoDto) => "translate(" + self.xScale(d.StartedAtDate) + "," + self.yDeletionScale(d.IndexName) + ")");
+
+        opTransition.select('.main_bar')
+            .attr('width', (d: deletionBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs));
+
+        opTransition.selectAll('.sto_item')
+            .attr('x', (d: deletionPerformanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: deletionPerformanceStatsDto) => self.xScaleExtent(d.CacheWidth));
+
+        var enteringOps = batches
+            .enter()
+            .append('g')
+            .attr('class', 'op')
+            .on('click', self.deletionBatchInfoClicked.bind(self))
+            .attr("transform", (d: deletionBatchInfoDto) =>
+                "translate(" + self.xScale(d.StartedAtDate) + "," + self.yDeletionScale(d.IndexName) + ")");
+
+        enteringOps.append('rect')
+            .attr('class', 'main_bar')
+            .attr('x', 0)
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .style('fill', (d: deletionBatchInfoDto) => self.color(d.StartedAt))
+            .transition()
+            .attr('width', (d: deletionBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs));
+
+        enteringOps.selectAll('.sto_item')
+            .data((d: deletionBatchInfoDto) => d.PerformanceStats, d => d.Name)
+            .enter()
+            .append('rect')
+            .attr('class', (d: deletionPerformanceStatsDto) => 'sto_item ' + d.Name)
+            .attr('x', (d: deletionPerformanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .transition()
+            .attr('width', (d: deletionPerformanceStatsDto) => self.xScaleExtent(d.CacheWidth));
+    }
+
     private updatePrefetchOperations() {
         var self = this; 
         var batches = self.svg.select('.prefetch_group')
@@ -1146,6 +1355,7 @@ class metrics extends viewModelBase {
         batches
             .select('rect')
             .transition()
+            .attr('x', d => self.xScale(d.CacheTimestamp))
             .attr('width', d => self.xScaleExtent(d.DurationMs));
 
         var enteringOps = batches
@@ -1201,7 +1411,7 @@ class metrics extends viewModelBase {
         gaps.exit().remove();
 
         var patternWidth = 20;
-        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length + 1 /* prefetch *) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between * 2;
+        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length + self.selectedDeletionIndexes().length + 1 /* prefetch *) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between * 3;
 
         gaps.select('text')
             .transition()
@@ -1284,7 +1494,6 @@ class metrics extends viewModelBase {
     }
 
     private showTooltip(data: any, templateName: string) {
-        var self = this;
         var container = document.getElementById("indexingPerformance");
         nv.tooltip.cleanup();
         var html = '<div data-bind="template: { name : \'' + templateName + '\' }"></div>';
@@ -1324,6 +1533,10 @@ class metrics extends viewModelBase {
 
     private reduceBatchInfoClicked(data: indexingBatchInfoDto) {
         app.showDialog(new reduceBatchInfo(data));
+    }
+
+    private deletionBatchInfoClicked(data: deletionBatchInfoDto) {
+        app.showDialog(new deletionBatchInfo(data)); 
     }
 
     private prefetchStatClicked(data: futureBatchStatsDto) {

@@ -10,8 +10,8 @@ class getIndexTermsCommand extends commandBase {
     execute(): JQueryPromise<string[]> {
         var urlArgs = {
             field: this.field,
-            pageSize: 1024,
-            name: this.indexName
+            name: this.indexName, 
+            pageSize: 1024
         };
         var url = "/indexes/terms" + this.urlEncodeArgs(urlArgs);
         return this.query(url, null, this.db);

@@ -15,7 +15,7 @@ class getGlobalReplicationTopology extends commandBase {
             Counters: this.counters
         };
         
-        return this.post("/admin/replication/topology/global", ko.toJSON(args), appUrl.getDatabase()).then((result) => {
+        return this.post("/admin/replication/topology/global", ko.toJSON(args), appUrl.getDatabase(), null, 20000).then((result) => {
             return result;
         });
     }

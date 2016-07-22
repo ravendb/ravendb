@@ -1,8 +1,7 @@
- /// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../typings/tsd.d.ts" />
 import changeSubscription = require('common/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
-import changesApi = require("common/changesApi");
 import idGenerator = require("common/idGenerator");
 
 class trafficWatchClient {

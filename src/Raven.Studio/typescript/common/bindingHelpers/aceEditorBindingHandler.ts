@@ -216,13 +216,15 @@ class aceEditorBindingHandler {
         if ($(element).height() < this.minHeight) {
             $(element).height(this.minHeight);
         }
-        $(element).resizable({
+        /*
+        $(element).resizable(<any>{
             minHeight: this.minHeight,
             handles: "s, se",
-            grid: [10000000000000000, 1]
-        });
-
-        $(element).on('resize', () => aceEditor.resize());
+            grid: [10000000000000000, 1],
+            resize: function (event, ui) {
+                aceEditor.resize();
+            }
+        });*/
 
         this.alterHeight(element, aceEditor);
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
@@ -234,7 +236,7 @@ class aceEditorBindingHandler {
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
             $(element).off('keyup', aceFocusElement);
             $(element).off('focus', aceFocusElement);
-            $(element).resizable("destroy");
+            //TODO: $(element).resizable("destroy");
             aceEditor.getSession().setUseWorker(false);
             aceEditor.destroy();
         });
@@ -261,6 +263,7 @@ class aceEditorBindingHandler {
         if (code !== editorCode) {
             aceEditor.getSession().setValue(code||"");
         }
+        aceEditor.setReadOnly(bindingValues.readOnly);
         if (this.allowResize) {
             this.alterHeight(element, aceEditor);
         }

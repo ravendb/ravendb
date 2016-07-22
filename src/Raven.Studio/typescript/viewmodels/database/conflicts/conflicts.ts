@@ -1,11 +1,8 @@
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import pagedList = require("common/pagedList");
-import indexPriority = require("models/database/index/indexPriority");
 import database = require("models/resources/database");
 import conflictVersion = require("models/database/replication/conflictVersion");
-import transformer = require("models/database/index/transformer");
-import indexDefinition = require("models/database/index/indexDefinition");
 import customColumns = require("models/database/documents/customColumns");
 import customColumnParams = require('models/database/documents/customColumnParams');
 
@@ -15,11 +12,9 @@ import getConflictsCommand = require("commands/database/replication/getConflicts
 import getReplicationSourcesCommand = require("commands/database/replication/getReplicationSourcesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
-import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
-import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
 import changeSubscription = require('common/changeSubscription');
-import shell = require("viewmodels/shell");
 import conflictsResolveCommand = require("commands/database/replication/conflictsResolveCommand");
+import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
@@ -31,6 +26,7 @@ class conflicts extends viewModelBase {
     private refreshConflictsObservable = ko.observable<number>();
     private conflictsSubscription: KnockoutSubscription;
     currentColumns = ko.observable(customColumns.empty());
+    hasAnyConflict: KnockoutComputed<boolean>;
 
     static performedIndexChecks: Array<string> = [];
     static conflictsIndexName = "Raven/ConflictDocuments";
@@ -38,6 +34,8 @@ class conflicts extends viewModelBase {
 
     currentConflictsPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
+
+    serverConflictResolution = ko.observable<string>();
 
     static gridSelector = "#conflictsGrid";
 
@@ -64,16 +62,35 @@ class conflicts extends viewModelBase {
         super.activate(args);
         this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 
+        this.updateHelpLink('5FRRCA');
+
+        this.hasAnyConflict = ko.computed(() => {
+            var pagedItems = this.currentConflictsPagedItems();
+            if (pagedItems) {
+                return pagedItems.totalResultCount() > 0;
+            }
+            return false;
+        });
+
         this.currentColumns().columns([
             new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),
-            new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' }),
+            new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' })
         ]);
         this.currentColumns().customMode(true);
 
         return this.performIndexCheck(this.activeDatabase()).then(() => {
             return this.loadReplicationSources(this.activeDatabase());
         }).done(() => {
-                this.fetchConflicts(appUrl.getDatabase());
+            this.fetchAutomaticConflictResolution(this.activeDatabase());
+            this.fetchConflicts(appUrl.getDatabase());
+        });
+    }
+
+    fetchAutomaticConflictResolution(db: database): JQueryPromise<any> {
+        return new getEffectiveConflictResolutionCommand(db)
+            .execute()
+            .done((repConfig: configurationDocumentDto<replicationConfigDto>) => {
+                this.serverConflictResolution(repConfig.MergedDocument.DocumentConflictResolution);
             });
     }
 

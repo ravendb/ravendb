@@ -16,10 +16,12 @@
         <div class="btn-toolbar" role="toolbar">
             <!-- TODO: create a page in documentation -->
             <!--<a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>-->
+            <!-- TODO: replace with new checkboxTriple format -->
             <div class="btn-group">
                 <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll, visible: hasCounters" title="Select all or none">
-                    <img data-bind="checkboxTriple: countersSelection" />
+                    <img data-bind="checkboxTriple: countersSelection"/>
                 </button>
+
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newCounter" title="Create a new counter (Alt+N)">
@@ -53,13 +55,13 @@
             </div>
         </div>
         <div class="documents-select" data-bind="with: selectedGroup, visible: hasAnyCountersSelected() && !hasAllCountersSelected() && isAnyCountersAutoSelected()">
-            <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedCounterIndices().length.toLocaleString() "></strong> <span data-bind="text: $root.selectedCountersText"></span>.
+            <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedCounterIndices().length"></strong> <span data-bind="text: $root.selectedCountersText"></span>.
             <span class="select-link" data-bind="click: $root.selectAll.bind($root)">
-                Select all <strong data-bind="text: countersCount().toLocaleString() "></strong> counters in <span data-bind="text: name"></span>
+                Select all <strong data-bind="text: countersCount"></strong> counters in <span data-bind="text: name"></span>
             </span>
         </div>
         <div class="documents-select" data-bind="with: selectedGroup, visible: hasAllCountersSelected() && isAllCountersAutoSelected()">
-            You have selected <strong data-bind="text: $root.selectedCounterIndices().length.toLocaleString()"></strong> <span data-bind="text: $root.selectedCountersText"></span> in
+            You have selected <strong data-bind="text: $root.selectedCounterIndices().length"></strong> <span data-bind="text: $root.selectedCountersText"></span> in
             <span data-bind="text: name"></span>.
             <span class="select-link" data-bind="click: $root.selectNone.bind($root)">
                 Clear selection

@@ -8,26 +8,36 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import getEffectiveSettingsCommand = require("commands/database/globalConfig/getEffectiveSettingsCommand");
 import saveGlobalSettingsCommand = require("commands/database/globalConfig/saveGlobalSettingsCommand");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigPeriodicExport extends viewModelBase {
 
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     settingsDocument = ko.observable<document>();
     activated = ko.observable<boolean>(false);
 
-    backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
+    settingsAccess = new settingsAccessAuthorizer();
+
+    backupSetup = ko.observable<periodicExportSetup>();
     isSaveEnabled: KnockoutComputed<boolean>;
 
     canActivate(args: any): any {
         super.canActivate(args);
-        this.backupSetup(new periodicExportSetup);
+        this.backupSetup(new periodicExportSetup());
 
         var deferred = $.Deferred();
-        var db = appUrl.getSystemDatabase();
+        var db = null;
 
         if (db) {
-            $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
+            if (this.settingsAccess.isForbidden()) {
+                deferred.resolve({ can: true });
+            } else {
+                $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
+                    .done(() => deferred.resolve({ can: true }))
+                    .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
+            }
         }
         return deferred;
     }
@@ -38,15 +48,17 @@ class globalConfigPeriodicExport extends viewModelBase {
         var self = this;
         this.dirtyFlag = new ko.DirtyFlag([this.backupSetup]);
         this.isSaveEnabled = ko.computed(() => {
+            var isNotReadOnly = !this.settingsAccess.isReadOnly();
             var onDisk = self.backupSetup().onDiskExportEnabled();
             var remote = self.backupSetup().remoteUploadEnabled();
             var hasAnyOption = onDisk || remote;
             var isDirty = this.dirtyFlag().isDirty();
-            return hasAnyOption && isDirty;
+            return isNotReadOnly && hasAnyOption && isDirty;
         });
     }
 
     attached() {
+        super.attached();
         this.bindPopover();
         this.bindHintWatchers();
     }
@@ -96,10 +108,10 @@ class globalConfigPeriodicExport extends viewModelBase {
     }
 
     syncChanges(deleteConfig: boolean) {
-        var db = appUrl.getSystemDatabase();
+        var db = null;
         if (db) {
             if (deleteConfig) {
-                new deleteDocumentCommand("Raven/Global/Backup/Periodic/Setup", appUrl.getSystemDatabase())
+                new deleteDocumentCommand("Raven/Global/Backup/Periodic/Setup", null)
                     .execute();
                 this.deleteSettings(db);
             } else {

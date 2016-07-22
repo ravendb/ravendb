@@ -1,16 +1,16 @@
 <section id="alertsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div style="height: 65%; position: relative;">
-        <button type="button" class="btn btn-primary" data-bind="click: saveAlerts" title="Save changes"><i class="fa fa-save"></i></button>
-        <button type="button" class="btn btn-default" data-bind="click: fetchAlerts" title="Refresh alerts"><i class="fa fa-refresh"></i></button>
+        <button type="button" class="btn btn-primary" data-bind="click: saveAlerts, enable: isSaveEnabled" title="Save changes"><i class="fa fa-save"></i></button>
+        <button title="Refresh alerts" class="btn btn-default" data-bind="autoRefresh: { duration: 10000, onRefresh: $root.fetchAlerts.bind($root), active:autoRefreshEnabled }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterAll">
-                <input type="radio" name="options" id="option1"> <span data-bind="text: 'All alerts (' + allAlerts().length + ')'"></span>
+                <input type="radio" name="options" id="option1"> All alerts <span class="badge" data-bind="text: allAlerts().length"></span>
             </label>
             <label class="btn btn-default" data-bind="click: setFilterUnread">
-                <input type="radio" name="options" id="option1"> <span data-bind="text: 'Unread (' + unreadAlertCount() + ')'"></span>
+                <input type="radio" name="options" id="option1"> Unread <span class="badge" data-bind="text: unreadAlertCount()"></span>
             </label>
             <label class="btn btn-default" data-bind="click: setFilterRead">
-                <input type="radio" name="options" id="option2"> <span data-bind="text: 'Read (' + readAlertCount() + ')'"></span>
+                <input type="radio" name="options" id="option2"> Read <span class="badge" data-bind="text: readAlertCount()"></span>
             </label>
         </div>
         <div class="btn-group" data-bind="with: selectedAlert">
@@ -29,7 +29,7 @@
             </div>
         </div>
         <div id="alertTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 40px; width: 100%;">
-            <table class="table table-condensed single-line-row-table" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
+            <table class="table table-condensed single-line-row-table" data-bind="event: { keydown: tableNavigation.tableKeyDown.bind(tableNavigation) }" tabindex="1">
                 <thead>
                     <tr>
                         <th class="col-md-1">Level</th>
@@ -51,36 +51,38 @@
             </table>
         </div>
     </div>
-    <div class="alerts-details panel panel-default" style="height: 30%;">
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Title</label>
-            <div class="col-md-10" data-bind="with: selectedAlert">
-                <p class="form-control-static" data-bind="text: title"></p>
+    <div class="alerts-details panel panel-default" style="height: 35%;">
+        <form class="form-horizontal form-condensed" role="form">
+            <div class="form-group">
+                <label class="col-md-1 control-label">Title</label>
+                <div class="col-md-10" data-bind="with: selectedAlert">
+                    <p class="form-control-static" data-bind="text: title"></p>
+                </div>
             </div>
-        </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Message</label>
-            <div class="col-md-10" data-bind="with: selectedAlert">
-                <p class="form-control-static" data-bind="text: message"></p>
+            <div class="form-group">
+                <label class="col-md-1 control-label">Message</label>
+                <div class="col-md-10" data-bind="with: selectedAlert">
+                    <p class="form-control-static" data-bind="text: message"></p>
+                </div>
             </div>
-        </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Exception</label>
-            <div class="col-md-10" data-bind="with: selectedAlert">
-                <p class="form-control-static exceptionText" data-bind="text: exception"></p>
+            <div class="form-group">
+                <label class="col-md-1 control-label">Exception</label>
+                <div class="col-md-10" data-bind="with: selectedAlert">
+                    <p class="form-control-static exceptionText" data-bind="text: exception"></p>
+                </div>
             </div>
-        </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Reported</label>
-            <div class="col-md-10" data-bind="with: selectedAlert">
-                <p class="form-control-static" data-bind="text: createdAtHumanized"></p>
+            <div class="form-group">
+                <label class="col-md-1 control-label">Reported</label>
+                <div class="col-md-10" data-bind="with: selectedAlert">
+                    <p class="form-control-static" data-bind="text: createdAtHumanized"></p>
+                </div>
             </div>
-        </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Level</label>
-            <div class="col-md-10" data-bind="with: selectedAlert">
-                <p class="form-control-static" data-bind="text: alertLevel, css: { 'text-warning': alertLevel === 'Warn', 'text-danger': alertLevel === 'Error' || alertLevel === 'Fatal' }"></p>
+            <div class="form-group">
+                <label class="col-md-1 control-label">Level</label>
+                <div class="col-md-10" data-bind="with: selectedAlert">
+                    <p class="form-control-static" data-bind="text: alertLevel, css: { 'text-warning': alertLevel === 'Warn', 'text-danger': alertLevel === 'Error' || alertLevel === 'Fatal' }"></p>
+                </div>
             </div>
-        </div>
+        </form>
     </div>
 </section>

@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 
-class getSingleTransformerCommand extends commandBase{
+class getSingleTransformerCommand extends commandBase {
 
     constructor(private tranName:string, private db:database) {
         super();

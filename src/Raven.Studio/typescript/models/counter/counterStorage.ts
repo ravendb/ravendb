@@ -5,12 +5,13 @@ import counterStorageStatistics = require("models/counter/counterStorageStatisti
 class counterStorage extends resource{
     statistics = ko.observable<counterStorageStatistics>();
     static type = "counterstorage";
-    iconName = "fa fa-sort-numeric-desc";
+    iconName = "fa fa-fw fa-sort-numeric-desc";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
         super(name, TenantType.CounterStorage, isAdminCurrentTenant);
         this.fullTypeName = "Counter Storage";
         this.disabled(isDisabled);
+        this.activeBundles(bundles);
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().counterCountText() : "");
 
         this.isLicensed = ko.computed(() => {

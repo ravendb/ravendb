@@ -9,21 +9,17 @@ class getKeysCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
-        var selector = (keys: timeSeriesKeyDto[]) => keys.map((key: timeSeriesKeyDto) => new timeSeriesKey(key, this.ts));
+    execute(): JQueryPromise<pagedResultSet<timeSeriesKey>> {
         var doneTask = $.Deferred();
-        var args = {
+        var selector = (keys: timeSeriesKeyDto[]) => keys.map((key: timeSeriesKeyDto) => new timeSeriesKey(key, this.ts));
+        var task = this.query("/keys/" + this.type, {
             skip: this.skip,
             take: this.take
-        };
-
-        var task = this.query("/keys/" + this.type, args, this.ts, selector);
-        task.done((summaries: timeSeriesKey[]) => doneTask.resolve(new pagedResultSet(summaries, summaries.length)));
+        }, this.ts, selector);
+        task.done((keys: timeSeriesKey[]) => doneTask.resolve(new pagedResultSet(keys, this.keysCount)));
         task.fail(xhr => doneTask.reject(xhr));
-
-        doneTask.fail(xhr => doneTask.reject(xhr));
         return doneTask;
-    }
+    }   
 }
 
 export = getKeysCommand; 

@@ -41,7 +41,7 @@ class datePickerBindingHandler {
 
     // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
-        var date: moment.Moment =  ko.unwrap(valueAccessor());
+        var date : moment.Moment =  ko.unwrap(valueAccessor());
         if (date) {
             $(element).data("DateTimePicker").date(date);
         }

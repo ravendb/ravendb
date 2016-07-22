@@ -9,17 +9,17 @@ class databaseAccess {
     searchResults: KnockoutComputed<string[]>;
     tenantCustomValidityError: KnockoutComputed<string>;
 
-    static adminAccessType = "Admin";
-    static readWriteAccessType = "Read, Write";
-    static readOnlyAccessType = "Read Only";
+    static adminAccessType = 'Admin';
+    static readWriteAccessType = 'Read, Write';
+    static readOnlyAccessType = 'Read Only';
     static databaseAccessTypes =
         ko.observableArray<string>([databaseAccess.adminAccessType, databaseAccess.readWriteAccessType, databaseAccess.readOnlyAccessType]);
 
     currentAccessType = ko.computed({
         read:()=> {
-            if (this.admin() === true) {
+            if (this.admin()) {
                 return databaseAccess.adminAccessType;
-            } else if (this.readOnly() === true) {
+            } else if (this.readOnly()) {
                 return databaseAccess.readOnlyAccessType;
             }
 
@@ -55,19 +55,16 @@ class databaseAccess {
                 return [];
 
             var newResourceName: string = this.tenantId();
-            var resourceNames = shell.resources()
-                            .map((rs: resource) => rs.name)
+            var resourceNames = shell.resources().map((rs: resource) => rs.name)
                             .concat("*")
                             .filter((x, i, c) => c.indexOf(x) == i);
-
             return resourceNames.filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.tenantCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newTenantId = this.tenantId();
-            var resourceNames = shell.resources()
-                            .map((rs: resource) => rs.name)
+            var resourceNames = shell.resources().map((rs: resource) => rs.name)
                             .concat("*")
                             .filter((x, i, c) => c.indexOf(x) == i);
             var foundResource = resourceNames.first(name => newTenantId === name);
@@ -99,6 +96,5 @@ class databaseAccess {
     getTypes(): string[] {
         return databaseAccess.databaseAccessTypes();
     }
-
 }
 export = databaseAccess;

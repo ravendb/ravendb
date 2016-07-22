@@ -7,13 +7,15 @@ import fileDownloader = require("common/fileDownloader");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import getReplicationTopology = require("commands/database/replication/getReplicationTopology");
 import getReplicationPerfStatsCommand = require("commands/database/debug/getReplicationPerfStatsCommand");
-import d3 = require('d3');
-import nv = require('nvd3');
-import dagre = require('dagre');
+import getDocumentsLeftToReplicate = require("commands/database/replication/getDocumentsLeftToReplicate");
+import d3 = require("d3");
+import nv = require("nvd3");
+import dagre = require("dagre");
 
 class replicationStats extends viewModelBase {
-/*TODO
-    static inlineCss = " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
+    /*
+    static inlineCss = " svg { background-color: white; } " +
+                           " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
                            " path.link.error {  stroke: #df382c; } " +
                            " svg:not(.active):not(.ctrl) path.link { cursor: pointer; } " +
                            " path.link.hidden {  stroke-width: 0; } " +
@@ -25,6 +27,12 @@ class replicationStats extends viewModelBase {
 
     topology = ko.observable<replicationTopologyDto>(null);
     currentLink = ko.observable<replicationTopologyConnectionDto>(null);
+    documentToReplicateText = ko.observable<string>(null);
+    isLoadingDocumentToReplicateCount = ko.observable<boolean>(false);
+    exportProgress = ko.observable<string>("");
+    databaseId = ko.observable<string>();
+    canCalculateDocumentsToReplicateCount: KnockoutComputed<boolean>;
+    canExportDocumentsToReplicateCount: KnockoutComputed<boolean>;
 
     hasReplicationEnabled = ko.observable(false); 
 
@@ -36,10 +44,9 @@ class replicationStats extends viewModelBase {
 
     width: number;
     height: number;
-    svg: d3.Selection;
+    svg: D3.Selection;
     colors = d3.scale.category10();
     line = d3.svg.line().x(d => d.x).y(d => d.y);
-
 
     // perf stats related variables start
     jsonData: any[] = [];
@@ -64,16 +71,79 @@ class replicationStats extends viewModelBase {
     legend: D3.UpdateSelection;
     // perf stats related variables end
 
-
     hasSaveAsPngSupport = ko.computed(() => {
         return !(navigator && navigator.msSaveBlob);
     });
-
 
     constructor() {
         super();
 
         this.updateCurrentNowTime();
+
+        this.canCalculateDocumentsToReplicateCount = ko.computed(() => {
+            var currentLink = this.currentLink();
+            if (!currentLink) {
+                return false;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return false;
+            }
+
+            var topology = this.topology();
+            if (!topology) {
+                return false;
+            }
+
+            var currentServer = topology
+                .Connections
+                .first((x: replicationTopologyConnectionDto) => {
+                    var serverId = this.getServerId(x.SendServerId, x.StoredServerId);
+                    return serverId === this.databaseId();
+                });
+
+            if (!currentServer) {
+                return false;
+            }
+
+            if (currentServer.Source === currentLink.Source) {
+                return true;
+            }
+
+            var sourceServerUrl = currentServer.Source;
+            var destinations = this.getAllReachableDestinationsFrom(sourceServerUrl, topology.Connections);
+
+            return destinations.contains(currentLink.Destination);
+        });
+
+        this.canExportDocumentsToReplicateCount = ko.computed(() => {
+            var currentLink = this.currentLink();
+            if (!currentLink) {
+                return false;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return false;
+            }
+
+            var topology = this.topology();
+            if (!topology) {
+                return false;
+            }
+
+            var currentServer = topology
+                .Connections
+                .first((x: replicationTopologyConnectionDto) => {
+                    var serverId = this.getServerId(x.SendServerId, x.StoredServerId);
+                    return serverId === this.databaseId();
+                });
+
+            if (!currentServer) {
+                return false;
+            }
+
+            return currentServer.Source === currentLink.Source;
+        });
     }
 
     activate(args) {
@@ -82,20 +152,12 @@ class replicationStats extends viewModelBase {
         this.activeDatabase.subscribe(() => {
             this.fetchReplStats();
             this.checkIfHasReplicationEnabled();
+            this.databaseId(this.activeDatabase().statistics().databaseId());
         });
-        this.updateHelpLink('ES8PCB');
+
+        this.updateHelpLink("ES8PCB");
         this.fetchReplStats();
-    }
-
-   f ff cffheckIfHasReplicationEnabled() {
-        new getDatabaseSettingsCommand(this.activeDatabase())
-            .execute()
-            .done((document: any) => {
-                // Remove the use of custom bundels
-
-                var documentSettings = document.Settings["Raven/ActiveBundles"];
-                this.hasReplicationEnabled(documentSettings.indexOf("Replication") !== -1);
-            });
+        this.databaseId(this.activeDatabase().statistics().databaseId());
     }
 
     attached() {
@@ -109,6 +171,128 @@ class replicationStats extends viewModelBase {
 
     compositionComplete() {
         this.resize();
+    }
+
+    detached() {
+        super.detached();
+
+        $("#visualizerContainer").off("DynamicHeightSet");
+        nv.tooltip.cleanup();
+    }
+
+    getAllReachableDestinationsFrom(sourceServerUrl: string, connections: replicationTopologyConnectionDto[]): string[] {
+        var result: string[] = [];
+        result.push(sourceServerUrl);
+
+        connections.forEach(connection => {
+            if (sourceServerUrl === connection.Source) {
+                result.push(connection.Destination);
+
+                var updatedConncetions = connections.filter(x => x.Destination !== sourceServerUrl);
+
+                var reachables = this.getAllReachableDestinationsFrom(connection.Destination, updatedConncetions);
+                result.pushAll(reachables);
+            }
+        });
+
+        return result;
+    }
+
+    checkIfHasReplicationEnabled() {
+        new getDatabaseSettingsCommand(this.activeDatabase())
+            .execute()
+            .done(document => {
+                var documentSettings = document.Settings["Raven/ActiveBundles"];
+                this.hasReplicationEnabled(documentSettings.indexOf("Replication") !== -1);
+            });
+    }
+
+    getDocumentsToReplicateCount() {
+        var currentLink = this.currentLink();
+        if (currentLink == null) {
+            return;
+        }
+
+        if (currentLink.SourceToDestinationState === "Offline") {
+            return;
+        }
+
+        var destinationSplitted = currentLink.Destination.split("/databases/");
+        var databaseName = destinationSplitted.last();
+        var destinationUrl = destinationSplitted.first() + "/";
+        var sourceUrl = currentLink.Source.split("/databases/").first() + "/";
+        var sourceId = this.getServerId(currentLink.SendServerId, currentLink.StoredServerId);
+
+        this.isLoadingDocumentToReplicateCount(true);
+        var getDocsToReplicateCount =
+            new getDocumentsLeftToReplicate(sourceUrl, destinationUrl, 
+                    databaseName, sourceId, this.activeDatabase())
+                .execute();
+
+        getDocsToReplicateCount
+            .done((documentCount: documentCountDto) => {
+                var message = "";
+                var isApproximate = documentCount.Type === "Approximate";
+                if (isApproximate) {
+                    message += "Approximately ";
+                }
+
+                message += documentCount.Count.toLocaleString();
+
+                if (isApproximate) {
+                    message += ">=";
+                }
+
+                if (documentCount.IsEtl) {
+                    message += " (ETL)";
+                }
+
+                this.documentToReplicateText(message);
+            })
+            .fail(() => this.documentToReplicateText("Couldn't calculate document count!"))
+            .always(() => this.isLoadingDocumentToReplicateCount(false));
+    }
+
+    getServerId(sendServerId: string, storedServerId: string) {
+        var serverId = sendServerId;
+        if (serverId === "00000000-0000-0000-0000-000000000000") {
+            serverId = storedServerId;
+        }
+
+        return serverId;
+    }
+
+    export() {
+        var confirmation = this.confirmationMessage("Export", "Are you sure that you want to export documents to replicate ids?");
+        confirmation.done(() => {
+            this.exportProgress("");
+            var url = "/admin/replication/export-docs-left-to-replicate";
+            var currentLink = this.currentLink();
+            if (currentLink == null) {
+                return;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return;
+            }
+
+            this.isLoadingDocumentToReplicateCount(true);
+
+            var destinationSplitted = currentLink.Destination.split("/databases/");
+            var databaseName = destinationSplitted.last();
+            var destinationUrl = destinationSplitted.first() + "/";
+            var sourceUrl = currentLink.Source.split("/databases/").first() + "/";
+
+            var requestData = {
+                SourceUrl: sourceUrl,
+                DestinationUrl: destinationUrl,
+                DatabaseName: databaseName,
+                SourceId: this.getServerId(currentLink.SendServerId, currentLink.StoredServerId)
+            };
+
+            var db = this.activeDatabase();
+            this.downloader.downloadByPost(db, url, requestData, this.isLoadingDocumentToReplicateCount, this.exportProgress);
+        });
     }
 
     resize() {
@@ -130,11 +314,11 @@ class replicationStats extends viewModelBase {
     processResults(results: replicationStatsDocumentDto) {
         if (results) {
             results.Stats.forEach(s => {
-                s['LastReplicatedLastModifiedHumanized'] = this.createHumanReadableTime(s.LastReplicatedLastModified);
-                s['LastFailureTimestampHumanized'] = this.createHumanReadableTime(s.LastFailureTimestamp);
-                s['LastHeartbeatReceivedHumanized'] = this.createHumanReadableTime(s.LastHeartbeatReceived);
-                s['LastSuccessTimestampHumanized'] = this.createHumanReadableTime(s.LastSuccessTimestamp);
-                s['isHotFailure'] = this.isFailEarlierThanSuccess(s.LastFailureTimestamp, s.LastSuccessTimestamp);
+                s["LastReplicatedLastModifiedHumanized"] = this.createHumanReadableTime(s.LastReplicatedLastModified);
+                s["LastFailureTimestampHumanized"] = this.createHumanReadableTime(s.LastFailureTimestamp);
+                s["LastHeartbeatReceivedHumanized"] = this.createHumanReadableTime(s.LastHeartbeatReceived);
+                s["LastSuccessTimestampHumanized"] = this.createHumanReadableTime(s.LastSuccessTimestamp);
+                s["isHotFailure"] = this.isFailEarlierThanSuccess(s.LastFailureTimestamp, s.LastSuccessTimestamp);
             });
         }
 
@@ -223,8 +407,12 @@ class replicationStats extends viewModelBase {
             "L" + (targetX - 3.5 * Math.cos(d90 - theta) - 10 * Math.cos(theta)) + "," + (targetY + 3.5 * Math.sin(d90 - theta) - 10 * Math.sin(theta)) + "z";
     }
 
-    linkHasError(d: replicationTopologyConnectionDto) {
-        return d.SourceToDestinationState !== "Online";
+    linkIsOffline(d: replicationTopologyConnectionDto) {
+        return d.SourceToDestinationState === "Offline";
+    }
+
+    linkIsDisabled(d: replicationTopologyConnectionDto) {
+        return d.SourceToDestinationState === "Disabled";
     }
 
     renderTopology(topologyGraph) {
@@ -270,16 +458,19 @@ class replicationStats extends viewModelBase {
         var edgesDom = this.svg.select('.edges').selectAll('.edge').data(mappedEdges, d => d.Source + "_" + d.Destination);
 
         edgesDom.enter()
-            .append('path')
-            .attr('class', 'link')
-            .classed('error', self.linkHasError)
-            .attr('d', d => self.linkWithArrow(d))
+            .append("path")
+            .attr("class", "link")
+            .classed("error", self.linkIsOffline)
+            .classed("warning", self.linkIsDisabled)
+            .attr("d", d => self.linkWithArrow(d))
             .on("click", function (d) {
                 var currentSelection = d3.select(".selected").node();
                 d3.selectAll(".selected").classed("selected", false);
-                d3.select(this).classed('selected', currentSelection != this);
-                self.currentLink(currentSelection != this ? d : null)
-             });
+                d3.select(this).classed("selected", currentSelection != this);
+                self.currentLink(currentSelection != this ? d : null);
+                self.documentToReplicateText(null);
+                self.exportProgress("");
+            });
     }
 
 
@@ -292,7 +483,10 @@ class replicationStats extends viewModelBase {
                 this.createReplicationTopology();
                 $("#replicationSetupCollapse").addClass("in"); // Force the panel to expand. Fixes a bug where the panel collapses when we fill it with content.
             })
-            .always(() => this.showLoadingIndicator(false)); 
+            .always(() => {
+                this.currentLink(null);
+                this.showLoadingIndicator(false);
+            }); 
     }
 
     saveAsPng() {
@@ -306,7 +500,6 @@ class replicationStats extends viewModelBase {
     saveAsJson() {
         fileDownloader.downloadAsJson(this.topology(), "topology.json");
     }
-
 
     fetchJsonData() {
         return new getReplicationPerfStatsCommand(this.activeDatabase()).execute();
@@ -570,6 +763,9 @@ class replicationStats extends viewModelBase {
                 var leftScroll = $("#replicationStatsContainer").scrollLeft();
                 var containerOffset = $("#replicationTopologySection").offset();
                 nv.tooltip.show([offset.left - containerOffset.left + leftScroll + self.barWidth, offset.top - containerOffset.top], self.getTooltip(d), 's', 5, document.getElementById("replicationStatsContainer"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings({ tooltipClose: nv.tooltip.cleanup }, elem);
+                });
             })
             .transition()
             .attr("height", d => self.perfHeight - self.yScale(d.BatchSize))
@@ -624,7 +820,8 @@ class replicationStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return "<table>"
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>'
+            + "<table>"
             + "<tr><td><strong>Destination:</strong></td><td>" + d.Destination + "</td></tr>"
             + "<tr><td><strong>Duration milliseconds:</strong></td><td>" + d.DurationMilliseconds + "</td></tr>"
             + "<tr><td><strong>Batch size:</strong></td><td>" + d.BatchSize + "</td></tr>"
@@ -642,16 +839,10 @@ class replicationStats extends viewModelBase {
         return byKey.map(d => d.key);
     }
 
-    detached() {
-        super.detached();
-
-        $("#visualizerContainer").off('DynamicHeightSet');
-        nv.tooltip.cleanup();
-    }
-
     replicationStatToggle() {
         setTimeout(() => this.redrawGraph(), 1);
-    }*/
+    }
+    */
 }
 
 export = replicationStats;

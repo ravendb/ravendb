@@ -2,13 +2,13 @@
 
 class synchronizationDestination {
 
-    url = ko.observable<string>().extend({ required: true });
-    username = ko.observable<string>().extend({ required: true });
-    password = ko.observable<string>().extend({ required: true });
-    domain = ko.observable<string>().extend({ required: true });
-    apiKey = ko.observable<string>().extend({ required: true });
-    filesystem = ko.observable<string>().extend({ required: true });
-    disabled = ko.observable<boolean>().extend({ required: true });
+    url = ko.observable<string>();
+    username = ko.observable<string>();
+    password = ko.observable<string>();
+    domain = ko.observable<string>();
+    apiKey = ko.observable<string>();
+    filesystem = ko.observable<string>();
+    disabled = ko.observable<boolean>();
 
     name = ko.computed(() => {
         if (this.url() && this.filesystem()) {
@@ -53,29 +53,44 @@ class synchronizationDestination {
         }
     }
 
-    toggleUserCredentials() {
-        this.isUserCredentials.toggle();
-        if (this.isUserCredentials()) {
-            this.isApiKeyCredentials(false);
-        }
+    clearApiKeyCredentials() {
+        this.apiKey(null);
     }
 
-    toggleApiKeyCredentials() {
-        this.isApiKeyCredentials.toggle();
-        if (this.isApiKeyCredentials()) {
-            this.isUserCredentials(false);
-        }
+    clearUserCredentials() {
+        this.username(null);
+        this.password(null);
+        this.domain(null);
     }
 
-    static empty(): synchronizationDestination {
+    useUserCredentials() {
+        this.isUserCredentials(true);
+        this.isApiKeyCredentials(false);
+        this.clearApiKeyCredentials();
+    }
+
+    useApiKeyCredentials() {
+        this.isApiKeyCredentials(true);
+        this.isUserCredentials(false);
+        this.clearUserCredentials();
+    }
+
+    useNoCredentials() {
+        this.isUserCredentials(false);
+        this.isApiKeyCredentials(false);
+        this.clearUserCredentials();
+        this.clearApiKeyCredentials();
+    }
+
+    static empty(fileSystemName: string): synchronizationDestination {
         return new synchronizationDestination({
-            ServerUrl: null,
+            ServerUrl: location.protocol + "//" + location.host,
             Username: null,
             Password: null,
             Domain: null,
             ApiKey: null,
-            FileSystem: null,
-            Enabled: false,
+            FileSystem: fileSystemName,
+            Enabled: false
         });
     }
 

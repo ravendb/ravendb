@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import documentClass = require("models/database/documents/document");
 
 class getStudioConfig extends commandBase {
 
@@ -8,7 +7,7 @@ class getStudioConfig extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<documentClass> {
+    execute(): JQueryPromise<singleAuthToken> {
         var url = "/studio-tasks/config";
         var getTask = this.query(url, null, this.db);
         return getTask;

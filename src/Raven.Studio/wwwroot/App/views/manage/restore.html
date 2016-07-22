@@ -1,4 +1,4 @@
-<div data-bind="visible: anotherRestoreInProgres()" class="badge pull-right"><span class="fa fa-spinner fa-spin"></span>Another restore in progress</div>
+<div data-bind="visible: anotherRestoreInProgres() && isForbidden() == false" class="badge pull-right"><span class="fa fa-spinner fa-spin"></span>Another restore in progress</div>
 
 <div data-bind="visible: isForbidden" class="text-center">
     <h4 class="page-header text-info">You are not authorized to view this page!</h4>
@@ -17,7 +17,8 @@
                     <div class="panel-heading panel-info">
                         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download"></i>
+                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
+                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
                             <span>Restore Database</span>
                         </button>
                         <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
@@ -58,41 +59,36 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
-                                            Defrag
-                                        </label>
+                                        <input type="checkbox" class="styled" id="defrag_db" data-bind="checked: defrag, disable: $parent.isBusy">
+                                        <label for="defrag_db">Defrag</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: $parent.disableReplicationDestinations, disable: $parent.isBusy">
-                                            Disable replication destinations
-                                        </label>
+                                        <input type="checkbox" class="styled" id="disable_replication_dest_db" data-bind="checked: $parent.disableReplicationDestinations, disable: $parent.isBusy">
+                                        <label for="disable_replication_dest_db">Disable replication destinations</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: $parent.generateNewDatabaseId, disable: $parent.isBusy">
-                                            Generate new database id
-                                        </label>
+                                        <input type="checkbox" class="styled" id="gen_db_id" data-bind="checked: $parent.generateNewDatabaseId, disable: $parent.isBusy">
+                                        <label for="gen_db_id">Generate new database id</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                            <pre>
+<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>
+                        </div>
                     </div>
                 </div>
-                <div id="databaseRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-                    <pre data-bind="visible: dbRestoreOptions.restoreStatusMessages().length > 0" id="databaseRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
-<!-- ko foreach: dbRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-        </pre>
-                </div>
+                
             </form>
         </div>
         <div role="tabpanel" class="tab-pane" id="restoreFs">
@@ -101,7 +97,8 @@
                     <div class="panel-heading panel-info">
                         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download"></i>
+                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
+                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
                             <span>Restore Filesystem</span>
                         </button>
                         <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
@@ -141,22 +138,19 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
-                                            Defrag
-                                        </label>
+                                        <input type="checkbox" class="styled" id="defrag_fs" data-bind="checked: defrag, disable: $parent.isBusy">
+                                        <label for="defrag_fs">Defrag</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                            <pre>
+<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>
+                        </div>
                     </div>
                 </div>
-                <div id="filesystemRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-                    <pre data-bind="visible: fsRestoreOptions.restoreStatusMessages().length > 0" id="filesystemRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
-<!-- ko foreach: fsRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-        </pre>
-                </div>
-
             </form>
         </div>
 
@@ -166,7 +160,8 @@
                     <div class="panel-heading panel-info">
                         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download"></i>
+                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
+                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
                             <span>Restore Counter Storage</span>
                         </button>
                         <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
@@ -194,22 +189,19 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
-                                            Defrag
-                                        </label>
+                                        <input type="checkbox" class="styled" id="defrag_cs" data-bind="checked: defrag, disable: $parent.isBusy">
+                                        <label for="defrag_cs">Defrag</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                            <pre>
+<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>
+                        </div>
                     </div>
                 </div>
-                <div id="filesystemRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-                    <pre data-bind="visible: fsRestoreOptions.restoreStatusMessages().length > 0" id="filesystemRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
-<!-- ko foreach: fsRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-        </pre>
-                </div>
-
             </form>
         </div>
     </div>

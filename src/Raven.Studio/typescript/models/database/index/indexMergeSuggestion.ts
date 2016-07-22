@@ -13,7 +13,7 @@ class indexMergeSuggestion {
     constructor(dto: suggestionDto) {
         this.canMerge = dto.CanMerge;
         this.collection = dto.Collection;
-        this.mergedIndexDefinition =  dto.MergedIndex ? new indexDefinition(dto.MergedIndex) : null
+        this.mergedIndexDefinition = dto.MergedIndex ? new indexDefinition(dto.MergedIndex) : null;
         this.id(idGenerator.generateId());
         this.canDelete = dto.CanDelete;
         this.surpassingIndex = dto.SurpassingIndex;

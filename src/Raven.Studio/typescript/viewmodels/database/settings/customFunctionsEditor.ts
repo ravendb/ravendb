@@ -40,7 +40,7 @@ class customFunctionsEditor extends viewModelBase {
         $("#customFunctionsExample").popover({
             html: true,
             trigger: "hover",
-            content: "Examples:<pre>exports.greet = <span class=\"code-keyword\">function</span>(name) {<br/>    <span class=\"code-keyword\">return</span> <span class=\"code-string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
+            content: "<p>Examples:</p><pre>exports.greet = <span class=\"code-keyword\">function</span>(name) {<br/>    <span class=\"code-keyword\">return</span> <span class=\"code-string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
         });
     }
 

@@ -1,30 +1,43 @@
 <section data-bind="with: backupSetup">
-    <div data-bind="visible: unsupported()">
+    <div data-bind="visible: $root.settingsAccess.isForbidden()" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <div data-bind="visible: !$root.settingsAccess.isForbidden() && unsupported()">
         <div class="alert alert-danger">Too many periodic export types found. This isn't a supported scenario for the UI.</div>
     </div>
-    <div data-bind="visible: !unsupported()">
-        <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
+    <div data-bind="if: !$root.settingsAccess.isForbidden() && !unsupported()">
+        <div class="panel panel-default" data-bind="visible: !$root.canUseGlobalConfigurations()">
+            <div class="panel-body">
+                <div class="text-center">
+                    <h3 class="text-info">
+                        Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <form data-bind="visible: $root.canUseGlobalConfigurations(), submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled(), visible: $root.activated()" accesskey="S"><i class="fa fa-save"></i></button>
-                    <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: $root.activated() == false">
+                    <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !$root.activated(), disable: $root.settingsAccess.isReadOnly()">
                         <i class="fa fa-plus"></i> Create global configuration for Periodic Export
                     </button>
-                    <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: $root.activated()">
+                    <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: $root.activated(), disable: $root.settingsAccess.isReadOnly()">
                         <i class="fa fa-trash"></i> Remove global configuration for Periodic Export
                     </button>
+                    <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
                 </div>
                 <div class="panel-body">
-                    <p data-bind="visible: $root.activated() == false">
-                        <i class="fa fa-info-circle text-info"></i> Global configuration for Periodic Export is not currently defined.
-                    </p>
-                    <div data-bind="if: $root.activated()"  id="periodicExportContainer">
-                        
+                    <div class="text-center" data-bind="visible: !$root.activated()">
+                        <h3 class="text-info">Global configuration for Periodic Export is not currently defined.</h3>
+                    </div>
+                    <div data-bind="if: $root.activated()" id="periodicExportContainer">
+
                         <div class="form-group">
                             <label for="disabled" class="col-sm-3 control-label">Enabled:</label>
                             <div class="col-sm-3">
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                         <span data-bind="visible: disabled()==false">Yes</span>
                                         <span data-bind="visible: disabled()">No</span>
                                         <span class="caret"></span>
@@ -41,7 +54,7 @@
                             <label for="onDiskExport" class="col-sm-3 control-label">On disk export:</label>
                             <div class="col-sm-3">
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                         <span data-bind="visible: onDiskExportEnabled">Yes</span>
                                         <span data-bind="visible: !onDiskExportEnabled()">No</span>
                                         <span class="caret"></span>
@@ -53,24 +66,24 @@
                                 </div>
                             </div>
                         </div>
-                
+
                         <div class="form-group" data-bind="visible: onDiskExportEnabled">
                             <label for="onDiskLocation" class="col-sm-3 control-label">File System Folder:</label>
                             <div class="col-sm-3" data-bind="if: onDiskExportEnabled">
-                                <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown'" />
+                                <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                             <div class="col-sm-6">
                                 <span id="onDiskHint" class="help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
-                                    <i class="fa fa-info-circle text-info"></i>
-                                </span>
+                                        <i class="fa fa-info-circle text-info"></i>
+                                    </span>
                             </div>
                         </div>
-                
+
                         <div class="form-group">
                             <label for="serverUpload" class="col-sm-3 control-label">Upload to remote server:</label>
                             <div class="col-sm-3">
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                         <span data-bind="visible: remoteUploadEnabled">Yes</span>
                                         <span data-bind="visible: !remoteUploadEnabled()">No</span>
                                         <span class="caret"></span>
@@ -85,45 +98,45 @@
 
                         <div class="form-group" data-bind="if: remoteUploadEnabled, visible: remoteUploadEnabled">
                             <div class="col-sm-3">
-                                <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
+                                <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type, disable: $root.settingsAccess.isReadOnly()"></select>
                             </div>
                             <div class="col-sm-3">
-                                <input type="text" required class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }"/>
+                                <input type="text" required class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }, disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="visible: isS3Bucket">
                             <label for="awsRemoteFolder" class="col-sm-3 control-label">Folder name:</label>
                             <div class="col-sm-3">
-                                <input id="awsRemoteFolder" type="text" disabled="disabled" value="{databaseName}" class="form-control"/>
+                                <input id="awsRemoteFolder" type="text" disabled="disabled" value="{databaseName}" class="form-control" data-bind="disable: $root.settingsAccess.isReadOnly()" />
                             </div>
                             <div class="col-sm-1">
                                 <span class="folderHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
-                                    <i class="fa fa-info-circle text-info"></i>
-                                </span>
+                                        <i class="fa fa-info-circle text-info"></i>
+                                    </span>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
                             <div class="col-sm-3">
-                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'" />
+                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
                             <div class="col-sm-3">
-                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'" />
+                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsRegionEndpoint" class="col-sm-3 control-label">AWS Region Endpoint:</label>
                             <div class="col-sm-3">
-                                <select required id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
+                                <select required id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint, disable: $root.settingsAccess.isReadOnly()"></select>
                             </div>
                         </div>
                         <div class="form-group" data-bind="visible: additionalAzureInfoRequired">
                             <label for="remoteFolder" class="col-sm-3 control-label">Folder name:</label>
                             <div class="col-sm-3">
-                                <input id="remoteFolder" type="text" value="{databaseName}" class="form-control" disabled="disabled"/>
+                                <input id="remoteFolder" type="text" value="{databaseName}" class="form-control" disabled="disabled" data-bind="disable: $root.settingsAccess.isReadOnly()" />
                             </div>
                             <div class="col-sm-1">
                                 <span class="folderHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
@@ -134,31 +147,31 @@
                         <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
                             <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
                             <div class="col-sm-3">
-                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'" />
+                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
                             <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
                             <div class="col-sm-3">
-                                <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'"/>
+                                <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
                             <div class="col-sm-1">
-                                <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
+                                <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                             <div class="col-sm-2">
-                                <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
+                                <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit, disable: $root.settingsAccess.isReadOnly()"></select>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
                             <div class="col-sm-1">
-                                <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
+                                <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                             </div>
                             <div class="col-sm-2">
-                                <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
+                                <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit, disable: $root.settingsAccess.isReadOnly()"></select>
                             </div>
                         </div>
                     </div>

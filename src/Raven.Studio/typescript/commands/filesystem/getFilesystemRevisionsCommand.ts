@@ -9,7 +9,7 @@ class getFilesystemRevisionsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResultSet<filesystemFileHeaderDto>> {
         var filesTask = this.fetchFiles();
         var doneTask = $.Deferred();
 

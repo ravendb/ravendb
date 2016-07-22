@@ -12,33 +12,63 @@ import getStatusDebugConfigCommand = require("commands/database/debug/getStatusD
 import extendRaftClusterCommand = require("commands/database/cluster/extendRaftClusterCommand");
 import initializeNewClusterCommand = require("commands/database/cluster/initializeNewClusterCommand");
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
+import removeClusteringCommand = require("commands/database/cluster/removeClusteringCommand");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
 import updateRaftClusterCommand = require("commands/database/cluster/updateRaftClusterCommand");
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
 import shell = require("viewmodels/shell");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
+import license = require("models/auth/license");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
 
 class cluster extends viewModelBase {
 
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
-    serverUrl = ko.observable<string>();
+    serverUrl = ko.observable<string>(); 
+
+    canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
+    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
+    clusterMode: KnockoutComputed<boolean>;
+    settingsAccess = new settingsAccessAuthorizer();
+
+    constructor() {
+        super();
+        autoRefreshBindingHandler.install();
+        this.clusterMode = ko.computed(() => {
+            return this.topology() && this.topology().clusterMode();
+        });
+    }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var db = null;
-        $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
-            .done(() => {
-                deferred.resolve({ can: true });
-                this.fetchStatus(db);
-            })
-            .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
+        if (this.settingsAccess.isForbidden()) {
+            deferred.resolve({ can: true });
+        } else {
+            $.when(this.fetchClusterTopology(null), this.fetchDatabaseId(null), this.fetchServerUrl(null))
+                .done(() => {
+                    deferred.resolve({ can: true });
+                    if (this.clusterMode()) {
+                        this.fetchStatus(null);
+                    }
+                })
+                .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
+        }
+
         return deferred;
     }
 
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("11HBHO");
+    }
+
     refresh() {
-       /* this.fetchClusterTopology(appUrl.getSystemDatabase())
-            .done(() => this.fetchStatus(appUrl.getSystemDatabase()));*/
+        return this.fetchClusterTopology(null)
+            .done(() => this.fetchStatus(null));
     }
 
     fetchClusterTopology(db: database): JQueryPromise<any> {
@@ -80,67 +110,90 @@ class cluster extends viewModelBase {
     }
 
     addAnotherServerToCluster(forcedAdd: boolean) {
-       /* var newNode = nodeConnectionInfo.empty();
+        var newNode = nodeConnectionInfo.empty();
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
             .onExit()
             .done(nci => {
-            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), false, forcedAdd)
+            new extendRaftClusterCommand(null, nci.toDto(), false, forcedAdd)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
-        app.showDialog(dialog);*/
+        app.showDialog(dialog);
+    }
+
+    removeClustering() {
+        this.confirmationMessage("Are you sure?", "You are about to clear cluster information on this server.")
+            .done(() => {
+                new removeClusteringCommand(null)
+                    .execute()
+                    .done(() => setTimeout(() => {
+                        this.refresh();
+                        shell.clusterMode(false);
+                    }, 500));
+            });
     }
 
     createCluster() {
-        /*var newNode = nodeConnectionInfo.empty();
+        var newNode = nodeConnectionInfo.empty();
         newNode.name(this.systemDatabaseId());
         newNode.uri(this.serverUrl());
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
             .onExit()
             .done(nci => {
-            new extendRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto(), true, false)
+            new extendRaftClusterCommand(null, nci.toDto(), true, false)
                 .execute()
                 .done(() => {
                     shell.clusterMode(true);
                     setTimeout(() => this.refresh(), 500);
-                    new saveClusterConfigurationCommand({ EnableReplication: true }, appUrl.getSystemDatabase())
+                    new saveClusterConfigurationCommand({ EnableReplication: true }, null)
                         .execute();
                 });
 
         });
-        app.showDialog(dialog);*/
+        app.showDialog(dialog);
     }
 
     initializeNewCluster() {
-       /* this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
+        this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
             .done(() => {
-            new initializeNewClusterCommand(appUrl.getSystemDatabase())
+                new initializeNewClusterCommand(null)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
-            });*/
+            });
     }
 
     editNode(node: nodeConnectionInfo) {
-        /*var dialog = new editNodeConnectionInfoDialog(node, true);
+        var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
-            .done(nci => {
-                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto())
+            .done((nci: nodeConnectionInfo) => {
+                new updateRaftClusterCommand(null, nci.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
             });
 
-        app.showDialog(dialog);*/
+        app.showDialog(dialog);
     }
 
     leaveCluster(node: nodeConnectionInfo) {
-       /* this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
+        this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
             .done(() => {
-                new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
+                new leaveRaftClusterCommand(null, node.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
-        });*/
+        });
+    }
+
+    promoteNodeToVoter(node: nodeConnectionInfo) {
+        var nodeAsDto = node.toDto();
+        nodeAsDto.IsNoneVoter = false;
+        this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter.")
+            .done(() => {
+                new changeNodeVotingModeCommand(null, nodeAsDto)
+                    .execute()
+                    .done(() => setTimeout(() => this.refresh(), 500));
+        });
     }
 }
 

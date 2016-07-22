@@ -6,12 +6,12 @@ import performanceTestRequest = require("models/database/debug/performanceTestRe
 import performanceTestResultWrapped = require("models/database/debug/performanceTestResultWrapped");
 import ioTestCommand = require("commands/database/debug/ioTestCommand");
 import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
-//TODO: import d3 = require('d3');
-//TODO: import nv = require('nvd3');
+import d3 = require('d3');
+import nv = require('nvd3');
 import shell = require("viewmodels/shell");
 
 class ioTest extends viewModelBase {
-/* TODO:
+    /*
     isBusy = ko.observable<boolean>(false);
     ioTestRequest: performanceTestRequest = performanceTestRequest.empty();
     testResult = ko.observable<performanceTestResultWrapped>();
@@ -51,14 +51,14 @@ class ioTest extends viewModelBase {
             return errorMessage;
         });
 
-        this.isForbidden(shell.isGlobalAdmin() === false);
+        this.isForbidden(!shell.isGlobalAdmin());
     }
 
     canActivate(args): any {
         var deferred = $.Deferred();
 
         if (this.isForbidden() === false) {
-            new getStatusDebugConfigCommand(appUrl.getSystemDatabase())
+            new getStatusDebugConfigCommand(null)
                 .execute()
                 .done((results: any) =>
                     this.ioTestRequest.threadCount(results.MaxNumberOfParallelProcessingTasks))
@@ -174,7 +174,7 @@ class ioTest extends viewModelBase {
 
     killTask() {
         if (this.lastCommand !== null) {
-            this.lastCommand.operationIdTask.done((operationId: number) => {
+            this.lastCommand.operationIdTask.done((operationId) => {
                 new killRunningTaskCommand(appUrl.getSystemDatabase(), operationId).execute();
             });
         }
@@ -186,7 +186,7 @@ class ioTest extends viewModelBase {
 
         var diskTestParams = this.ioTestRequest.toDto();
 
-            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams, s => { if (s) this.currentStatus(s.currentStatus); });
+            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams, s => { if (s) this.currentStatus(s.Progress); });
         this.lastCommand
             .execute()
             .done(() => {

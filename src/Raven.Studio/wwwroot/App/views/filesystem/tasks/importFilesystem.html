@@ -3,13 +3,13 @@
         <h3 class="panel-title">Import File System</h3>
     </div>
     <div class="panel-body">
-        <h4>Import data from a .ravendump file into the current file system.</h4>
+        <h4>Import data from a .ravenfsdump file into the current file system.</h4>
         <p class="help-block">
             <i class="fa fa-warning text-warning"></i>
             Importing will overwrite any existing data.
         </p>
         <div data-bind="with: activeFilesystem">
-            <span class="btn btn-primary btn-file" data-bind="disable: isImporting">
+            <span class="btn btn-primary btn-file" data-bind="attr: { 'disabled': isImporting() ? 'disabled' : null }">
                 Choose file <input id="importFilesystemFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }"/>
             </span>
             <button class="btn btn-primary" data-bind="click: $root.importFs.bind($root), disable: !$root.hasFileSelected() || isImporting()">
@@ -19,9 +19,9 @@
             <p data-bind="visible: $root.hasFileSelected()">
                 Selected file name: <span data-bind="text: $root.importedFileName()"></span>
             </p>
-            <br /> 
-            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting() || !!importStatus()"></p>
-            <br />
+            <div style="margin-top: 15px">
+                <p data-bind="text: importStatus, visible: $root.isUploading() || isImporting() || !!importStatus()"></p>
+            </div> 
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
             </div>
@@ -38,14 +38,12 @@
                 <div class="form-group">
                     <div class="col-sm-offset-2 col-sm-5">
                         <div class="checkbox">
-                            <label>
-                                <input type="checkbox" data-bind="checked: stripReplicationInformation"> Strip synchronization information from files metadata
-                            </label>
+                            <input type="checkbox" class="styled" id="strip_replicaton_info_fs" data-bind="checked: stripReplicationInformation">
+                            <label for="strip_replicaton_info_fs">Strip synchronization information from files metadata</label>
                         </div>
                         <div class="checkbox">
-                            <label>
-                                <input type="checkbox" data-bind="checked: shouldDisableVersioningBundle"> Disable versioning bundle during import
-                            </label>
+                            <input type="checkbox" class="styled" id="disable_versioning_fs" data-bind="checked: shouldDisableVersioningBundle">
+                            <label for="disable_versioning_fs">Disable versioning bundle during import</label>
                         </div>
                     </div>
                 </div>

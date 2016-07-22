@@ -7,7 +7,7 @@ class ioTestCommand extends commandBase {
 
     operationIdTask = $.Deferred();
 
-    constructor(private db: database, private testParameters: performanceTestRequestDto, private onStatus: (string) => void) {
+    constructor(private db: database, private testParameters: performanceTestRequestDto, private onStatus: (state: operationStateDto) => void) {
         super();
     }
 
@@ -27,11 +27,11 @@ class ioTestCommand extends commandBase {
     }
 
     private monitorIoTest(parentPromise: JQueryDeferred<any>, operationId: number) {
-        new getOperationStatusCommand(appUrl.getSystemDatabase(), operationId)
+        new getOperationStatusCommand(null, operationId)
             .execute()
             .done((result: operationStatusDto) => {
                 if (result.Completed) {
-                    if (result.Faulted) {
+                    if (result.Faulted || result.Canceled) {
                         this.reportError("Failed to perform disk IO test!", result.State.Error);
                         parentPromise.reject();
                     } else {

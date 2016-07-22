@@ -8,7 +8,7 @@ import app = require("durandal/app");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import sqlReplicationStatsDialog = require("viewmodels/database/status/sqlReplicationStatsDialog");
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
@@ -21,7 +21,6 @@ import sqlReplicationSimulationDialog = require("viewmodels/database/status/sqlR
 import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
 import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
-import collectionsStats = require("models/database/documents/collectionsStats");
 
 
 class editSqlReplication extends viewModelBase {
@@ -62,11 +61,15 @@ class editSqlReplication extends viewModelBase {
         this.sqlReplicationName = ko.computed(() => (!!this.editedReplication() && !this.isEditingNewReplication()) ? this.editedReplication().name() : null);
     }
 
+    toggleBasicMode() {
+        this.isBasicView(!this.isBasicView());
+    }
+
     private addScriptLabelPopover() {
         var popOverSettings: PopoverOptions = {
             html: true,
             trigger: 'hover',
-            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.Lines.length,<br/>   TotalCost: 0<br/>};<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.Lines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.Lines[i];<br/>   <span class="code-keyword">var</span> lineCost = ((line.Quantity * line.PricePerUnit) * (1 - line.Discount));<br/>   orderData.TotalCost += lineCost;<br/><br/>   replicateToOrderLines({"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: lineCost<br/>   });<br/>}<br/><br/>replicateToOrders(orderData);</pre>',
+            content: 'Replication scripts use JavaScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.Lines.length,<br/>   TotalCost: 0<br/>};<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.Lines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.Lines[i];<br/>   <span class="code-keyword">var</span> lineCost = ((line.Quantity * line.PricePerUnit) <br />                     * (1 - line.Discount));<br/>   orderData.TotalCost += lineCost;<br/><br/>   replicateToOrderLines({<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: lineCost<br/>   });<br/>}<br/><br/>replicateToOrders(orderData);</pre>',
             selector: '.script-label',
             placement: "right"
         };
@@ -99,7 +102,7 @@ class editSqlReplication extends viewModelBase {
             } else {
                 this.isEditingNewReplication(true);
                 this.editedReplication(this.createSqlReplication());
-                this.fetchCollectionsStats(this.activeDatabase()).always(() => canActivateResult.resolve({ can: true }));
+                this.fetchCollections(this.activeDatabase()).always(() => canActivateResult.resolve({ can: true }));
             }
         });
         return canActivateResult;
@@ -131,7 +134,7 @@ class editSqlReplication extends viewModelBase {
 
     loadSqlReplication(replicationToLoadName: string) {
         var loadDeferred = $.Deferred();
-        $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollectionsStats(this.activeDatabase()))
+        $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollections(this.activeDatabase()))
             .done(() => {
                 this.editedReplication().collections = this.collections;
                 new getDocumentsMetadataByIDPrefixCommand(editSqlReplication.sqlReplicationDocumentPrefix, 256, this.activeDatabase())
@@ -162,11 +165,11 @@ class editSqlReplication extends viewModelBase {
         return loadDocTask;
     }
 
-    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db)
+    private fetchCollections(db: database): JQueryPromise<any> {
+        return new getCollectionsCommand(db)
             .execute()
-            .done((collectionsStats: collectionsStats) => {
-                this.collections(collectionsStats.collections.map((collection: collection) => { return collection.name; }));
+            .done((collections: Array<collection>) => {
+                this.collections(collections.map((collection: collection) => { return collection.name; }));
             });
     }
 

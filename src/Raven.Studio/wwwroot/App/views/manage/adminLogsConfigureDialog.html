@@ -42,7 +42,10 @@
                             </select>
                         </td>
                         <td class="col-md-4">
-                            <input class="form-checkbox-control" type="checkbox" data-bind="checked: includeStackTrace" />
+                            <div class="checkbox">
+                                <input type="checkbox" class="styled" data-bind="checked: includeStackTrace, attr: { id : 'stack_' + $index() }">
+                                <label data-bind="attr: { for: 'stack_' + $index() }">&nbsp;</label>
+                            </div>
                         </td>
                         <td class="col-md-2">
                             <div class="btn-group">

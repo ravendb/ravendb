@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getSystemDocumentCommand extends commandBase {
 

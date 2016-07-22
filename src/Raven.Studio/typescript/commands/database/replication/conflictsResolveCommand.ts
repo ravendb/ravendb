@@ -39,7 +39,7 @@ class conflictsResolveCommand extends commandBase {
             .execute()
             .done((result: operationStatusDto) => {
             if (result.Completed) {
-                if (result.Faulted) {
+                if (result.Faulted || result.Canceled) {
                     this.reportError("Failed to perform conflict resolution!", result.State.Error);
                     parentPromise.reject();
                 } else {

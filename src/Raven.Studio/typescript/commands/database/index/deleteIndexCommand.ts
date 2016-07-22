@@ -8,10 +8,9 @@ class deleteIndexCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         this.reportInfo("Deleting " + this.indexName + "...");
-        var args = {
+        const args = {
             name: this.indexName
         };
-
         return this.del("/indexes" + this.urlEncodeArgs(args), null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to delete index " + this.indexName, response.responseText))
             .done(() => this.reportSuccess("Deleted " + this.indexName));

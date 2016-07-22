@@ -4,18 +4,20 @@ import changesContext = require("common/changesContext");
 import getSqlReplicationPerfStatsCommand = require("commands/database/debug/getSqlReplicationPerfStatsCommand");
 import d3 = require("d3");
 import nv = require('nvd3');
-import shell = require("viewmodels/shell");
-import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
+import database = require('models/resources/database');
 import changeSubscription = require('common/changeSubscription');
 
 class sqlReplicationPerfStats extends viewModelBase {
-/* TODO
+    /*
+    statsAvailable: KnockoutComputed<boolean>;
     hasReplicationEnabled = ko.observable(false);
+
+    documentationLink = "http://ravendb.net/l/RVGRQB/" + viewModelBase.clientVersion() + "/";
 
     jsonData: any[] = [];
     rawJsonData: any[] = [];
     hiddenNames = d3.set([]);
-    replicationNames: string[] = [];
+    replicationNames = ko.observableArray<string>([]);
     private refreshGraphObservable = ko.observable<number>();
     private refreshSubscription: KnockoutSubscription;
 
@@ -27,13 +29,13 @@ class sqlReplicationPerfStats extends viewModelBase {
     legendWidth = 0;
     isoFormat = d3.time.format.iso;
     xTickFormat = d3.time.format("%H:%M:%S");	
-    x0Scale: d3.scale.Ordinal;
-    yScale: d3.scale.Linear;
-    color = d3.scale.category20<string>();
-    xAxis: d3.svg.Axis;
-    yAxis: d3.svg.Axis;
-    svg: d3.Selection;
-    legend: d3.selection.Update;
+    x0Scale: D3.Scale.OrdinalScale;
+    yScale: D3.Scale.LinearScale;
+    color = d3.scale.category20();
+    xAxis: D3.Svg.Axis;
+    yAxis: D3.Svg.Axis;
+    svg: D3.Selection;
+    legend: D3.UpdateSelection;
 
     fetchJsonData() {
         return new getSqlReplicationPerfStatsCommand(this.activeDatabase()).execute();
@@ -42,21 +44,17 @@ class sqlReplicationPerfStats extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.activeDatabase.subscribe(() => {
-            this.checkIfHasReplicationEnabled();
+        this.activeDatabase.subscribe((db: database) => {
+            this.checkIfHasReplicationEnabled(db);
         });
-        this.checkIfHasReplicationEnabled();
+        this.checkIfHasReplicationEnabled(this.activeDatabase());
+
+        this.statsAvailable = ko.computed(() => this.hasReplicationEnabled() && this.replicationNames().length > 0);
     }
 
-    checkIfHasReplicationEnabled() {
-        new getDatabaseSettingsCommand(this.activeDatabase())
-            .execute()
-            .done((document: any) => {
-                var documentSettings = document.Settings["Raven/ActiveBundles"];
-                this.hasReplicationEnabled(documentSettings.toLowerCase().indexOf("sqlreplication") !== -1);
-            });
+    checkIfHasReplicationEnabled(db: database) {
+        this.hasReplicationEnabled(db.isBundleActive("sqlreplication"));
     }
-
 
     attached() {
         super.attached();
@@ -91,7 +89,7 @@ class sqlReplicationPerfStats extends viewModelBase {
     refresh() {
         return this.fetchJsonData().done((data) => {
             this.rawJsonData = this.mergeJsonData(this.rawJsonData, data);
-            this.replicationNames = this.findReplicationNames(this.rawJsonData);
+            this.replicationNames(this.findReplicationNames(this.rawJsonData));
             this.filterJsonData();
             this.redrawGraph(); 
         });
@@ -250,7 +248,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .text("Batch size");
 
         this.x0Scale.domain(d3.nest()
-            .key((d: any) => d.Started)
+            .key(d => d.Started)
             .sortKeys(d3.ascending)
             .entries(self.jsonData)
             .map(d => d.key));
@@ -292,7 +290,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .attr('text-anchor', 'middle')
             .attr('x', d => d.sectionWidth / 2)
             .attr('y', self.height + 16)
-            .text((d: any) => self.xTickFormat(self.isoFormat.parse(d.Started)));
+            .text(d => self.xTickFormat(self.isoFormat.parse(d.Started)));
 
         frameEnter.append("g")
             .attr('class', 'inputs');
@@ -308,7 +306,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .attr("x", (d, i) => i * self.barWidth + self.barPadding)
             .attr("y", d => self.yScale(d.BatchSize))
             .attr("height", d => self.height - self.yScale(d.BatchSize))
-            .style("fill", (d:any) => self.color(d.ReplicationName));
+            .style("fill", d => self.color(d.ReplicationName));
 
         inputCounts.enter().append("rect")
             .attr("class", "inputCounts")
@@ -316,13 +314,17 @@ class sqlReplicationPerfStats extends viewModelBase {
             .attr("x", (d, i) => i * self.barWidth + self.barPadding)
             .attr("y", d => self.height)
             .attr("height", 0)
-            .style("fill", (d:any) => self.color(d.ReplicationName))
+            .style("fill", d => self.color(d.ReplicationName))
             .on('click', function (d) {
                 nv.tooltip.cleanup();
                 var offset = $(this).offset();
                 var leftScroll = $("#replicationStatsContainer").scrollLeft();
                 var containerOffset = $("#replicationStatsContainer").offset();
                 nv.tooltip.show([offset.left - containerOffset.left + leftScroll + self.barWidth, offset.top - containerOffset.top], self.getTooltip(d), 's', 5, document.getElementById("replicationStatsContainer"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings({ tooltipClose: nv.tooltip.cleanup }, elem);
+                });
+
             })
             .transition()
             .attr("height", d => self.height - self.yScale(d.BatchSize))
@@ -330,7 +332,7 @@ class sqlReplicationPerfStats extends viewModelBase {
 
         
         this.legend = this.svg.select('.controlls').selectAll(".legend")
-            .data(this.replicationNames, d => d);
+            .data(this.replicationNames(), d => d);
 
         this.legend.selectAll("rect").transition()
             .attr("x", this.width - 18);
@@ -364,7 +366,7 @@ class sqlReplicationPerfStats extends viewModelBase {
 
         this.svg.select('.legend_bg')
             .attr('y', -6)
-            .attr('height', this.replicationNames.length * 20 + 10)
+            .attr('height', this.replicationNames().length * 20 + 10)
             .attr('width', this.legendWidth)
             .attr('x', this.width - this.legendWidth + 10);
     }
@@ -377,7 +379,8 @@ class sqlReplicationPerfStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return "<strong>Replication Name:</strong> <span>" + d.ReplicationName + "</span><br />"
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>'
+            + "<strong>Replication Name:</strong> <span>" + d.ReplicationName + "</span><br />"
             + "<strong>Duration milliseconds:</strong> <span>" + d.DurationMilliseconds + "</span><br />"
             + "<strong>Batch size:</strong> <span>" + d.BatchSize + "</span><br />"
             ;
@@ -397,7 +400,7 @@ class sqlReplicationPerfStats extends viewModelBase {
         var statsInline = d3.merge(jsonData.map((d) => d.Stats));
         var byKey = d3
             .nest()
-            .key((d: any) => d.ReplicationName)
+            .key(d => d.ReplicationName)
             .sortKeys(d3.ascending)
             .rollup(l => l.length)
             .entries(statsInline);

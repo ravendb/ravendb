@@ -8,6 +8,7 @@ import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
 import router = require("plugins/router");
 import app = require("durandal/app");
+import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import changeSubscription = require("common/changeSubscription");
 import oauthContext = require("common/oauthContext");
 import changesContext = require("common/changesContext");
@@ -15,7 +16,6 @@ import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
-
 import downloader = require("common/downloader");
 
 /*
@@ -110,11 +110,14 @@ class viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
+        // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
+        var adminArea = this.appUrls.isAreaActive("admin");
+
         oauthContext.enterApiKeyTask.done(() => {
             // we have to wait for changes api to connect as well
             // as obtaining changes api connection might take a while, we have to spin until connection is read
             var createNotifySpinFunction = () => {
-                if (isShell || this.appUrls.isAreaActive("admin")())
+                if (isShell || adminArea())
                     return;
                 if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
                     this.notifications = this.createNotifications();
@@ -128,13 +131,13 @@ class viewModelBase {
         this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();
 
-        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
 
         ko.postbox.publish("SetRawJSONUrl", "");
         this.updateHelpLink(null); // clean link
     }
 
     attached() {
+        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
         this.isAttached = true;
         viewModelBase.showSplash(false);
     }
@@ -178,8 +181,14 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.activeTimeSeries.unsubscribeFrom("ActivateTimeSeries");
+        this.lastActivatedResource.unsubscribeFrom("ActivateDatabase");
+        this.lastActivatedResource.unsubscribeFrom("ActivateFilesystem");
+        this.lastActivatedResource.unsubscribeFrom("ActivateCounterStorage");
+        this.lastActivatedResource.unsubscribeFrom("ActivateTimeSeries");
+        this.currentHelpLink.unsubscribeFrom("currentHelpLink");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
+
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
 
         this.isAttached = true;
@@ -318,7 +327,7 @@ class viewModelBase {
     private beforeUnloadListener: EventListener = (e: any): any => {
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            const message = "You have unsaved data.";
+            var message = "You have unsaved data.";
             e = e || window.event;
 
             // For IE and Firefox

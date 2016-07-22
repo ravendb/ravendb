@@ -1,55 +1,68 @@
 <section>
-    <form class="quotas-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root)">
-        <div class="panel panel-default">
+    <div data-bind="visible: $root.settingsAccess.isForbidden()" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <form class="quotas-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root), if: !$root.settingsAccess.isForbidden()">
+        <div class="panel panel-default" data-bind="visible: !$root.canUseGlobalConfigurations()">
+            <div class="panel-body">
+                <div class="text-center">
+                    <h3 class="text-info">
+                        Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default" data-bind="visible: $root.canUseGlobalConfigurations()">
             <div class="panel-heading">
                 <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled(), visible: activated()" accesskey="S"><i class="fa fa-save"></i></button>
-                <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: activated()==false">
+                <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated(), disable: $root.settingsAccess.isReadOnly()">
                     <i class="fa fa-plus"></i> Create global configuration for Quotas
                 </button>
-                <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+                <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated(), disable: $root.settingsAccess.isReadOnly()">
                     <i class="fa fa-trash"></i> Remove global configuration for Quotas
                 </button>
+                <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
             </div>
             <div class="panel-body">
-                <p data-bind="visible: activated()==false">
-                    <i class="fa fa-info-circle text-info"></i> Global configuration for Quotas is not currently defined.
-                </p>
+                <div class="text-center" data-bind="visible: !activated()">
+                    <h3 class="text-info">Global configuration for Quotas is not currently defined.</h3>
+                </div>
                 <div data-bind="if: activated()">
                     <div class="form-group">
-                        <div class="col-md-4 control-label">Maximum size:</div>
-                        <div class="col-md-8">
+                        <label class="col-md-3 control-label">Maximum size:</label>
+                        <div class="col-md-9">
                             <div class="input-group">
-                                <input required type="number" min="0" class="form-control" data-bind="numericValue: maximumSize,valueUpdate: 'afterkeydown'" />
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: maximumSize,valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                                 <span class="input-group-addon">MB</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <div class="col-md-4 control-label">Warning limit threshold:</div>
-                        <div class="col-md-8">
+                        <label class="col-md-3 control-label">Warning limit threshold:</label>
+                        <div class="col-md-9">
                             <div class="input-group">
-                                <input required type="number" min="0" class="form-control" data-bind="numericValue: warningLimitThreshold, valueUpdate: 'afterkeydown'" />
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: warningLimitThreshold, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                                 <span class="input-group-addon">MB</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <div class="col-md-4 control-label">Maximum number of docs:</div>
-                        <div class="col-md-8">
+                        <label class="col-md-3 control-label">Maximum number of docs:</label>
+                        <div class="col-md-9">
                             <div class="input-group">
-                                <input required type="number" min="0" class="form-control" data-bind="numericValue: maxNumberOfDocs,valueUpdate: 'afterkeydown'" />
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: maxNumberOfDocs,valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                                 <span class="input-group-addon">docs</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <div class="col-md-4 control-label">Warning threshold for docs:</div>
-                        <div class="col-md-8">
+                        <label class="col-md-3 control-label">Warning threshold for docs:</label>
+                        <div class="col-md-9">
                             <div class="input-group">
-                                <input required type="number" min="0" class="form-control" data-bind="numericValue: warningThresholdForDocs,valueUpdate: 'afterkeydown'" />
+                                <input required type="number" min="0" class="form-control" data-bind="numericValue: warningThresholdForDocs,valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                                 <span class="input-group-addon">docs</span>
                             </div>
                         </div>

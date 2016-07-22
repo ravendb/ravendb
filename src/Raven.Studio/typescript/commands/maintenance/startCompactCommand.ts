@@ -6,8 +6,6 @@ import monitorCompactCommand = require("commands/maintenance/monitorCompactComma
 
 class startCompactCommand extends commandBase {
 
-    private db: database = appUrl.getSystemDatabase();
-
     constructor(private dbToCompact: string, private updateCompactStatus: (compactStatusDto) => void) {
         super();
     }
@@ -16,7 +14,7 @@ class startCompactCommand extends commandBase {
 
         var result = $.Deferred();
 
-        new deleteDocumentCommand('Raven/Database/Compact/Status/' + this.dbToCompact, this.db)
+        new deleteDocumentCommand('Raven/Database/Compact/Status/' + this.dbToCompact, null)
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to delete compact status document!", response.responseText, response.statusText);
@@ -24,7 +22,7 @@ class startCompactCommand extends commandBase {
             })
             .done(_=> {
                 var url = '/admin/compact' + this.urlEncodeArgs({ database: this.dbToCompact });
-                this.post(url, null, this.db)
+                this.post(url, null, null)
                     .fail((response: JQueryXHR) => {
                         this.reportError("Failed to compact database!", response.responseText, response.statusText);
                         this.logError(response, result);

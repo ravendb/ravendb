@@ -1,4 +1,5 @@
 <ul class="breadcrumb">
+    <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>    
     <li>
         <h3>
             <a href="#resources">
@@ -22,7 +23,7 @@
         <div class="col-md-2">
             <ul class="nav nav-pills nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
                 <li data-bind="css: { active: isActive }">
-                    <a data-bind="attr: { href: dynamicHash }, text: title"></a>
+                    <a data-bind="attr: { href: hash }, text: title"></a>
                 </li>
             </ul>
         </div>

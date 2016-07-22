@@ -1,51 +1,49 @@
-<div data-bind="visible: isForbidden" class="text-center">
-    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
-</div>
-
-<div class="panel panel-default form-horizontal" role="form" data-bind="visible: isForbidden() == false">
+<div class="panel panel-default form-horizontal" role="form">
     <div class="panel-heading">
-        Studio config
+        <span class="text-height-fix">Studio config</span>
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <div class="clearfix"></div>
     </div>
+
     <div class="panel-body">
-        <div class="form-group">
-            <div class="col-md-4 control-label">Warn when using System Database</div>
-            <div class="col-md-8">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: isReadOnly">
-                        <span data-bind="visible: warnWhenUsingSystemDatabase">On</span>
-                        <span data-bind="visible: !warnWhenUsingSystemDatabase()">Off</span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, true)">On</a></li>
-                        <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, false)">Off</a></li>
-                    </ul>
+        <div data-bind="visible: !isForbidden()">
+            <h4>Server-wide settings</h4>
+            <hr />
+            <div class="form-group">
+                <label class="col-md-4 control-label">Warn when using System Database</label>
+                <div class="col-md-8">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: isReadOnly">
+                            <span data-bind="visible: warnWhenUsingSystemDatabase">On</span>
+                            <span data-bind="visible: !warnWhenUsingSystemDatabase()">Off</span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, true)">On</a></li>
+                            <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, false)">Off</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-4 control-label">Environment</label>
+                <div class="col-md-2">
+                    <div id="select-color">
+                        <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name', disable: isReadOnly"></select>
+                    </div>
                 </div>
             </div>
         </div>
+        
+
+        <h4>Local settings</h4>
+        <hr />
+
         <div class="form-group">
-            <div class="col-md-4 control-label">Disable event source</div>
+            <label class="col-md-4 control-label" data-bind="text: 'Mute remind to upgrade (' + timeUntilRemindToUpgradeMessage() + ')'"></label>
             <div class="col-md-8">
                 <div class="btn-group">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: isReadOnly">
-                        <span data-bind="visible: disableEventSource">Yes</span>
-                        <span data-bind="visible: !disableEventSource()">No</span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" data-bind="click: setEventSourceDisabled.bind($root, true)">Yes</a></li>
-                        <li><a href="#" data-bind="click: setEventSourceDisabled.bind($root, false)">No</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="form-group">
-            <div class="col-md-4 control-label" data-bind="text: 'Mute remind to upgrade (' + timeUntilRemindToUpgradeMessage() + ')'"></div>
-            <div class="col-md-8">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: isReadOnly">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span data-bind="visible: mute">On</span>
                         <span data-bind="visible: !mute()">Off</span>
                         <span class="caret"></span>
@@ -57,11 +55,37 @@
                 </div>
             </div>
         </div>
+
         <div class="form-group">
-            <div class="col-md-4 control-label" data-bind="text: 'Environment'"></div>
+            <label class="col-md-4 control-label">Disable event source</label>
             <div class="col-md-8">
-                <div id="select-color" class="btn-group" style="padding-top:0">
-                    <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name', disable: isReadOnly"></select>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        <span data-bind="visible: disableEventSource">Yes</span>
+                        <span data-bind="visible: !disableEventSource()">No</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#" data-bind="click: setEventSourceDisabled.bind($root, true)">Yes</a></li>
+                        <li><a href="#" data-bind="click: setEventSourceDisabled.bind($root, false)">No</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-4 control-label">Number format</label>
+            <div class="col-md-8">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        <span data-bind="visible: rawFormat">Raw format (ex. 5055.99)</span>
+                        <span data-bind="visible: !rawFormat()">Browser default format (ex. <span data-bind="text: browserFormatExample"></span>)</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#" data-bind="click: setNumberFormat.bind($root, true)">Raw format (ex. 5055.99)</a></li>
+                        <li><a href="#" data-bind="click: setNumberFormat.bind($root, false)">Browser default format (ex. <span data-bind="text: browserFormatExample"></span>)</a></li>
+                    </ul>
                 </div>
             </div>
         </div>

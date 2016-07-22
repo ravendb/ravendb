@@ -1,11 +1,19 @@
+<div class="panel panel-default" data-bind="visible: data().length === 0">
+    <div class="panel-heading">
+        Data subscriptions
+    </div>
+    <div class="panel-body">
+        <div class="text-center">
+            <h3 class="text-info">No data subscriptions for now. </h3>
+        </div>
+    </div>
+</div>
 <div class="panel-group" data-bind="foreach: data">
     <div class="panel panel-default">
         <div class="panel-heading">
             <h4 class="panel-title">
                 <a data-toggle="collapse" data-bind="text: 'Id: ' + subscriptionId, attr: { href: '#statsSubscriptionsCollapse' + $index() }"></a>
-
             </h4>
-
         </div>
         <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsSubscriptionsCollapse' + $index() }">
             <div class="panel-body">
@@ -15,19 +23,20 @@
                         <div class="col-md-10">
                             <p class="form-control-static" data-bind="text: ackEtag"></p>
                         </div>
-
                     </div>
                     <form class="form-group" data-bind="submit: $root.setSubscriptionEtag.bind($root, $data)">
                         <label class="col-md-2 control-label">Set Acknowledged Etag</label>
-                        <div class="input-group">
-                            <input required class="form-control" size="38" data-bind="value: newAckEtag, valueUpdate: 'afterkeyup', customValidity: etagCustomValidityError">
-                            <span class="input-group-btn">
-                                <button class="btn btn-default" type="submit" data-bind="disable: isButtonDisabled">Set</button>
-                            </span>
+                        <div class="col-md-5">
+                            <div class="input-group">
+                                <input required class="form-control" size="38" data-bind="value: newAckEtag, valueUpdate: 'afterkeyup', customValidity: etagCustomValidityError">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default" type="submit" data-bind="disable: isButtonDisabled">Set</button>
+                                </span>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</div> 
+</div>

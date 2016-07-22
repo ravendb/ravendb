@@ -118,7 +118,7 @@
                                             </p>
                                         </div>
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" data-bind="visible: IsMapReduce">
                                         <label class="col-md-2 control-label">Last reduce</label>
                                         <div class="col-md-8">
                                             <p class="form-control-static" data-bind="text: LastReducedTimestampText"></p>
@@ -142,7 +142,7 @@
                                             <p class="form-control-static" data-bind="text: LastIndexedEtag"></p>
                                         </div>
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" data-bind="visible: IsMapReduce">
                                         <label class="col-md-2 control-label">Last reduced Etag</label>
                                         <div class="col-md-8">
                                             <p class="form-control-static" data-bind="text: LastReducedEtag"></p>

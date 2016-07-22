@@ -42,6 +42,7 @@ interface computedAppUrls {
     quotas: KnockoutComputed<string>;
     periodicExport: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
+    etl: KnockoutComputed<string>;
     hotSpare: KnockoutComputed<string>;
     versioning: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;

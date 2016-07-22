@@ -13,7 +13,7 @@ import router = require("plugins/router");
 class commandBase {
 
     // TODO: better place for this?
-    static ravenClientVersion = '3.0.0.0';
+    static ravenClientVersion = '4.0.0.0';
     static splashTimerHandle = 0;
     static alertTimeout = 0;
     static loadingCounter = 0;
@@ -24,19 +24,7 @@ class commandBase {
     }
 
     urlEncodeArgs(args: any): string {
-        var propNameAndValues = [];
-        for (var prop in args) {
-            var value = args[prop];
-            if (value instanceof Array) {
-                for (var i = 0; i < value.length; i++) {
-                    propNameAndValues.push(prop + "=" + encodeURIComponent(value[i]));
-                }
-            } else if (value !== undefined) {
-                propNameAndValues.push(prop + "=" + encodeURIComponent(value));
-            }
-        }
-
-        return "?" + propNameAndValues.join("&");
+        return appUrl.urlEncodeArgs(args);
     }
 
     getTimeToAlert(longWait: boolean) {

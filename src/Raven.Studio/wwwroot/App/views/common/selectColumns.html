@@ -1,7 +1,7 @@
 
 <form id="selectColumnsForm" data-bind="submit: changeCurrentColumns">
     <div class="messageBox" tabindex="-1" style="width: 715px;">
-        <div class=" modal-header">
+        <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="fa fa-times"></i>
             </button>
@@ -47,18 +47,18 @@
                     <tr>
                         <td class="col-md-3">
                             <div style="position: relative">
-                                <input class="form-control" required type="text" data-bind="customValidity: bindingCustomValidity, attr: { 'id': $root.generateBindingInputId($index()) }, value: binding, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
+                                <input class="form-control" required type="text" data-bind="customValidity: bindingCustomValidity, attr: { 'id': $root.generateBindingInputId($index()) }, textInput: binding, event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
                                 <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + $root.generateBindingInputId($index()), foreach: $root.autoCompleteResults">
                                     <li role="presentation" data-bind="click: $root.completeTheWord.bind($root)">
                                         <a href="#" data-bind="click: $root.completeTheWord.bind($root)">
-                                            <span data-bind="text: $data"></span>
+                                            <span class="text" data-bind="text: $data"></span>
                                         </a>
                                     </li>
                                 </ul>
                             </div>
                         </td>
-                        <td class="col-md-3"><input class="form-control" required type="text" data-bind="value: header, valueUpdate: 'afterkeydown'" /></td>
-                        <td class="col-md-2"><input class="form-control" required type="number" data-bind="value: width, valueUpdate: 'afterkeydown'" /></td>
+                        <td class="col-md-3"><input class="form-control" required type="text" data-bind="value: header, valueUpdate: 'afterkeydown', hasFocus: hasHeaderFocus" /></td>
+                        <td class="col-md-2"><input class="form-control" required type="number" data-bind="numericValue: width, valueUpdate: 'afterkeydown'" /></td>
                         <td class="col-md-2">
                             <div class="btn-group">
                                 <button data-bind="click: $root.moveUp.bind($root, $data), disable: ($index() === 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>

@@ -11,7 +11,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
     content: DurandalActivator<any>;
     currentModel: viewModelBase;
 
-    constructor() {
+    constructor(bundles: Array<string>) {
         super();
 
         this.content = activator.create();
@@ -29,9 +29,15 @@ class databaseSettingsDialog extends dialogViewModelBase {
         );
 
         this.routes = [];
-        this.routes.push(quotasRoute);
-        this.routes.push(versioningRoute);
-        this.routes.push(sqlReplicationConnectionRoute);
+        if (bundles.contains("Quotas")) {
+            this.routes.push(quotasRoute);
+        }
+        if (bundles.contains("Versioning")) {
+            this.routes.push(versioningRoute);
+        }
+        if (bundles.contains("SqlReplication")) {
+            this.routes.push(sqlReplicationConnectionRoute);
+        }
     }
 
     attached() {

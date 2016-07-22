@@ -15,6 +15,8 @@ class row {
     isChecked = ko.observable(false);
     compiledCustomFunctions = {};
 
+    templateNameCache:{ [key:string]:KnockoutObservable<string> } = {};
+
     calculateExternalIdCellColor(cellValue: string) {
         var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf("/")).toLocaleLowerCase();
         var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() === cellCollectionName);
@@ -65,7 +67,6 @@ class row {
     }
 
     fillCells(rowData: documentBase) {
-        var customFunctions = this.viewModel.settings.customFunctions();
         var customColumns = this.viewModel.settings.customColumns();
         this.isInUse(true);
         var rowProperties = rowData.getDocumentPropertyNames();
@@ -74,25 +75,17 @@ class row {
             customColumns.columns().forEach((column, index) => {
                 var binding = column.binding();
                 var context = {};
-                var stringify = typeof rowData === "object" && this.getCellTemplateName(binding, rowData) !== cell.customTemplate;
 
                 $.each(rowData, (name: string, value: any) => {
-                    if (stringify) {
-                        context[name] = JSON.stringify(value, null, 4);
-                        if (context[name] && context[name].length > 250) {
-                            context[name] = context[name].substring(0, 250);
-                        }
-                    } else {
-                        context[name] = value;
-                    }
+                    context[name] = value;
                 });
 
                 for (var p in this.compiledCustomFunctions) {
                     context[p] = this.compiledCustomFunctions[p];
                 }
-
-                var cellValueGenerator = execJs.createSimpleCallableCode("return " + binding + ";", context);
-                this.addOrUpdateCellMap(binding, cellValueGenerator());
+                var cellValue = execJs.createSimpleCallableCode("return " + binding + ";", context)();
+                var callValueAsString = (typeof cellValue === "object" && this.getCellTemplateName(binding, rowData) !== cell.customTemplate) ? JSON.stringify(cellValue, null, 4) : cellValue;
+                this.addOrUpdateCellMap(binding, callValueAsString);
             });
 
         } else {
@@ -104,8 +97,8 @@ class row {
                     cellValue = JSON.stringify(cellValue, null, 4) || "";
                 }
 
-                if (cellValue && cellValue.length > 250) {
-                    cellValue = cellValue.substring(0, 250);
+                if (cellValue && cellValue.length > 300) {
+                    cellValue = cellValue.substring(0, 300);
                 }
                 this.addOrUpdateCellMap(prop, cellValue);
             }
@@ -123,6 +116,9 @@ class row {
             var cellVal: cell = this.cellMap[propertyName];
             cellVal.update(data);
         }
+
+        var cacheKey = this.getOrAddTemplateNameCache(propertyName);
+        cacheKey(this.getCellTemplate(propertyName));
     }
 
     getCellData(cellName: string): any {
@@ -132,6 +128,14 @@ class row {
         }
 
         return "";
+    }
+
+    getOrAddTemplateNameCache(cellName: string) {
+        var cacheKey = this.templateNameCache[cellName];
+        if (!cacheKey) {
+            cacheKey = this.templateNameCache[cellName] = ko.observable<string>("nullTemplate");
+        }
+        return cacheKey;
     }
 
     getCellTemplate(cellName: string): string {

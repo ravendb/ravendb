@@ -7,10 +7,16 @@ import customFunctions = require("models/database/documents/customFunctions");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigCustomFunctions extends viewModelBase {
 
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     activated = ko.observable<boolean>(false);
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     docEditor: AceAjax.Editor;
     textarea: any;
@@ -26,12 +32,11 @@ class globalConfigCustomFunctions extends viewModelBase {
         this.fetchCustomFunctions();
 
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
-        this.isSaveEnabled = ko.computed<boolean>(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed<boolean>(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     attached() {
+        super.attached();
         $("#customFunctionsExample").popover({
             html: true,
             trigger: "hover",
@@ -47,7 +52,6 @@ class globalConfigCustomFunctions extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
-        this.docEditor.resize();
         $("#customFunctionsEditor").on("DynamicHeightSet", () => this.docEditor.resize());
         this.fetchCustomFunctions();
     }
@@ -58,7 +62,7 @@ class globalConfigCustomFunctions extends viewModelBase {
     }
 
     fetchCustomFunctions() {
-        var fetchTask = new getCustomFunctionsCommand(appUrl.getDatabase(), true).execute();
+        var fetchTask = new getCustomFunctionsCommand(null, true).execute();
         fetchTask.done((cf: customFunctions) => {
             this.documentText(cf.functions);
             this.activated(true);
@@ -76,7 +80,7 @@ class globalConfigCustomFunctions extends viewModelBase {
 
     syncChanges(deleteConfig: boolean) {
         if (deleteConfig) {
-            new deleteDocumentCommand("Raven/Global/Javascript/Functions", appUrl.getDatabase())
+            new deleteDocumentCommand("Raven/Global/Javascript/Functions", null)
                 .execute()
                 .done(() => messagePublisher.reportSuccess("Global Settings were successfully saved!"))
                 .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save global settings!", response.responseText, response.statusText));
@@ -94,7 +98,7 @@ class globalConfigCustomFunctions extends viewModelBase {
                 var cf = new customFunctions({
                     Functions: this.documentText()
                 });
-                var saveTask = new saveCustomFunctionsCommand(appUrl.getDatabase(), cf, true).execute();
+                var saveTask = new saveCustomFunctionsCommand(null, cf, true).execute();
                 saveTask.done(() => this.dirtyFlag().reset());
             }
             else {

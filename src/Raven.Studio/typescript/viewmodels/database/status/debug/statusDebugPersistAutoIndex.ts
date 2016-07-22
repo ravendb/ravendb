@@ -20,7 +20,7 @@ class statusDebugPersistAutoIndex extends viewModelBase {
             .execute()
             .done(() => {
                 this.indexName(statusDebugPersistAutoIndex.selectIndexText);
-                var index = this.onRamIndexes.first(i => i.name == indexName);
+                var index = this.onRamIndexes.first(i => i.name === indexName);
                 if (index) {
                     this.onRamIndexes.remove(index);
                 }

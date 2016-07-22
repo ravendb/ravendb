@@ -12,7 +12,7 @@ import getConfigurationSettingsCommand = require("commands/database/globalConfig
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
 
 class createDefaultSettingsCommand extends commandBase {
-    constructor(private db: database) {
+    constructor(private db: database, private bundles) {
         super();
     }
 
@@ -20,8 +20,12 @@ class createDefaultSettingsCommand extends commandBase {
         this.reportInfo("Creating default settings for '" + this.db.name + "'...");
         
         var tasksToWatch = []; 
+        if (this.bundles.contains("Quotas")) {
             tasksToWatch.push(this.updateQuotasSettings());
+        }
+        if (this.bundles.contains("Versioning")) {
             tasksToWatch.push(this.saveVersioningConfiguration());
+        }
 
         if (tasksToWatch.length > 0) {
             return $.when.apply(null, tasksToWatch);
