@@ -7,7 +7,10 @@
     "compile": {
       "include": [ "**/*.cs" ]
     },
-    "embed": [ "Data/*.txt" ]
+    "embed": [ "Data/*.txt" ],
+    "copyToOutput": {
+      "include": [ "xunit.runner.json" ]
+    }
   },
 
   "configurations": {
