@@ -57,7 +57,7 @@ function Get-InformationalVersion($version, $label, $category)
         throw [System.ArgumentException] "Invalid build category $type"
     }
 
-    if ($category.EndsWith("-Unstable")) {
+    if ($category.EndsWith("-Unstable") -or $category.EndsWith("-RC")) {
         $result = "$version-rc-$label"
     }
     elseif ($category.EndsWith("-Hotfix")) {
