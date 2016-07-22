@@ -5,7 +5,7 @@
     "allowUnsafe": true,
     "warningsAsErrors": true,
     "compile": {
-      "include": [ "**/*.cs" ]
+      "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
     },
     "embed": [
       "**/*.json",
@@ -14,7 +14,7 @@
     ],
     "define": [ "DEBUG" ],
     "copyToOutput": {
-      "include": [ "xunit.runner.json" ]
+      "include": [ "../xunit.runner.json" ]
     }
   },
 

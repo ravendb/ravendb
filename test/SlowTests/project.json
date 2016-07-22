@@ -5,11 +5,11 @@
     "allowUnsafe": true,
     "warningsAsErrors": true,
     "compile": {
-      "include": [ "**/*.cs" ]
+      "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
     },
     "embed": [ "Data/*.txt" ],
     "copyToOutput": {
-      "include": [ "xunit.runner.json" ]
+      "include": [ "../xunit.runner.json" ]
     }
   },
 
