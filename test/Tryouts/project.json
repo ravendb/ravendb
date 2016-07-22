@@ -40,7 +40,6 @@
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.0.0"
-    },
-    "Regression.Benchmark": "4.0.0-*"
+    }
   }
 }
