@@ -934,6 +934,8 @@ namespace Raven.Database.Indexing
 
             configuration.Container.SatisfyImportsOnce(indexImplementation);
 
+            indexImplementation.AnalyzerGenerators.Apply(initialization => initialization.Initialize(documentDatabase));
+
             return indexImplementation;
         }
 
