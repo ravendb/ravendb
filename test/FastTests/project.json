@@ -12,7 +12,10 @@
       "Voron/Bugs/Data/*.txt",
       "**/*.ravendump"
     ],
-    "define": [ "DEBUG" ]
+    "define": [ "DEBUG" ],
+    "copyToOutput": {
+      "include": [ "xunit.runner.json" ]
+    }
   },
 
   "configurations": {

@@ -1133,8 +1133,8 @@ namespace Raven.Client.Connection.Async
             {
                 request.AddOperationHeaders(OperationsHeaders);
 
-                var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+                var result = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return result.Deserialize<TcpConnectionInfo>(convention);
             }
         }
 
