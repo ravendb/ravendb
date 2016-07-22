@@ -552,7 +552,40 @@ namespace Sparrow
                 return byteString;
             }
         }
+        [ThreadStatic]
+        private static char[] _toLowerTempBuffer;
+        /// <summary>
+        /// Mutate the string to lower case
+        /// </summary>
+        public void ToLowerCase(ref ByteString str)
+        {
+            if (str.IsMutable == false)
+                throw new InvalidOperationException("Cannot mutate an immutable ByteString");
 
+            var charCount = Encoding.UTF8.GetCharCount(str._pointer->Ptr, str.Length);
+            if (_toLowerTempBuffer == null || _toLowerTempBuffer.Length < charCount)
+            {
+                _toLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
+            }
+            fixed (char* pChars = _toLowerTempBuffer)
+            {
+                charCount = Encoding.UTF8.GetChars(str._pointer->Ptr, str.Length, pChars, _toLowerTempBuffer.Length);
+                for (int i = 0; i < charCount; i++)
+                {
+                    _toLowerTempBuffer[i] = char.ToLowerInvariant(_toLowerTempBuffer[i]);
+                }
+                var byteCount = Encoding.UTF8.GetByteCount(pChars, charCount);
+                if (// we can't mutate external memory!
+                    str.IsExternal ||
+                    // calling to lower has increased the size, and we can't fit in the space
+                    // provided, so we must allocate a new string here
+                    byteCount > str._pointer->Size)
+                {
+                    str = Allocate(byteCount);
+                }
+                str._pointer->Length = Encoding.UTF8.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
+            }
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString Create(void* ptr, int length, int size, ByteStringType type = ByteStringType.Immutable)
         {

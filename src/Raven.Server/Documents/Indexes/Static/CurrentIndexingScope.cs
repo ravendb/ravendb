@@ -61,6 +61,10 @@ namespace Raven.Server.Documents.Indexes.Static
             else
                 keySlice = Slice.From(_documentsContext.Allocator, keyString, ByteStringType.Immutable);
 
+            // making sure that we normalize the case of the key so we'll be able to find
+            // it in case insensitive manner
+            _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
+
             var collectionSlice = Slice.From(_documentsContext.Allocator, collectionName, ByteStringType.Immutable);
 
             var references = GetReferencesForDocument(id);
@@ -68,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             references.Add(keySlice);
 
-            var document = _documentsStorage.Get(_documentsContext, keyString ?? keySlice.ToString()); // TODO [ppekrol] fix me
+            var document = _documentsStorage.Get(_documentsContext, keySlice);
             if (document == null)
             {
                 MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, 0);

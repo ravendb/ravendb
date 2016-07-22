@@ -53,9 +53,13 @@ namespace Raven.Server.Documents.Transformers
             if (keyLazy != null)
                 keySlice = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size);
             else
-                keySlice = Slice.From(_documentsContext.Allocator, keyString, ByteStringType.Immutable);
+                keySlice = Slice.From(_documentsContext.Allocator, keyString);
 
-            var document = _documentsStorage.Get(_documentsContext, keyString ?? keySlice.ToString()); // TODO [ppekrol] fix me
+            // making sure that we normalize the case of the key so we'll be able to find
+            // it in case insensitive manner
+            _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
+
+            var document = _documentsStorage.Get(_documentsContext, keySlice); 
             if (document == null)
                 return Null();
 
