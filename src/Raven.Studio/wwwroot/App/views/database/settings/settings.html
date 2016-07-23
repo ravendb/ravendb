@@ -18,7 +18,21 @@
     </li>
 </ul>
 
-<div class="settings-container row">
+<div class="settings-container row new_layout">
+  
+    <div class="col-md-10" data-bind="router: { cacheViews: false }">
+
+    </div>
+    <div class="col-md-2">
+        <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
+            <li data-bind="css: { active: (isActive() || $root.isEditingSqlReplication($root.router.navigationModel,route) === true) }, visible: $parent.routeIsVisible($data)">
+                <a data-bind="attr: { href: hash }, text: title"></a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="settings-container row old_layout">
     <div class="col-md-2">
         <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
             <li data-bind="css: { active: (isActive() || $root.isEditingSqlReplication($root.router.navigationModel,route) === true) }, visible: $parent.routeIsVisible($data)">

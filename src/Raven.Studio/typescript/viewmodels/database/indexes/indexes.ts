@@ -48,6 +48,7 @@ class indexes extends viewModelBase {
 
     constructor() {
         super();
+        viewModelBase.layout.setMode(true);
         this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
 
         this.sortedGroups = ko.computed(() => {

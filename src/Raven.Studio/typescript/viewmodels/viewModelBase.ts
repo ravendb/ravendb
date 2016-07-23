@@ -8,7 +8,6 @@ import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
 import router = require("plugins/router");
 import app = require("durandal/app");
-import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import changeSubscription = require("common/changeSubscription");
 import oauthContext = require("common/oauthContext");
 import changesContext = require("common/changesContext");
@@ -17,11 +16,15 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
+import layoutSwitcher = require("viewmodels/layoutSwitcher");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
+
+    static layout = new layoutSwitcher();
+
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
@@ -51,6 +54,7 @@ class viewModelBase {
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
+        viewModelBase.layout.setMode(false);
     }
 
     /*
