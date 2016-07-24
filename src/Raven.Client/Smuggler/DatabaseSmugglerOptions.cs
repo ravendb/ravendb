@@ -4,7 +4,8 @@ namespace Raven.Client.Smuggler
     {
         public DatabaseSmugglerOptions()
         {
-            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Documents | DatabaseItemType.Transformers;
+            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers 
+                | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
         }
 
         public long? StartDocsEtag { get; set; }
@@ -14,7 +15,7 @@ namespace Raven.Client.Smuggler
         public bool IgnoreErrorsAndContinue { get; set; }
 
         public int? DocumentsLimit { get; set; }
-        public int? VersioningRevisionsLimit { get; set; }
+        public int? RevisionDocumentsLimit { get; set; }
 
         public string TransformScript { get; set; }
 

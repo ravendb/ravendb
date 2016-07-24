@@ -105,7 +105,7 @@ namespace FastTests.Smuggler
 
                     var stats = await store1.AsyncDatabaseCommands.GetStatisticsAsync();
                     Assert.Equal(5, stats.CountOfDocuments);
-                    Assert.Equal(7, stats.CountOfVersioningRevisionDocuments);
+                    Assert.Equal(7, stats.CountOfRevisionDocuments);
                 }
 
                 using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
@@ -114,7 +114,7 @@ namespace FastTests.Smuggler
 
                     var stats = await store2.AsyncDatabaseCommands.GetStatisticsAsync();
                     Assert.Equal(5, stats.CountOfDocuments);
-                    Assert.Equal(7, stats.CountOfVersioningRevisionDocuments);
+                    Assert.Equal(7, stats.CountOfRevisionDocuments);
                 }
             }
             finally

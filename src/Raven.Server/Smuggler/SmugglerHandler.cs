@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO.Compression;
 using System.Threading.Tasks;
+using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -21,11 +23,20 @@ namespace Raven.Server.Smuggler
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                new DatabaseDataExporter(Database)
+                var exporter = new DatabaseDataExporter(Database)
                 {
                     DocumentsLimit = GetIntValueQueryString("documentsLimit", required: false),
-                    VersioningRevisionsLimit = GetIntValueQueryString("versioningRevisionsLimit", required: false),
-                }.Export(context, ResponseBodyStream());
+                    RevisionDocumentsLimit = GetIntValueQueryString("RevisionDocumentsLimit", required: false),
+                };
+
+                var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
+                DatabaseItemType databaseItemType;
+                if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
+                {
+                    exporter.OperateOnTypes = databaseItemType;
+                }
+                
+                exporter.Export(context, ResponseBodyStream());
             }
             return Task.CompletedTask;
         }
@@ -39,7 +50,16 @@ namespace Raven.Server.Smuggler
             //TODO: detect gzip or not based on query string param
             using (var stream = new GZipStream(HttpContext.Request.Body, CompressionMode.Decompress))
             {
-                await new DatabaseDataImporter(Database).Import(context, stream);
+                var importer = new DatabaseDataImporter(Database);
+
+                var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
+                DatabaseItemType databaseItemType;
+                if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
+                {
+                    importer.OperateOnTypes = databaseItemType;
+                }
+
+                await importer.Import(context, stream);
             }
         }
     }

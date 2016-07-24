@@ -42,9 +42,9 @@ namespace Raven.Client.Data
         public long CountOfDocuments { get; set; }
 
         /// <summary>
-        /// Total number of versioning revision documents in database.
+        /// Total number of revision documents in database.
         /// </summary>
-        public long? CountOfVersioningRevisionDocuments { get; set; }
+        public long? CountOfRevisionDocuments { get; set; }
 
         /// <summary>
         /// List of stale index names in database..

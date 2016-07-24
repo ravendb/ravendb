@@ -793,7 +793,7 @@ namespace Raven.Server.Documents
 
             if (isSystemDocument == false)
             {
-                _documentDatabase.BundleLoader.VersioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document);
+                _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, originalCollectionName, key, newEtagBigEndian, document);
                 _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, Slice.External(context.Allocator, lowerKey, (ushort)lowerSize), document);
             }
 
