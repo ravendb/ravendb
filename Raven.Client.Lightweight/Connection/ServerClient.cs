@@ -228,13 +228,6 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, false));
         }
 
-        public string PutIndex(string name, IndexDefinition definition, out Operation precomputeBatchOperation)
-        {
-            var result = AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsyncWithOperation(name, definition, false));
-            precomputeBatchOperation = result.Item2;
-            return result.Item1;
-        }
-
         public string[] PutIndexes(IndexToAdd[] indexesToAdd)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(indexesToAdd));

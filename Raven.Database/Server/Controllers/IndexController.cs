@@ -254,17 +254,7 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                long opId;
-                Database.Indexes.PutIndex(index, data, out opId);
-
-                //treat includePrecomputeOperation as a flag
-                var includePrecomputeOperation = GetQueryStringValue("includePrecomputeOperation");
-                if (!String.IsNullOrWhiteSpace(includePrecomputeOperation) &&
-                    includePrecomputeOperation.Equals("yes",StringComparison.OrdinalIgnoreCase))
-                {
-                    return GetMessageWithObject(new { Index = index, OperationId = opId }, HttpStatusCode.Created);
-                }
-
+                Database.Indexes.PutIndex(index, data);
                 return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
             }
             catch (Exception ex)
