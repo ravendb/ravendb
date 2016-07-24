@@ -35,16 +35,13 @@ namespace Raven.Client.Smuggler
             ShowProgress("Starting to export file");
             var database = options.Database ?? _store.DefaultDatabase;
             var url = $"{_store.Url}/databases/{database}/smuggler/export";
-            var query = new Dictionary<string, string>();
+            var query = new Dictionary<string, object>();
             if (options.DocumentsLimit.HasValue)
-                query.Add("documentsLimit", options.DocumentsLimit.Value.ToString());
+                query.Add("documentsLimit", options.DocumentsLimit.Value);
             if (options.VersioningRevisionsLimit.HasValue)
-                query.Add("versioningRevisionsLimit", options.VersioningRevisionsLimit.Value.ToString());
-            if (query.Count > 0)
-            {
-                url += "?" + string.Join("&", query.Select(pair => pair.Key + "=" + pair.Value));
-            }
-            // todo: send the options here
+                query.Add("versioningRevisionsLimit", options.VersioningRevisionsLimit.Value);
+            url = UrlHelper.BuildUrl(url, query);
+            // todo: send more options here
             var response = await httpClient.PostAsync(url, new StringContent(""), token).ConfigureAwait(false);
             var stream = await response.Content.ReadAsStreamAsync();
             return stream;
