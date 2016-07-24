@@ -5,12 +5,14 @@ namespace Raven.Client.Smuggler
     [Flags]
     public enum DatabaseItemType
     {
-        Documents = 0x1,
-        Indexes = 0x2,
-        Transformers = 0x4,
+        None = 0,
 
-        RevisionDocuments = 0x32,
+        Documents = 1 << 0,
+        RevisionDocuments = 1 << 1,
+        Indexes = 1 << 2,
+        Transformers = 1 << 3,
+        Identities = 1 << 4,
 
-        RemoveAnalyzers = 0x8000,
+        RemoveAnalyzers = 1 << 7,
     }
 }

@@ -4,11 +4,8 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client.Smuggler;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -20,6 +17,8 @@ namespace Raven.Server.Smuggler
     public class DatabaseDataImporter
     {
         private readonly DocumentDatabase _database;
+
+        public DatabaseItemType OperateOnTypes;
 
         public DatabaseDataImporter(DocumentDatabase database)
         {
@@ -88,7 +87,7 @@ namespace Raven.Server.Smuggler
                             }
                             builder.FinalizeDocument();
 
-                            if (operateOnType == "Docs")
+                            if (operateOnType == "Docs" && OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
                                 result.DocumentsCount++;
 
@@ -99,7 +98,7 @@ namespace Raven.Server.Smuggler
                                     batchPutCommand.Clean();
                                 }
                             }
-                            else if (operateOnType == "RevisionDocuments")
+                            else if (operateOnType == "RevisionDocuments" && OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
                             {
                                 if (versioningStorage == null)
                                     break;
@@ -123,53 +122,62 @@ namespace Raven.Server.Smuggler
                                             result.Warnings.Add("Attachments are not supported anymore. Use RavenFS isntead. Skipping.");
                                             break;
                                         case "Indexes":
-                                            result.IndexesCount++;
-
-                                            using (var reader = builder.CreateReader())
+                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
                                             {
-                                                /*   var index = new IndexDefinition();
-                                                   string name;
-                                                   if (reader.TryGet("Name", out name) == false)
-                                                   {
-                                                       result.Warnings.Add($"Cannot import the following index as it does not contain a name: '{reader}'. Skipping.");
-                                                   }
-                                                   index.Name = name;
-                                                   _database.IndexStore.CreateIndex(index);*/
+                                                result.IndexesCount++;
+
+                                                using (var reader = builder.CreateReader())
+                                                {
+                                                    /*   var index = new IndexDefinition();
+                                                       string name;
+                                                       if (reader.TryGet("Name", out name) == false)
+                                                       {
+                                                           result.Warnings.Add($"Cannot import the following index as it does not contain a name: '{reader}'. Skipping.");
+                                                       }
+                                                       index.Name = name;
+                                                       _database.IndexStore.CreateIndex(index);*/
+                                                }
                                             }
                                             break;
                                         case "Transformers":
-                                            result.TransformersCount++;
-
-                                            using (var reader = builder.CreateReader())
+                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Transformers))
                                             {
-                                                /* var transformerDefinition = new TransformerDefinition();
-                                                 // TODO: Import
-                                                 _database.TransformerStore.CreateTransformer(transformerDefinition);*/
+                                                result.TransformersCount++;
+
+                                                using (var reader = builder.CreateReader())
+                                                {
+                                                    /* var transformerDefinition = new TransformerDefinition();
+                                                     // TODO: Import
+                                                     _database.TransformerStore.CreateTransformer(transformerDefinition);*/
+                                                }
                                             }
                                             break;
                                         case "Identities":
-                                            result.IdentitiesCount++;
-                                           
-                                            using (var reader = builder.CreateReader())
+                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Identities))
                                             {
-                                                try
+                                                result.IdentitiesCount++;
+
+                                                using (var reader = builder.CreateReader())
                                                 {
-                                                    string identityKey, identityValueString;
-                                                    long identityValue;
-                                                    if (reader.TryGet("Key", out identityKey) == false ||
-                                                        reader.TryGet("Value", out identityValueString) == false ||
-                                                        long.TryParse(identityValueString, out identityValue) == false)
+                                                    try
                                                     {
-                                                        result.Warnings.Add($"Cannot import the following identity: '{reader}'. Skipping.");
+                                                        string identityKey, identityValueString;
+                                                        long identityValue;
+                                                        if (reader.TryGet("Key", out identityKey) == false ||
+                                                            reader.TryGet("Value", out identityValueString) == false ||
+                                                            long.TryParse(identityValueString, out identityValue) == false)
+                                                        {
+                                                            result.Warnings.Add($"Cannot import the following identity: '{reader}'. Skipping.");
+                                                        }
+                                                        else
+                                                        {
+                                                            identities[identityKey] = identityValue;
+                                                        }
                                                     }
-                                                    else
+                                                    catch (Exception e)
                                                     {
-                                                        identities[identityKey] = identityValue;
+                                                        result.Warnings.Add($"Cannot import the following identity: '{reader}'. Error: {e}. Skipping.");
                                                     }
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    result.Warnings.Add($"Cannot import the following identity: '{reader}'. Error: {e}. Skipping.");
                                                 }
                                             }
                                             break;
@@ -179,7 +187,6 @@ namespace Raven.Server.Smuggler
                                     }
                                 }
                             }
-
                             break;
                         case JsonParserToken.EndArray:
                             switch (operateOnType)
@@ -202,14 +209,17 @@ namespace Raven.Server.Smuggler
                                     {
                                         await _database.TxMerger.Enqueue(batchPutCommand);
                                         batchPutCommand.Clean();
-                                        batchPutCommand = null;
                                     }
+                                    batchPutCommand = null;
                                     break;
                                 case "Identities":
-                                    using (var tx = context.OpenWriteTransaction())
+                                    if (identities.Count > 0)
                                     {
-                                        _database.DocumentsStorage.UpdateIdentities(context, identities);
-                                        tx.Commit();
+                                        using (var tx = context.OpenWriteTransaction())
+                                        {
+                                            _database.DocumentsStorage.UpdateIdentities(context, identities);
+                                            tx.Commit();
+                                        }
                                     }
                                     identities = null;
                                     break;

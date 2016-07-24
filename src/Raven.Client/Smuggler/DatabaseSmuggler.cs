@@ -36,7 +36,10 @@ namespace Raven.Client.Smuggler
             var database = options.Database ?? _store.DefaultDatabase;
 
             var url = $"{_store.Url}/databases/{database}/smuggler/export";
-            var query = new Dictionary<string, object>();
+            var query = new Dictionary<string, object>
+            {
+                {"operateOnTypes", options.OperateOnTypes},
+            };
             if (options.DocumentsLimit.HasValue)
                 query.Add("documentsLimit", options.DocumentsLimit.Value);
             if (options.RevisionDocumentsLimit.HasValue)
@@ -102,6 +105,13 @@ namespace Raven.Client.Smuggler
             using (var content = new StreamContent(stream))
             {
                 var uri = $"{url}/databases/{database}/smuggler/import";
+                var query = new Dictionary<string, object>
+                {
+                    {"operateOnTypes", options.OperateOnTypes},
+                };
+                // todo: send more options here
+                uri = UrlHelper.BuildUrl(uri, query);
+
                 var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
