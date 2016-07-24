@@ -23,9 +23,14 @@ namespace Raven.Server.Smuggler
         public DatabaseDataImporter(DocumentDatabase database)
         {
             _database = database;
+            _batchPutCommand = new MergedBatchPutCommand(_database);
             OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
                 | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
         }
+
+        private MergedBatchPutCommand _batchPutCommand;
+        private MergedBatchPutCommand _prevCommand;
+        private Task _prevCommandTask;
 
         public async Task<ImportResult> Import(DocumentsOperationContext context, Stream stream)
         {
@@ -35,7 +40,6 @@ namespace Raven.Server.Smuggler
             using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
             {
                 string operateOnType = "__top_start_object";
-                var batchPutCommand = new MergedBatchPutCommand(_database);
                 var identities = new Dictionary<string, long>();
                 VersioningStorage versioningStorage = null;
 
@@ -67,7 +71,7 @@ namespace Raven.Server.Smuggler
                             switch (operateOnType)
                             {
                                 case "BuildVersion":
-                                    batchPutCommand.BuildVersion = state.Long;
+                                    _batchPutCommand.BuildVersion = state.Long;
                                     break;
                             }
                             break;
@@ -92,14 +96,8 @@ namespace Raven.Server.Smuggler
                             if (operateOnType == "Docs" && OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
                                 result.DocumentsCount++;
-
-                                batchPutCommand.Add(builder);
-                                if (batchPutCommand.Count >= 16)
-                                {
-                                    await _database.TxMerger.Enqueue(batchPutCommand);
-                                    batchPutCommand.Dispose();
-                                    batchPutCommand = new MergedBatchPutCommand(_database);
-                                }
+                                _batchPutCommand.Add(builder);
+                                await HandleBatchOfDocuments();
                             }
                             else if (operateOnType == "RevisionDocuments" && OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
                             {
@@ -107,14 +105,8 @@ namespace Raven.Server.Smuggler
                                     break;
 
                                 result.RevisionDocumentsCount++;
-
-                                batchPutCommand.Add(builder);
-                                if (batchPutCommand.Count >= 16)
-                                {
-                                    await _database.TxMerger.Enqueue(batchPutCommand);
-                                    batchPutCommand.Dispose();
-                                    batchPutCommand = new MergedBatchPutCommand(_database);
-                                }
+                                _batchPutCommand.Add(builder);
+                                await HandleBatchOfDocuments();
                             }
                             else
                             {
@@ -196,26 +188,17 @@ namespace Raven.Server.Smuggler
                             switch (operateOnType)
                             {
                                 case "Docs":
-                                    if (batchPutCommand.Count > 0)
-                                    {
-                                        await _database.TxMerger.Enqueue(batchPutCommand);
-                                        batchPutCommand.Dispose();
-                                        batchPutCommand = new MergedBatchPutCommand(_database);
-                                    }
+                                    await FinishBatchOfDocuments();
+                                    _batchPutCommand = new MergedBatchPutCommand(_database);
 
                                     // We are taking a reference here since the documents import can activate or disable the versioning.
                                     // We holad a local copy because the user can disable the bundle during the import process, exteranly.
                                     // In this case we want to continue to import the revisions documents.
                                     versioningStorage = _database.BundleLoader.VersioningStorage;
-                                    batchPutCommand.IsRevision = true;
+                                    _batchPutCommand.IsRevision = true;
                                     break;
                                 case "RevisionDocuments":
-                                    if (batchPutCommand.Count > 0)
-                                    {
-                                        await _database.TxMerger.Enqueue(batchPutCommand);
-                                        batchPutCommand.Dispose();
-                                    }
-                                    batchPutCommand = null;
+                                    await FinishBatchOfDocuments();
                                     break;
                                 case "Identities":
                                     if (identities.Count > 0)
@@ -235,6 +218,44 @@ namespace Raven.Server.Smuggler
             }
 
             return result;
+        }
+
+        private async Task FinishBatchOfDocuments()
+        {
+            if (_prevCommand != null)
+            {
+                using (_prevCommand)
+                {
+                    await _prevCommandTask;
+                }
+                _prevCommand = null;
+            }
+
+            if (_batchPutCommand.Count > 0)
+            {
+                using (_batchPutCommand)
+                {
+                    await _database.TxMerger.Enqueue(_batchPutCommand);
+                }
+            }
+            _batchPutCommand = null;
+        }
+
+        private async Task HandleBatchOfDocuments()
+        {
+            if (_batchPutCommand.Count >= 16)
+            {
+                if (_prevCommand != null)
+                {
+                    using (_prevCommand)
+                    {
+                        await _prevCommandTask;
+                    }
+                }
+                _prevCommandTask = _database.TxMerger.Enqueue(_batchPutCommand);
+                _prevCommand = _batchPutCommand;
+                _batchPutCommand = new MergedBatchPutCommand(_database);
+            }
         }
 
         private class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
