@@ -19,6 +19,6 @@ namespace Raven.Database.Raft.Dto
     public class LastModificationTimeAndTransactionalId
     {
         public DateTime LastModified { get; set; }
-        public string TransactionalId { get; set; }
+        public string DatabaseId { get; set; }
     }
 }

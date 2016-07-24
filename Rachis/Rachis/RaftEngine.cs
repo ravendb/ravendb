@@ -962,7 +962,7 @@ namespace Rachis
         public bool VetoCandidacy { get; set; }
         /// <summary>
         /// for now we support a single veto reasoning, if in the future we will have multiple 
-        /// handlers we should consider chainng this property to a list
+        /// handlers we should consider chaining this property to a list
         /// </summary>
         public string Reason { get; set; }
     }

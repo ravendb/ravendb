@@ -47,7 +47,7 @@ namespace Raven.Database.Raft
             engine.StateChanged += OnRaftEngineStateChanged;
             engine.ProposingCandidacy += OnProposingCandidacy;
             maxReplicationLatency = DatabasesLandlord.SystemDatabase.Configuration.Cluster.MaxReplicationLatency;
-            clusterManagerStartTime = DateTime.Now;
+            clusterManagerStartTime = DateTime.UtcNow;
         }
 
         private readonly TimeSpan maxReplicationLatency;
@@ -59,7 +59,7 @@ namespace Raven.Database.Raft
             {
                 //This is a case of a node loading for the first time and just never got any replication state.
                 //If we prevent this than a cluster will be non-respnosive when loaded (mostly a test senario but could be a real issue)
-                if (clusterManagerStartTime + maxReplicationLatency + maxReplicationLatency < DateTime.Now)
+                if (clusterManagerStartTime + maxReplicationLatency + maxReplicationLatency < DateTime.UtcNow)
                 {
                     e.VetoCandidacy = true;
                     e.Reason = "Could not find replication state document";                    
@@ -85,7 +85,7 @@ namespace Raven.Database.Raft
                 //nothing we can do but ignore this.
                 if (replicationState.DatabasesToLastModification.TryGetValue(database.Name, out modification) == false)
                     return;
-                var docKey = $"{Constants.RavenReplicationSourcesBasePath}/{modification.TransactionalId}";
+                var docKey = $"{Constants.RavenReplicationSourcesBasePath}/{modification.DatabaseId}";
                 var doc = database.Documents.Get(docKey, null);
                 if (doc == null)
                     return;
@@ -161,7 +161,7 @@ namespace Raven.Database.Raft
                         databaseToLastModified[databaseName] = new LastModificationTimeAndTransactionalId
                         {
                             LastModified = lastModified,
-                            TransactionalId = db.TransactionalStorage.Id.ToString()
+                            DatabaseId = db.TransactionalStorage.Id.ToString()
                         };
                     }
                     catch (Exception e)
