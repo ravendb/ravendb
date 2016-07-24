@@ -100,10 +100,7 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        /// <summary>
-        /// Should be used from document put
-        /// </summary>
-        public void PutVersion(DocumentsOperationContext context, string collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
+        public void PutFromDocument(DocumentsOperationContext context, string collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
         {
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
@@ -142,10 +139,7 @@ namespace Raven.Server.Documents.Versioning
             PutInternal(context, key, newEtagBigEndian, document, table);
         }
 
-        /// <summary>
-        /// Should be used from smuggler import
-        /// </summary>
-        public void Put(DocumentsOperationContext context, string key, long etag, BlittableJsonReaderObject document)
+        public void PutDirect(DocumentsOperationContext context, string key, long etag, BlittableJsonReaderObject document)
         {
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(etag);
 

@@ -276,7 +276,7 @@ namespace Raven.Server.Smuggler
                         if (metadata.TryGet(Constants.MetadataEtagId, out etag) == false)
                             throw new InvalidOperationException("Document's metadata must include the document's key.");
 
-                        _database.BundleLoader.VersioningStorage.Put(context, key, etag, document);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document);
                     }
                     else if (BuildVersion < 4000 && key.Contains("/revisions/"))
                     {
@@ -287,7 +287,7 @@ namespace Raven.Server.Smuggler
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         key = key.Substring(0, endIndex);
 
-                        _database.BundleLoader.VersioningStorage.Put(context, key, etag, document);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document);
                     }
                     else
                     {
