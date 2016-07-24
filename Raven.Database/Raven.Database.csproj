@@ -469,6 +469,7 @@
     <Compile Include="Raft\Controllers\ClusterController.cs" />
     <Compile Include="Raft\Dto\ClusterConfiguration.cs" />
     <Compile Include="Raft\ClusterManagementHttpClient.cs" />
+    <Compile Include="Raft\Dto\ReplicationState.cs" />
     <Compile Include="Raft\Storage\ClusterStateMachine.cs" />
     <Compile Include="Raft\Storage\Handlers\ClusterConfigurationUpdateCommandHandler.cs" />
     <Compile Include="Raft\Storage\Handlers\CommandHandler.cs" />

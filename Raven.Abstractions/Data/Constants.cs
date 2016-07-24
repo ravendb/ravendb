@@ -472,6 +472,8 @@ namespace Raven.Abstractions.Data
             public const string ClusterReadBehaviorHeader = "Raven-Cluster-Read-Behavior";
 
             public const string ClusterFailoverBehaviorHeader = "Raven-Cluster-Failover-Behavior";
+
+            public const string ClusterReplicationStateDocumentKey = "Raven/Cluster/ReplicationState";
         }
 
         public class Authorization

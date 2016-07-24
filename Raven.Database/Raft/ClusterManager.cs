@@ -5,10 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Storage;
@@ -16,10 +17,11 @@ using Rachis.Transport;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Bundles.Replication.Data;
 using Raven.Client.Connection;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Raft.Storage;
+using Raven.Database.Raft.Dto;
 using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
 
@@ -35,7 +37,7 @@ namespace Raven.Database.Raft
 
         public bool HasNonEmptyTopology => Engine.CurrentTopology.AllNodes.Any();
 
-        private Timer timer = null;
+        private Timer timer;
 
         public ClusterManager(RaftEngine engine, DatabasesLandlord databasesLandlord)
         {
@@ -43,6 +45,62 @@ namespace Raven.Database.Raft
             Client = new ClusterManagementHttpClient(engine);
             DatabasesLandlord = databasesLandlord;
             engine.StateChanged += OnRaftEngineStateChanged;
+            engine.ProposingCandidacy += OnProposingCandidacy;
+            maxReplicationLatency = DatabasesLandlord.SystemDatabase.Configuration.Cluster.MaxReplicationLatency;
+            clusterManagerStartTime = DateTime.Now;
+        }
+
+        private readonly TimeSpan maxReplicationLatency;
+        private readonly DateTime clusterManagerStartTime;
+        private void OnProposingCandidacy(object sender, ProposingCandidacyResult e)
+        {
+            var replicationStateDoc = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Cluster.ClusterReplicationStateDocumentKey,null);
+            if (replicationStateDoc == null)
+            {
+                //This is a case of a node loading for the first time and just never got any replication state.
+                //If we prevent this than a cluster will be non-respnosive when loaded (mostly a test senario but could be a real issue)
+                if (clusterManagerStartTime + maxReplicationLatency + maxReplicationLatency < DateTime.Now)
+                {
+                    e.VetoCandidacy = true;
+                    e.Reason = "Could not find replication state document";                    
+                }
+                return;
+            }
+            var replicationState = replicationStateDoc.DataAsJson.ToObject<ReplicationState>();
+            if (replicationState == null)
+            {
+                e.VetoCandidacy = true;
+                e.Reason = "Could not deserialize replication state document";
+                return;
+            }
+
+            var anyDatabaseUptodate = false;
+            //preventing the case where all databases are inactive (long overnight inactivity).
+            var anyDatabaseUp = false;
+            DatabasesLandlord.ForAllDatabases(database =>
+            {
+                anyDatabaseUp = true;
+                LastModificationTimeAndTransactionalId modification;
+                //if the source document doesn't contain this databse it means it was not active in the source
+                //nothing we can do but ignore this.
+                if (replicationState.DatabasesToLastModification.TryGetValue(database.Name, out modification) == false)
+                    return;
+                var docKey = $"{Constants.RavenReplicationSourcesBasePath}/{modification.TransactionalId}";
+                var doc = database.Documents.Get(docKey, null);
+                if (doc == null)
+                    return;
+                var sourceInformation = doc.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+                if (sourceInformation == null)
+                    return;
+                var lastUpdate = sourceInformation.LastModifiedAtSource ?? DateTime.MinValue;                
+                if (lastUpdate + maxReplicationLatency >= modification.LastModified)
+                    anyDatabaseUptodate = true;
+            },true);
+            if (anyDatabaseUptodate == false && anyDatabaseUp)
+            {
+                e.VetoCandidacy = true;
+                e.Reason = "None of the active databases are up to date with the leader last replication state";
+            }
         }
 
         private DatabasesLandlord DatabasesLandlord { get; set; }
@@ -53,71 +111,73 @@ namespace Raven.Database.Raft
             {
                 var period = DatabasesLandlord.SystemDatabase.Configuration.Cluster.MaxReplicationLatency;
                 //timer should be null 
-                timer?.Dispose();
+                SaflyDisposeOfTimer();
                 timer = new Timer(NewLeaderTimerCallback,null, period, period); 
             }
             else
             {
                 //If this node was the leader before, dispose of the timer.
-                timer?.Dispose();
+                SaflyDisposeOfTimer();
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SaflyDisposeOfTimer()
+        {
+            var timerSnapshot = timer;
+            timerSnapshot?.Dispose();
+            timer = null;
+        }
+
+        private static int newLeaderTimerCallbackLocker;
         private void NewLeaderTimerCallback(object state)
         {
-            //This method should never be invoked from non-leader
-            //Might happen if the timer and the state change event happen at the same time.
-            if (Engine.State != RaftEngineState.Leader)
-            {
-                if(Log.IsDebugEnabled)
-                    Log.Debug($"NewLeaderTimerCallback invoked from non-leader node, actual state:{Engine.State}");
+            //preventing multiple calls to the callback
+            if (Interlocked.CompareExchange(ref newLeaderTimerCallbackLocker, 1, 0) == 1)
                 return;
-            }
-            var databasesNames = GetDatabasesNames();
-            var databaseToLastModified = new Dictionary<string,Tuple<DateTime,string>>();
-            foreach (var databaseName in databasesNames)
+            try
             {
-                try
+                //This method should never be invoked from non-leader
+                //Might happen if the timer and the state change event happen at the same time.
+                if (Engine.State != RaftEngineState.Leader)
                 {
-                    Task<DocumentDatabase> databaseTask;
-                    if (DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, out databaseTask) == false)
-                        continue;
-                    var database = databaseTask.Result;
-                    JsonDocument lastDoc = null;
-                    database.TransactionalStorage.Batch(action =>
+                    if(Log.IsDebugEnabled)
+                        Log.Debug($"NewLeaderTimerCallback invoked from non-leader node, actual state:{Engine.State}");
+                    return;
+                }
+                var databaseToLastModified = new Dictionary<string, LastModificationTimeAndTransactionalId>();
+                DatabasesLandlord.ForAllDatabases(db => 
+                {
+                    try
                     {
-                        lastDoc = action.Documents.GetDocumentsByReverseUpdateOrder(0, 1).FirstOrDefault();                        
+                        var databaseName = db.Name;
+                        JsonDocument lastDoc = null;
+                        db.TransactionalStorage.Batch(action =>
+                        {
+                            lastDoc = action.Documents.GetDocumentsByReverseUpdateOrder(0, 1).FirstOrDefault();                        
 
-                    });
-                    if (lastDoc == null)
-                    {
-                        if (Log.IsWarnEnabled)
-                            Log.Warn($"Failed to get last document for databse: {databaseName} while generating replication state");
-                        continue;
+                        });
+                        var lastModified = lastDoc?.LastModified ?? DateTime.MinValue;
+                        databaseToLastModified[databaseName] = new LastModificationTimeAndTransactionalId
+                        {
+                            LastModified = lastModified,
+                            TransactionalId = db.TransactionalStorage.Id.ToString()
+                        };
                     }
-                    databaseToLastModified[databaseName] = new Tuple<DateTime, string>(lastDoc.LastModified??DateTime.MinValue,database.TransactionalStorage.Id.ToString());
-                }
-                catch (Exception e)
-                {
-                    if(Log.IsWarnEnabled)
-                        Log.WarnException($"Failed to get database: {databaseName} while generating replication state",e);
-                }
+                    catch (Exception e)
+                    {
+                        if(Log.IsWarnEnabled)
+                            Log.WarnException($"Failed to get database: {db.Name} while generating replication state",e);
+                    }
 
+                },true);
+                Client.SendReplicationStateAsync(new ReplicationState(databaseToLastModified));
             }
-            Client.SendReplicationStateAsync(databaseToLastModified);
-        }
-
-        private HashSet<string> GetDatabasesNames()
-        {
-            int nextPageStart = 0;
-            var databases = DatabasesLandlord.SystemDatabase.Documents
-                .GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
-                    int.MaxValue, CancellationToken.None, ref nextPageStart);
-
-            var databaseNames = databases
-                .Select(database =>
-                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
-            return databaseNames;
+            finally
+            {
+                //releasing the 'lock'
+                Interlocked.Exchange(ref newLeaderTimerCallbackLocker, 0);
+            }
         }
 
         public ClusterTopology GetTopology()
@@ -212,16 +272,12 @@ namespace Raven.Database.Raft
         {
             var aggregator = new ExceptionAggregator("ClusterManager disposal error.");
 
-            aggregator.Execute(() =>
-            {
-                timer?.Dispose();
-            });
-            aggregator.Execute(() =>
-            {
-                if(Engine != null)
-                    Engine.StateChanged -= OnRaftEngineStateChanged;
-            });
-            
+            aggregator.Execute(SaflyDisposeOfTimer);
+             aggregator.Execute(() =>
+             {
+                 if (Engine != null && disableReplicationStateChecks == false)
+                     Engine.StateChanged -= OnRaftEngineStateChanged;
+             });
             aggregator.Execute(() =>
             {
                 Client?.Dispose();
@@ -233,6 +289,34 @@ namespace Raven.Database.Raft
             });
 
             aggregator.ThrowIfNeeded();
+        }
+
+        private bool disableReplicationStateChecks;
+        private int disableReplicationStateChecksLocker;
+        public void HandleClusterConfigurationChanged(ClusterConfiguration configuration)
+        {
+            if (Interlocked.CompareExchange(ref disableReplicationStateChecksLocker, 1, 0) == 1)
+                return;
+            try
+            {
+                //same value nothing to do
+                if (configuration.DisableReplicationStateChecks == disableReplicationStateChecks)
+                    return;
+                if (configuration.DisableReplicationStateChecks)
+                {
+                    Engine.StateChanged -= OnRaftEngineStateChanged;
+                    SaflyDisposeOfTimer();
+                }
+                else
+                {
+                    Engine.StateChanged += OnRaftEngineStateChanged;
+                }
+                disableReplicationStateChecks = configuration.DisableReplicationStateChecks;
+            }
+            finally
+            {
+                Interlocked.Exchange(ref disableReplicationStateChecksLocker, 0);
+            }
         }
     }
 
