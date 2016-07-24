@@ -157,6 +157,8 @@ namespace Voron.Platform.Win32
 
         public void Truncate(long size)
         {
+            if (Win32NativeFileMethods.FlushFileBuffers(_handle) == false)
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to sync for " + _filename);
             Win32NativeFileMethods.SetFileLength(_handle, size);
         }
 

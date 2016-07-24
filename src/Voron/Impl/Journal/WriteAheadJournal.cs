@@ -950,10 +950,6 @@ namespace Voron.Impl.Journal
             txHeader->Compressed = true;
             txHeader->CompressedSize = len;
             txHeader->UncompressedSize = sizeInBytes;
-            if (new DateTime(txHeader->TimeStampTicksUtc).Year != 2016)
-            {
-                Console.WriteLine(new DateTime(txHeader->TimeStampTicksUtc));
-            }
             txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, len);
 
             // Copy the transaction header to the output buffer. 
@@ -982,7 +978,9 @@ namespace Voron.Impl.Journal
         {
             // switching transactions modes requires to close jounal, 
             // truncate it (in case of recovery) and create next journal file
+            _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, null);
             CurrentFile?.JournalWriter.Truncate(pageSize * CurrentFile.WritePagePosition);
+            CurrentFile = null;
         }
     }
 

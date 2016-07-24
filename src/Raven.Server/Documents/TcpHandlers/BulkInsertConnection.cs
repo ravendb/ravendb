@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 catch (Exception)
                 {
-                    _docsToRelease.Dispose(); // will abort the reading thread
+                    _docsToRelease.CompleteAdding(); // will abort the reading thread
                     throw;
                 }
             });
@@ -85,28 +85,36 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             catch (AggregateException e)
             {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error occured while read bulk insert operation", e.InnerException);
                 _docsToWrite.CompleteAdding();
                 _messagesToClient.CompleteAdding();
                 try
                 {
                     _insertDocuments.Wait();
                 }
-                catch (Exception)
+                catch (Exception insertDocumentsException)
                 {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Error in server while inserting bulk documents", insertDocumentsException);
                     // forcing observation of any potential errors
                 }
                 try
                 {
                     _replyToCustomer.Wait();
                 }
-                catch (Exception)
+                catch (Exception replyToClientException)
                 {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Couldn't reply to client with server's error in bulk insert (maybe client was disconnected)", replyToClientException);
                     // forcing observation of any potential errors
                 }
                 SendErrorToClient(e.InnerException);
             }
             catch (Exception e)
             {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Server internal error while in bulk insert process", e);
                 SendErrorToClient(e);
             }
         }
@@ -336,10 +344,18 @@ namespace Raven.Server.Documents.TcpHandlers
                         try
                         {
                             hasFreeBuffer = _docsToRelease.TryTake(out buffer);
+                            if (_docsToRelease.IsAddingCompleted)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Stopping read bulk insert due to an error in insert documents task");
+                                // error during the insert, just quit and use the error handling to report to the user
+                                return;
+                            }
                         }
-                        catch (ObjectDisposedException)
+                        catch (Exception ex)
                         {
-                            // error during the insert, just quit and use the error handling to report to the user
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Server internal error while in read documents in bulk insert", ex);
                             return;
                         }
                         if (hasFreeBuffer == false)

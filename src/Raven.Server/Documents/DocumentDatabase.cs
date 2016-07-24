@@ -293,7 +293,9 @@ namespace Raven.Server.Documents
             yield return SubscriptionStorage.Environment();
             foreach (var index in IndexStore.GetIndexes())
             {
-                yield return index._indexStorage.Environment();
+                var env = index._indexStorage.Environment();
+                if (env != null)
+                    yield return env;
             }
         }
     }
