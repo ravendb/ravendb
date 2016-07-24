@@ -555,6 +555,11 @@ namespace Raven.Database.Indexing
                             }
                         }
                     }
+                    catch (IndexDoesNotExistsException)
+                    {
+                        Log.Info("Indexing batch was aborted because index was deleted, indexing batch will be retried");
+                        throw;
+                    }
                     catch (OperationCanceledException)
                     {
                         operationWasCancelled = true;
