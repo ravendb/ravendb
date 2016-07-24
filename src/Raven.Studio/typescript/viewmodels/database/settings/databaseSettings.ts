@@ -22,13 +22,14 @@ class databaseSettings extends viewModelBase {
     isSaveEnabled: KnockoutComputed<Boolean>;
     isEditingEnabled = ko.observable<boolean>(false);
     isEditingMetadata = ko.observable<boolean>(false);
-    leavePageDeffered :JQueryPromise<any>;
+    leavePageDeffered: JQueryPromise<any>;
     isForbidden = ko.observable<boolean>(false);
 
     static containerId ="#databaseSettingsContainer";
 
     constructor() {
         super();
+        viewModelBase.layout.setMode(true);
         aceEditorBindingHandler.install();
 
         this.document.subscribe(doc => {
@@ -63,8 +64,10 @@ class databaseSettings extends viewModelBase {
         super.canActivate(args);
         var deferred = $.Deferred();
 
-        this.isForbidden(shell.isGlobalAdmin() == false);
-        if (this.isForbidden() == false) {
+        this.isForbidden(!shell.isGlobalAdmin());
+        if (this.isForbidden()) {
+            deferred.resolve({ can: true });
+        } else {
             var db: database = this.activeDatabase();
             this.fetchDatabaseSettings(db)
                 .done(() => deferred.resolve({ can: true }))
@@ -72,8 +75,6 @@ class databaseSettings extends viewModelBase {
                     messagePublisher.reportError("Error fetching database document!", response.responseText, response.statusText);
                     deferred.resolve({ redirect: appUrl.forStatus(db) });
                 });
-        } else {
-            deferred.resolve({ can: true });
         }
 
         return deferred;
@@ -107,8 +108,6 @@ class databaseSettings extends viewModelBase {
         editDbConfirm
             .viewTask
             .done(() => {
-                this.docEditor.setReadOnly(false);
-                this.docEditor.focus();
                 this.isEditingEnabled(true);
             });
         app.showDialog(editDbConfirm);
@@ -120,7 +119,6 @@ class databaseSettings extends viewModelBase {
             this.fetchDatabaseSettings(this.activeDatabase(), true)
                 .done(() => {
                     this.metadataText("{}");
-                    this.docEditor.setReadOnly(true);
                     this.isEditingEnabled(false);
                     this.activateDoc();
                     this.dirtyFlag().reset(); //Resync Changes
@@ -164,7 +162,6 @@ class databaseSettings extends viewModelBase {
                     saveTask.done((saveResult: databaseDocumentSaveDto) => {
                         this.document().__metadata['@etag'] = saveResult.ETag;
                         this.metadataText("{}");
-                        this.docEditor.setReadOnly(true);
                         this.isEditingEnabled(false);
                         this.formatDocument();
                         this.dirtyFlag().reset(); //Resync Changes

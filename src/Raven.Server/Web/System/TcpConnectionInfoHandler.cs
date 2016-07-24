@@ -12,28 +12,16 @@ namespace Raven.Server.Web.System
         public async Task Get()
         {
             JsonOperationContext context;
-            using(ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                DynamicJsonValue output;
-                try
+                var port = await Server.GetTcpServerPortAsync();
+                var output = new DynamicJsonValue
                 {
-                    var ip = await Server.GetTcpServerPortAsync();
-                    output = new DynamicJsonValue
-                    {
-                        ["Port"] = ip.Port,
-                        ["Url"] = Server.Configuration.Core.TcpServerUrl
-                    };
-                }
-                catch (Exception e)
-                {
-                    output = new DynamicJsonValue
-                    {
-                        ["Type"] = "Error",
-                        ["Exception"] = e.ToString()
-                    };
-                }
-               
+                    ["Port"] = port,
+                    ["Url"] = Server.Configuration.Core.TcpServerUrl
+                };
+
                 context.Write(writer, output);
             }
         }

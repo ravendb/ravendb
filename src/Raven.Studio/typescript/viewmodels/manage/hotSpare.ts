@@ -1,35 +1,59 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import GetHotSpareInformation = require("commands/licensing/GetHotSpareInformation");
-import TestHotSpareCommand = require("commands/licensing/TestLicenseCommand");
-import ActivateHotSpareCommand = require("commands/licensing/ActivateLicenseCommand");
+import getHotSpareInformation = require("commands/licensing/GetHotSpareInformation");
+import testHotSpareCommand = require("commands/licensing/testHotSpareCommand");
+import activateHotSpareCommand = require("commands/licensing/activateHotSpareCommand");
+import shell = require("viewmodels/shell");
+
 class hotSpare extends viewModelBase {
     runningOnExpiredLicense = ko.observable<boolean>(false);
-    ActivationMode = ko.observable<string>();
-    ActivationTime = ko.observable<string>();
-    RemainingTestActivation = ko.observable<number>();	
+    activationMode = ko.observable<string>();
+    activationTime = ko.observable<string>();
+    remainingTestActivation = ko.observable<number>();	
     isActivationExpired = ko.observable(false);
+
     activate(args: any) {
-        var self = this;
         super.activate(args);
-        new GetHotSpareInformation().execute().done((res: HotSpareDto) => {
-            self.ActivationMode(res.ActivationMode);
-            self.ActivationTime(res.ActivationTime);
-            self.RemainingTestActivation(res.RemainingTestActivations);
+        this.updateHelpLink("SV6IMV");
+        this.fetchHotSpareInformation();
+    }
+
+    fetchHotSpareInformation() {
+        new getHotSpareInformation().execute().done((res: HotSpareDto) => {
+            this.activationMode(res.ActivationMode);
+            this.activationTime(res.ActivationTime);
+            this.remainingTestActivation(res.RemainingTestActivations);
         }).fail(() => {
             alert("Can't fetch license information");
-            });
-    }
-    isTestEnabled(): boolean {
-        return (this.ActivationMode() === 'NotActivated');
-    }
-    Testlicense() {
-        new TestHotSpareCommand().execute();
-    }
-    ActivateLicense() {
-        var self = this;
-        new ActivateHotSpareCommand().execute().fail(() => {
-            self.isActivationExpired(true);
         });
+    }
+
+    isTestEnabled(): boolean {
+        return this.activationMode() === 'NotActivated';
+    }
+
+    testLicense() {
+        new testHotSpareCommand().execute();
+    }
+
+    activateLicense() {
+        var self = this;
+
+        this.confirmationMessage("Hot Spare Activation", "This is a one time activation, valid for 96 hours, are you sure you want to activate the hot spare license?")
+            .done(() => {
+                new activateHotSpareCommand()
+                    .execute()
+                    .done(() => {
+                        this.fetchHotSpareInformation();
+
+                        // refresh top navbar with 
+                        //TODO:shell.fetchStudioConfig();
+                    })
+                    .fail((response: JQueryXHR) => {
+                    if (response.status === 403) {
+                        self.isActivationExpired(true);
+                    }
+                });
+            });
     }
 }
 

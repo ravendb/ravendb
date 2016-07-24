@@ -368,6 +368,8 @@ namespace FastTests.Blittable
                 basePointer[listStart + i] = (byte)listStart;
                 message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                 Assert.Equal(message.Message, "Properties names offset not valid");
+
+                basePointer[listStart + i] = temp;
             }
 
             for (var i = 0; i < 1; i++)
@@ -460,7 +462,7 @@ namespace FastTests.Blittable
             var blittable = new byte[26]
             {
                 0x08, 0x61, 0x62, 0x63, 0x64, 0x0a, 0x61, 0x62, 0x63, 0x01,
-                0x04, 0x01, 0x0b, 0x00, 0x05, 0x04, 0x74, 0x65, 0x6d, 0x70,
+                0x03, 0x01, 0x0b, 0x00, 0x05, 0x04, 0x74, 0x65, 0x6d, 0x70,
                 0x00, 0x10, 0x06, 0x0b, 0x15, 0x51
             };
             fixed (byte* ptr = &blittable[0])
@@ -579,7 +581,7 @@ namespace FastTests.Blittable
             Assert.Equal(message.Message, "Root metadata offset not valid");
         }
 
-        [Fact(Skip = "RavenDB-4837: Blittable Validation fails for some json files")]
+        [Fact]
         public unsafe void ParseBlitAndValidate()
         {
             var assembly = typeof(BlittableFormatTests).GetTypeInfo().Assembly;
@@ -596,6 +598,7 @@ namespace FastTests.Blittable
                     {
                         using (var obj = context.Read(stream, "docs/1"))
                         {
+
                             obj.BlittableValidation();
                         }
                     }

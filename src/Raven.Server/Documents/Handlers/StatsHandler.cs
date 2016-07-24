@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var stats = new DatabaseStatistics();
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
+                stats.CountOfVersioningRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
                 stats.ApproximateTaskCount = 0; // TODO [ppekrol]
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = 0; // TODO [ppekrol]

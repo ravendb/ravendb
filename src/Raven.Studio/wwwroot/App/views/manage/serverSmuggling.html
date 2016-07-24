@@ -1,20 +1,23 @@
 <form class="form-horizontal" role="form" data-bind="submit: performMigration">
-    <div class="panel panel-default">
+    <div data-bind="visible: !settingsAccess.canWrite()" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <div class="panel panel-default" data-bind="visible: settingsAccess.canWrite()">
         <div class="panel-heading panel-info">
-            Server Smuggling
+            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+            <span class="text-height-fix">Server Smuggling</span>
         </div>
         <div class="panel-body">
-
             <div data-bind="with: targetServer">
                 <div class="form-group">
-                    <label class="col-sm-4 control-label">Destination server Url</label>
-                    <div class="col-sm-7">
+                    <label class="col-sm-2 control-label">Destination server Url</label>
+                    <div class="col-sm-5">
                         <input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="col-sm-4 control-label">Credentials</label>
-                    <div class="col-sm-7">
+                    <label class="col-sm-2 control-label">Credentials</label>
+                    <div class="col-sm-5">
                         <div class="btn-group">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
                                 <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
@@ -33,101 +36,109 @@
                 </div>
                 <div data-bind="if: isUserCredentials, visible: isUserCredentials">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">User Name</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">User Name</label>
+                        <div class="col-sm-5">
                             <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Password</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Password</label>
+                        <div class="col-sm-5">
                             <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Domain</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Domain</label>
+                        <div class="col-sm-5">
                             <input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                 </div>
                 <div data-bind="if: isApiKeyCredentials, visible: isApiKeyCredentials">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">API Key</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">API Key</label>
+                        <div class="col-sm-5">
                             <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-4 control-label">
-                    Select databases to migrate <br />
+                <label class="col-sm-2 control-label">
+                    Select databases to migrate <br/>
                 </label>
-                <div class="col-sm-7">
+                <div class="col-sm-9">
                     <div>
                         <table class="table table-condensed table-striped">
-                            <thead> 
+                            <thead>
                             <tr>
                                 <th class="text-center">
-                                    <button type="button" class="btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
-                                        <img data-bind="checkboxTriple: resourcesSelection">
-                                    </button>
+                                    <div class="checkbox">
+                                        <input id="resources_all" class="styled" type="checkbox" data-bind="checkboxTriple: resourcesSelection, event: { change: toggleSelectAll }, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+                                        <label for="resources_all">&nbsp;</label>
+                                    </div>
                                 </th>
                                 <th>Name</th>
                                 <th class="text-center">
-                                    <button type="button" class="btn-link" data-bind="click: toggleSelectAllIncremental, visible: hasResources, disable: $root.inProgress() || noIncremental()" title="Select all or none">
-                                        <img data-bind="checkboxTriple: incrementalSelection, needOpacity: noIncremental">
-                                    </button>
-                                    Incremental
+                                    <div class="checkbox">
+                                        <input id="incr_all" class="styled" type="checkbox" data-bind="checkboxTriple: incrementalSelection, event: { change: toggleSelectAllIncremental }, visible: hasResources, disable: $root.inProgress() || noIncremental()" title="Select all or none">
+                                        <label for="incr_all">Incremental</label>
+                                    </div>
                                 </th>
                                 <th class="text-center">
-                                    <button type="button" class="btn-link" data-bind="click: toggleSelectAllStripReplication, visible: hasResources, disable: $root.inProgress() || noStripReplication()" title="Select all or none">
-                                        <img data-bind="checkboxTriple: stripReplicationSelection, needOpacity: noStripReplication">
-                                    </button>
-                                    Strip replication information
+                                    <div class="checkbox">
+                                        <input id="rep_all" class="styled" type="checkbox" data-bind="checkboxTriple: stripReplicationSelection, event: { change: toggleSelectAllStripReplication }, visible: hasResources, disable: $root.inProgress() || noStripReplication()" title="Select all or none">
+                                        <label for="rep_all">Strip replication information</label>
+                                    </div>
                                 </th>
                                 <th class="text-center">
-                                    <button type="button" class="btn-link" data-bind="click: toggleSelectAllDisableVersioning, visible: hasResources, disable: $root.inProgress() || noDisableVersioning()" title="Select all or none">
-                                        <img data-bind="checkboxTriple: disableVersioningSelection, needOpacity: noDisableVersioning">
-                                    </button>
-                                    Disable versioning bundle
+                                    <div class="checkbox">
+                                        <input id="versioning_all" class="styled" type="checkbox" data-bind="checkboxTriple: disableVersioningSelection, event: { change: toggleSelectAllDisableVersioning }, visible: hasResources, disable: $root.inProgress() || noDisableVersioning()" title="Select all or none">
+                                        <label for="versioning_all">Disable versioning bundle</label>
+                                    </div>
                                 </th>
                             </tr>
                             </thead>
                             <tbody data-bind="foreach: resources">
-                                <tr>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="click: $root.toggleSelection.bind($root)">
-                                            <img data-bind="checkbox: $root.isSelected($data)">
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <span style="font-weight: normal" data-bind="text: resource.name"></span>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="click: $root.toggleIncremental.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
-                                            <img data-bind="checkbox: incremental, needOpacity: $root.isSelected($data) === false">
-                                        </button>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="visible: hasReplicationBundle, click: $root.toggleStripReplicationInformation.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
-                                            <img data-bind="checkbox: stripReplicationInformation, needOpacity: $root.isSelected($data) === false">
-                                        </button>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="visible: hasVersioningBundle, click: $root.toggleDisableVersioningBundle.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
-                                            <img data-bind="checkbox: shouldDisableVersioningBundle, needOpacity: $root.isSelected($data) === false">
-                                        </button>
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td class="text-center">
+                                    <div class="checkbox">
+                                        <input type="checkbox" class="styled"  data-bind="attr: { id: 'selection_' + $index() }, value: $data, checked: $root.selectedResources ">
+                                        <label data-bind="attr: { for: 'selection_' + $index() } ">&nbsp;</label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <label data-bind="attr: { for: 'selection_' + $index() }, text: resource.name " style="font-weight: normal"></label>
+                                </td>
+                                <td class="text-center">
+                                    <div class="checkbox">
+                                        <input type="checkbox" class="styled" aria-label="Incremental"
+                                                data-bind="disable: $root.inProgress() || !$root.isSelected($data), checked: incremental, attr: { id: 'incr_' + $index() }">
+                                        <label data-bind="attr: { for: 'incr_' + $index() }">&nbsp;</label>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="checkbox" data-bind="visible: hasReplicationBundle">
+                                        <input type="checkbox" class="styled" aria-label="Strip replication information" 
+                                               data-bind="disable: $root.inProgress() || !$root.isSelected($data), checked: stripReplicationInformation, attr: { id : 'strip_rep_' + $index() }">
+                                        <label data-bind="attr: { for: 'strip_rep_' + $index() }">&nbsp;</label>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="checkbox" data-bind="visible: hasVersioningBundle">
+                                        <input type="checkbox" class="styled" aria-label="Should disable versioning bundle" 
+                                               data-bind="disable: $root.inProgress() || !$root.isSelected($data), checked: shouldDisableVersioningBundle, attr: { id: 'versioning_' + $index() }">
+                                        <label data-bind="attr: { for: 'versioning_' + $index() }">&nbsp;</label>
+                                    </div>
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <div class="col-sm-offset-4 col-sm-7">
+                    <div class="col-sm-offset-2 col-sm-9">
                         <button type="submit" class="btn btn-warning" data-bind="enable: submitEnabled"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
                         <button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest() ? 'Hide JSON' : 'Show JSON')"></button>
                         <button type="button" class="btn btn-default" data-bind="click: toggleCurl, text: (showCurlRequest() ? 'Hide curl' : 'Show curl')"></button>
@@ -136,8 +147,8 @@
 
                 <div data-bind="visible: showCurlRequest()">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Curl Command</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Curl Command</label>
+                        <div class="col-sm-9">
                             <pre data-bind="text: curlRequest"></pre>
                         </div>
                     </div>
@@ -145,27 +156,23 @@
 
                 <div data-bind="visible: showJsonRequest()">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Method</label>
-                        <div class="col-sm-7">
-                            <input type="text" class="form-control" readonly="readonly" value="POST" />
+                        <label class="col-sm-2 control-label">Method</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" readonly="readonly" value="POST"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Payload</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Payload</label>
+                        <div class="col-sm-9">
                             <pre class="jsContent" data-bind="html: jsonRequest"></pre>
                         </div>
                     </div>
                 </div>
 
-
-                <hr/>
-                <div class="row">
-                    <div class="col-sm-offset-1 col-sm-10">
-                        <pre data-bind="visible: resultsVisible">
+                <div class="bs-code-output" data-title="Log" data-bind="visible: resultsVisible">
+                    <pre>
 <!-- ko foreach: $root.messages --><div data-bind="text: $data"></div><!-- /ko -->
-</pre>		
-                    </div>
+</pre>
                 </div>
             </div>
         </div>

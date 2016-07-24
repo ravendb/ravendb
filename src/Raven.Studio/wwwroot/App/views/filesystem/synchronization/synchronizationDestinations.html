@@ -1,19 +1,15 @@
 <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
     <div class="panel panel-default">
         <div class="panel-heading">
-            <div class="pull-left panel-title">Synchronization Destinations</div>
-            <div class="pull-right">
-                <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
-                    <i class="fa fa-plus"></i> Add destination
-                </button>
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save synchronization destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            </div>
-            <div class="clearfix"></div>
+            <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save synchronization destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
+                <i class="fa fa-plus"></i> Add destination
+            </button>
         </div>
         <div class="panel-body" data-bind="with: replicationsSetup">
-            <div class="alert alert-warning" data-bind="visible: destinations().length === 0">
+            <h3 class="text-center text-info" data-bind="visible: destinations().length === 0">
                 You've got no synchronization destinations set up.
-            </div>
+            </h3>
             <div data-bind="foreach: destinations">
                 <div class="panel replication-destination-card" data-bind="css: { 'panel-danger': !isValid(), 'panel-info': isValid() && !disabled(), 'panel-warning': isValid() && disabled() }">
                     <div class="panel-heading">
@@ -24,15 +20,17 @@
                     </div>
                     <div class="panel-body">
                         <div class="form-group">
-                            <label class="col-sm-4 control-label">Disabled</label>
-                            <div class="col-sm-7">
-                                <div class="btn-group" data-toggle="buttons">
-                                    <label class="btn btn-primary" data-bind="click: enable, css: { active: !disabled() }">
-                                        <input type="radio" name="options"> Enabled
-                                    </label>
-                                    <label class="btn btn-primary" data-bind="click: disable, css: { active: disabled }">
-                                        <input type="radio" name="options"> Disabled
-                                    </label>
+                            <div class="col-sm-offset-4 col-sm-7">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="visible: !disabled()">Enabled</span>
+                                        <span data-bind="visible: disabled">Disabled</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu">
+                                        <li><a href="#" data-bind="click: enable">Enabled</a></li>
+                                        <li><a href="#" data-bind="click: disable">Disabled</a></li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -43,7 +41,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-4 control-label">Filesystem</label>
+                            <label class="col-sm-4 control-label">File System</label>
                             <div class="col-sm-7">
                                 <input required type="text" class="form-control" data-bind="value: filesystem, valueUpdate: 'afterkeydown'" />
                             </div>
@@ -51,8 +49,20 @@
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Credentials</label>
                             <div class="col-sm-7">
-                                <button type="button" class="btn btn-default" data-bind="click: toggleUserCredentials, css: {active:isUserCredentials}">User</button>
-                                <button type="button" class="btn btn-default" data-bind="click: toggleApiKeyCredentials, css: {active:isApiKeyCredentials}">ApiKey</button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
+                                        <span data-bind="visible: isUserCredentials">User</span>
+                                        <span data-bind="visible: isApiKeyCredentials">API key</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu">
+                                        <li><a href="#" data-bind="click: useNoCredentials">None</a></li>
+                                        <li class="divider"></li>
+                                        <li><a href="#" data-bind="click: useUserCredentials">User</a></li>
+                                        <li><a href="#" data-bind="click: useApiKeyCredentials">API key</a></li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                         <div data-bind="if: isUserCredentials, visible: isUserCredentials">

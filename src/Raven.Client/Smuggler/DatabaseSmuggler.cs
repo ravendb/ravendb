@@ -36,10 +36,10 @@ namespace Raven.Client.Smuggler
             var database = options.Database ?? _store.DefaultDatabase;
             var url = $"{_store.Url}/databases/{database}/smuggler/export";
             var query = new Dictionary<string, string>();
-            if (options.Limit.HasValue)
-            {
-                query.Add("limit", options.Limit.Value.ToString());
-            }
+            if (options.DocumentsLimit.HasValue)
+                query.Add("documentsLimit", options.DocumentsLimit.Value.ToString());
+            if (options.VersioningRevisionsLimit.HasValue)
+                query.Add("versioningRevisionsLimit", options.VersioningRevisionsLimit.Value.ToString());
             if (query.Count > 0)
             {
                 url += "?" + string.Join("&", query.Select(pair => pair.Key + "=" + pair.Value));

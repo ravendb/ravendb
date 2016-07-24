@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import pagedResultSet = require("common/pagedResultSet");
 import appUrl = require("common/appUrl");
 
 class dataExplorationCommand extends commandBase {

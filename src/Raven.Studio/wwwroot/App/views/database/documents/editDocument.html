@@ -5,15 +5,18 @@
         <li style="display: inline-block">
             <h3 style="display: inline-block">
                 <i class="fa fa-file-text-o" style="display: inline-block"></i>
-                <a href="#documents" data-bind="click: navigateToDocuments, text:isInDocMode() === true?'Documents':'Indexes'" style="display: inline-block">
+                <a href="#documents" data-bind="click: navigateToDocuments, text:isInDocMode()?'Documents':'Indexes'" style="display: inline-block">
                 </a>
             </h3>
         </li>
         <!-- ko ifnot: isCreatingNewDocument -->
         <li data-bind="with: metadata" style="display: inline-block">
-            <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode() === true?(ravenEntityName ===undefined)?($root.isSystemDocumentByDocTitle() === true?'System Documents':'No Collection'):ravenEntityName:$root.queryIndex, 
-            attr: {title:ravenEntityName, href: '#documents?collection=' + (ravenEntityName ===undefined)?($root.isSystemDocumentByDocTitle() === true?'System Documents':'No Collection'):ravenEntityName }, click: $root.navigateToCollection.bind($root,
-            (ravenEntityName ===undefined)?($root.isSystemDocumentByDocTitle() === true?'System Documents':'No Collection'):ravenEntityName)"></a>
+            <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode()?$root.generateCollectionName(ravenEntityName, true):$root.queryIndex, 
+               attr: { 
+                   title: ravenEntityName, 
+                   href: '#documents?collection=' + $root.generateCollectionName(ravenEntityName) 
+               }, 
+               click: $root.navigateToCollection.bind($root, $root.generateCollectionName(ravenEntityName))"></a>
         </li>
         <!-- /ko -->
         <li class="active" data-bind="text: docTitle, attr:{ title: docTitle }" style="display: inline-block">
@@ -21,30 +24,49 @@
     </ul>
     <form data-bind="submit: saveDocument">
         <div class="btn-toolbar">
-            <div class="btn-group">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)"><i class="fa fa-save"></i></button>
-                <a class="btn btn-default" data-bind="click: refreshDocument, visible: loadedDocumentName" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
-                <button type="button" class="btn btn-default" data-bind="enable:isNewLineFriendlyMode()===false || $root.isEditingMetadata()===true ,click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
-                <button class="btn btn-default" title="Toggle newline mode (Alt+N)" data-toggle="button" accesskey="N" data-bind="enable: $root.isEditingMetadata() === false, click: toggleNewlineMode">
-                    <span class="text-lowercase" data-bind="text: newLineToggle"></span>
-                </button>
-                <button class="btn btn-default" title="Toggle auto-collapse" data-toggle="button" data-bind="enable: $root.isEditingMetadata() === false, click: toggleAutoCollapse">
-                    <span class="fa fa-plus-square-o"></span>
-                </button>
-                <button type="button" class="btn btn-default" data-bind="click: generateCode, visible: loadedDocumentName" title="Generate Class"><i class="fa">C#</i></button>
-                <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: loadedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+            <!-- We duplicate following sections to fix issues with missing rounded borders when creating new document -->
+            <div data-bind="if: loadedDocumentName">
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)"><i class="fa fa-save"></i></button>
+                    <a class="btn btn-default" data-bind="click: refreshDocument" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
+                    <button type="button" class="btn btn-default" data-bind="enable:!isNewLineFriendlyMode() || $root.isEditingMetadata(), click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
+                    <button class="btn btn-default" title="Toggle newline mode (Alt+N)" data-toggle="button" accesskey="N" data-bind="enable: !$root.isEditingMetadata(), click: toggleNewlineMode">
+                        <span class="text-lowercase" data-bind="text: newLineToggle"></span>
+                    </button>
+                    <button class="btn btn-default" title="Toggle auto-collapse" data-toggle="button" data-bind="enable: !$root.isEditingMetadata(), click: toggleAutoCollapse">
+                        <span class="fa fa-plus-square-o"></span>
+                    </button>
+                    <button type="button" class="btn btn-default" data-bind="click: generateCode, enable: !isSaveEnabled()" title="Generate Class"><i class="fa">C#</i></button>
+                    <button type="button" class="btn btn-danger" data-bind="click: deleteDocument" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+                </div>
+            </div>
 
+            <div data-bind="ifnot: loadedDocumentName">
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)"><i class="fa fa-save"></i></button>
+                    <button type="button" class="btn btn-default" data-bind="enable:!isNewLineFriendlyMode() || $root.isEditingMetadata(), click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
+                    <button class="btn btn-default" title="Toggle newline mode (Alt+N)" data-toggle="button" accesskey="N" data-bind="enable: !$root.isEditingMetadata(), click: toggleNewlineMode">
+                        <span class="text-lowercase" data-bind="text: newLineToggle"></span>
+                    </button>
+                    <button class="btn btn-default" title="Toggle auto-collapse" data-toggle="button" data-bind="enable: $root.isEditingMetadata() === false, click: toggleAutoCollapse">
+                        <span class="fa fa-plus-square-o"></span>
+                    </button>
+                </div>
             </div>
 
             <div class="btn-group" data-bind="with: docsList">
-                <button type="button" class="btn btn-default" data-bind="click: $root.firstDocument.bind($root), attr:{ disabled: $root.isFirstDocumentNavDisabled }" title="Go to first document (Alt+Home)"><i class="fa fa-step-backward"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.firstDocument.bind($root), attr:{ disabled: $root.isFirstDocumenNavtDisabled }" title="Go to first document (Alt+Home)"><i class="fa fa-step-backward"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.previousDocumentOrLast.bind($root)" title="Go to previous document (Alt+PageUp)"><i class="fa fa-caret-left"></i></button>
-                <button type="button" class="btn btn-default" data-bind="text: 'Doc ' + (currentItemIndex() + 1) + ' of ' + totalResultCount().toLocaleString()"></button>
+                <button type="button" class="btn btn-default" data-bind="text: 'Doc ' + (currentItemIndex() + 1).toLocaleString() + ' of ' + totalResultCount().toLocaleString()"></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.nextDocumentOrFirst.bind($root)" title="Go to next document (Alt+PageDown)"><i class="fa fa-caret-right"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.lastDocument.bind($root), attr:{ disabled: $root.isLastDocumentNavDisabled }" title="Go to last document (Alt+End)"><i class="fa fa-step-forward"></i></button>
-
             </div>
         </div>
+
+        <div>
+            <span class="changeNotification" data-bind="text: documentChangeNotificationMessage"></span>
+        </div>
+
         <br />
         <div class="row">
             <div class="col-md-7">
@@ -71,7 +93,7 @@
 
                     <div class="row">
                         <label class="col-md-5">Raven-Entity-Name</label>
-                        <span class="col-md-7" data-bind="text: ravenEntityName, attr: {title:ravenEntityName}"></span>
+                        <span class="col-md-7" data-bind="text: $root.prettyLabel(ravenEntityName), attr: {title:ravenEntityName}"></span>
                     </div>
                     <div class="row">
                         <label class="col-md-5">Etag</label>

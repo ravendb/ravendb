@@ -1,38 +1,40 @@
-<form class="form-horizontal" role="form" data-bind="submit: saveChanges">
-    <div data-bind="visible: isForbidden" class="text-center">
+<form class="form-horizontal" role="form" id="manageApiKeys" data-bind="submit: saveChanges">
+    <div data-bind="visible: settingsAccess.isForbidden" class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
 
-    <div class="panel panel-default" data-bind="visible: isForbidden() == false">
+    <div class="panel panel-default" data-bind="visible: !settingsAccess.isForbidden()">
         <div class="panel-heading">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default" data-bind="click: createNewApiKey, disable: isReadOnly" title="Create a new API Key (Alt+N)" accesskey="N">
+                <button type="button" class="btn btn-default" data-bind="click: createNewApiKey, disable: settingsAccess.isReadOnly" title="Create a new API Key (Alt+N)" accesskey="N">
                     <i class="fa fa-plus"></i> Create a new API Key
                 </button>
             </div>
             <div class="btn-group">
-                <div class="input-group" data-bind="visible: apiKeys().length > 0">
+                <div class="input-group" style="width: 500px" data-bind="visible: apiKeys().length > 0">
                     <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                    <input type="text" class="form-control" placeholder="Search for API Keys" data-bind="value: searchText, valueUpdate: 'afterkeydown', disable: isReadOnly" />
+                    <input type="text" id="apiKeysSearchInput" class="form-control" placeholder="Search for API Keys" data-bind="value: searchText, valueUpdate: 'afterkeydown'"/>
                 </div>
             </div>
         </div>
         <div class="panel-body">
             <div class="text-center" data-bind="visible: apiKeys().length == 0">
-                <h3 class="text-info">
-                    You don't have any API keys. <small>Go ahead and <a href="#" data-bind="click: createNewApiKey">create one now</a>.</small>
+                <h3 class="text-info">You don't have any API keys. <small>Go ahead and <a href="#" data-bind="click: createNewApiKey">create one now</a>.</small>
                 </h3>
+            </div>
+            <div class=text-center data-bind="visible: noResults">
+                <h3 class="text-info">No results found</h3>
             </div>
             <div data-bind="foreach: apiKeys">
                 <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid($index), 'panel-warning': !enabled() && isValid($index), 'panel-danger': !isValid($index) }">
                     <div class="panel-heading">
                         <h3 class="panel-title">
                             <span data-bind="text: name() ? name() : '[new api key]'"></span>
-                            <button type="button" style="display: inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root), visible: $root.isReadOnly() == false" title="Remove this API key">
+                            <button type="button" style="display: inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this API key">
                                 <i class="fa fa-times"></i>
                             </button>
                         </h3>
@@ -40,38 +42,38 @@
                     <div class="panel-body">
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
-                            <div class="col-sm-7">
-                                <input type="text" class="form-control" required placeholder="API Key name" data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity" />
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" required placeholder="API Key name" data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity"/>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Secret</label>
-                            <div class="col-sm-7">
-                                <input type="text" class="form-control" readonly data-bind="value: secret" onmouseup="this.select(); return false;" />
-                                <a href="javascript:void(0)" data-bind="click: generateSecret">Generate</a>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" readonly data-bind="value: secret" onmouseup="this.select(); return false;"/>
+                                <a href="javascript:void(0)" data-bind="click: generateSecret, visible: !$root.settingsAccess.isReadOnly()">Generate</a>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Full API Key</label>
-                            <div class="col-sm-7">
+                            <div class="col-sm-8">
                                 <input type="text" class="form-control" readonly data-bind="value: fullApiKey" onmouseup="this.select(); return false;">
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Connection String</label>
-                            <div class="col-sm-7">
-                                <input type="text" class="form-control" readonly data-bind="value: connectionString" onmouseup="this.select(); return false;" />
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" readonly data-bind="value: connectionString" onmouseup="this.select(); return false;"/>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Direct Link</label>
-                            <div class="col-sm-7">
-                                <input type="text" class="form-control" readonly data-bind="value: directLink" onmouseup="this.select(); return false;" />
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" readonly data-bind="value: directLink" onmouseup="this.select(); return false;"/>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Enabled</label>
-                            <div class="col-sm-7">
+                            <div class="col-sm-8">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                         <span data-bind="visible: enabled">Enabled</span>
@@ -88,61 +90,58 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Resources</label>
                             <div class="col-sm-9">
+                                
+                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add Resource">
+                                    <i class="fa fa-plus"></i> Add Resource
+                                </button>
                                 <table class="table table-striped table-hover">
                                     <thead>
-                                        <tr class="database-header" data-bind="visible: databases().length > 0">
-                                            <td>Name</td>
-                                            <td>Type</td>
-                                            <td>
-                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: $root.isReadOnly() == false">
-                                                    <i class="fa fa-plus"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr data-bind="visible: databases().length == 0">
-                                            <td>
-                                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add Resource">
-                                                    <i class="fa fa-plus"></i> Add Resource
-                                                </button>
-                                            </td>
-                                        </tr>
+                                    <tr class="database-header" data-bind="visible: databases().length > 0">
+                                        <td>Name</td>
+                                        <td>Type</td>
+                                        <td>
+                                            <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: !$root.settingsAccess.isReadOnly()">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
                                     </thead>
                                     <tbody data-bind="foreach: databases">
-                                        <tr>
-                                            <td>
-                                                <div class="btn-group">
-                                                    <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
-                                                    <ul class="dropdown-menu scrollable-resource-menu" style="display: none; overflow-x: hidden" data-bind="autoComplete: '#databaseName' + $parentContext.$index() + $index(), foreach: searchResults">
-                                                        <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
-                                                            <a role="menuitem" tabindex="-1" href="#" class="nounderline" data-bind="attr : { 'title': $data }">
-                                                                <span data-bind="text: $data"></span>
-                                                            </a>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group">
-                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                        <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
-                                                    </button>
-                                                    <ul class="dropdown-menu" role="menu">
-                                                        <!-- ko foreach: getTypes() -->
-                                                        <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
-                                                        <!-- /ko -->
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <button type="button" style="display: inline-block; float: none; vertical-align: middle; font-size: 14px;" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.isReadOnly() == false" title="Remove this resource">
-                                                    <i class="fa fa-times"></i>
+                                    <tr>
+                                        <td>
+                                            <div class="btn-group">
+                                                <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="textInput: tenantId, customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                <ul class="dropdown-menu scrollable-resource-menu" style="display: none; overflow-x: hidden" data-bind="autoComplete: '#databaseName' + $parentContext.$index() + $index(), foreach: searchResults">
+                                                    <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
+                                                        <a role="menuitem" tabindex="-1" href="#" class="nounderline" data-bind="attr : { 'title': $data }">
+                                                            <span class="text" data-bind="text: $data"></span>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
                                                 </button>
-                                            </td>
-                                        </tr>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <!-- ko foreach: getTypes() -->
+                                                    <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
+                                                    <!-- /ko -->
+                                                </ul>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button type="button" style="display: inline-block; float: none; vertical-align: middle; font-size: 14px;" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: !$root.settingsAccess.isReadOnly()" title="Remove this resource">
+                                                <i class="fa fa-times"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
                                     </tbody>
                                 </table>
                                 <div style="color: red" data-bind="visible: needToShowSystemDatabaseWarning">
-                                    *This API Key provides admin access to all resources but not to the System Database
+                                    * This API Key provides access to all resources but not to the System Database
                                 </div>
                             </div>
                         </div>

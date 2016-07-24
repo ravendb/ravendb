@@ -1,0 +1,39 @@
+<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+            <i class="fa fa-times"></i>
+        </button>
+        <h4 class="modal-title">Deletion batch information</h4>
+    </div>
+    <div class="modal-body">
+        <table class="table table-condensed table-striped" data-bind="with: deletionBatchInfo">
+            <tbody>
+                <tr>
+                    <td>Index name</td>
+                    <td data-bind="text: IndexName"></td>
+                </tr>
+                <tr>
+                    <td>Started at</td>
+                    <td data-bind="text: StartedAt"></td>
+                </tr>
+                <tr>
+                    <td>Total duration [ms]</td>
+                    <td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
+                </tr>
+                <tr>
+                    <td>Total documents count</td>
+                    <td data-bind="text: TotalDocumentCount.toLocaleString(2)"></td>
+                </tr>
+                <!-- ko foreach: PerformanceStats -->
+                <tr class="sto">
+                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }"></span> <span data-bind="text: Name + ' [ms]'"></span></td>
+                    <td data-bind="text: DurationMs"></td>
+                </tr>
+                <!-- /ko -->
+            </tbody>
+        </table>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+    </div>
+</div>

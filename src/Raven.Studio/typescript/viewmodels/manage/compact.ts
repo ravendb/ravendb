@@ -29,10 +29,10 @@ class resourceCompact {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            var foundRs = this.resources().first((rs: resource) => newResourceName == rs.name);
+            var foundRs = this.resources().first((rs: resource) => newResourceName === rs.name);
 
             if (!foundRs && newResourceName.length > 0) {
-                errorMessage = (this.type == database.type ? "Database" : "File system") + " name doesn't exist!";
+                errorMessage = (this.type === database.type ? "Database" : "File system") + " name doesn't exist!";
             }
 
             return errorMessage;
@@ -41,28 +41,30 @@ class resourceCompact {
 
     toggleKeepDown() {
         this.keepDown.toggle();
-        if (this.keepDown() == true) {
-            var logsPre = document.getElementById(this.type + 'CompactLogPre');
-            logsPre.scrollTop = logsPre.scrollHeight;
+        this.forceKeepDown();
+    }
+
+    forceKeepDown() {
+        if (this.keepDown()) {
+            var body = document.getElementsByTagName("body")[0];
+            body.scrollTop = body.scrollHeight;
         }
     }
 
     updateCompactStatus(newCompactStatus: compactStatusDto) {
         this.compactStatusMessages(newCompactStatus.Messages);
         this.compactStatusLastUpdate(newCompactStatus.LastProgressMessage);
-        if (this.keepDown()) {
-            var logsPre = document.getElementById(this.type + 'CompactLogPre');
-            logsPre.scrollTop = logsPre.scrollHeight;
-        }
-        this.parent.isBusy(newCompactStatus.State == "Running");
+        this.forceKeepDown();
+        this.parent.isBusy(newCompactStatus.State === "Running");
     }
 
 }
 class compact extends viewModelBase {
     private dbCompactOptions = new resourceCompact(this, database.type, shell.databases);
     private fsCompactOptions = new resourceCompact(this, filesystem.type, shell.fileSystems);
-    isForbidden = ko.observable<boolean>();
+
     isBusy = ko.observable<boolean>();
+    isForbidden = ko.observable<boolean>();
 
     canActivate(args): any {
         this.isForbidden(shell.isGlobalAdmin() === false);
@@ -76,8 +78,8 @@ class compact extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        $('form :input[name="databaseName"]').on("keypress", (e) => e.which != 13);
-        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which != 13);
+        $('form :input[name="databaseName"]').on("keypress", (e) => e.which !== 13);
+        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which !== 13);
     }
 
     startDbCompact() {

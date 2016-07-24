@@ -1,5 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getRequestTracingCommand = require("commands/database/debug/getRequestTracingCommand");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
+import tableNavigationTrait = require("common/tableNavigationTrait");
 
 class requestTracing extends viewModelBase {
     
@@ -10,12 +12,18 @@ class requestTracing extends viewModelBase {
     failedCount: KnockoutComputed<number>;
     successCount: KnockoutComputed<number>;
 
+    tableNavigation: tableNavigationTrait<requestTracingDto>;
+
     constructor() {
         super();
+
+        autoRefreshBindingHandler.install();
 
         this.failedCount = ko.computed(() => this.allEntries().count(l => l.StatusCode >= 400));
         this.successCount = ko.computed(() => this.allEntries().count(l => l.StatusCode < 400));
         this.activeDatabase.subscribe(() => this.fetchRequestTracing());
+
+        this.tableNavigation = new tableNavigationTrait<requestTracingDto>("#requestTracingTableContainer", this.selectedEntry, this.allEntries, i => "#requestTracingTableContainer table tbody tr:nth-child(" + (i + 1) + ")");
     }
 
     activate(args) {
@@ -58,51 +66,8 @@ class requestTracing extends viewModelBase {
         this.selectedEntry(entry);
     }
 
-    tableKeyDown(sender: any, e: KeyboardEvent) {
-        
-        var isKeyUp = e.keyCode === 38;
-        var isKeyDown = e.keyCode === 40;
-        if (isKeyUp || isKeyDown) {
-            e.preventDefault();
-
-            var oldSelection = this.selectedEntry();
-            if (oldSelection) {
-                var oldSelectionIndex = this.allEntries.indexOf(oldSelection);
-                var newSelectionIndex = oldSelectionIndex;
-                if (isKeyUp && oldSelectionIndex > 0) {
-                    newSelectionIndex--;
-                } else if (isKeyDown && oldSelectionIndex < this.allEntries().length - 1) {
-                    newSelectionIndex++;
-                }
-
-                this.selectedEntry(this.allEntries()[newSelectionIndex]);
-                var newSelectedRow = $("#requestTracingTableContainer table tbody tr:nth-child(" + (newSelectionIndex + 1) + ")");
-                if (newSelectedRow) {
-                    this.ensureRowVisible(newSelectedRow);
-                }
-            }
-        }
-    }
-
     showContextMenu() {
         //alert("this");
-    }
-
-    ensureRowVisible(row: JQuery) {
-        var table = $("#requestTracingTableContainer");
-        var scrollTop = table.scrollTop();
-        var scrollBottom = scrollTop + table.height();
-        var scrollHeight = scrollBottom - scrollTop;
-
-        var rowPosition = row.position();
-        var rowTop = rowPosition.top;
-        var rowBottom = rowTop + row.height();
-
-        if (rowTop < 0) {
-            table.scrollTop(scrollTop + rowTop);
-        } else if (rowBottom > scrollHeight) {
-            table.scrollTop(scrollTop + (rowBottom - scrollHeight));
-        }
     }
 
     setStatusAll() {

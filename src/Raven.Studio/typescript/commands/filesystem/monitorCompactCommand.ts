@@ -4,14 +4,13 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import appUrl = require("common/appUrl");
 
 class monitorCompactCommand extends commandBase {
-    private db: database = appUrl.getSystemDatabase();
 
     constructor(private parentPromise: JQueryDeferred<any>, private fsName: string, private updateCompactStatus: (compactStatusDto) => void) {
         super();
     }
 
     execute(): JQueryPromise<any> {
-        new getDocumentWithMetadataCommand("Raven/FileSystem/Compact/Status/" + this.fsName, this.db)
+        new getDocumentWithMetadataCommand("Raven/FileSystem/Compact/Status/" + this.fsName, null)
             .execute()
             .fail((response: JQueryXHR) => {
                 setTimeout(() => this.execute(), 1000);

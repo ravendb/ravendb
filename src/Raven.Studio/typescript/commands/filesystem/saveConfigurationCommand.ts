@@ -12,7 +12,8 @@ class saveFilesystemConfigurationCommand extends commandBase {
 
         var url = "/config?name=" + encodeURIComponent(this.key.key);
         return this.put(url, JSON.stringify(this.args), this.fs)
-            .done( () => this.reportSuccess("Saved configuration"));
+            .done(() => this.reportSuccess("Saved configuration"))
+            .fail((qXHR, textStatus, errorThrown) => this.reportError("Unable to save configuration", errorThrown));
     }
 }
 

@@ -11,9 +11,12 @@ namespace Raven.Server.Smuggler
     public class DatabaseDataExporter
     {
         private readonly DocumentDatabase _database;
-        public long? StartDocsEtag;
 
-        public int? Limit;
+        public long? StartDocsEtag;
+        public int? DocumentsLimit;
+
+        public long? StartVersioningRevisionsEtag;
+        public int? VersioningRevisionsLimit;
 
         public DatabaseDataExporter(DocumentDatabase database)
         {
@@ -30,16 +33,20 @@ namespace Raven.Server.Smuggler
 
         public ExportResult Export(DocumentsOperationContext context, Stream destinationStream)
         {
-            long lastDocsEtag = 0;
+            var result = new ExportResult();
 
             using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, leaveOpen: true))
             using (var writer = new BlittableJsonTextWriter(context, gZipStream))
             {
                 writer.WriteStartObject();
 
+                writer.WritePropertyName(context.GetLazyString("BuildVersion"));
+                writer.WriteInteger(40000);
+
+                writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyString("Docs"));
-                var documents = Limit.HasValue
-                      ? _database.DocumentsStorage.GetDocumentsAfter(context, StartDocsEtag ?? 0, 0, Limit.Value)
+                var documents = DocumentsLimit.HasValue
+                      ? _database.DocumentsStorage.GetDocumentsAfter(context, StartDocsEtag ?? 0, 0, DocumentsLimit.Value)
                       : _database.DocumentsStorage.GetDocumentsAfter(context, StartDocsEtag ?? 0);
                 writer.WriteStartArray();
                 bool first = true;
@@ -56,15 +63,39 @@ namespace Raven.Server.Smuggler
 
                         document.EnsureMetadata();
                         context.Write(writer, document.Data);
-                        lastDocsEtag = document.Etag;
+                        result.LastDocsEtag = document.Etag;
                     }
                 }
                 writer.WriteEndArray();
 
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyString("Attachments"));
-                writer.WriteStartArray();
-                writer.WriteEndArray();
+                var versioningStorage = _database.BundleLoader.VersioningStorage;
+                if (versioningStorage != null)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(context.GetLazyString("VersioningRevisions"));
+                    writer.WriteStartArray();
+                    first = true;
+                    var revisionDocuments = VersioningRevisionsLimit.HasValue 
+                        ? versioningStorage.GetRevisionsAfter(context, StartVersioningRevisionsEtag ?? 0, VersioningRevisionsLimit.Value)
+                        : versioningStorage.GetRevisionsAfter(context, StartVersioningRevisionsEtag ?? 0);
+                    foreach (var revisionDocument in revisionDocuments)
+                    {
+                        if (revisionDocument == null)
+                            continue;
+
+                        using (revisionDocument.Data)
+                        {
+                            if (first == false)
+                                writer.WriteComma();
+                            first = false;
+
+                            revisionDocument.EnsureMetadata();
+                            context.Write(writer, revisionDocument.Data);
+                            result.LastVersioningRevisionsEtag = revisionDocument.Etag;
+                        }
+                    }
+                    writer.WriteEndArray();
+                }
 
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyString("Indexes"));
@@ -120,10 +151,7 @@ namespace Raven.Server.Smuggler
                 writer.WriteEndObject();
             }
 
-            return new ExportResult
-            {
-                LastDocsEtag = lastDocsEtag,
-            };
+            return result;
         }
     }
 }

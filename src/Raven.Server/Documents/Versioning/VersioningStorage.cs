@@ -41,6 +41,10 @@ namespace Raven.Server.Documents.Versioning
                 StartIndex = 0,
                 Count = 3,
             });
+            _docsSchema.DefineFixedSizeIndex("Etag", new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 2,
+            });
 
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
@@ -96,6 +100,9 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
+        /// <summary>
+        /// Should be used from document put
+        /// </summary>
         public void PutVersion(DocumentsOperationContext context, string collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
         {
             var enableVersioning = false;
@@ -132,6 +139,22 @@ namespace Raven.Server.Documents.Versioning
             var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
             DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
 
+            PutInternal(context, key, newEtagBigEndian, document, table);
+        }
+
+        /// <summary>
+        /// Should be used from smuggler import
+        /// </summary>
+        public void Put(DocumentsOperationContext context, string key, long etag, BlittableJsonReaderObject document)
+        {
+            var newEtagBigEndian = IPAddress.HostToNetworkOrder(etag);
+
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+            PutInternal(context, key, newEtagBigEndian, document, table);
+        }
+
+        private void PutInternal(DocumentsOperationContext context, string key, long newEtagBigEndian, BlittableJsonReaderObject document, Table table)
+        {
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -178,7 +201,7 @@ namespace Raven.Server.Documents.Versioning
             numbers.Delete(prefixedLoweredKey);
         }
 
-        public void Delete(DocumentsOperationContext context, string collectionName, string key)
+        public void Delete(DocumentsOperationContext context, string collectionName, Slice loweredKey)
         {
             Debug.Assert(collectionName[0] != '@');
             
@@ -190,7 +213,10 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
-            var prefixSlice = GetSliceFromKey(context, key);
+            var prefixKeyMem = context.Allocator.Allocate(loweredKey.Size +1);
+            loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
+            prefixKeyMem.Ptr[loweredKey.Size] = (byte)30; // the record separator
+            var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
             table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], prefixSlice, long.MaxValue);
             DeleteCountOfRevisions(context, prefixSlice);
         }
@@ -221,9 +247,34 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
+        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+
+            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["Etag"], etag))
+            {
+                var document = TableValueToDocument(context, tvr);
+                yield return document;
+            }
+        }
+
+        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag, int take)
+        {
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+
+            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["Etag"], etag))
+            {
+                var document = TableValueToDocument(context, tvr);
+                yield return document;
+
+                if (take-- <= 0)
+                    yield break;
+            }
+        }
+
         public static Slice GetSliceFromKey(DocumentsOperationContext context, string key)
         {
-            // REVIEW: Is this needed? Could we just use the ByteString?
+            // TODO: Is this needed? Could we just use the ByteString?
 
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
             if (byteCount > 255)
@@ -271,6 +322,12 @@ namespace Raven.Server.Documents.Versioning
             result.Data = new BlittableJsonReaderObject(tvr.Read(4, out size), size, context);
 
             return result;
+        }
+
+        public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
+        {
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+            return table.GetNumberEntriesFor(_docsSchema.FixedSizeIndexes["Etag"]);
         }
     }
 }

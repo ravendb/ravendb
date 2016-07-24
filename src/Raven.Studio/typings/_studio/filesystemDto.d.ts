@@ -88,6 +88,7 @@ interface filesystemHistoryItemDto {
 interface filesystemConflictItemDto {
     FileName: string;
     RemoteServerUrl: string;
+    ResolveUsingRemote: boolean;
 
     RemoteHistory: filesystemHistoryItemDto[];
     CurrentHistory: filesystemHistoryItemDto[];
@@ -128,8 +129,8 @@ interface synchronizationUpdateNotification {
     SourceServerId: string;
     SourceFileSystemUrl: string;
     Type: filesystemSynchronizationType;
-    Action: synchronizationAction;
-    Direction: synchronizationDirection;
+    Action: string;
+    Direction: string;
 }
 
 
@@ -137,7 +138,7 @@ interface synchronizationConflictNotification {
     FileSystemName: string;
     FileName: string;
     SourceServerUrl: string;
-    Status: conflictStatus;
+    Status: string;
     RemoteFileHeader: any;
 }
 

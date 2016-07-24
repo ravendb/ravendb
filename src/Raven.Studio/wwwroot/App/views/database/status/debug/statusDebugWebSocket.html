@@ -1,9 +1,11 @@
 <section>
     <button data-bind="click: test" class="btn btn-primary">Test web sockets</button>
     
-    <h4>Results:</h4>
-    <pre data-bind="text: results">
-
+    <div data-bind="visible: results">
+        <h4>Results:</h4>
+        <pre data-bind="text: results">
     </pre>
+    </div>
+   
     
 </section>

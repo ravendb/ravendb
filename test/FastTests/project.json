@@ -5,14 +5,17 @@
     "allowUnsafe": true,
     "warningsAsErrors": true,
     "compile": {
-      "include": [ "**/*.cs" ]
+      "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
     },
     "embed": [
       "**/*.json",
       "Voron/Bugs/Data/*.txt",
       "**/*.ravendump"
     ],
-    "define": [ "DEBUG" ]
+    "define": [ "DEBUG" ],
+    "copyToOutput": {
+      "include": [ "../xunit.runner.json" ]
+    }
   },
 
   "configurations": {

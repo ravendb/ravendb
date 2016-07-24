@@ -25,7 +25,7 @@
                 <div class="panel-body">
 
                     <div class="form-group" data-bind="visible: $root.hasGlobalValues">
-                        <div class="col-md-4">
+                        <div class="col-md-4 text-right">
                             <strong>Property</strong>
                         </div>
                         <div class="col-md-4">
@@ -91,12 +91,14 @@
                             </div>
                         </div>
 
-                        <div class="form-group" data-bind="if: onDiskExportEnabled, visible: onDiskExportEnabled">
+                        <div class="form-group" data-bind="if: $root.showOnDiskExportRow()">
                             <label for="onDiskLocation" class="col-sm-4 control-label">File System Folder:</label>
-                            <div class="col-sm-4">
-                                <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
+                            <div class="col-sm-4" >
+                                <div data-bind="visible: onDiskExportEnabled">
+                                    <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />    
+                                </div>
                             </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
+                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues() && $root.globalBackupSetup().onDiskExportEnabled()">
                                 <input type="text" disabled="disabled" placeholder="full path" class="form-control" data-bind="value: $root.globalBackupSetup().localFolderName" />
                             </div>
                         </div>
@@ -144,7 +146,7 @@
                                 <input type="text" disabled="disabled" class="form-control" data-bind="value: $root.globalBackupSetup().mainValue, attr: { placeholder: mainPlaceholder }"/>
                             </div>
                         </div>
-                        <div class="form-group" data-bind="if: isS3Bucket">
+                        <div class="form-group" data-bind="if: isS3Bucket, visible: isS3Bucket">
                             <label for="awsRemoteFolder" class="col-sm-4 control-label">Folder name:</label>
                             <div class="col-sm-4">
                                 <input id="awsRemoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: s3RemoteFolderName, valueUpdate: 'afterkeydown'" />
@@ -221,7 +223,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="incrementalBackupInterval" class="col-sm-4 control-label">Incremental Backup Interval:</label>
+                            <label for="incrementalBackupInterval" class="col-sm-4 control-label">Incremental Export Interval:</label>
                             <div class="col-sm-1">
                                 <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="enable: $root.usingGlobal() == false, numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
                             </div>
@@ -236,7 +238,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="fullBackupInterval" class="col-sm-4 control-label">Full Backup Interval:</label>
+                            <label for="fullBackupInterval" class="col-sm-4 control-label">Full Export Interval:</label>
                             <div class="col-sm-1">
                                 <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="enable: $root.usingGlobal() == false, numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
                             </div>

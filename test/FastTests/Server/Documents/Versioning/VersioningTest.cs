@@ -6,9 +6,9 @@ using Raven.Server.Documents.Versioning;
 
 namespace FastTests.Server.Documents.Versioning
 {
-    public class VersioningTest : RavenTestBase
+    public class VersioningHelper
     {
-        protected async Task SetupVersioning(DocumentStore store)
+        public static async Task SetupVersioning(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
             {

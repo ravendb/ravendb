@@ -6,7 +6,7 @@ import adminLogsConfigureDialog = require("viewmodels/manage/adminLogsConfigureD
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
-import appUrl = require("common/appUrl");
+import appUrl = require('common/appUrl');
 import shell = require("viewmodels/shell");
 
 class adminLogs extends viewModelBase {
@@ -29,7 +29,7 @@ class adminLogs extends viewModelBase {
     
     activate(args) {
         super.activate(args);
-        this.updateHelpLink("57BGF7");
+        this.updateHelpLink('57BGF7');
     }
 
     redraw() {
@@ -96,13 +96,14 @@ class adminLogs extends viewModelBase {
         var tokenDeferred = $.Deferred();
 
         if (!this.adminLogsConfig().singleAuthToken()) {
-           /* TODO: new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true)
+            /*
+            new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true)
                 .execute()
                 .done((tokenObject: singleAuthToken) => {
                     this.adminLogsConfig().singleAuthToken(tokenObject);
                     tokenDeferred.resolve();
                 })
-                .fail((e) => {
+                .fail(() => {
                     app.showMessage("You are not authorized to trace this resource", "Authorization error");
                 });*/
         } else {
@@ -188,7 +189,7 @@ class adminLogs extends viewModelBase {
 
     toggleKeepDown() {
         this.keepDown.toggle();
-        if (this.keepDown() == true) {
+        if (this.keepDown()) {
             var logsPre = document.getElementById('adminLogsPre');
             logsPre.scrollTop = logsPre.scrollHeight;
         }

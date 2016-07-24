@@ -6,6 +6,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Tests.Core;
@@ -659,7 +660,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             }
         }
 
-        [Fact(Skip = "Waiting for static indexes")]
+        [Fact]
         public async Task CanCreateDocumentsIfPatchingAppliedByIndex()
         {
             using (var store = await GetDocumentStore())
@@ -679,11 +680,11 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                /*store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
+                store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
                 {
-                    Map = @"from doc in docs 
-                            select new { doc.Value }"
-                });*/
+                    Maps = { @"from doc in docs.CustomTypes 
+                            select new { doc.Value }" }
+                });
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -764,36 +765,38 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             }
         }
 
-        [Fact(Skip = "Waiting for indexes")]
+        [Fact]
         public async Task CanPerformAdvancedWithSetBasedUpdates()
         {
             using (var store = await GetDocumentStore())
             {
+                var item1 = new CustomType
+                {
+                    Id = "someId/",
+                    Owner = "bob",
+                    Value = 12143,
+                    Comments = new List<string>(new[] { "one", "two", "seven" })
+                };
+                var item2 = new CustomType
+                {
+                    Id = "someId/",
+                    Owner = "NOT bob",
+                    Value = 9999,
+                    Comments = new List<string>(new[] { "one", "two", "seven" })
+                };
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType
-                    {
-                        Id = "someId/",
-                        Owner = "bob",
-                        Value = 12143,
-                        Comments = new List<string>(new[] {"one", "two", "seven"})
-                    });
-                    await session.StoreAsync(new CustomType
-                    {
-                        Id = "someId/",
-                        Owner = "NOT bob",
-                        Value = 9999,
-                        Comments = new List<string>(new[] {"one", "two", "seven"})
-                    });
+                    await session.StoreAsync(item1);
+                    await session.StoreAsync(item2);
                     await session.SaveChangesAsync();
                 }
-
-                throw new NotImplementedException("Wait for indexes");
-                /*store.AsyncDatabaseCommands.PutIndex("TestIndex",
+                
+                store.DatabaseCommands.PutIndex("TestIndex",
                     new IndexDefinition
                     {
-                        Map = @"from doc in docs 
-                                     select new { doc.Owner }"
+                        Maps = { @"from doc in docs.CustomTypes 
+                                     select new { doc.Owner }" }
                     });
 
                 WaitForUserToContinueTheTest(store);
@@ -801,18 +804,12 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                 store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
                     .WaitForNonStaleResults().ToList();
 
-                store.AsyncDatabaseCommands.UpdateByIndex("TestIndex",
+                store.DatabaseCommands.UpdateByIndex("TestIndex",
                     new IndexQuery {Query = "Owner:Bob"},
-                    new ScriptedPatchRequest {Script = sampleScript})
+                    new PatchRequest {Script = sampleScript})
                     .WaitForCompletion();
 
-                var item1ResultJson = store.AsyncDatabaseCommands.Get(new CustomType
-                {
-                    Id = "someId/",
-                    Owner = "bob",
-                    Value = 12143,
-                    Comments = new List<string>(new[] {"one", "two", "seven"})
-                }.Id).DataAsJson;
+                var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
                 var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
                 Assert.Equal(2, item1Result.Comments.Count);
                 Assert.Equal("one test", item1Result.Comments[0]);
@@ -820,13 +817,13 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                 Assert.Equal(12144, item1Result.Value);
                 Assert.Equal("err!!", item1ResultJson["newValue"]);
 
-                var item2ResultJson = store.AsyncDatabaseCommands.Get(item2.Id).DataAsJson;
+                var item2ResultJson = store.DatabaseCommands.Get(item2.Id).DataAsJson;
                 var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());
                 Assert.Equal(9999, item2Result.Value);
                 Assert.Equal(3, item2Result.Comments.Count);
                 Assert.Equal("one", item2Result.Comments[0]);
                 Assert.Equal("two", item2Result.Comments[1]);
-                Assert.Equal("seven", item2Result.Comments[2]);*/
+                Assert.Equal("seven", item2Result.Comments[2]);
             }
         }
     }

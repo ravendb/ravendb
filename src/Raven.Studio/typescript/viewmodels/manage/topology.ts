@@ -2,12 +2,17 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import getGlobalReplicationTopology = require("commands/resources/getGlobalReplicationTopology");
+import getDocumentsLeftToReplicate = require("commands/database/replication/getDocumentsLeftToReplicate");
 import d3 = require('d3');
 import dagre = require('dagre');
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import shell = require("viewmodels/shell");
+import database = require("models/resources/database");
 
 class topology extends viewModelBase {
-
-    static inlineCss = " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
+    /*
+    static inlineCss = " svg { background-color: white; }" +
+                        " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
                         " path.link.error {  stroke: #df382c; } " +
 " svg:not(.active):not(.ctrl) path.link { cursor: pointer; } " +
 " path.link.hidden {  stroke-width: 0; } " +
@@ -20,39 +25,227 @@ class topology extends viewModelBase {
     currentLink = ko.observable<any>(null); 
     searchText = ko.observable<string>();
 
+    documentToReplicateText = ko.observable<string>(null);
+    isLoadingDocumentToReplicateCount = ko.observable<boolean>(false);
+    exportProgress = ko.observable<string>("");
+    localDatabaseIds: KnockoutComputed<string[]>;
+    canCalculateDocumentsToReplicateCount: KnockoutComputed<boolean>;
+    canExportDocumentsToReplicateCount: KnockoutComputed<boolean>;
+
+    settingsAccess = new settingsAccessAuthorizer();
+
     fetchDb = ko.observable<boolean>(true);
     fetchFs = ko.observable<boolean>(true);
-    fetchCs = ko.observable<boolean>(true);
+    fetchCs = ko.observable<boolean>(shell.has40Features());
 
     showLoadingIndicator = ko.observable(false); 
 
+    dagreGraphSize: [number, number];
+
+    showCsOption = shell.has40Features;
+
     width: number;
     height: number;
-    private svg: d3.Selection<any>;
-    private zoom: d3.behavior.Zoom<any>;
+    svg: D3.Selection;
+    zoom: D3.Behavior.Zoom;
     colors = d3.scale.category10();
-    line = d3.svg.line<any>().x(d => d.x).y(d => d.y);
+    line = d3.svg.line().x(d => d.x).y(d => d.y);
 
+    constructor() {
+        super();
 
-    hasSaveAsPngSupport = ko.computed(() => {
-        return !(navigator && navigator.msSaveBlob);
-    });
+        this.searchText.throttle(250).subscribe(value => this.filter(value));
 
+        this.localDatabaseIds = ko.computed(() => {
+            var topology = this.topology();
+            if (!topology || !topology.Databases) {
+                return [];
+            }
+
+            return topology.Databases.LocalDatabaseIds;
+        });
+
+        this.canCalculateDocumentsToReplicateCount = ko.computed(() => {
+            var currentLink = this.currentLink();
+            if (!currentLink) {
+                return false;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return false;
+            }
+
+            var topology = this.topology();
+            if (!topology || !topology.Databases) {
+                return false;
+            }
+
+            var destinations = this.getAllReachableDestinationsFrom(currentLink.Source, topology.Databases.Connections);
+
+            return destinations.contains(currentLink.Destination);
+        });
+
+        this.canExportDocumentsToReplicateCount = ko.computed(() => {
+            var currentLink = this.currentLink();
+            if (!currentLink) {
+                return false;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return false;
+            }
+
+            var topology = this.topology();
+            if (!topology || !topology.Databases) {
+                return false;
+            }
+
+            var localServer = topology
+                .Databases
+                .Connections
+                .first((x: replicationTopologyConnectionDto) => {
+                    var serverId = this.getServerId(x.SendServerId, x.StoredServerId);
+                    var foundServerId = this.localDatabaseIds().first(id => id === serverId);
+                    if (!foundServerId) {
+                        return false;
+                    }
+
+                    return x.Source === currentLink.Source;
+                });
+
+            return !!localServer;
+        });
+    }
 
     activate(args) {
         super.activate(args);
-        this.updateHelpLink('ES8PCB');
+        this.updateHelpLink("ES8PCB");
     }
 
     attached() {
         super.attached();
         d3.select(window).on("resize", this.resize.bind(this));
-       
     }
 
     compositionComplete() {
         this.resize();
     }
+
+    getAllReachableDestinationsFrom(sourceServerUrl: string, connections: replicationTopologyConnectionDto[]): string[] {
+        var result: string[] = [];
+
+        connections.forEach(connection => {
+            if (sourceServerUrl === connection.Source) {
+                result.push(connection.Destination);
+
+                var updatedConncetions = connections.filter(x => x.Destination !== sourceServerUrl);
+
+                var reachables = this.getAllReachableDestinationsFrom(connection.Destination, updatedConncetions);
+                result.pushAll(reachables);
+            }
+        });
+
+        return result;
+    }
+
+    getDocumentsToReplicateCount() {
+        var currentLink = this.currentLink();
+        if (currentLink == null) {
+            return;
+        }
+        
+        if (currentLink.SourceToDestinationState === "Offline") {
+            return;
+        }
+
+        var destinationSplitted = currentLink.Destination.split("/databases/");
+        var databaseName = destinationSplitted.last();
+        var destinationUrl = destinationSplitted.first() + "/";
+        var sourceSplitted = currentLink.Source.split("/databases/");
+        var sourceUrl = sourceSplitted.first() + "/";
+        var sourceDatabaseName = sourceSplitted.last();
+        var sourceId = this.getServerId(currentLink.SendServerId, currentLink.StoredServerId);
+
+        this.isLoadingDocumentToReplicateCount(true);
+        var getDocsToReplicateCount =
+            new getDocumentsLeftToReplicate(sourceUrl, destinationUrl, databaseName,
+                    sourceId, new database(sourceDatabaseName))
+                .execute();
+
+        getDocsToReplicateCount
+            .done((documentCount: documentCountDto) => {
+                var message = "";
+                var isApproximate = documentCount.Type === "Approximate";
+                if (isApproximate) {
+                    message += "Approximately ";
+                }
+
+                message += documentCount.Count.toLocaleString();
+
+                if (isApproximate) {
+                    message += ">=";
+                }
+
+                if (documentCount.IsEtl) {
+                    message += " (ETL)";
+                }
+
+                this.documentToReplicateText(message);
+            })
+            .fail(() => this.documentToReplicateText("Couldn't calculate document count!"))
+            .always(() => this.isLoadingDocumentToReplicateCount(false));
+    }
+
+    getServerId(sendServerId: string, storedServerId: string) {
+        var serverId = sendServerId;
+        if (serverId === "00000000-0000-0000-0000-000000000000") {
+            serverId = storedServerId;
+        }
+
+        return serverId;
+    }
+
+    export() {
+        var confirmation = this.confirmationMessage("Export", "Are you sure that you want to export documents to replicate ids?");
+        confirmation.done(() => {
+            this.exportProgress("");
+            var url = "/admin/replication/export-docs-left-to-replicate";
+            var currentLink = this.currentLink();
+            if (currentLink == null) {
+                return;
+            }
+
+            if (currentLink.SourceToDestinationState === "Offline") {
+                return;
+            }
+
+            this.isLoadingDocumentToReplicateCount(true);
+            var destinationSplitted = currentLink.Destination.split("/databases/");
+            var databaseName = destinationSplitted.last();
+            var destinationUrl = destinationSplitted.first() + "/";
+            var sourceSplitted = currentLink.Source.split("/databases/");
+            var sourceUrl = sourceSplitted.first() + "/";
+            var sourceDatabaseName = sourceSplitted.last();
+
+            this.isLoadingDocumentToReplicateCount(true);
+
+            var requestData = {
+                SourceUrl: sourceUrl,
+                DestinationUrl: destinationUrl,
+                DatabaseName: databaseName,
+                SourceId: this.getServerId(currentLink.SendServerId, currentLink.StoredServerId)
+            };
+
+            var db = new database(sourceDatabaseName);
+            this.downloader.downloadByPost(db, url, requestData, this.isLoadingDocumentToReplicateCount, this.exportProgress);
+
+            this.isLoadingDocumentToReplicateCount(false);
+        });
+    }
+
+    hasSaveAsPngSupport = ko.computed(() => {
+        return !(navigator && navigator.msSaveBlob);
+    });
 
     resize() {
         this.width = $("#replicationTopologySection").width() * 0.66;
@@ -61,20 +254,24 @@ class topology extends viewModelBase {
     createReplicationTopology() {
         var self = this;
 
-        this.height = 600;
+        var $replicationTopologSection = $("#replicationTopologySection");
+        var $replicationTopologySvg = $("svg#replicationTopology");
 
-        this.zoom = d3.behavior.zoom<any>()
+        this.height = $replicationTopologSection.outerHeight() -
+            ($replicationTopologySvg.offset().top - $replicationTopologSection.offset().top) -
+            20;
+
+        this.zoom = d3.behavior.zoom()
             .scaleExtent([0.2, 5])
             .on("zoom", () => {
-                var evt = <d3.ZoomEvent> d3.event;
-                this.svg.select('.graphZoom').attr("transform", "translate(" + evt.translate + ")scale(" + evt.scale + ")");
+                this.svg.select('.graphZoom').attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
             });
 
         this.svg = d3.select("#replicationTopology")
             .style({ height: self.height + 'px' })
             .style({ width: self.width + 'px' })
             .attr("viewBox", "0 0 " + self.width + " " + self.height)
-            .call((s: d3.Selection<any>) => this.zoom(s));
+            .call(this.zoom);
 
         this.syncGraph();
 
@@ -91,7 +288,7 @@ class topology extends viewModelBase {
         this.renderTopology(topologyGraph);
     }
 
-    private fillNodes(topologyGraph: Dagre.Graph) {
+    private fillNodes(topologyGraph) {
         if (this.topologyFiltered().Databases) {
             this.topologyFiltered().Databases.SkippedResources.forEach(s => {
                 topologyGraph.setNode(s, {
@@ -198,8 +395,12 @@ class topology extends viewModelBase {
             "L" + (targetX - 3.5 * Math.cos(d90 - theta) - 10 * Math.cos(theta)) + "," + (targetY + 3.5 * Math.sin(d90 - theta) - 10 * Math.sin(theta)) + "z";
     }
 
-    linkHasError(d: replicationTopologyConnectionDto) {
-        return d.SourceToDestinationState !== "Online";
+    linkIsOffline(d: replicationTopologyConnectionDto) {
+        return d.SourceToDestinationState === "Offline";
+    }
+
+    linkIsDisabled(d: replicationTopologyConnectionDto) {
+        return d.SourceToDestinationState === "Disabled";
     }
 
     private iconText(rType: string) {
@@ -216,12 +417,41 @@ class topology extends viewModelBase {
         }
     }
 
-    renderTopology(topologyGraph: Dagre.Graph) {
+    private getScaleFactorAndLeftOffset(containerWidth, graphWidth): { scaleFactor: number; leftOffset: number } {
+        const extraPadding = 50;
+        var scaleFactor = containerWidth / (graphWidth + extraPadding);
+        if (scaleFactor > 1) {
+            return {
+                leftOffset: (containerWidth - graphWidth) / 2,
+                scaleFactor: 1
+            };
+        } else {
+            /*
+            left offset is more complicated:
+            - initially we compute scaleFactor with extra padding
+            - multiply graphWidth by scaleFactor, it gives us width of graph
+            - use: (containerWidth - graphWidth) / 2
+            *
+            var scaledGraphWidth = graphWidth * scaleFactor;
+            var leftOffset = (containerWidth - scaledGraphWidth) / 2;
+            return {
+                leftOffset: leftOffset,
+                scaleFactor: scaleFactor
+            }
+        }
+    }
+
+    renderTopology(topologyGraph) {
         var self = this;
 
         var graph = this.svg.selectAll('.graph').data([null]);
 
-        graph.attr('transform', 'translate(' + ((self.width - topologyGraph.graph().width) / 2) + ',10)');
+        var graphWidth = topologyGraph.graph().width;
+        if (graphWidth === -Infinity) {
+            graphWidth = 0;
+        }
+
+        this.dagreGraphSize = [topologyGraph.graph().width, topologyGraph.graph().height];
 
         var enteringGraph = graph.enter().append('g').attr('class', 'graph');
         var enteringGraphZoom = enteringGraph.append("g").attr("class", "graphZoom");
@@ -229,7 +459,14 @@ class topology extends viewModelBase {
         enteringGraphZoom.append('g').attr('class', 'nodes');
         enteringGraphZoom.append('g').attr('class', 'edges');
 
-        enteringGraph.attr('transform', 'translate(' + ((self.width - topologyGraph.graph().width) / 2) + ',10)');
+        var { scaleFactor, leftOffset } = this.getScaleFactorAndLeftOffset(self.width, graphWidth);
+
+        this.zoom.translate([leftOffset, 10]);
+        this.zoom.scale(scaleFactor);
+
+        graph
+            .select('.graphZoom')
+            .attr('transform', 'translate(' + leftOffset + ',10)scale(' + scaleFactor + ')');
 
         var mappedNodes = topologyGraph.nodes().map(n => topologyGraph.node(n));
 
@@ -258,7 +495,7 @@ class topology extends viewModelBase {
             .attr("x", -100)
             .attr("y", 6)
             .attr('class', 'fa')
-            .html(d => self.iconText(<string>d.rType));
+            .html(d => self.iconText(d.rType));
 
         nGroup.append('svg:text')
             .attr('x', 10)
@@ -283,26 +520,28 @@ class topology extends viewModelBase {
         edgesDom
             .exit()
             .transition()
-            .style('opacity', 0)
+            .style("opacity", 0)
             .remove();
 
         edgesDom.enter()
-            .append('path')
-            .attr('class', 'link')
-            .classed('error', self.linkHasError)
-            .attr('d', d => self.linkWithArrow(d))
+            .append("path")
+            .attr("class", "link")
+            .classed("error", self.linkIsOffline)
+            .classed("warning", self.linkIsDisabled)
+            .attr("d", d => self.linkWithArrow(d))
             .on("click", function (d) {
                 var currentSelection = d3.select(".selected").node();
                 d3.selectAll(".selected").classed("selected", false);
-                d3.select(<EventTarget>this).classed('selected', currentSelection !== this);
-                self.currentLink(currentSelection !== this ? d : null)
+                d3.select(this).classed("selected", currentSelection !== this);
+                self.currentLink(currentSelection !== this ? d : null);
+                self.documentToReplicateText(null);
+                self.exportProgress("");
             });
 
         edgesDom
             .transition()
             .attr('d', d => self.linkWithArrow(d));
     }
-
 
     fetchTopology() {
         this.showLoadingIndicator(true);
@@ -313,26 +552,54 @@ class topology extends viewModelBase {
                 this.topologyFiltered(topo);
                 this.createReplicationTopology();
             })
-            .always(() => this.showLoadingIndicator(false)); 
+            .always(() => {
+                this.currentLink(null);
+                this.showLoadingIndicator(false);
+            }); 
     }
 
     saveAsPng() {
-        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', () => topology.inlineCss);
+        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', svg => {
+            this.preprocesSvgDownload(svg);
+            return topology.inlineCss;
+        });
     }
 
     saveAsSvg() {
-        svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', () => topology.inlineCss);
+        svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', (svg) => {
+            this.preprocesSvgDownload(svg);
+            return topology.inlineCss;
+        });
+    }
+
+    preprocesSvgDownload(svg: Element) {
+        this.removeIconsProcessor(svg);
+
+        var padding = 10;
+
+        $(svg)
+            .attr('width', (this.dagreGraphSize[0] + 2 * padding)  + 'px')
+            .attr('height', (this.dagreGraphSize[1]  + 2 * padding) + 'px');
+
+        $(".graph", svg).attr('transform', 'translate(' + padding  + ',' + padding + ')');
+        $(".graphZoom", svg).removeAttr('transform');
+    }
+
+    /*
+    * Since we are using FontAwesome icons and they won't be avaialable in downloaded
+    * svg, remove them from DOM
+    * Also this procedure should fix issue with converting utf-8 data with window.atob.
+    *
+    removeIconsProcessor(svg: Element) {
+        $("text.fa", svg).remove();
     }
 
     saveAsJson() {
         fileDownloader.downloadAsJson(this.topology(), "topology.json");
     }
 
-    filter() {
+    filter(criteria: string) {
         var filtered: globalTopologyDto = jQuery.extend(true, {}, this.topology());
-        var criteria = this.searchText();
-
-        this.resetZoom();
 
         if (!criteria) {
             this.topologyFiltered(filtered);
@@ -361,17 +628,8 @@ class topology extends viewModelBase {
         this.topologyFiltered(filtered);
 
         this.syncGraph();
-        
     }
-
-    private resetZoom() {
-        this.zoom.scale(1);
-        this.zoom.translate([0, 0]);
-        this.svg.select('.graphZoom')
-            .transition()
-            .attr('transform', 'translate(0,0)scale(1)');
-    }
-    
+*/
 }
 
 export = topology;

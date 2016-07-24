@@ -21,6 +21,10 @@ import timeSeriesType = require("models/timeSeries/timeSeriesType");
 class ctor {
 
     static idColumnWidth = 200;
+    static selectColumnWidth = 38;
+    static optionalScrollSize = 20;
+
+    $window = $(window);
 
     items: pagedList;
     recycleRows = ko.observableArray<row>();
@@ -28,7 +32,9 @@ class ctor {
     borderHeight = 2;
     virtualHeight: KnockoutComputed<number>;
     viewportHeight = ko.observable(0);
+    virtualWidth: KnockoutComputed<number>;
     virtualRowCount = ko.observable(0);
+    tableXScroll = ko.observable(0);
     grid: JQuery;
     focusableGridSelector: string;
     columns = ko.observableArray<column>();
@@ -42,6 +48,9 @@ class ctor {
     noResults: KnockoutComputed<boolean>;
     getCollectionClassFromEntityNameMemoized: (base: documentBase, collectionName: string) => string;
     ensureColumnsAnimationFrameHandle = 0;
+    bottomMargin: KnockoutComputed<number>;
+    headerVisible = ko.observable(false);
+    shiftPressed = ko.observable<boolean>(false);
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -52,6 +61,7 @@ class ctor {
         showCheckboxes: boolean;
         showIds: boolean;
         useContextMenu: boolean;
+        container?: string;
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
@@ -94,6 +104,18 @@ class ctor {
             isCounterAllGroupsGroup: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
+        this.bottomMargin = ko.computed(() => {
+            // if header is visible we have to substruct it's height to avoid scroll
+            var headerHeight = this.headerVisible() ? 0 : 41;
+            return headerHeight + (this.settings.dynamicHeightBottomMargin || 0);
+        });
+
+        this.$window.resize(() => {
+            this.headerVisible($(".ko-grid-column-container", this.grid).is(":visible"));
+        });
+
+        this.$window.on('keydown.virtualTable', e => this.shiftPressed(e.shiftKey));
+        this.$window.on('keyup.virtualTable', e => this.shiftPressed(e.shiftKey));
 
         if (!!settings.isIndexMapReduce) {
             this.isIndexMapReduce = settings.isIndexMapReduce;
@@ -105,19 +127,22 @@ class ctor {
         this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
+        this.virtualWidth = ko.computed(() => this.columns().map(x => x.width()).reduce((a, b) => a + b, 0));
         this.refreshIdAndCheckboxColumn();
 
         this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
                 this.recycleRows.valueHasMutated();
-                this.columns.valueHasMutated();
                 r.isInUse(false);
             });
+            this.columns.valueHasMutated();
             this.items = list;
             this.settings.selectedIndices.removeAll();
             this.columns.remove(c => (c.binding !== "Id" && c.binding !== "__IsChecked"));
-            this.gridViewport.scrollTop(0);
+            if (this.gridViewport) {
+                this.gridViewport.scrollTop(0);
+            }
             this.onGridScrolled();
 
             this.refreshIdAndCheckboxColumn();
@@ -144,6 +169,7 @@ class ctor {
 
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
         this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
+        this.gridViewport.on('scroll', () => this.tableXScroll(this.gridViewport.scrollLeft()));
         this.gridViewport.scroll(() => this.onGridScrolled());
 
         this.setupKeyboardShortcuts();
@@ -156,6 +182,11 @@ class ctor {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
 
         this.gridViewport.off('DynamicHeightSet');
+        this.gridViewport.off('scroll');
+
+        this.$window.off('keydown.virtualTable');
+        this.$window.off('keyup.virtualTable');
+
         if (this.itemsSourceSubscription) {
             this.itemsSourceSubscription.dispose();
         }
@@ -202,7 +233,7 @@ class ctor {
         this.createRecycleRows(desiredRowCount);
         this.ensureRowsCoverViewport();
         this.loadRowData();
-        
+
 
         // Update row checked states.
         this.recycleRows().forEach((r: row) => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
@@ -234,7 +265,7 @@ class ctor {
                     // Select any right-clicked row.
 
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
-                        this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                        this.toggleRowChecked(rightClickedElement, false);
                     }
                 } else {
                     if (rightClickedElement) {
@@ -247,12 +278,12 @@ class ctor {
     }
 
     refreshIdAndCheckboxColumn() {
-        var containsId = this.columns().first(x=> x.binding === "Id");
+        var containsId = this.columns().first(x => x.binding === "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
             var containsCheckbox = this.columns().first(x => x.binding === "__IsChecked");
             if (!containsCheckbox && this.settings.showCheckboxes) {
-                this.columns.push(new column("__IsChecked", 38));
+                this.columns.push(new column("__IsChecked", ctor.selectColumnWidth));
             }
             if (this.settings.showIds !== false) {
                 this.columns.push(new column("Id", ctor.idColumnWidth));
@@ -279,7 +310,7 @@ class ctor {
 
                     // when we have few rows and we delete once of them there might be old rows that must be removed
                     this.recycleRows().filter((r, i) => i >= resultSet.items.length + firstVisibleIndex && r.isInUse()).map(r => r.isInUse(false));
-                    
+
                     // Because processing all columns can take time for many columns, we
                     // asynchronously load the column information in the next animation frame.
                     this.ensureColumnsAnimationFrameHandle = this.requestAnimationFrame(() => this.ensureColumnsForRows(resultSet.items), this.ensureColumnsAnimationFrameHandle);
@@ -317,7 +348,7 @@ class ctor {
             rowAtIndex.fillCells(rowData);
             var entityName = this.getEntityName(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromEntityNameMemoized(rowData, entityName));
-            
+
             var editUrl: string;
             if (rowData instanceof counterSummary) {
                 editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group Name"], rowData["Counter Name"]);
@@ -365,15 +396,15 @@ class ctor {
         var obj: any = rowData;
         if (obj && obj.getEntityName) {
             if (obj instanceof document) {
-                var documentObj = <document> obj;
+                var documentObj = <document>obj;
                 return documentObj.getEntityName();
             }
             if (obj instanceof counterSummary) {
-                var counterSummaryObj = <counterSummary> obj;
+                var counterSummaryObj = <counterSummary>obj;
                 return counterSummaryObj.getEntityName();
             }
             if (obj instanceof timeSeriesKey) {
-                var timeSeriesKeyObj = <timeSeriesKey> obj;
+                var timeSeriesKeyObj = <timeSeriesKey>obj;
                 return timeSeriesKeyObj.getEntityName();
             }
         }
@@ -446,7 +477,7 @@ class ctor {
 
         var existingColumns = this.columns();
         var desiredColumns = existingColumns.concat([]);
-       
+
         for (var i = 0; i < existingColumns.length; i++) {
             var colName = existingColumns[i].binding;
             delete columnsNeeded[colName];
@@ -470,28 +501,34 @@ class ctor {
             columnsCurrentTotalWidth += existingColumns[i].width();
         }
 
-        var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
+        var checkboxesWidth = this.settings.showCheckboxes ? ctor.selectColumnWidth : 0;
+        var availiableWidth = this.grid.width() - checkboxesWidth - ctor.idColumnWidth * idColumnExists - columnsCurrentTotalWidth - ctor.optionalScrollSize;
         var freeWidth = availiableWidth;
         var fontSize = parseInt(this.grid.css("font-size"), 10);
         var columnCount = 0;
         for (var binding in columnsNeeded) {
-            var curColWidth = (binding.length + 2) * fontSize;
-            if (freeWidth - curColWidth < 0) {
-                break;
+            if (columnsNeeded.hasOwnProperty(binding)) {
+                var curColWidth = (binding.length + 2) * fontSize;
+
+                if (!hasOverrides && freeWidth < curColWidth) {
+                    break;
+                }
+                freeWidth -= curColWidth;
+                columnCount++;
             }
-            freeWidth -= curColWidth;
-            columnCount++;
         }
-        var freeWidthPerColumn = (freeWidth / (columnCount + 1));
+        var freeWidthPerColumn = hasOverrides ? 0 : Math.floor((freeWidth / (columnCount + 1)));
 
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
             var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
             var columnWidth = this.getColumnWidth(binding, curColWidth);
+
             availiableWidth -= columnWidth;
-            if (availiableWidth <= 0) {
+            if (!hasOverrides && availiableWidth <= 0) {
                 break;
             }
+
             var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
@@ -602,7 +639,8 @@ class ctor {
         return undefined;
     }
 
-    toggleRowChecked(row: row, isShiftSelect = false) {
+    toggleRowChecked(row: row, eventFromCheckbox: boolean) {
+        var isShiftSelect = this.shiftPressed();
         if (this.settings.isAllAutoSelected()) {
             var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
             this.settings.selectedIndices(cachedIndeices);
@@ -613,9 +651,18 @@ class ctor {
 
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
-        var firstIndex = <number>this.settings.selectedIndices.first();
+        var firstIndex = this.settings.selectedIndices.first();
         var toggledIndices: Array<number> = isShiftSelect && this.settings.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
-        if (!isChecked) {
+
+        if (eventFromCheckbox) {
+            // since checkbox generates event after check we have to invert condition
+            isChecked = !isChecked;
+        }
+
+        if (isChecked) {
+            // Going from checked to unchecked.
+            this.settings.selectedIndices.removeAll(toggledIndices);
+        } else {
             // Going from unchecked to checked.
             if (this.settings.selectedIndices.indexOf(rowIndex) === -1) {
                 toggledIndices
@@ -623,9 +670,6 @@ class ctor {
                     .reverse()
                     .forEach(i => this.settings.selectedIndices.unshift(i));
             }
-        } else {
-            // Going from checked to unchecked.
-            this.settings.selectedIndices.removeAll(toggledIndices);
         }
 
         this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
@@ -720,13 +764,13 @@ class ctor {
         if (!this.items || this.settings.selectedIndices().length === 0) {
             return [];
         }
-        var sliced = max ? this.settings.selectedIndices.slice(0, max) : null;
-        var maxSelectedIndices = sliced || this.settings.selectedIndices();
+        var sliced = max ? <number[]>this.settings.selectedIndices.slice(0, max) : null;
+        var maxSelectedIndices = sliced || <number[]>this.settings.selectedIndices();
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
     refreshCollectionData() {
-        this.settings.itemsSource.valueHasMutated();
+        //this.settings.itemsSource.valueHasMutated();
         this.items.invalidateCache(); // Causes the cache of items to be discarded.
         this.onGridScrolled(); // Forces a re-fetch of the rows in view.
         this.onWindowHeightChanged();
@@ -782,7 +826,7 @@ class ctor {
 
     getColumnsNames() {
         var row = this.items.getAllCachedItems().first();
-        return row.getDocumentPropertyNames();
+        return row ? row.getDocumentPropertyNames() : [];
     }
 
     collectionExists(collectionName: string): boolean {
@@ -800,18 +844,18 @@ class ctor {
         var startingWidth = 0;
         var columnIndex = 0;
 
-        $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: JQueryMouseEventObject) => {
+        $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
             columnIndex = parseInt($(e.currentTarget).attr("column"));
             startingWidth = parseInt(this.columns()[columnIndex].width().toString());
             startX = e.pageX;
             resizingColumn = true;
         });
 
-        $(this.settings.gridSelector).on("mouseup.virtualTableColumnResize", "", () => {
+        $(this.settings.gridSelector).on("mouseup.virtualTableColumnResize", "", (e: any) => {
             resizingColumn = false;
         });
 
-        $(this.settings.gridSelector).on("mousemove.virtualTableColumnResize", "", (e: JQueryMouseEventObject) => {
+        $(this.settings.gridSelector).on("mousemove.virtualTableColumnResize", "", (e: any) => {
             if (resizingColumn) {
                 var targetColumnSize = startingWidth + e.pageX - startX;
                 this.columns()[columnIndex].width(targetColumnSize);

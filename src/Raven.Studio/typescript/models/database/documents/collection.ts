@@ -1,4 +1,5 @@
 import pagedList = require("common/pagedList");
+import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import getSystemDocumentsCommand = require("commands/database/documents/getSystemDocumentsCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getAllDocumentsCommand = require("commands/database/documents/getAllDocumentsCommand");
@@ -8,10 +9,11 @@ import cssGenerator = require("common/cssGenerator");
 
 class collection implements ICollectionBase {
     colorClass = ""; 
-    documentCount = ko.observable(0);
+    documentCount: any = ko.observable(0);
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
     isAllDocuments = false;
     isSystemDocuments = false;
+    bindings = ko.observable<string[]>();
 
     public collectionName : string;
     private documentsList: pagedList;
@@ -31,6 +33,10 @@ class collection implements ICollectionBase {
     // Called from the UI when a user clicks a collection the documents page.
     activate() {
         ko.postbox.publish("ActivateCollection", this);
+    }
+
+    prettyLabel(text: string) {
+        return text.replace(/__/g, '/');
     }
 
     getDocuments(): pagedList {

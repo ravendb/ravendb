@@ -28,7 +28,7 @@ class performSmugglingCommand extends commandBase {
             .done((result: operationStatusDto) => {
             this.updateMigrationStatus(result);
             if (result.Completed) {
-                if (result.Faulted) {
+                if (result.Faulted || result.Canceled) {
                     this.reportError("Failed to perform server migration!", result.State.Error);
                     parentPromise.reject();
                 } else {

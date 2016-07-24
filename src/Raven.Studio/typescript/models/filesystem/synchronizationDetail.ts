@@ -2,31 +2,28 @@
 
 class synchronizationDetail implements documentBase {
 
-    fileName = ko.observable<string>();
+    FileName = ko.observable<string>();
+    FileEtag = ko.observable<string>();
     DestinationUrl = ko.observable<string>();
-    Type = ko.observable<filesystemSynchronizationType>();
+    Type = ko.observable<synchronizationType>();
     TypeDescription = ko.observable<string>();
-    Status = ko.observable<string>();
+    Status = ko.observable<synchronizationActivity>();
     Direction = ko.observable<synchronizationDirection>();
+    AdditionalInfo = ko.observable<any>();
 
-    constructor(dto?: synchronizationUpdateNotification | filesystemSynchronizationDetailsDto, status?: string, type?: string, destinationUrl?: string) {
+    constructor(dto: synchronizationDetailsDto, direction: synchronizationDirection, status?: synchronizationActivity) {
 
-        this.fileName(dto.FileName);
-
-        this.DestinationUrl(destinationUrl);
-        if (type) {
-            this.Type(synchronizationDetail.getType(type));
-        }
-        else {
-            this.Type((<any>dto).Type);
-        }
+        this.FileName(dto.FileName);
+        this.FileEtag(dto.FileETag);
+        this.DestinationUrl(dto.DestinationUrl);
+        this.Type(synchronizationDetail.getType(dto.Type));
         this.TypeDescription(synchronizationDetail.getTypeDescription(this.Type()));
         this.Status(status);
-        this.Direction(dto.Direction);
+        this.Direction(direction);
     }
 
     getId() {
-        return this.fileName();
+        return this.FileName();
     }
 
     getUrl() {
@@ -34,33 +31,33 @@ class synchronizationDetail implements documentBase {
     }
 
     getDocumentPropertyNames(): Array<string> {
-        return ["Id", "DestinationUrl", "Type", "Status"];
+        return ["Id", "FileEtag", "DestinationUrl", "Type", "Status"];
     }
 
     static getType(typeAsString: string) {
         switch (typeAsString) {
             case "ContentUpdate":
-                return filesystemSynchronizationType.ContentUpdate;
+                return synchronizationType.ContentUpdate;
             case "Delete":
-                return filesystemSynchronizationType.Delete;
+                return synchronizationType.Delete;
             case "MetadataUpdate":
-                return filesystemSynchronizationType.MetadataUpdate;
+                return synchronizationType.MetadataUpdate;
             case "Rename":
-                return filesystemSynchronizationType.Rename;
+                return synchronizationType.Rename;
             default:
-                return filesystemSynchronizationType.Unknown;
+                return synchronizationType.Unknown;
         }
     }
 
-    static getTypeDescription(type: filesystemSynchronizationType) {
+    static getTypeDescription(type: synchronizationType) {
         switch (type) {
-            case filesystemSynchronizationType.ContentUpdate:
+            case synchronizationType.ContentUpdate:
                 return "Content Update";
-            case filesystemSynchronizationType.Delete:
+            case synchronizationType.Delete:
                 return "Delete";
-            case filesystemSynchronizationType.MetadataUpdate:
+            case synchronizationType.MetadataUpdate:
                 return "Metadata Update";
-            case filesystemSynchronizationType.Rename:
+            case synchronizationType.Rename:
                 return "Rename";
             default:
                 return "Unknown";

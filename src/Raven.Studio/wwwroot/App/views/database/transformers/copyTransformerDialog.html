@@ -7,10 +7,8 @@
     </div>
     <div class="modal-body">
         <h4>
-            <span data-bind="visible: isPaste">Paste a JSON string containing a transformer.</span>
-            <span data-bind="visible: !isPaste">
-                <strong>CTRL+C, Enter</strong> to copy
-            </span>
+            <strong data-bind="text: isPaste === true ? 'CTRL+V, Enter ': 'CTRL+C, Enter '"></strong>
+            <span data-bind="text: isPaste === true ? 'to save' : 'to copy'"></span>
         </h4>
         <div>
             <pre data-bind="aceEditor: { code: transformerJSON, lang: 'ace/mode/json', getFocus: true, selectAll: true, readOnly: !isPaste, bubbleEscKey: true }" style="width: 600px; height: 200px;"></pre>

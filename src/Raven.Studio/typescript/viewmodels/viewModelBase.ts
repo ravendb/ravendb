@@ -15,13 +15,16 @@ import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
-
 import downloader = require("common/downloader");
+import layoutSwitcher = require("viewmodels/layoutSwitcher");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
+
+    static layout = new layoutSwitcher();
+
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
@@ -51,6 +54,7 @@ class viewModelBase {
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
+        viewModelBase.layout.setMode(false);
     }
 
     /*
@@ -110,11 +114,14 @@ class viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
+        // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
+        var adminArea = this.appUrls.isAreaActive("admin");
+
         oauthContext.enterApiKeyTask.done(() => {
             // we have to wait for changes api to connect as well
             // as obtaining changes api connection might take a while, we have to spin until connection is read
             var createNotifySpinFunction = () => {
-                if (isShell || this.appUrls.isAreaActive("admin")())
+                if (isShell || adminArea())
                     return;
                 if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
                     this.notifications = this.createNotifications();
@@ -128,13 +135,13 @@ class viewModelBase {
         this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();
 
-        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
 
         ko.postbox.publish("SetRawJSONUrl", "");
         this.updateHelpLink(null); // clean link
     }
 
     attached() {
+        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
         this.isAttached = true;
         viewModelBase.showSplash(false);
     }
@@ -178,8 +185,14 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.activeTimeSeries.unsubscribeFrom("ActivateTimeSeries");
+        this.lastActivatedResource.unsubscribeFrom("ActivateDatabase");
+        this.lastActivatedResource.unsubscribeFrom("ActivateFilesystem");
+        this.lastActivatedResource.unsubscribeFrom("ActivateCounterStorage");
+        this.lastActivatedResource.unsubscribeFrom("ActivateTimeSeries");
+        this.currentHelpLink.unsubscribeFrom("currentHelpLink");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
+
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
 
         this.isAttached = true;
@@ -318,7 +331,7 @@ class viewModelBase {
     private beforeUnloadListener: EventListener = (e: any): any => {
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            const message = "You have unsaved data.";
+            var message = "You have unsaved data.";
             e = e || window.event;
 
             // For IE and Firefox

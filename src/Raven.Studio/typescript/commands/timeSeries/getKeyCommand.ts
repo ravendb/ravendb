@@ -8,7 +8,7 @@ class getKeyCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<timeSeriesKeySummaryDto> {
+    execute(): JQueryPromise<timeSeriesKey> {
         var doneTask = $.Deferred();
         var task = this.query("/key/" + this.type + "?key=" + this.key, null, this.ts);
         task.done((key: timeSeriesKeySummaryDto) => doneTask.resolve(key));

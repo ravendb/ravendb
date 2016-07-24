@@ -57,7 +57,7 @@ class index {
 
     constructor(dto: indexStatisticsDto) {
         this.createdTimestamp = dto.CreatedTimestamp;
-        this.docsCount = dto.DocsCount;
+        this.docsCount = 0; //TODO: dto.DocsCount;
         this.forEntityName = dto.ForEntityName;
         this.indexingAttempts = dto.IndexingAttempts;
         this.indexingErrors = dto.IndexingErrors;

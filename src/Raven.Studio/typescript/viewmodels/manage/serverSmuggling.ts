@@ -6,11 +6,14 @@ import performSmugglingCommand = require("commands/operations/performSmugglingCo
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import serverSmugglingLocalStorage = require("common/serverSmugglingLocalStorage");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class serverSmuggling extends viewModelBase {
     resources = ko.observableArray<serverSmugglingItem>([]);
     selectedResources = ko.observableArray<serverSmugglingItem>();
     targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     hasResources: KnockoutComputed<boolean>;
     noIncremental: KnockoutComputed<boolean>;
@@ -34,7 +37,7 @@ class serverSmuggling extends viewModelBase {
     constructor() {
         super();
 
-        var smi = shell.databases().map(d => new serverSmugglingItem(d));
+        var smi = shell.databases().filter(d => d.name !== "<system>").map(d => new serverSmugglingItem(d));
         this.resources(smi);
 
         this.hasResources = ko.computed(() => this.resources().count() > 0);
@@ -126,6 +129,12 @@ class serverSmuggling extends viewModelBase {
         this.restoreFromLocalStorage();
     }
 
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("MUJQ7G");
+    }
+
     restoreFromLocalStorage() {
         var savedValue = serverSmugglingLocalStorage.get();
         if (savedValue) {
@@ -200,14 +209,6 @@ class serverSmuggling extends viewModelBase {
         }
     }
 
-    toggleSelection(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            this.selectedResources.remove(item);
-        } else {
-            this.selectedResources.push(item);
-        }
-    }
-
     isSelected(item: serverSmugglingItem) {
         return this.selectedResources().indexOf(item) >= 0;
     }
@@ -225,7 +226,7 @@ class serverSmuggling extends viewModelBase {
         this.inProgress(true);
         this.resultsVisible(true);
 
-        new performSmugglingCommand(request, appUrl.getDatabase(), (status) => this.updateProgress(status))
+        new performSmugglingCommand(request, null, (status) => this.updateProgress(status))
             .execute()
             .always(() => this.inProgress(false));
     }
@@ -251,23 +252,6 @@ class serverSmuggling extends viewModelBase {
         this.showCurlRequest(!this.showCurlRequest());
     }
 
-    toggleIncremental(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            item.incremental(!item.incremental());
-        }
-    }
-
-    toggleStripReplicationInformation(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            item.stripReplicationInformation(!item.stripReplicationInformation());
-        }
-    }
-
-    toggleDisableVersioningBundle(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            item.shouldDisableVersioningBundle(!item.shouldDisableVersioningBundle());
-        }
-    }
 }
 
 export = serverSmuggling;  

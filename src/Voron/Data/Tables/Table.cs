@@ -533,6 +533,12 @@ namespace Voron.Data.Tables
             return SeekForwardFrom(index, Slice.From(_tx.Allocator, value, ByteStringType.Immutable), startsWith);
         }
 
+        public long GetNumberEntriesFor(TableSchema.FixedSizeSchemaIndexDef index)
+        {
+            var fst = GetFixedSizeTree(index);
+            return fst.NumberOfEntries;
+        }
+
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith = false)
         {
             var tree = GetTree(index);

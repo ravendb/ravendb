@@ -15,7 +15,7 @@ class getIdentitiesCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResultSet<statusDebugIdentitiesDto>> {
         
         var args = {
             start: this.skip,
@@ -36,7 +36,6 @@ class getIdentitiesCommand extends commandBase {
                         getDocumentPropertyNames: () => ["Key", "Value"]
                     }
                 });
-                console.log(items); //TODO: dlete me
                 var resultsSet = new pagedResultSet(items, identities.TotalCount);
                 identitiesTask.resolve(resultsSet);
             });

@@ -6,7 +6,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteCollection extends dialogViewModelBase {
 
-    public deletionTask = $.Deferred<void>();
+    public deletionTask = $.Deferred<operationIdDto>();
     private deletionStarted = false;
     isAllDocuments: boolean;
 

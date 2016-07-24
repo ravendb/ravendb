@@ -1,4 +1,3 @@
-
 import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
@@ -35,7 +34,7 @@ class trafficWatch extends viewModelBase {
     filterDuration = ko.observable<string>();
 
     enableTimingsTimer: number;
-    
+
     constructor() {
         super();
 
@@ -46,10 +45,10 @@ class trafficWatch extends viewModelBase {
             }
             return "";
         });
-        this.filter.throttle(250).subscribe(() => this.filterEntries());
-        this.filterDuration.throttle(250).subscribe(() => this.filterEntries());
 
         this.isForbidden(shell.isGlobalAdmin() === false);
+        this.filter.throttle(250).subscribe(() => this.filterEntries());
+        this.filterDuration.throttle(250).subscribe(() => this.filterEntries());
     }
 
     filterEntries() {
@@ -63,7 +62,7 @@ class trafficWatch extends viewModelBase {
     }
     
     activate(args) {
-        var widthUnit = 0.08;
+        var widthUnit = 0.075;
         this.columnWidths = [
             ko.observable<number>(100 * widthUnit),
             ko.observable<number>(100 * widthUnit),
@@ -164,7 +163,7 @@ class trafficWatch extends viewModelBase {
         var tokenDeferred = $.Deferred();
 
         if (!this.logConfig().SingleAuthToken) {
-            new getSingleAuthTokenCommand(this.logConfig().Resource, this.logConfig().WatchedResourceMode == "AdminView")
+            new getSingleAuthTokenCommand(this.logConfig().Resource, this.logConfig().WatchedResourceMode === "AdminView")
                 .execute()
                 .done((tokenObject: singleAuthToken) => {
                     this.logConfig().SingleAuthToken = tokenObject;
@@ -272,7 +271,7 @@ class trafficWatch extends viewModelBase {
 
         this.recentEntries.push(logObject);
 
-        if (this.keepDown() == true) {
+        if (this.keepDown()) {
             this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;
         }
 
@@ -297,7 +296,7 @@ class trafficWatch extends viewModelBase {
         this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 1000);
     }
 
-    createHumanReadableTime(time: string, chainHumanized: boolean= true, chainDateTime: boolean= true): KnockoutComputed<string> {
+    createHumanReadableTime(time: string, chainHumanized: boolean = true, chainDateTime: boolean= true): KnockoutComputed<string> {
         if (time) {
             return ko.computed(() => {
                 return this.parseHumanReadableTimeString(time, chainHumanized, chainDateTime);
@@ -312,9 +311,9 @@ class trafficWatch extends viewModelBase {
         var dateMoment = moment(time);
         var humanized = "", formattedDateTime = "";
         var agoInMs = dateMoment.diff(this.now());
-        if (chainHumanized == true)
+        if (chainHumanized)
             humanized = moment.duration(agoInMs).humanize(true);
-        if (chainDateTime == true)
+        if (chainDateTime)
             formattedDateTime = dateMoment.format(" (ddd MMM DD YYYY HH:mm:ss.SS[GMT]ZZ)");
         return humanized + formattedDateTime;
 }

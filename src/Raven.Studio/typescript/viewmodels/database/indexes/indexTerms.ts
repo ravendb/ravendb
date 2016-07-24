@@ -5,9 +5,11 @@ import appUrl = require("common/appUrl");
 
 class indexTerms extends viewModelBase {
 
-    fields = ko.observableArray<{ name: string; terms: KnockoutObservableArray<string>; }>();
+    fields = ko.observableArray<{ name: string; terms: KnockoutObservableArray<string>; hasMoreTerms: KnockoutObservable<boolean>; }>();
     appUrls: computedAppUrls;
     indexName: string;
+
+    termsPageLimit = 1024;
 
     constructor() {
         super();
@@ -29,7 +31,7 @@ class indexTerms extends viewModelBase {
 
     processIndex(indexContainer: indexDefinitionContainerDto) {
         var fields = indexContainer.Index.Fields.map(fieldName => {
-            return { name: fieldName, terms: ko.observableArray<string>() }
+            return { name: fieldName, terms: ko.observableArray<string>(), hasMoreTerms: ko.observable<boolean>(false) }
         });
         this.fields(fields);
 
@@ -37,7 +39,13 @@ class indexTerms extends viewModelBase {
             .forEach(field => {
                 new getIndexTermsCommand(indexContainer.Index.Name, field.name, this.activeDatabase())
                     .execute()
-                    .done(terms => field.terms(terms));
+                    .done((terms: string[]) => {
+                        if (terms.length >= this.termsPageLimit) {
+                            field.hasMoreTerms(true);
+                            terms = terms.slice(0, this.termsPageLimit - 1);
+                        }
+                        field.terms(terms);
+                    });
             });
     }
 }

@@ -33,6 +33,7 @@ interface JQuery {
     selectpicker(): void;
 
     multiselect(action?: string): void;
+    multiselect(options?: any): void;
 
     highlight(): void;
 
@@ -184,6 +185,7 @@ interface Array<T> {
 
 // String extensions
 interface String {
+    capitalizeFirstLetter: () => string;
     hashCode: () => number;
     replaceAll: (find, replace) => string;
     reverse: (input) => string;

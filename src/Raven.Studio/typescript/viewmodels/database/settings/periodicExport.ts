@@ -20,13 +20,20 @@ class periodicExport extends viewModelBase {
     hasGlobalValues = ko.observable<boolean>(false);
     isForbidden = ko.observable<boolean>(false);
     
+    showOnDiskExportRow: KnockoutComputed<boolean>;
 
     constructor() {
         super();
         this.activeDatabase.subscribe((db: database) => this.isForbidden(!db.isAdminCurrentTenant()));
+        this.showOnDiskExportRow = ko.computed(() => {
+            var localSetting = this.backupSetup() && this.backupSetup().onDiskExportEnabled();
+            var globalSetting = this.hasGlobalValues() && this.globalBackupSetup().onDiskExportEnabled();
+            return localSetting || globalSetting;
+        });
     }
 
     attached() {
+        super.attached();
         var content = "Could not decrypt the access settings, if you are running on IIS, make sure that load user profile is set to true. " +
             "Alternatively this can happen when the server was started using different account than when the settings were created.<br />" +
             "Reenter your settings and click save.";

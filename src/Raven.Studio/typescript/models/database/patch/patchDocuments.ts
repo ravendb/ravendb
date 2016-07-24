@@ -1,5 +1,3 @@
-/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import patchParam = require("models/database/patch/patchParam");
 
 class patchDocuments {

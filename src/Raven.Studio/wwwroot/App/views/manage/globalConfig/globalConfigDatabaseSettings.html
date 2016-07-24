@@ -1,0 +1,79 @@
+<section>
+    <div data-bind="visible: $root.settingsAccess.isForbidden()" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <form class="versioning-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root), if: !$root.settingsAccess.isForbidden()">
+        <div class="panel panel-default" data-bind="visible: !$root.canUseGlobalConfigurations()">
+            <div class="panel-body">
+                <div class="text-center">
+                    <h3 class="text-info">
+                        Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default" data-bind="visible: $root.canUseGlobalConfigurations()">
+            <div class="panel-heading">
+                <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: isSaveEnabled, visible: activated()" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated() && $root.clusterMode(), disable: $root.settingsAccess.isReadOnly()">
+                    <i class="fa fa-plus"></i> Create global configuration for cluster-wide database settings
+                </button>
+                <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated(), disable: $root.settingsAccess.isReadOnly()">
+                    <i class="fa fa-trash"></i> Remove global configuration for cluster-wide database settings
+                </button>
+                <div class="pull-right text-height-fix text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
+                <div class="clearfix"></div>
+            </div>
+            <div class="panel-body">
+                <div class="text-center" data-bind="visible: !activated() && $root.clusterMode()">
+                    <h3 class="text-info">Global configuration for cluster-wide database settings is not currently defined.</h3>
+                </div>
+                <div class="text-center" data-bind="visible: !$root.clusterMode()">
+                    <h3 class="text-info">
+                        This feature is available only in cluster mode. <small data-bind="visible: !$root.settingsAccess.isReadOnly()">Go ahead and <a href="#" data-bind="click: navigateToCreateCluster">create cluster</a>.</small>
+                    </h3>
+                </div>
+                <div data-bind="if: activated()">
+                    
+                    <div class="alert alert-warning">
+                        <i class="fa fa-exclamation-triangle"></i> Please remember to restart RavenDB server or reload database to apply cluster-aware database settings. 
+                    </div>
+
+                    <table class="table table-striped" style="width: 600px">
+                        <thead>
+                            <tr>
+                                <th class="col-sm-4">Configuration Key</th>
+                                <th class="col-sm-4">Value</th>
+                                <th class="col-sm-1">&nbsp;</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: databaseSettings">
+                            <tr>
+                                <td>
+                                    <input required type="text" class="form-control" data-bind="value: key" />
+                                </td>
+                                <td>
+                                    <input required type="text" class="form-control" data-bind="value: value" />
+                                </td>
+                                <td>
+                                    <button type="button" class="close" aria-hidden="true">
+                                        <i class="fa fa-times" data-bind="click: $parent.removeSetting.bind($parent, $data)" title="Remove this setting"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-default btn-block" data-bind="click: addNewSetting" title="Add new setting">
+                                        <i class="fa fa-plus"></i> Add new setting
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

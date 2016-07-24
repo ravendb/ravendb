@@ -21,6 +21,7 @@ class settings extends viewModelBase {
         var databaseSettingsRoute = { route: ['databases/settings', 'databases/settings/databaseSettings'], moduleId: 'viewmodels/database/settings/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
         var quotasRoute = { route: 'databases/settings/quotas', moduleId: 'viewmodels/database/settings/quotas', title: 'Quotas', nav: true, hash: appUrl.forCurrentDatabase().quotas };
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/database/settings/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
+        var etlRoute = { route: 'databases/settings/etl', moduleId: 'viewmodels/database/settings/etl', title: 'ETL', nav: true, hash: appUrl.forCurrentDatabase().etl };
         var sqlReplicationsRoute = { route: 'databases/settings/sqlReplication', moduleId: 'viewmodels/database/settings/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
         var editsqlReplicationsRoute = { route: 'databases/settings/editSqlReplication(/:sqlReplicationName)', moduleId: 'viewmodels/database/settings/editSqlReplication', title: 'Edit SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().editSqlReplication };
         var sqlReplicationsConnectionsRoute = { route: 'databases/settings/sqlReplicationConnectionStringsManagement', moduleId: 'viewmodels/database/settings/sqlReplicationConnectionStringsManagement', title: 'SQL Replication Connection Strings', nav: true, hash: appUrl.forCurrentDatabase().sqlReplicationsConnections};
@@ -34,6 +35,7 @@ class settings extends viewModelBase {
                 databaseSettingsRoute,
                 quotasRoute,
                 replicationsRoute,
+                etlRoute,
                 sqlReplicationsRoute,
                 sqlReplicationsConnectionsRoute,
                 editsqlReplicationsRoute,
@@ -91,15 +93,19 @@ class settings extends viewModelBase {
 
         this.userDatabasePages(["Database Settings", "Custom Functions", "Studio Config"]);
         var db: database = this.activeDatabase();
-        var bundleMap = this.bundleMap;
-        for (var bundle in bundleMap) {
-            if (bundleMap.hasOwnProperty(bundle)) {
-                var bundleName = bundleMap[bundle.toLowerCase()];
-                if (bundleName != undefined) {
-                    this.userDatabasePages.push(bundleName);
-                }
+        var bundles: string[] = db.activeBundles();
+
+        bundles.forEach((bundle: string) => {
+            var bundleName = this.bundleMap[bundle.toLowerCase()];
+            if (bundleName != undefined) {
+                this.userDatabasePages.push(bundleName);
             }
-        }
+        });
+
+        // RavenDB-3640 Allow to enable replication to existing db in studio
+        // even if replication isn't enabled we display button to enable it
+        this.userDatabasePages.push("Replication");
+        this.userDatabasePages.push("ETL");
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {

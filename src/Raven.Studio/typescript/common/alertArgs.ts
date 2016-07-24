@@ -1,4 +1,5 @@
 /// <reference path="../../typings/tsd.d.ts" />
+
 import alertType = require("common/alertType");
 
 class alertArgs {

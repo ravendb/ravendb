@@ -7,40 +7,37 @@ class SubscriptionsTask extends viewModelBase {
 
     data = ko.observableArray<Subscription>();
 
-    constructor() {
-            super();
-       }
-
     activate(args) {
-            super.activate(args);
-            this.activeDatabase.subscribe(() => this.fetchSubscriptions());
-            return this.fetchSubscriptions();
-        }
+        super.activate(args);
 
-    fetchSubscriptions(): JQueryPromise < Array < Subscription >> {
+        this.updateHelpLink("23PHKW");
+        this.activeDatabase.subscribe(() => this.fetchSubscriptions());
+        return this.fetchSubscriptions();
+    }
+
+    fetchSubscriptions(): JQueryPromise<Array<Subscription>> {
         var db = this.activeDatabase();
         if (db) {
-                return new getSubscriptionCommand(db)
-                        .execute()
-                        .done((results: Array<Subscription>) => this.data(results));
-            }
+            return new getSubscriptionCommand(db)
+                .execute()
+                .done((results: Array<Subscription>) => this.data(results));
+        }
         return null;
     }
 
     setSubscriptionEtag(subscription: Subscription) {
-            var db = this.activeDatabase();
-    
-            if (db) {
-                    subscription.isChangeInProgress(true);
-                    var newAckEtag = subscription.newAckEtag();
-                    return new setSubscriptionCommand(db, subscription.subscriptionId, newAckEtag)
-                            .execute()
-                            .done(() => subscription.ackEtag(newAckEtag))
-                            .fail(() => { })
-                            .always(() => subscription.isChangeInProgress(false));
-                }
-            return null;
+        var db = this.activeDatabase();
+        
+        if (db) {
+            subscription.isChangeInProgress(true);
+            var newAckEtag = subscription.newAckEtag();
+            return new setSubscriptionCommand(db, subscription.subscriptionId, newAckEtag)
+                .execute()
+                .done(() => subscription.ackEtag(newAckEtag))
+                .always(() => subscription.isChangeInProgress(false));
         }
+        return null;
+    }
 
 }
 

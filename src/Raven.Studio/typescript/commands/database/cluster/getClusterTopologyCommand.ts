@@ -13,7 +13,20 @@ class getClusterTopologyCommand extends commandBase {
     }
 
     execute(): JQueryPromise<topology> {
-        return this.query("/cluster/topology", null, this.ownerDb, x => new topology(x));
+        var task = $.Deferred<topology>();
+        this.query("/cluster/topology", null, this.ownerDb, x => new topology(x))
+            .done((result: topology) => {
+                task.resolve(result);
+            })
+            .fail((result :JQueryXHR) => {
+                if (result.status === 200 && !result.responseText) {
+                    task.resolve(null);
+                } else {
+                    task.reject(result);
+                }
+            });
+
+        return task;
 
     }
 }

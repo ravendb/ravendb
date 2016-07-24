@@ -33,6 +33,8 @@ class synchronizationDestinations extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+
+        this.updateHelpLink("KW8LAF");
        
         if (!this.subscription) {
             this.subscription = changesContext.currentResourceChangesApi()
@@ -70,7 +72,7 @@ class synchronizationDestinations extends viewModelBase {
             if (fs) {
                 new getFileSystemStatsCommand(fs)
                     .execute()
-                    .done(result => this.prepareAndSaveReplicationSetup(/*result.DatabaseId*/ null));
+                    .done(result => this.prepareAndSaveReplicationSetup(null /* TODO */));
             }
         }
     }
@@ -88,13 +90,15 @@ class synchronizationDestinations extends viewModelBase {
             new saveDestinationCommand(this.replicationsSetup().toDto(), fs)
                 .execute()
                 .done(() => {
-                    this.dirtyFlag().reset();
+                    console.log("Reseted dirty flag");
+                    this.dirtyFlag().reset()
                 }).always(() => this.saveIssued = false);;
         }
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(synchronizationDestination.empty());
+        var fs = this.activeFilesystem();
+        this.replicationsSetup().destinations.unshift(synchronizationDestination.empty(fs.name));
     }
 
     removeDestination(repl: synchronizationDestination) {

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Raven.Client.Document;
 using Raven.Client.Smuggler;
+using Raven.SlowTests.Issues;
 
 namespace Tryouts
 {
@@ -9,15 +10,9 @@ namespace Tryouts
     {
         private static void Main(string[] args)
         {
-            using (var store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = "FreeDB" })
+            using (var t = new RavenDB_2812())
             {
-                store.Initialize();
-                var sw = new Stopwatch();
-                sw.Start();
-                var task = store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"c:\dumps\freedb.raven.dump");
-                task.Wait();
-                sw.Stop();
-                Console.WriteLine(sw.ElapsedMilliseconds);
+                t.ShouldProperlyPageResults();
             }
         }
     }

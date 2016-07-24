@@ -17,6 +17,7 @@ class selectColumns extends dialogViewModelBase {
     nextTaskStarted = false;
     private form: JQuery;
     private activeInput: JQuery;
+    private lastActiveInput: JQuery;
     private autoCompleteBase = ko.observableArray<KnockoutObservable<string>>([]);
     private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
@@ -178,15 +179,6 @@ class selectColumns extends dialogViewModelBase {
         }
     }
 
-    private alignBoxVertically() {
-        var messageBoxHeight = parseInt($(".messageBox").css('height'), 10);
-        var windowHeight = $(window).height();
-        var messageBoxMarginTop = parseInt($(".messageBox").css('margin-top'), 10);
-        var newTopPercent = Math.floor(((windowHeight - messageBoxHeight) / 2 - messageBoxMarginTop) / windowHeight * 100);
-        var newTopPercentString = newTopPercent.toString() + '%';
-        $(".modalHost").css('top', newTopPercentString);
-    }
-
     saveAsDefault() {
         if ((<any>this.form[0]).checkValidity() === true) {
             if (this.customColumns.customMode()) {
@@ -243,6 +235,10 @@ class selectColumns extends dialogViewModelBase {
         this.activeInput = $("[id ^= 'binding-']:focus");
         if (this.activeInput.length > 0) {
             this.autoCompleterSupport.searchForCompletions(this.activeInput);
+            this.lastActiveInput = this.activeInput;
+        }
+        else if (!!this.lastActiveInput) {
+            this.autoCompleterSupport.searchForCompletions(this.lastActiveInput);
         }
     }
 

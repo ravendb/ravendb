@@ -22,8 +22,8 @@ class createResource extends dialogViewModelBase {
     createTimeSeriesPart: createTimeSeries;
 
     resourceTypes = ko.observableArray([
-        { resourceType: this.databaseType, title: "Database", iconName: "fa fa-database fa-2x", experimental: false },
-        { resourceType: this.fileSystemType, title: "File System", iconName: "fa fa-file-image-o fa-2x", experimental: false },
+        { resourceType: this.databaseType, title: "Database", iconName: "fa fa-database fa-2x" },
+        { resourceType: this.fileSystemType, title: "File System", iconName: "fa fa-file-image-o fa-2x" },
         { resourceType: this.counterStorageType, title: "Counter Storage", iconName: "fa fa-sort-numeric-desc fa-2x", experimental: false },
         { resourceType: this.timeSeriesType, title: "Time Series", iconName: "fa fa-clock-o fa-2x", experimental: false }
     ]);
@@ -31,12 +31,6 @@ class createResource extends dialogViewModelBase {
 
     constructor() {
         super();
-
-        if (!shell.has40Features()) {
-            this.resourceTypes().first(r => r.resourceType === this.counterStorageType).experimental = true;
-            this.resourceTypes().first(r => r.resourceType === this.timeSeriesType).experimental = true;
-        }
-
 
         this.createDatabasePart = new createDatabase(this);
         this.createFileSystemPart = new createFileSystem(this);

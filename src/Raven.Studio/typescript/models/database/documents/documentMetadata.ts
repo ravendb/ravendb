@@ -22,6 +22,18 @@ class documentMetadata {
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
             this.lastModified = dto['Last-Modified'];
+
+            this.lastModifiedFullDate = ko.computed(() => {
+                if (!!this.lastModified) {
+                    var lastModifiedMoment = moment(this.lastModified);
+                    var timeSince = lastModifiedMoment.from(this.now());
+                    var fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
+                    return timeSince + " (" + fullTimeSinceUtc + ")";
+                }
+                return "";
+            });
+            setInterval(() => this.now(new Date()), 60*1000);
+
             this.ravenLastModified = dto['Raven-Last-Modified'];
             this.etag = dto['@etag'];
 
@@ -40,17 +52,6 @@ class documentMetadata {
                     this.nonStandardProps.push(property);
                 }
             }
-
-            this.lastModifiedFullDate = ko.computed(() => {
-                if (!!this.ravenLastModified) {
-                    var lastModifiedMoment = moment(this.ravenLastModified);
-                    var timeSince = lastModifiedMoment.from(this.now());
-                    var fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
-                    return timeSince + " (" + fullTimeSinceUtc + ")";
-                }
-                return "";
-            });
-            setInterval(() => this.now(new Date()), 60 * 1000);
         }
     }
 
@@ -86,8 +87,7 @@ class documentMetadata {
             "X-AspNet-Version", "X-Requested-With", "X-SourceFiles", "Accept-Charset", "Accept-Encoding", "Accept", "Accept-Language", "Authorization", "Cookie", "Expect",
             "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
             "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
-            "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL", "Size-In-Kb"];
-            */
+            "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL", "Size-In-Kb"];*/
         var metaPropsToRemove = ["@id", "@etag", "Raven-Last-Modified"];
 
         for (var property in metaDto) {

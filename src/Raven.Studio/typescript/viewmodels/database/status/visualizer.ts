@@ -20,11 +20,13 @@ import queryIndexDebugReduceCommand = require("commands/database/debug/queryInde
 import queryIndexDebugAfterReduceCommand = require("commands/database/debug/queryIndexDebugAfterReduceCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 
-import d3 = require("d3");
+import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
+
+import d3 = require('d3');
 import nv = require('nvd3');
 
 class visualizer extends viewModelBase {
-/* TODO
+    /*
     static chooseIndexText = "Select an index";
     indexes = ko.observableArray<indexDataDto>();
     indexName = ko.observable(visualizer.chooseIndexText);
@@ -33,10 +35,14 @@ class visualizer extends viewModelBase {
     showLoadingIndicator = ko.observable(false);
 
     docKey = ko.observable("");
+    hasFocusDocKey = ko.observable<boolean>(false);
+    loadingDocKeySearchResults = ko.observable<boolean>(false);
     docKeys = ko.observableArray<string>();
     docKeysSearchResults = ko.observableArray<string>();
 
     reduceKey = ko.observable("");
+    hasFocusReduceKey = ko.observable<boolean>(false);
+    loadingReduceKeySearchResults = ko.observable<boolean>(false);
     reduceKeys = ko.observableArray<string>();
     reduceKeysSearchResults = ko.observableArray<string>();
 
@@ -52,7 +58,7 @@ class visualizer extends viewModelBase {
     currentlySelectedLinks = d3.set([]);
 
     tree: visualizerDataObjectNodeDto = null;
-    xScale: d3.scale.Linear;
+    xScale: D3.Scale.LinearScale;
 
     editIndexUrl: KnockoutComputed<string>;
     runQueryUrl: KnockoutComputed<string>;
@@ -72,8 +78,8 @@ class visualizer extends viewModelBase {
     boxWidth: number;
     boxSpacing = 30;
 
-    node: d3.Selection = null; // nodes selection
-    link: d3.Selection = null; // links selection
+    node: D3.Selection = null; // nodes selection
+    link: D3.Selection = null; // links selection
 
     hasSaveAsPngSupport = ko.computed(() => {
         return !(navigator && navigator.msSaveBlob);
@@ -95,9 +101,23 @@ class visualizer extends viewModelBase {
         this.runQueryUrl = ko.computed(() => {
             return appUrl.forQuery(this.activeDatabase(), this.indexName());
         });
-        this.reduceKey.throttle(250).subscribe(search => this.fetchReduceKeySearchResults(search));
-        this.docKey.throttle(250).subscribe(search => this.fetchDocKeySearchResults(search));
 
+        this.hasFocusDocKey.subscribe(value => {
+            if (value === false) {
+                return;
+            }
+            this.fetchDocKeySearchResults("");
+        });
+        this.docKey.throttle(100).subscribe(search => this.fetchDocKeySearchResults(search));
+
+        this.hasFocusReduceKey.subscribe(value => {
+            if (value === false) {
+                return;
+            }
+            this.fetchReduceKeySearchResults("");
+        });
+        this.reduceKey.throttle(100).subscribe(search => this.fetchReduceKeySearchResults(search));
+        
         this.selectedDocs.subscribe(() => this.repaintSelectedNodes());
 
         $(document).bind("fullscreenchange", function () {
@@ -130,6 +150,13 @@ class visualizer extends viewModelBase {
         this.drawHeader();
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+        this.hasIndexSelected.subscribe(() => {
+            dynamicHeightBindingHandler.forceUpdate();
+        });
+    }
+
     resetChart() {
         this.tooltipClose();
         this.reduceKey("");
@@ -147,32 +174,30 @@ class visualizer extends viewModelBase {
         this.currentlySelectedLinks = d3.set([]);
     }
 
-    fetchReduceKeySearchResults(query: string) {
-        if (query.length >= 2) {
-            new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: query }, 0, 10)
-                .execute()
-                .done((results: string[]) => {
-                    if (this.reduceKey() === query) {
-                        this.reduceKeysSearchResults(results.sort());
-                    }
-                });
-        } else if (query.length == 0) {
-            this.reduceKeysSearchResults.removeAll();
-        }
+    fetchDocKeySearchResults(query: string) {
+        this.loadingDocKeySearchResults(true);
+
+        new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), query, 0, 10)
+            .execute()
+            .done((results: string[]) => {
+                if (this.docKey() === query) {
+                    this.docKeysSearchResults(results.sort());
+                }
+            })
+            .always(() => this.loadingDocKeySearchResults(false));
     }
 
-    fetchDocKeySearchResults(query: string) {
-        if (query.length >= 2) {
-            new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), query, 0, 10)
-                .execute()
-                .done((results: string[]) => {
-                    if (this.docKey() === query) {
-                        this.docKeysSearchResults(results.sort());
-                    }
-                });
-        } else if (query.length == 0) {
-            this.docKeysSearchResults.removeAll();
-        }
+    fetchReduceKeySearchResults(query: string) {
+        this.loadingReduceKeySearchResults(true);
+
+        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: query }, 0, 10)
+            .execute()
+            .done((results: string[]) => {
+                if (this.reduceKey() === query) {
+                    this.reduceKeysSearchResults(results.sort());
+                }
+            })
+            .always(() => this.loadingReduceKeySearchResults(false));
     }
 
     updateScale() {
@@ -211,7 +236,7 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
-        if (key && this.docKeys.contains(key))
+        if (!key || this.docKeys.contains(key))
             return;
 
         this.showLoadingIndicator(true);
@@ -241,7 +266,7 @@ class visualizer extends viewModelBase {
 
     addReduceKey(key: string, needToChangeLoadingIndicator = true): JQueryPromise<any[]> {
         var deferred = $.Deferred();
-        if (key && this.reduceKeys().contains(key))
+        if (!key || this.reduceKeys().contains(key))
             return deferred.resolve();
 
         if (needToChangeLoadingIndicator)
@@ -434,7 +459,7 @@ class visualizer extends viewModelBase {
             .attr("id", visualizer.makeLinkId)
             .attr("d", this.diagonal);
 
-        var enteringNodes = (<d3.selection.Update>this.node)
+        var enteringNodes = (<D3.UpdateSelection>this.node)
             .enter()
             .append("g")
             .attr("id", visualizer.makeNodeId)
@@ -601,14 +626,16 @@ class visualizer extends viewModelBase {
         nv.tooltip.cleanup();
     }
 
-    selectReduceKey(value: string) {
-        this.addReduceKey(value);
-        this.reduceKey("");
-    }
-
     selectDocKey(value: string) {
         this.addDocKey(value);
         this.docKey("");
+        this.docKeysSearchResults.removeAll();
+    }
+
+    selectReduceKey(value: string) {
+        this.addReduceKey(value);
+        this.reduceKey("");
+        this.reduceKeysSearchResults.removeAll();
     }
 
     transiviteClosure() {
@@ -784,7 +811,8 @@ class visualizer extends viewModelBase {
     }
 
 
-    static visualizationCss = '* { box-sizing: border-box; }\n' +
+    static visualizationCss = 'svg { background-color: white; }\n' +
+        '* { box-sizing: border-box; }\n' +
     '.hidden { display: none !important; visibility: hidden !important; }\n' +
     'svg text { font-style: normal; font-variant: normal; font-weight: normal; font-size: 12px; line-height: normal; font-family: Arial; }\n' +
     '.nodeRect { stroke: rgb(119, 119, 119); stroke-width: 1.5px; fill-opacity: 0.4 !important; }\n' +
@@ -794,7 +822,7 @@ class visualizer extends viewModelBase {
     '.link { fill: none; stroke: rgb(204, 204, 204); stroke-width: 1.5px; }\n' +
     'text { pointer-events: none; text-anchor: middle; }\n' +
     '.link.selected { fill: none; stroke: black; stroke-width: 2.5px; } \n';
-*/
+    */
 }
 
 export = visualizer;

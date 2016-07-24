@@ -116,16 +116,19 @@
     </ul>
     <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
         <input id="goToDocInput" title="Search for a document (Alt+G)" accesskey="G"
-               type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown', disable: isActiveDatabaseDisabled" autocomplete="off"/>
+               type="text" class="form-control" placeholder="Go to document" data-bind="textInput: goToDocumentSearch, disable: isActiveDatabaseDisabled" autocomplete="off"/>
         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
             <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
                 <a role="menuitem" tabindex="-1" href="#">
                     <span class="collection-color-strip" data-bind="css: $root.getDocCssClass($data)"></span>
-                    <span data-bind="text: $data['@metadata']['@id']"></span>
+                    <span class="text" data-bind="text: $data['@metadata']['@id']"></span>
                 </a>
             </li>
         </ul>
     </form>
+    
+    <span class="new_layout" style="float: left">New layout mode</span>
+    <span class="old_layout" style="float: left">Old layout mode</span>
 </div>
 
 
@@ -342,8 +345,19 @@
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
                 <!-- ko with: $root -->
                 <li data-bind="visible: isInCluster()"><a class="navbar-link" href="#" data-bind="click: navigateToClusterSettings" title="This server is part of cluster"><span class="text-danger"><i class="fa fa-cubes"></i> Cluster</span></a></li>
-                <li class="licensing-status" data-bind="with: localLicenseStatus">
-                    <a class="navbar-link" href="#" data-bind="css: { 'license-error': Error }, text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a>
+                <li>
+                    <div class="btn-group" role="group">
+                        <button type="button" data-bind="attr: { class: 'btn btn-default ' + licenseStatus() }, click: $root.showLicenseStatusDialog.bind($root)">
+                            <div class="roundborder">
+                                <i class="fa fa-file-text-o"></i>
+                            </div>
+                        </button>
+                        <button type="button" data-bind="attr: { class: 'btn btn-default ' + supportStatus() }, click: $root.showLicenseStatusDialog.bind($root)">
+                            <div class="roundborder ">
+                                <i class="fa fa-comments-o"></i>
+                            </div>
+                        </button>
+                    </div>
                 </li>
                 <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
                 <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>

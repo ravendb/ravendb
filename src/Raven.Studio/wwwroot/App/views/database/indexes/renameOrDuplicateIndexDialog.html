@@ -1,0 +1,19 @@
+<div class="messageBox" tabindex="-1" style="width: 700px">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+            <i class="fa fa-times"></i>
+        </button>
+        <h4 class="modal-title">Choose an action:</h4>
+    </div>
+    <div class="modal-body">
+        <p>It appears that you changed index name. Choose what to do:</p>
+        
+        <p><strong>Rename</strong> index <span data-bind="text: originalName"></span> to <span data-bind="text: newName"></span></p>
+        <p><strong>Create new</strong> index: <span data-bind="text: newName"></span></p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
+        <button type="submit" class="btn btn-primary" data-bind="click: rename">Rename</button>
+        <button type="submit" class="btn btn-primary" data-bind="click: createNew">Create new</button>
+    </div>
+</div>

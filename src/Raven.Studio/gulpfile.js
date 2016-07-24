@@ -22,6 +22,15 @@ var paths = {
         './wwwroot/Content/dynatree.custom.less'],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
+
+
+    oldLessSource: [
+        './wwwroot/Content_old/old_app.less',
+        './wwwroot/Content_old/old_bootstrap.less',
+        './wwwroot/Content_old/dynatree.custom.less'],
+    oldLessTarget: './wwwroot/Content_old/',
+    oldLessTargetSelector: './wwwroot/Content_old/**/*.css',
+
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
     cssToMerge: [
@@ -94,6 +103,17 @@ var newestFileFinder = function (targetGlob) {
     }
 }
 
+gulp.task('old-less', function () {
+    return gulp.src(paths.oldLessSource)
+        .pipe(plugins.newy(newestFileFinder(paths.oldLessTargetSelector)))
+        .pipe(plugins.sourcemaps.init())
+        .pipe(plugins.less({
+            sourceMap: true
+        }))
+        .pipe(plugins.sourcemaps.write("."))
+        .pipe(gulp.dest(paths.oldLessTarget));
+});
+
 gulp.task('less', function() {
     return gulp.src(paths.lessSource)
         .pipe(plugins.newy(newestFileFinder(paths.lessTargetSelector)))
@@ -126,7 +146,7 @@ gulp.task('bower', function () {
     return plugins.bower();
 });
 
-gulp.task('compile', ['less', 'ts-compile'], function() {
+gulp.task('compile', ['less', 'old-less', 'ts-compile'], function() {
     // await dependent tasks
 });
 

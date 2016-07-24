@@ -1,5 +1,6 @@
 
 <ul class="breadcrumb">
+    <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>    
     <li>
         <h3>
             <a href="#resources">
@@ -17,7 +18,7 @@
 
 <div class="filesystems-page">
 
-    <div class="panel panel-default">
+    <div class="panel panel-default panel-wo-margin">
         <div class="panel-heading">
             <form class="form-inline">
                 <div class="row" style="padding: 0 10px 0 10px">
@@ -36,8 +37,9 @@
                 </div>
             </form>
             <br />
-            <h5>Add search filter</h5>
-            <div class="row" style="padding: 0 10px 0 10px">
+            <h5 class="pull-left">Add search filter: </h5>
+            <button class="btn btn-danger pull-right" data-bind="click: resetIndex" title="Reset index"><i class="fa fa-undo"></i> Reset index</button>
+            <div class="pull-left" style="padding: 0 10px 0 10px">
                 <div class="btn-group">
                     <button id="fileNameStartsWith" type="button" class="btn btn-default" data-bind="click: fileNameStartsWith">File name starts with...</button>
                     <button id="fileNameEndsWith" type="button" class="btn btn-default" data-bind="click: fileNameEndsWith">File name ends with...</button>
@@ -46,11 +48,13 @@
                     <button id="inFolder" type="button" class="btn btn-default" data-bind="click: inFolder">In folder...</button>
                     <button id="lastModifiedBetween" type="button" class="btn btn-default" data-bind="click: lastModifiedBetween">Last modified...</button>
                 </div>
+                
             </div>
+            <div class="clearfix"></div>
         </div>
 
         <div class="panel-body" style="position: relative">
-            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
+            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', useContextMenu: false, selectionEnabled: false, container: '.filesystems-page'}"></div>
         </div>
 
     </div>

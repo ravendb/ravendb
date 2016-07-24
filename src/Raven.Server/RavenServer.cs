@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -12,6 +13,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -37,7 +39,7 @@ namespace Raven.Server
         public readonly ServerStore ServerStore;
 
         private IWebHost _webHost;
-        private Task<TcpListener> _tcpListenerTask;
+        private Task<List<TcpListener>> _tcpListenerTask;
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool = new UnmanagedBuffersPool("TcpConnectionPool");
         private readonly Logger _tcpLogger;
         public LoggerSetup LoggerSetup { get; }
@@ -58,10 +60,10 @@ namespace Raven.Server
             _tcpLogger = LoggerSetup.GetLogger<RavenServer>("<TcpServer>");
         }
 
-        public async Task<IPEndPoint> GetTcpServerPortAsync()
+        public async Task<int> GetTcpServerPortAsync()
         {
-            var tcpListener = await _tcpListenerTask;
-            return ((IPEndPoint)tcpListener.LocalEndpoint);
+            var tcpListeners = await _tcpListenerTask;
+            return ((IPEndPoint)tcpListeners[0].LocalEndpoint).Port;
         }
 
 
@@ -136,35 +138,37 @@ namespace Raven.Server
                 throw;
             }
         }
-
-        private async Task<TcpListener> StartTcpListener()
+        
+        private async Task<List<TcpListener>> StartTcpListener()
         {
-            if (_tcpLogger.IsInfoEnabled)
-            {
-                Log.Info($"Tcp Server will listen on {Configuration.Core.TcpServerUrl}");
-            }
-
-            var uri = new Uri(Configuration.Core.TcpServerUrl);
-
-            var ipAddress = await GetTcpListenAddress(uri);
-
-            var port = uri.IsDefaultPort ? 9090 : uri.Port;
-            if (Log.IsDebugEnabled)
-            {
-                Log.Info($"Tcp Server will bind to {ipAddress} at {port}");
-            }
+            var listeners = new List<TcpListener>();
             try
             {
-                var listener = new TcpListener(ipAddress, port);
-                listener.Start();
-                for (int i = 0; i < 4; i++)
+                var uri = new Uri(Configuration.Core.TcpServerUrl);
+                var port = uri.IsDefaultPort ? 9090 : uri.Port;
+                foreach (var ipAddress in await GetTcpListenAddresses(uri))
                 {
-                    ListenToNewTcpConnection();
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
+                    }
+
+                    var listener = new TcpListener(ipAddress, port);
+                    listeners.Add(listener);
+                    listener.Start();
+                    for (int i = 0; i < 4; i++)
+                    {
+                        ListenToNewTcpConnection(listener);
+                    }
                 }
-                return listener;
+                return listeners;
             }
             catch (Exception e)
             {
+                foreach (var tcpListener in listeners)
+                {
+                    tcpListener.Stop();
+                }
                 if (_tcpLogger.IsOperationsEnabled)
                 {
                     _tcpLogger.Operations(
@@ -174,20 +178,21 @@ namespace Raven.Server
             }
         }
 
-        private async Task<IPAddress> GetTcpListenAddress(Uri uri)
+
+        private async Task<IPAddress[]> GetTcpListenAddresses(Uri uri)
         {
             IPAddress ipAddress;
 
             if (IPAddress.TryParse(uri.DnsSafeHost, out ipAddress))
-                return ipAddress;
+                return new[] { ipAddress };
 
             switch (uri.DnsSafeHost)
             {
                 case "*":
                 case "+":
-                    return IPAddress.Any;
+                    return new[] { IPAddress.Any };
                 case "localhost":
-                    return IPAddress.Loopback;
+                    return new[] { IPAddress.Loopback };
                 default:
                     try
                     {
@@ -196,7 +201,7 @@ namespace Raven.Server
                         if (ipHostEntry.AddressList.Length == 0)
                             throw new InvalidOperationException("The specified tcp server hostname has no entries: " +
                                                                 uri.DnsSafeHost);
-                        return ipHostEntry.AddressList[0]; // TODO: bind to all of the entries
+                        return ipHostEntry.AddressList;
                     }
                     catch (Exception e)
                     {
@@ -211,15 +216,14 @@ namespace Raven.Server
             }
         }
 
-        private void ListenToNewTcpConnection()
+        private void ListenToNewTcpConnection(TcpListener listener)
         {
             Task.Run(async () =>
             {
                 TcpClient tcpClient;
                 try
                 {
-                    var tcpListener = await _tcpListenerTask;
-                    tcpClient = await tcpListener.AcceptTcpClientAsync();
+                    tcpClient = await listener.AcceptTcpClientAsync();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -234,7 +238,7 @@ namespace Raven.Server
                     }
                     return;
                 }
-                ListenToNewTcpConnection();
+                ListenToNewTcpConnection(listener);
                 NetworkStream stream = null;
                 JsonOperationContext context = null;
                 JsonOperationContext.MultiDocumentParser multiDocumentParser = null;
@@ -353,20 +357,44 @@ namespace Raven.Server
             {
                 if (_tcpListenerTask.IsCompleted)
                 {
-                    _tcpListenerTask.Result.Stop();
+                    CloseTcpListeners(_tcpListenerTask.Result);
                 }
                 else
                 {
-                    var exception = _tcpListenerTask.Exception;
-                    if (exception != null && _tcpLogger.IsInfoEnabled)
+                    if (_tcpListenerTask.Exception != null)
                     {
-                        _tcpLogger.Info("Cannot dispose of tcp server because it has errored", exception);
+                        if(_tcpLogger.IsInfoEnabled)
+                            _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                    }
+                    else
+                    {
+                        _tcpListenerTask.ContinueWith(t =>
+                        {
+                            CloseTcpListeners(t.Result);
+                        }, TaskContinuationOptions.OnlyOnRanToCompletion);
                     }
                 }
             }
             ServerStore?.Dispose();
             Timer?.Dispose();
             _unmanagedBuffersPool?.Dispose();
+        }
+
+        private void CloseTcpListeners(List<TcpListener> listeners)
+        {
+            foreach (var tcpListener in listeners)
+            {
+                try
+                {
+                    tcpListener.Stop();
+                }
+                catch (Exception e)
+                {
+                    if (_tcpLogger.IsInfoEnabled)
+                        _tcpLogger.Info("Failed to properly dispose the tcp listener", e);
+                }
+            }
+            
         }
     }
 }

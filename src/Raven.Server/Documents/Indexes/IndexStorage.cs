@@ -353,7 +353,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IEnumerable<string> GetDocumentKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
+        public IEnumerable<Slice> GetDocumentKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
         {
             var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
             if (collectionTree == null)
@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Indexes
 
                 do
                 {
-                    yield return it.CurrentKey.ToString(); // TODO [ppekrol] ?
+                    yield return it.CurrentKey;
                 } while (it.MoveNext());
             }
         }

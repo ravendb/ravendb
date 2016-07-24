@@ -13,9 +13,6 @@ class getDocumentWithMetadataCommand extends commandBase {
             throw new Error("Must specify ID");
         }
 
-        if (!db) {
-            throw new Error("Must specify database");
-        }
         this.shouldResolveNotFoundAsNull = shouldResolveNotFoundAsNull || false;
     }
 

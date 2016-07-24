@@ -6,7 +6,6 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import indexPriority = require("models/database/index/indexPriority");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
@@ -22,8 +21,7 @@ class copyIndexDialog extends dialogViewModelBase {
     canActivate(args: any): any {
         if (this.isPaste) {
             return true;
-        }
-        else {
+        } else {
             var canActivateResult = $.Deferred();
             new getIndexDefinitionCommand(this.indexName, this.db)
                 .execute()
@@ -34,7 +32,6 @@ class copyIndexDialog extends dialogViewModelBase {
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => canActivateResult.reject());
-            canActivateResult.resolve({ can: true });
             return canActivateResult;
         }
     }
@@ -49,18 +46,19 @@ class copyIndexDialog extends dialogViewModelBase {
         // edit the JSON, or even type some in manually, enter might really mean new line, not Save changes.
         if (!this.isPaste) {
             return super.enterKeyPressed();
+        } else {
+            this.saveIndex();
         }
 
         return true;
     }
    
     saveIndex() {
-        if (this.isPaste === true && !!this.indexJSON()) {
+        if (this.isPaste && this.indexJSON()) {
             var indexDto: indexDefinitionDto;
 
             try {
                 indexDto = JSON.parse(this.indexJSON());
-                var testIndex = new indexDefinition(indexDto);
             } catch (e) {
                 indexDto = null;
                 messagePublisher.reportError("Index paste failed, invalid json string", e);
@@ -68,15 +66,15 @@ class copyIndexDialog extends dialogViewModelBase {
 
             if (indexDto) {
                 new saveIndexDefinitionCommand(indexDto, this.db)
-                        .execute()
-                        .done(() => {
-                            router.navigate(appUrl.forEditIndex(indexDto.Name, this.db));
-                            this.close();
-                        });
+                    .execute()
+                    .done(() => {
+                        router.navigate(appUrl.forEditIndex(indexDto.Name, this.db));
+                        this.close();
+                    });
             }
-        }
-         else 
+        } else {
             this.close();
+        }
     }
 
     close() {

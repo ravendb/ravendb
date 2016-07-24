@@ -13,7 +13,7 @@ using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Server.Documents.Versioning
 {
-    public class Versioning : VersioningTest
+    public class Versioning : RavenTestBase
     {
         [Fact]
         public async Task CanGetAllRevisionsFor()
@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company {Name = "Company Name"};
             using (var store = await GetDocumentStore())
             {
-                await SetupVersioning(store);
+                await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -48,7 +48,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = await GetDocumentStore())
             {
-                await SetupVersioning(store);
+                await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
@@ -77,7 +77,7 @@ namespace FastTests.Server.Documents.Versioning
             var comment = new Comment { Name = "foo" };
             using (var store = await GetDocumentStore())
             {
-                await SetupVersioning(store);
+                await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(user);
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Versioning
             var product = new Product {Description = "A fine document db", Quantity = 5};
             using (var store = await GetDocumentStore())
             {
-                await SetupVersioning(store);
+                await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(product);
@@ -134,7 +134,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company {Name = "Company #1"};
             using (var store = await GetDocumentStore())
             {
-                await SetupVersioning(store);
+                await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -161,7 +161,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = await GetDocumentStore())
             {
-                await SetupVersioning(store);
+                await VersioningHelper.SetupVersioning(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

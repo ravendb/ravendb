@@ -8,6 +8,7 @@ import commandBase = require("commands/commandBase");
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
+import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import changesApiWarnStorage = require("common/changesApiWarnStorage");
 import messagePublisher = require("common/messagePublisher");
 
@@ -22,6 +23,7 @@ class changesApi {
     private readyStateOpen = 1;
     private isDisposing = false;
 
+    private disposed: boolean = false;
     private isCleanClose: boolean = false;
     private normalClosureCode = 1000;
     private normalClosureMessage = "CLOSE_NORMAL";
@@ -34,6 +36,7 @@ class changesApi {
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
+    private watchedDocuments = {};
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
 
@@ -71,6 +74,11 @@ class changesApi {
     }
 
     private connect(action: Function, recoveringFromWebsocketFailure: boolean = false) {
+        if (this.disposed) {
+            if (!!this.connectToChangesApiTask)
+                this.connectToChangesApiTask.resolve();
+            return;
+        }
         if (!recoveringFromWebsocketFailure) {
             this.connectToChangesApiTask = $.Deferred();
         }
@@ -109,11 +117,11 @@ class changesApi {
             });
     }
 
-    private connectWebSocket() {
+    private connectWebSocket(connectionString: string) {
         var connectionOpened: boolean = false;
 
         var wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-        var url = wsProtocol + window.location.host + this.resourcePath + "/changes";
+        var url = wsProtocol + window.location.host + this.resourcePath + "/changes/websocket?" + connectionString;
         this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
@@ -159,7 +167,7 @@ class changesApi {
     }
 
     private send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
-        /*TODO: Implement
+        /* TODO:
         this.connectToChangesApiTask.done(() => {
             var args = {
                 id: this.eventsId,
@@ -203,6 +211,12 @@ class changesApi {
         var value = eventDto.Value;
         if (eventType === "DocumentChangeNotification") {
             this.fireEvents(this.allDocsHandlers(), value, (event) => true);
+
+            for (var key in this.watchedDocuments) {
+                var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedDocuments[key];
+                this.fireEvents(docCallbacks(), value, (event) => event.Id != null && event.Id === key);
+            }
+
             for (var key in this.watchedPrefixes) {
                 var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
                 this.fireEvents(docCallbacks(), value, (event) => event.Id != null && event.Id.match("^" + key));
@@ -299,6 +313,22 @@ class changesApi {
             this.allDocsHandlers.remove(callback);
             if (this.allDocsHandlers().length === 0) {
                 this.send("unwatch-docs");
+            }
+        });
+    }
+
+    watchDocument(docId: string, onChange: (e: documentChangeNotificationDto) => void): changeSubscription {
+        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
+        if (typeof (this.watchedDocuments[docId]) === "undefined") {
+            this.send("watch-doc", docId);
+            this.watchedDocuments[docId] = ko.observableArray();
+        }
+        this.watchedDocuments[docId].push(callback);
+        return new changeSubscription(() => {
+            this.watchedDocuments[docId].remove(callback);
+            if (this.watchedDocuments[docId]().length === 0) {
+                delete this.watchedDocuments[docId];
+                this.send("unwatch-doc", docId);
             }
         });
     }
@@ -513,8 +543,8 @@ class changesApi {
     
     dispose() {
         this.isDisposing = true;
-
-        this.connectToChangesApiTask.always(() => {
+        this.disposed = true;
+        this.connectToChangesApiTask.done(() => {
             var isCloseNeeded: boolean;
 
             if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){

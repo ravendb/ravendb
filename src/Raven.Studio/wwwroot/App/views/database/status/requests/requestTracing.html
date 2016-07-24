@@ -1,6 +1,10 @@
 <section id="requestTracingContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+
     <div style="height: 65%; position: relative;">
-        <button type="button" class="btn btn-default" data-bind="click: fetchRequestTracing"><i class="fa fa-refresh"></i></button>
+
+        <button class="btn btn-default" data-bind="autoRefresh: { duration: 10000, onRefresh: $root.fetchRequestTracing.bind($root), active:true }">
+        </button>
+
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setStatusAll">
                 <input type="radio" name="options" id="option1"> All requests <span class="badge" data-bind="text: allEntries().length"></span>
@@ -13,7 +17,7 @@
             </label>
         </div>
         <div id="requestTracingTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 50px; width: 100%; ">
-            <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
+            <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableNavigation.tableKeyDown.bind(tableNavigation) }" tabindex="1">
                 <thead>
                     <tr>
                         <th class="col-md-2">Method</th>
@@ -33,16 +37,17 @@
             </table>
         </div>
     </div>
-    <div class="panel panel-default" style="height: 30%; overflow-y: auto" data-bind="with: selectedEntry">
+    <div class="panel panel-default flex-container" style="height: 34%; overflow-y: auto" data-bind="with: selectedEntry">
         <div class="panel-heading">Headers</div>
-        <div class="panel-body" data-bind="foreach: RequestHeaders">
-            <div class="row">
-                <label class="col-md-3 text-right control-label" data-bind="text: Name">Message</label>
-                <div class="col-md-9">
-                    <p class="form-control-static" data-bind="text: Values.join(', ')"></p>
+        <div class="panel-body flex-grow">
+            <form class="form-horizontal" data-bind="foreach: RequestHeaders" style="position: ">
+                <div class="row">
+                    <label class="col-md-3 text-right control-label" data-bind="text: Name">Message</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static" data-bind="text: Values.join(', ')"></p>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
-        
     </div>
 </section>

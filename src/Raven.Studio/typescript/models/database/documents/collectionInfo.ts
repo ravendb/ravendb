@@ -1,12 +1,13 @@
 import document = require("models/database/documents/document");
-import abstractQueryResult = require("models/database/query/abstractQueryResult");
 
-class collectionInfo extends abstractQueryResult {
+class collectionInfo {
     results: Array<document>;
+    totalResults: number;
 
+    //TODO: use document preview endpoint
     constructor(dto: collectionInfoDto) {
-        super(dto);
         this.results = dto.Results.map(d => new document(d));
+        this.totalResults = dto.TotalResults;
     }
 }
 
