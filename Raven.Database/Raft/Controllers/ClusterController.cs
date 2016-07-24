@@ -16,6 +16,7 @@ using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
 using Raven.Database.Raft.Commands;
+using Raven.Database.Raft.Dto;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
@@ -152,7 +153,7 @@ namespace Raven.Database.Raft.Controllers
         [RavenRoute("cluster/replicationState")]
         public async Task<HttpResponseMessage> ReplicationState()
         {
-            var databaseToLastModify = await ReadJsonObjectAsync<Dictionary<string, Tuple<DateTime,string>>>().ConfigureAwait(false);
+            var databaseToLastModify = await ReadJsonObjectAsync<ReplicationState>().ConfigureAwait(false);
             await ClusterManager.Client.SendReplicationStateAsync(databaseToLastModify).ConfigureAwait(false);
             return GetEmptyMessage();
         }

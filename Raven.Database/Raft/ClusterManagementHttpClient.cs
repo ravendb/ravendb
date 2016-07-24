@@ -211,27 +211,27 @@ namespace Raven.Database.Raft
             }
         }
 
-        public Task SendReplicationStateAsync(Dictionary<string, Tuple<DateTime,string>> databaseToLastModified)
+        public Task SendReplicationStateAsync(ReplicationState replicationState)
         {
             try
             {
-                var command = ReplicationStateCommand.Create(databaseToLastModified);
+                var command = ReplicationStateCommand.Create(replicationState);
                 raftEngine.AppendCommand(command);
                 return command.Completion.Task;
             }
             catch (NotLeadingException)
             {
-                return SendReplicationStateAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), databaseToLastModified);
+                return SendReplicationStateAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), replicationState);
             }
         }
 
-        private async Task SendReplicationStateAsync(NodeConnectionInfo node, Dictionary<string, Tuple<DateTime, string>> databaseToLastModified)
+        private async Task SendReplicationStateAsync(NodeConnectionInfo node, ReplicationState replicationState)
         {
             var url = node.Uri.AbsoluteUri + "cluster/replicationState";
             using (var request = CreateRequest(node, url, HttpMethods.Post))
             {
                 var response = await request.WriteAsync(
-                    () => new JsonContent(RavenJToken.FromObject(databaseToLastModified)))
+                    () => new JsonContent(RavenJToken.FromObject(replicationState)))
                     .ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                     return;

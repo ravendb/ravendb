@@ -81,8 +81,7 @@ namespace Raven.Database.Raft
                 MaxStepDownDrainTime = configuration.Cluster.MaxStepDownDrainTime,
             };
             var raftEngine = new RaftEngine(raftEngineOptions);
-            stateMachine.RaftEngine = raftEngine;
-            stateMachine.RegisterHandler(typeof(ReplicationStateCommand), new ReplicationStateCommandHandler(systemDatabase, databasesLandlord, raftEngine));           
+            stateMachine.RaftEngine = raftEngine;           
             return new ClusterManager(raftEngine, databasesLandlord);
         }
     }

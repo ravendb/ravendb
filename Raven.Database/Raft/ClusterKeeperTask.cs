@@ -101,7 +101,7 @@ namespace Raven.Database.Raft
                 return;
 
             var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
-
+            clusterManager.HandleClusterConfigurationChanged(configuration);
             HandleClusterReplicationChanges(removedNodeUrls, configuration.EnableReplication);
         }
 

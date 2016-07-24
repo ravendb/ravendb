@@ -86,6 +86,21 @@ namespace Rachis
 
         }
 
+        /// <summary>
+        /// This method is intended to prevent a node from becoming a leader by registering 
+        /// ProposingCandidacy event and setting the veto result to false
+        /// </summary>
+        /// <returns> The veto result with the reasoning</returns>
+        public ProposingCandidacyResult CheckIfThereIsVetoOnBecomingCandidate()
+        {
+            var candidacyResult = new ProposingCandidacyResult();
+            var onProposingCandidacy = ProposingCandidacy;
+            if (onProposingCandidacy == null)
+                return candidacyResult;            
+            onProposingCandidacy(this, candidacyResult);
+            return candidacyResult;
+        }
+
         private readonly Task _eventLoopTask;
 
         private long _commitIndex;
@@ -98,6 +113,7 @@ namespace Rachis
 
         public CancellationToken CancellationToken { get { return _eventLoopCancellationTokenSource.Token; } }
 
+        public event EventHandler<ProposingCandidacyResult> ProposingCandidacy;
         public event Action<RaftEngineState> StateChanged;
         public event Action<Command> CommitApplied;
         public event Action<long> NewTerm;
@@ -172,13 +188,13 @@ namespace Rachis
                 {
                     MessageContext message;
                     var behavior = StateBehavior;
-                    var lastHeartBeat = (int)(DateTime.UtcNow - behavior.LastHeartbeatTime).TotalMilliseconds;
+                    var lastHeartBeat = (int) (DateTime.UtcNow - behavior.LastHeartbeatTime).TotalMilliseconds;
                     var timeout = behavior.Timeout - lastHeartBeat;
-                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);                    
+                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);
                     var messageBase = message?.Message as BaseMessage;
-                    if(messageBase != null)
+                    if (messageBase != null)
                         EngineStatistics.Messages.LimitedSizeEnqueue(
-                            new MessageWithTimingInformation{Message = messageBase,MessageReceiveTime = DateTime.UtcNow}, 
+                            new MessageWithTimingInformation {Message = messageBase, MessageReceiveTime = DateTime.UtcNow},
                             RaftEngineStatistics.NumberOfMessagesToTrack);
                     if (_eventLoopCancellationTokenSource.IsCancellationRequested)
                     {
@@ -193,8 +209,8 @@ namespace Rachis
                             _log.Debug("State {0} timeout ({1:#,#;;0} ms).", State, behavior.Timeout);
                         EngineStatistics.TimeOuts.LimitedSizeEnqueue(
                             new TimeoutInformation()
-                            { ActualTimeout = lastHeartBeat ,State = State,Timeout = behavior.Timeout,TimeOutTime = DateTime.UtcNow}
-                        ,RaftEngineStatistics.NumberOfTimeoutsToTrack);
+                                {ActualTimeout = lastHeartBeat, State = State, Timeout = behavior.Timeout, TimeOutTime = DateTime.UtcNow}
+                            , RaftEngineStatistics.NumberOfTimeoutsToTrack);
                         behavior.HandleTimeout();
                         OnStateTimeout();
                         continue;
@@ -202,8 +218,8 @@ namespace Rachis
 
                     if (_log.IsDebugEnabled)
                         _log.Debug("{0}: {1} {2}", State,
-                        message.Message.GetType().Name,
-                        message.Message is BaseMessage ? JsonConvert.SerializeObject(message.Message) : string.Empty
+                            message.Message.GetType().Name,
+                            message.Message is BaseMessage ? JsonConvert.SerializeObject(message.Message) : string.Empty
                         );
 
                     behavior.HandleMessage(message);
@@ -939,5 +955,15 @@ namespace Rachis
             steppingDownCompletionSource.TrySetResult(null);
         }
 
+    }
+
+    public class ProposingCandidacyResult : EventArgs
+    {
+        public bool VetoCandidacy { get; set; }
+        /// <summary>
+        /// for now we support a single veto reasoning, if in the future we will have multiple 
+        /// handlers we should consider chainng this property to a list
+        /// </summary>
+        public string Reason { get; set; }
     }
 }
