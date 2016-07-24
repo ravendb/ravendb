@@ -24,7 +24,7 @@ namespace Raven.Server.Smuggler
                 new DatabaseDataExporter(Database)
                 {
                     DocumentsLimit = GetIntValueQueryString("documentsLimit", required: false),
-                    VersioningRevisionsLimit = GetIntValueQueryString("versioningRevisionsLimit", required: false),
+                    RevisionDocumentsLimit = GetIntValueQueryString("RevisionDocumentsLimit", required: false),
                 }.Export(context, ResponseBodyStream());
             }
             return Task.CompletedTask;

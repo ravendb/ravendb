@@ -15,8 +15,8 @@ namespace Raven.Server.Smuggler
         public long? StartDocsEtag;
         public int? DocumentsLimit;
 
-        public long? StartVersioningRevisionsEtag;
-        public int? VersioningRevisionsLimit;
+        public long? StartRevisionDocumentsEtag;
+        public int? RevisionDocumentsLimit;
 
         public DatabaseDataExporter(DocumentDatabase database)
         {
@@ -72,12 +72,12 @@ namespace Raven.Server.Smuggler
                 if (versioningStorage != null)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(context.GetLazyString("VersioningRevisions"));
+                    writer.WritePropertyName(context.GetLazyString("RevisionDocuments"));
                     writer.WriteStartArray();
                     first = true;
-                    var revisionDocuments = VersioningRevisionsLimit.HasValue 
-                        ? versioningStorage.GetRevisionsAfter(context, StartVersioningRevisionsEtag ?? 0, VersioningRevisionsLimit.Value)
-                        : versioningStorage.GetRevisionsAfter(context, StartVersioningRevisionsEtag ?? 0);
+                    var revisionDocuments = RevisionDocumentsLimit.HasValue 
+                        ? versioningStorage.GetRevisionsAfter(context, StartRevisionDocumentsEtag ?? 0, RevisionDocumentsLimit.Value)
+                        : versioningStorage.GetRevisionsAfter(context, StartRevisionDocumentsEtag ?? 0);
                     foreach (var revisionDocument in revisionDocuments)
                     {
                         if (revisionDocument == null)
@@ -91,7 +91,7 @@ namespace Raven.Server.Smuggler
 
                             revisionDocument.EnsureMetadata();
                             context.Write(writer, revisionDocument.Data);
-                            result.LastVersioningRevisionsEtag = revisionDocument.Etag;
+                            result.LastRevisionDocumentsEtag = revisionDocument.Etag;
                         }
                     }
                     writer.WriteEndArray();

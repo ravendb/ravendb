@@ -440,10 +440,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfDocuments);
             writer.WriteComma();
 
-            if (statistics.CountOfVersioningRevisionDocuments.HasValue)
+            if (statistics.CountOfRevisionDocuments.HasValue)
             {
-                writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfVersioningRevisionDocuments)));
-                writer.WriteInteger(statistics.CountOfVersioningRevisionDocuments.Value);
+                writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfRevisionDocuments)));
+                writer.WriteInteger(statistics.CountOfRevisionDocuments.Value);
                 writer.WriteComma();
             }
 

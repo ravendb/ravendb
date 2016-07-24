@@ -9,7 +9,7 @@ namespace Raven.Client.Smuggler
         Indexes = 0x2,
         Transformers = 0x4,
 
-        VersioningRevisionDocuments = 0x32,
+        RevisionDocuments = 0x32,
 
         RemoveAnalyzers = 0x8000,
     }

@@ -99,12 +99,12 @@ namespace Raven.Server.Smuggler
                                     batchPutCommand.Clean();
                                 }
                             }
-                            else if (operateOnType == "VersioningRevisions")
+                            else if (operateOnType == "RevisionDocuments")
                             {
                                 if (versioningStorage == null)
                                     break;
 
-                                result.VersioningRevisionDocumentsCount++;
+                                result.RevisionDocumentsCount++;
 
                                 batchPutCommand.Add(builder);
                                 if (batchPutCommand.Count >= 16)
@@ -197,7 +197,7 @@ namespace Raven.Server.Smuggler
                                     versioningStorage = _database.BundleLoader.VersioningStorage;
                                     batchPutCommand.IsRevision = true;
                                     break;
-                                case "VersioningRevisions":
+                                case "RevisionDocuments":
                                     if (batchPutCommand.Count > 0)
                                     {
                                         await _database.TxMerger.Enqueue(batchPutCommand);

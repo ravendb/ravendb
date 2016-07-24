@@ -14,7 +14,7 @@ namespace Raven.Client.Smuggler
         public bool IgnoreErrorsAndContinue { get; set; }
 
         public int? DocumentsLimit { get; set; }
-        public int? VersioningRevisionsLimit { get; set; }
+        public int? RevisionDocumentsLimit { get; set; }
 
         public string TransformScript { get; set; }
 
