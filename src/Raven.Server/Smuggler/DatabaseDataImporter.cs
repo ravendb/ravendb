@@ -97,7 +97,8 @@ namespace Raven.Server.Smuggler
                                 if (batchPutCommand.Count >= 16)
                                 {
                                     await _database.TxMerger.Enqueue(batchPutCommand);
-                                    batchPutCommand.Clean();
+                                    batchPutCommand.Dispose();
+                                    batchPutCommand = new MergedBatchPutCommand(_database);
                                 }
                             }
                             else if (operateOnType == "RevisionDocuments" && OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
@@ -111,7 +112,8 @@ namespace Raven.Server.Smuggler
                                 if (batchPutCommand.Count >= 16)
                                 {
                                     await _database.TxMerger.Enqueue(batchPutCommand);
-                                    batchPutCommand.Clean();
+                                    batchPutCommand.Dispose();
+                                    batchPutCommand = new MergedBatchPutCommand(_database);
                                 }
                             }
                             else
@@ -197,7 +199,8 @@ namespace Raven.Server.Smuggler
                                     if (batchPutCommand.Count > 0)
                                     {
                                         await _database.TxMerger.Enqueue(batchPutCommand);
-                                        batchPutCommand.Clean();
+                                        batchPutCommand.Dispose();
+                                        batchPutCommand = new MergedBatchPutCommand(_database);
                                     }
 
                                     // We are taking a reference here since the documents import can activate or disable the versioning.
@@ -210,7 +213,7 @@ namespace Raven.Server.Smuggler
                                     if (batchPutCommand.Count > 0)
                                     {
                                         await _database.TxMerger.Enqueue(batchPutCommand);
-                                        batchPutCommand.Clean();
+                                        batchPutCommand.Dispose();
                                     }
                                     batchPutCommand = null;
                                     break;
@@ -234,7 +237,7 @@ namespace Raven.Server.Smuggler
             return result;
         }
 
-        private class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public long BuildVersion;
             public bool IsRevision;
@@ -298,7 +301,7 @@ namespace Raven.Server.Smuggler
                 }
             }
 
-            public void Clean()
+            public void Dispose()
             {
                 foreach (var documentBuilder in _buildersToDispose)
                 {
@@ -308,8 +311,6 @@ namespace Raven.Server.Smuggler
                 {
                     documentBuilder.Dispose();
                 }
-                _buildersToDispose.Clear();
-                _documents.Clear();
             }
 
             public void Add(BlittableJsonDocumentBuilder documentBuilder)
