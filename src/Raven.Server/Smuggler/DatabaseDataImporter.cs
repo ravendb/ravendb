@@ -23,6 +23,8 @@ namespace Raven.Server.Smuggler
         public DatabaseDataImporter(DocumentDatabase database)
         {
             _database = database;
+            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
+                | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
         }
 
         public async Task<ImportResult> Import(DocumentsOperationContext context, Stream stream)

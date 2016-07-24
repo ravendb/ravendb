@@ -24,6 +24,8 @@ namespace Raven.Server.Smuggler
         public DatabaseDataExporter(DocumentDatabase database)
         {
             _database = database;
+            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
+                | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
         }
 
         public ExportResult Export(DocumentsOperationContext context, string destinationFilePath)
