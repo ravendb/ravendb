@@ -38,7 +38,7 @@ import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getReducedDatabaseStatsCommand = require("commands/resources/getReducedDatabaseStatsCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
@@ -451,9 +451,9 @@ class shell extends viewModelBase {
 
     private fetchDbStats(db: database) {
         if (!!db && !db.disabled() && db.isLicensed()) {
-            new getDatabaseStatsCommand(db, true)
+            new getReducedDatabaseStatsCommand(db, true)
                 .execute()
-                .done((result: databaseStatisticsDto) => db.saveStatistics(result));
+                .done((result: reducedDatabaseStatisticsDto) => db.saveStatistics(result));
         }
     }
 
@@ -584,7 +584,7 @@ class shell extends viewModelBase {
 
     private renewOAuthToken() {
         oauthContext.authHeader(null);
-        new getDatabaseStatsCommand(this.systemDatabase).execute();
+        new getReducedDatabaseStatsCommand(this.systemDatabase).execute();
     }
 
     showNavigationProgress(isNavigating: boolean) {

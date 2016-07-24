@@ -14,7 +14,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
@@ -237,13 +236,6 @@ namespace Raven.Client.Connection
         public string PutIndex(string name, IndexDefinition definition)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, false));
-        }
-
-        public string PutIndex(string name, IndexDefinition definition, out Operation precomputeBatchOperation)
-        {
-            var result = AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsyncWithOperation(name, definition, false));
-            precomputeBatchOperation = result.Item2;
-            return result.Item1;
         }
 
         public string[] PutIndexes(IndexToAdd[] indexesToAdd)

@@ -1995,6 +1995,7 @@ If you really want to do in memory filtering on the data returned from the query
             var list = UnpackEnumerable(values).ToList();
             if (list.Count == 0)
             {
+                queryText.Append("*:*");
                 return;
             }
 

@@ -98,6 +98,18 @@ interface databaseStatisticsDto {
     Is64Bit: boolean;
 }
 
+interface reducedDatabaseStatisticsDto {
+    DatabaseId: string;
+    CountOfDocuments: number;
+    CountOfIndexesExcludingDisabledAndAbandoned: number;
+    CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
+    CountOfErrors: number;
+    CountOfIndexes: number;
+    CountOfStaleIndexes: number;
+    ApproximateTaskCount: number;
+    CountOfAttachments: number;
+}
+
 interface futureBatchStatsDto {
     Timestamp: string;
     Duration: string;

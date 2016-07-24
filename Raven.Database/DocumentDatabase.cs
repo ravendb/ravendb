@@ -622,6 +622,75 @@ namespace Raven.Database
             }
         }
 
+        public ReducedDatabaseStatistics ReducedStatistics
+        {
+            get
+            {
+                var result = new ReducedDatabaseStatistics
+                {
+                    DatabaseId = TransactionalStorage.Id,
+                    CountOfErrors = WorkContext.Errors.Length,
+                    CountOfIndexes = IndexStorage.Indexes.Length,
+                    CountOfStaleIndexes = IndexStorage.Indexes.Count(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
+                };
+
+                TransactionalStorage.Batch(actions =>
+                {
+                    result.CountOfDocuments = actions.Documents.GetDocumentsCount();
+
+                    var lastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
+                    var indexes = actions.Indexing.GetIndexesStats()
+                        .Where(x => x != null).Select(x =>
+                        {
+                            var indexInstance = IndexStorage.GetIndexInstance(x.Id);
+                            if (indexInstance == null)
+                                return null;
+                            x.Name = indexInstance.PublicName;
+                            x.SetLastDocumentEtag(lastDocEtag);
+                            return x;
+                        })
+                        .Where(x => x != null)
+                        .ToList();
+
+
+                    result.CountOfIndexesExcludingDisabledAndAbandoned = indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
+                    result.CountOfStaleIndexesExcludingDisabledAndAbandoned = IndexStorage.Indexes
+                        .Where(indexId => IndexStorage.IsIndexStale(indexId, lastCollectionEtags))
+                        .Count(indexId =>
+                        {
+                            var index = IndexStorage.GetIndexInstance(indexId);
+                            return index != null;
+                        });
+
+                    result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
+                    result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
+                });
+
+                return result;
+            }
+        }
+
+        public class ReducedDatabaseStatistics
+        {
+            public Guid DatabaseId { get; set; }
+
+            public long CountOfDocuments { get; set; }
+
+            public int CountOfIndexesExcludingDisabledAndAbandoned { get; set; }
+
+            public int CountOfStaleIndexesExcludingDisabledAndAbandoned { get; set; }
+
+            public int CountOfErrors { get; set; }
+
+            public int CountOfIndexes { get; set; }
+
+            public int CountOfStaleIndexes { get; set; }
+
+            public long ApproximateTaskCount { get; set; }
+
+            public long CountOfAttachments { get; set; }
+        }
+
         public Dictionary<string, RemainingReductionPerLevel> GetRemainingScheduledReductions()
         {
             Dictionary<string, RemainingReductionPerLevel> res = new Dictionary<string, RemainingReductionPerLevel>();

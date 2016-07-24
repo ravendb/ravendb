@@ -39,8 +39,13 @@ namespace Raven.Database.Server.Controllers
 {
     public class StudioTasksController : BaseDatabaseApiController
     {
-        private const int CsvImportBatchSize = 512;
-
+        [HttpGet]
+        [RavenRoute("studio-tasks/reduced-database-stats")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/reduced-database-stats")]
+        public HttpResponseMessage ReducedDatabaseStats()
+        {
+            return GetMessageWithObject(Database.ReducedStatistics);
+        }
 
         [HttpGet]
         [RavenRoute("studio-tasks/config")]
@@ -604,6 +609,8 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/loadCsvFile")]
         public async Task<HttpResponseMessage> LoadCsvFile()
         {
+            const int csvImportBatchSize = 512;
+
             if (!Request.Content.IsMimeMultipartContent())
                 throw new Exception(); // divided by zero
 
@@ -677,7 +684,7 @@ for(var customFunction in customFunctions) {{
                         batch.Add(document);
                         totalCount++;
 
-                        if (batch.Count >= CsvImportBatchSize)
+                        if (batch.Count >= csvImportBatchSize)
                         {
                             await FlushBatch(batch).ConfigureAwait(false);
                             batch.Clear();

@@ -260,17 +260,7 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                long opId;
-                Database.Indexes.PutIndex(index, data, out opId);
-
-                //treat includePrecomputeOperation as a flag
-                var includePrecomputeOperation = GetQueryStringValue("includePrecomputeOperation");
-                if (!String.IsNullOrWhiteSpace(includePrecomputeOperation) &&
-                    includePrecomputeOperation.Equals("yes",StringComparison.OrdinalIgnoreCase))
-                {
-                    return GetMessageWithObject(new { Index = index, OperationId = opId }, HttpStatusCode.Created);
-                }
-
+                Database.Indexes.PutIndex(index, data);
                 return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
             }
             catch (Exception ex)
@@ -316,11 +306,11 @@ namespace Raven.Database.Server.Controllers
 
             if ("forceReplace".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
             {
-                var indexDefiniton = Database.IndexDefinitionStorage.GetIndexDefinition(id);
-                if (indexDefiniton == null)
+                var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+                if (indexDefinition == null)
                     return GetEmptyMessage(HttpStatusCode.NotFound);
 
-                Database.IndexReplacer.ForceReplacement(indexDefiniton);
+                Database.IndexReplacer.ForceReplacement(indexDefinition);
                 return GetEmptyMessage();
             }
 

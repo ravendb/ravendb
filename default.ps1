@@ -251,6 +251,12 @@ task Custom {
     $global:configuration = "Release"
 }
 
+task RC {
+    $global:uploadCategory = "RavenDB-RC"
+    $global:uploadMode = "Unstable"
+    $global:configuration = "Release"
+}
+
 task RunTests -depends Test
 
 task PullRequest {

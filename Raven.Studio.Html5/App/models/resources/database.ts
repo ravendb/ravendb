@@ -44,7 +44,7 @@ class database extends resource {
         ko.postbox.publish("ActivateDatabase", this);
     }
 
-    saveStatistics(dto: databaseStatisticsDto) {
+    saveStatistics(dto: reducedDatabaseStatisticsDto) {
         if (!this.statistics()) {
             this.statistics(new databaseStatistics());
         }

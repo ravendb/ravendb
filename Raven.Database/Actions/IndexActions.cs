@@ -228,23 +228,15 @@ namespace Raven.Database.Actions
         [MethodImpl(MethodImplOptions.Synchronized)]
         public string PutIndex(string name, IndexDefinition definition)
         {
-            long _;
-            return PutIndex(name, definition, out _);
+            return PutIndexInternal(name, definition);
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public string PutIndex(string name, IndexDefinition definition, out long opId)
-        {
-            return PutIndexInternal(name, definition, out opId);
-        }
-
-        private string PutIndexInternal(string name, IndexDefinition definition, out long opId, bool disableIndexBeforePut = false, 
+        private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, 
             bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
         {
             if (name == null)
                 throw new ArgumentNullException(nameof(name));
 
-            opId = -1;
             name = name.Trim();
             IsIndexNameValid(name);
 
@@ -291,7 +283,7 @@ namespace Raven.Database.Actions
                     break;
             }
 
-            opId = PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
+            PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
 
             WorkContext.ClearErrorsFor(name);
 
@@ -315,7 +307,7 @@ namespace Raven.Database.Actions
                 foreach (var indexToAdd in indexesToAdd)
                 {
                     long opId;
-                    var nameToAdd = PutIndexInternal(indexToAdd.Name, indexToAdd.Definition,out opId, disableIndexBeforePut: true);
+                    var nameToAdd = PutIndexInternal(indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true);
                     if (nameToAdd == null)
                         continue;
 
@@ -386,7 +378,7 @@ namespace Raven.Database.Actions
                     }
 
                     long _;
-                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition, out _,
+                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,
                         disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
 
                     if (nameToAdd == null)
@@ -485,7 +477,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        internal long PutNewIndexIntoStorage(string name, IndexDefinition definition, bool disableIndex = false)
+        internal void PutNewIndexIntoStorage(string name, IndexDefinition definition, bool disableIndex = false)
         {
             Debug.Assert(Database.IndexStorage != null);
             Debug.Assert(TransactionalStorage != null);
@@ -531,7 +523,7 @@ namespace Raven.Database.Actions
 
             Debug.Assert(index != null);
 
-            Func<long> precomputeTask = null;
+            Action precomputedTask = null;
             if (WorkContext.RunIndexing &&
                 name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
                 Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex) && isPrecomputedBatchForNewIndexIsRunning == false)
@@ -539,7 +531,7 @@ namespace Raven.Database.Actions
                 // optimization of handling new index creation when the number of document in a database is significantly greater than
                 // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
 
-                precomputeTask = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
+                precomputedTask = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
             }
             else
             {
@@ -551,20 +543,14 @@ namespace Raven.Database.Actions
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
-            // we start the precomutedTask _after_ we finished adding the index
-            long operationId = -1;
-            if (precomputeTask != null)
-            {
-                operationId = precomputeTask();
-            }
+            // we start the precomputedTask _after_ we finished adding the index
+            precomputedTask?.Invoke();
 
             WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-            WorkContext.NotifyAboutWork();
-
-            return operationId;	        
+            WorkContext.NotifyAboutWork();       
         }
 
-        private Func<long> TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
+        private Action TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
             if (Database.Configuration.MaxPrecomputedBatchSizeForNewIndex <= 0) //precaution -> should never be lower than 0
             {
@@ -648,7 +634,6 @@ namespace Raven.Database.Actions
                                 },
                                 out id,
                                 cts);
-                        return id;
                     }
                     catch (Exception)
                     {
@@ -746,12 +731,10 @@ namespace Raven.Database.Actions
 
                         if (totalLoadedDocumentSize > Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes)
                         {
-                            var error = string.Format(
-                                @"Aborting applying precomputed batch for index id: {0}, name: {1}
-                                    because we have {2}mb of documents that were fetched
-                                    and the configured max data to fetch is {3}mb",
-                                index.indexId, index.PublicName, totalLoadedDocumentSize,
-                                Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes / 1024 / 1024);
+                            var error = $"Aborting applying precomputed batch for index id: {index.indexId}, " +
+                                        $"name: {index.PublicName} because we have {totalLoadedDocumentSize}MB of documents that were fetched" + 
+                                        $"and the configured max data to fetch is " +
+                                        $"{Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes/1024/1024}MB";
 
                             //we are aborting operation, so don't keep the references
                             docsToIndex.Clear();
@@ -766,11 +749,10 @@ namespace Raven.Database.Actions
 
                         if (Database.Configuration.MemoryLimitForProcessingInMb > MemoryStatistics.AvailableMemoryInMb)
                         {
-                            var error = string.Format(
-                                @"Aborting applying precomputed batch for index id: {0}, name: {1}
-                                    because we have {2}mb of available memory and the available memory for processing is: {3}mb",
-                                index.indexId, index.PublicName,
-                                MemoryStatistics.AvailableMemoryInMb, Database.Configuration.MemoryLimitForProcessingInMb);
+                            var error = $"Aborting applying precomputed batch for index id: {index.indexId}, " +
+                                        $"name: {index.PublicName} because we have {MemoryStatistics.AvailableMemoryInMb}MB " +
+                                        $"of available memory and the available memory for processing is: " +
+                                        $"{Database.Configuration.MemoryLimitForProcessingInMb}MB";
 
                             //we are aborting operation, so don't keep the references
                             docsToIndex.Clear();

@@ -50,6 +50,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationsByPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFoldersStartsWithCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resolveConflictsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resources\getReducedDatabaseStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getResourceDrives.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
