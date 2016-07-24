@@ -72,7 +72,7 @@ namespace Sparrow
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 32bits 
         /// </summary>
-        /// <<remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
+        /// <remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
         public static class XXHash32
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -214,7 +214,7 @@ namespace Sparrow
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 64bits 
         /// </summary>
-        /// <<remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
+        /// <remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
         public static class XXHash64
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
