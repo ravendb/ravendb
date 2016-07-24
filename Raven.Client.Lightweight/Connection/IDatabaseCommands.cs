@@ -512,14 +512,6 @@ namespace Raven.Client.Connection
         string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
 
         /// <summary>
-        ///     Creates an index with the specified name, based on an index definition
-        /// </summary>
-        /// <param name="name">name of an index</param>
-        /// <param name="indexDef">definition of an index</param>
-        /// <param name="precomputeBatchOperation">Operation of first time index population.</param>
-        string PutIndex(string name, IndexDefinition indexDef, out Operation precomputeBatchOperation);
-
-        /// <summary>
         ///     Creates an index with the specified name, based on an index definition that is created by the supplied
         ///     IndexDefinitionBuilder
         /// </summary>
