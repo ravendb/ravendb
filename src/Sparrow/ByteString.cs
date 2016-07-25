@@ -482,8 +482,6 @@ namespace Sparrow
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
 
-            int allocationSize = sizeof(ByteStringStorage);
-
             ByteStringStorage* storagePtr;
             if (_externalFastPoolCount > 0)
             {
@@ -670,12 +668,14 @@ namespace Sparrow
                 byte* end = start + memory.Size;
                                 
                 segment = new SegmentInformation { Memory = memory, Start = start, Current = start, End = end, CanDispose = true };
+                _wholeSegments.Add(segment);
             }
             else
             {                                                     
                 segment = AllocateSegment(length + sizeof(ByteStringStorage));
+                // _wholeSegments.Add(segment); - called in AllocateSegment
+
             }
-            _wholeSegments.Add(segment);
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
@@ -798,8 +798,9 @@ namespace Sparrow
             var memorySegment = _globalPool.Allocate(size);
             if (memorySegment.Size < size)
             {
-                // The size is not big enough. We don't care, we will pay the cost and be done with it. 
-                _globalPool.Free(memorySegment);
+                // not big enough, so we'll discard it and create a bigger instance
+                // it will go into the pool afterward and be available for future use
+                memorySegment.Dispose(); 
                 memorySegment = _globalPool.AllocateInstance(size);
             }            
 
@@ -819,8 +820,9 @@ namespace Sparrow
             var memorySegment = _globalPool.Allocate(size);
             if (memorySegment.Size < size)
             {
-                // The size is not big enough. We don't care, we will pay the cost and be done with it. 
-                _globalPool.Free(memorySegment);
+                // not big enough, so we'll discard it and create a bigger instance
+                // it will go into the pool afterward and be available for future use
+                memorySegment.Dispose();
                 memorySegment = _globalPool.AllocateInstance(size);
             }
 
