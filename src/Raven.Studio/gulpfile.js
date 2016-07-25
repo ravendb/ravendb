@@ -19,7 +19,8 @@ var paths = {
     lessSource: [
         './wwwroot/Content/app.less',
         './wwwroot/Content/bootstrap.less',
-        './wwwroot/Content/dynatree.custom.less'],
+        './wwwroot/Content/dynatree.custom.less',
+        './wwwroot/Content/awesome-bootstrap-checkbox.less'],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
 
@@ -27,7 +28,8 @@ var paths = {
     oldLessSource: [
         './wwwroot/Content_old/old_app.less',
         './wwwroot/Content_old/old_bootstrap.less',
-        './wwwroot/Content_old/dynatree.custom.less'],
+        './wwwroot/Content_old/dynatree.custom.less',
+        './wwwroot/Content_old/awesome-bootstrap-checkbox.less'],
     oldLessTarget: './wwwroot/Content_old/',
     oldLessTargetSelector: './wwwroot/Content_old/**/*.css',
 
