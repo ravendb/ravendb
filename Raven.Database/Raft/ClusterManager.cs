@@ -109,10 +109,9 @@ namespace Raven.Database.Raft
         {
             if (state == RaftEngineState.Leader)
             {
-                var period = DatabasesLandlord.SystemDatabase.Configuration.Cluster.MaxReplicationLatency;
                 //timer should be null 
                 SaflyDisposeOfTimer();
-                timer = new Timer(NewLeaderTimerCallback,null, period, period); 
+                timer = new Timer(NewLeaderTimerCallback,null, maxReplicationLatency, maxReplicationLatency); 
             }
             else
             {
@@ -265,6 +264,8 @@ namespace Raven.Database.Raft
                     systemDatabase.Documents.Put(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata, null);
                 }
             }
+            //deleting the replication state from the system database
+            DatabasesLandlord.SystemDatabase.Documents.Delete(Constants.Cluster.ClusterReplicationStateDocumentKey, null,null);
 
         }
 
@@ -310,6 +311,12 @@ namespace Raven.Database.Raft
                 else
                 {
                     Engine.StateChanged += OnRaftEngineStateChanged;
+                    //This is the case where replication checks were off and we are the leader
+                    //In this case if we remain the leader nobody is going to create the tiemr.
+                    if (Engine.State == RaftEngineState.Leader)
+                    {
+                        timer = new Timer(NewLeaderTimerCallback, null, maxReplicationLatency, maxReplicationLatency);
+                    }
                 }
                 disableReplicationStateChecks = configuration.DisableReplicationStateChecks;
             }
