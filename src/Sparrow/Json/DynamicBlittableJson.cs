@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Dynamic;
+using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
@@ -81,6 +82,11 @@ namespace Sparrow.Json
             public IEnumerable<object> Select(Func<object, int, object> func)
             {
                 throw new NotImplementedException();
+            }
+
+            public decimal Sum(Func<object, decimal> selector)
+            {
+                return Enumerable.Sum(this, selector);
             }
 
             private class DynamicArrayIterator : IEnumerator<object>

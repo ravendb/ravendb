@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using Indexing.Benchmark.Entities;
 using Raven.Client;
 using Raven.Client.Indexes;
 #if v35
@@ -13,16 +15,33 @@ namespace Indexing.Benchmark
 {
     public class MapIndexesBench : IndexingBenchmark
     {
-        public MapIndexesBench(IDocumentStore store) : base(store)
+        private readonly int _numberOfOrdersInDb;
+
+        public MapIndexesBench(IDocumentStore store, int numberOfOrdersInDb) : base(store)
         {
+            _numberOfOrdersInDb = numberOfOrdersInDb;
         }
 
-        protected override AbstractIndexCreationTask[] Indexes => new []
+        public override IndexingTestRun[] IndexTestRuns => new []
         {
-            new OrdersTotals(),
+            new IndexingTestRun
+            {
+              Index = new Orders_Totals(),
+              NumberOfRelevantDocs = _numberOfOrdersInDb
+            },
+            new IndexingTestRun
+            {
+              Index = new Orders_ByCompanyNameAndEmploeeFirstName_LoadDocument(),
+              NumberOfRelevantDocs = _numberOfOrdersInDb
+            },
+            new IndexingTestRun
+            {
+              Index = new Orders_ByProducts_Fanout(),
+              NumberOfRelevantDocs = _numberOfOrdersInDb
+            }
         };
 
-        public class OrdersTotals : AbstractIndexCreationTask
+        public class Orders_Totals : AbstractIndexCreationTask
         {
             public class Result
             {
@@ -59,6 +78,33 @@ select new { order.Employee,  order.Company, Total = order.Lines.Sum(l =>l.Price
                     //    }
                     //}
                 };
+            }
+        }
+
+        public class Orders_ByCompanyNameAndEmploeeFirstName_LoadDocument : AbstractIndexCreationTask<Order>
+        {
+            public Orders_ByCompanyNameAndEmploeeFirstName_LoadDocument()
+            {
+                Map = orders => from o in orders
+                                     select new
+                                     {
+                                         CompanyName = LoadDocument<Company>(o.Company).Name,
+                                         EmployeeName = LoadDocument<Employee>(o.Employee).FirstName
+                                     };
+            }
+        }
+
+        public class Orders_ByProducts_Fanout : AbstractIndexCreationTask<Order>
+        {
+            public Orders_ByProducts_Fanout()
+            {
+                Map = orders => from o in orders
+                    from line in o.Lines
+                    select new
+                    {
+                        line.Product,
+                        line.ProductName
+                    };
             }
         }
     }

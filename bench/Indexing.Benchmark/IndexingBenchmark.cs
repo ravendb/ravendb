@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 using Raven.Client;
 using Raven.Client.Indexes;
 #if v35
@@ -23,17 +24,17 @@ namespace Indexing.Benchmark
             _store = store;
         }
         
-        protected abstract AbstractIndexCreationTask[] Indexes { get; }
-
+        public abstract IndexingTestRun[] IndexTestRuns { get; }
+        
         public void Execute()
         {
-            foreach (var index in Indexes)
+            foreach (var test in IndexTestRuns)
             {
-                Console.WriteLine($"Inserting {index.IndexName} index");
+                test.Index.Execute(_store);
+                
+                Console.WriteLine($"{Environment.NewLine}{test.Index.IndexName} index created");
 
-                index.Execute(_store);
-
-                Console.WriteLine("waiting for results ...");
+                Console.WriteLine("waiting for non-stale results ...");
 
                 var sw = Stopwatch.StartNew();
 
@@ -45,7 +46,7 @@ namespace Indexing.Benchmark
                 //{
                 //    do
                 //    {
-                //        var stats = _store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                //        var stats = _store.DatabaseCommands.GetIndexStatistics(test.Index.IndexName);
 
                 //        Console.WriteLine($"{nameof(stats.MapAttempts)}: {stats.MapAttempts}");
                 //        Console.WriteLine($"{nameof(stats.ReduceAttempts)}: {stats.ReduceAttempts}");
@@ -54,11 +55,9 @@ namespace Indexing.Benchmark
                 //    } while ((result != null && result.IsStale == false) || sw.Elapsed > stalenessTimeout);
                 //}, TaskCreationOptions.LongRunning);
 
-                result = _store.DatabaseCommands.Query(index.IndexName, new IndexQuery()
+                result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery()
                 {
-
                     WaitForNonStaleResultsTimeout = stalenessTimeout,
-
                     PageSize = 0,
                     Start = 0
                 });
@@ -66,7 +65,7 @@ namespace Indexing.Benchmark
 #else
                 do
                 {
-                    result = _store.DatabaseCommands.Query(index.IndexName, new IndexQuery()
+                    result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery()
                     {
                         PageSize = 0,
                         Start = 0
@@ -83,7 +82,7 @@ namespace Indexing.Benchmark
 
                 sw.Stop();
 
-                Console.WriteLine($"It took {sw.Elapsed} to return non stale result");
+                Console.WriteLine($"It took {sw.Elapsed} to return a non stale result. {(double)test.NumberOfRelevantDocs / sw.Elapsed.Seconds:#,#} docs / sec indexed");
             }
         }
     }
