@@ -160,17 +160,25 @@ namespace Raven.Server.Documents.Indexes
 
                 Index index;
 
-                var indexDefinition = definition as AutoMapIndexDefinition;
-                if (indexDefinition != null)
-                    index = AutoMapIndex.CreateNew(indexId, indexDefinition, _documentDatabase);
-                else
+                if (definition is AutoMapIndexDefinition)
+                    index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition)definition, _documentDatabase);
+                else if (definition is AutoMapReduceIndexDefinition)
+                    index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
+                else if (definition is StaticMapIndexDefinition)
                 {
-                    var reduceIndexDefinition = definition as AutoMapReduceIndexDefinition;
-                    if (reduceIndexDefinition != null)
-                        index = AutoMapReduceIndex.CreateNew(indexId, reduceIndexDefinition, _documentDatabase);
+                    var mapReduceIndexDef = definition as MapReduceIndexDefinition;
+
+                    if (mapReduceIndexDef != null)
+                    {
+                        index = MapReduceIndex.CreateNew(indexId, ((MapReduceIndexDefinition)definition).IndexDefinition, _documentDatabase);
+                    }
                     else
-                        throw new NotImplementedException("Unknown index definition type: ");
+                    {
+                        index = StaticMapIndex.CreateNew(indexId, ((StaticMapIndexDefinition)definition).IndexDefinition, _documentDatabase);
+                    }
                 }
+                else
+                    throw new NotImplementedException($"Unknown index definition type: {definition.GetType().FullName}");
 
                 return CreateIndexInternal(index, indexId);
             }
@@ -425,20 +433,7 @@ namespace Raven.Server.Documents.Indexes
             lock (_locker)
             {
                 DeleteIndex(index.IndexId);
-
-                switch (index.Type)
-                {
-                    case IndexType.AutoMap:
-                        var autoMapIndex = (AutoMapIndex)index;
-                        var autoMapIndexDefinition = autoMapIndex.Definition;
-                        return CreateIndex(autoMapIndexDefinition);
-                    case IndexType.Map:
-                        var staticMapIndex = (StaticMapIndex)index;
-                        var staticMapIndexDefinition = staticMapIndex.Definition.IndexDefinition;
-                        return CreateIndex(staticMapIndexDefinition);
-                    default:
-                        throw new NotSupportedException(index.Type.ToString());
-                }
+                return CreateIndex(index.Definition);
             }
         }
 
