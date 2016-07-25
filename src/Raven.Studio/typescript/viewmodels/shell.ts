@@ -363,7 +363,7 @@ class shell extends viewModelBase {
                 this.activeArea(val.config.title);
         });
 
-        sys.error = (e) => {
+        sys.error = (e: any) => {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
         };
@@ -409,7 +409,7 @@ class shell extends viewModelBase {
                 // override environment colors with hot spare
                 shell.activateHotSpareEnvironment(hotSpare);
             } else {
-                var envColor = doc["EnvironmentColor"];
+                var envColor = (<any>doc)["EnvironmentColor"];
                 if (envColor != null) {
                     shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
                 }
@@ -600,7 +600,7 @@ class shell extends viewModelBase {
 
     private static updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>, recievedResourceArray: Array<any>) {
 
-        var deletedResources = [];
+        var deletedResources: Array<resource> = [];
 
         resourceObservableArray().forEach((rs: resource) => {
             var existingResource = recievedResourceArray.first((recievedResource: resource) => recievedResource.name === rs.name);
@@ -717,14 +717,15 @@ class shell extends viewModelBase {
                     }
 
                     if (resourceType === TenantType.Database) { //for databases, bundle change or indexing change
-                        var bundles = !!dto.Settings["Raven/ActiveBundles"] ? dto.Settings["Raven/ActiveBundles"].split(";") : [];
+                        var dtoSettings: any = dto.Settings;
+                        var bundles = !!dtoSettings["Raven/ActiveBundles"] ? dtoSettings["Raven/ActiveBundles"].split(";") : [];
                         existingResource.activeBundles(bundles);
 
 
-                        var indexingDisabled = this.getIndexingDisbaledValue(dto.Settings["Raven/IndexingDisabled"]);
+                        var indexingDisabled = this.getIndexingDisbaledValue(dtoSettings["Raven/IndexingDisabled"]);
                         existingResource.indexingDisabled(indexingDisabled);
 
-                        var isRejectclientsEnabled = this.getIndexingDisbaledValue(dto.Settings["Raven/RejectClientsModeEnabled"]);
+                        var isRejectclientsEnabled = this.getIndexingDisbaledValue(dtoSettings["Raven/RejectClientsModeEnabled"]);
                         existingResource.rejectClientsMode(isRejectclientsEnabled);
                     }
                 });
@@ -742,8 +743,8 @@ class shell extends viewModelBase {
         return false;
     }
 
-    private createNewResource(resourceType: TenantType, resourceName: string, dto: databaseDocumentDto) {
-        var newResource = null;
+    private createNewResource(resourceType: TenantType, resourceName: string, dto: databaseDocumentDto): resource {
+        var newResource: resource = null;
 
         if (resourceType === TenantType.Database) {
             newResource = new database(resourceName, true, dto.Disabled);
@@ -761,7 +762,7 @@ class shell extends viewModelBase {
         return newResource;
     }
 
-    selectResource(rs) {
+    selectResource(rs: resource) {
         rs.activate();
 
         var locationHash = window.location.hash;
@@ -875,7 +876,7 @@ class shell extends viewModelBase {
             });
     }
 
-    private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, url) {
+    private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, url: () => string) {
         if (!!resource) {
             var newResource = resourceObservableArray.first(rs => rs.name === resource.name);
             if (newResource != null) {
@@ -911,7 +912,7 @@ class shell extends viewModelBase {
         shell.originalEnvironmentColor(color);
     }
 
-    private handleRavenConnectionFailure(result) {
+    private handleRavenConnectionFailure(result: any) {
         NProgress.done();
 
         if (result.status === 401) {
@@ -1034,11 +1035,11 @@ class shell extends viewModelBase {
 
     goToDoc(doc: documentMetadataDto) {
         this.goToDocumentSearch("");
-        this.navigate(appUrl.forEditDoc(doc["@metadata"]["@id"], null, null, this.activeDatabase()));
+        this.navigate(appUrl.forEditDoc((<any>doc)["@metadata"]["@id"], null, null, this.activeDatabase()));
     }
 
     getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass(doc["@metadata"]["Raven-Entity-Name"], this.activeDatabase());
+        return collection.getCollectionCssClass((<any>doc)["@metadata"]["Raven-Entity-Name"], this.activeDatabase());
     }
 
     fetchServerBuildVersion() {

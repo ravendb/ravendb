@@ -15,7 +15,7 @@ class listDiskPerformanceRunsCommand extends commandBase {
             fetch: "DisplayName"
         };
 
-        var mapper = x => {
+        var mapper = (x: any) => {
             return {
                 displayName: x.DisplayName,
                 documentId: x["__document_id"]

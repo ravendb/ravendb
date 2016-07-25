@@ -1,18 +1,18 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 class inputCursor {
-    static setPosition($input: JQuery, position: number) {
+    static setPosition($input: JQuery, position: number): void {
         var input = $input[0];
-        if (!input) return null;
+        if (!input) return;
 
         if ('createTextRange' in input) {
-            var textRange = input['createTextRange']();
+            var textRange = (<any>input)['createTextRange']();
             textRange.collapse(true);
             textRange.moveEnd(position);
             textRange.moveStart(position);
             textRange.select();
         } else if ('setSelectionRange' in input) {
-            input['setSelectionRange'](position, position);
+            (<any>input)['setSelectionRange'](position, position);
         }
     }
 
@@ -22,14 +22,14 @@ class inputCursor {
         var cursorPosition = 0;
         if ('selectionStart' in input) {
             // Normal browsers
-            cursorPosition = input["selectionStart"];
+            cursorPosition = (<any>input)["selectionStart"];
         }
         else {
             // IE
             input.focus();
-            var sel = document["selection"].createRange();
-            var selLen = document["selection"].createRange().text.length;
-            sel.moveStart('character', -input["value"].length);
+            var sel = (<any>document)["selection"].createRange();
+            var selLen = (<any>document)["selection"].createRange().text.length;
+            sel.moveStart('character', -(<any>input)["value"].length);
             cursorPosition = sel.text.length - selLen;
         }
         return cursorPosition;

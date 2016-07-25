@@ -29,7 +29,7 @@ class indexErrors extends viewModelBase {
         ];
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('ABUXGF');
         this.fetchIndexErrors();
@@ -46,7 +46,7 @@ class indexErrors extends viewModelBase {
             return new getDatabaseStatsCommand(db)
                 .execute()
                 .done((stats: databaseStatisticsDto) => {
-                    stats.Errors.forEach(e => e['TimestampHumanized'] = this.createHumanReadableTime(e.Timestamp));
+                    stats.Errors.forEach((e: any) => e['TimestampHumanized'] = this.createHumanReadableTime(e.Timestamp));
                     this.allIndexErrors(stats.Errors);
                     this.hasFetchedErrors(true);
                 });

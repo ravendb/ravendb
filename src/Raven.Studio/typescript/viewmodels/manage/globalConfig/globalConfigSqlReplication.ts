@@ -51,7 +51,7 @@ class globalConfigSqlReplication extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.dirtyFlag = new ko.DirtyFlag([this.connections]);
         this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
@@ -94,7 +94,7 @@ class globalConfigSqlReplication extends viewModelBase {
         newPredefinedConnection.name("New");
     }
 
-    removeSqlReplicationConnection(connection) {
+    removeSqlReplicationConnection(connection: predefinedSqlConnection) {
         this.connections().predefinedConnections.remove(connection);
     }
 
@@ -102,7 +102,7 @@ class globalConfigSqlReplication extends viewModelBase {
         con.name.subscribe(() => {
              //Get the previous value of 'name' here before it's set to newValue
              $("input[name=\"name\"]")
-                .each((index, inputField: any) => {
+                .each((index: number, inputField: any) => {
                 inputField.setCustomValidity("");
             });
         }, this, "beforeChange");
@@ -116,7 +116,7 @@ class globalConfigSqlReplication extends viewModelBase {
             }
             $("input[name=\"name\"]")
                 .filter(function () { return this.value === newName; })
-                .each((index, element: any) => {
+                .each((index: number, element: any) => {
                     element.setCustomValidity(message);
                 });
         });
@@ -126,12 +126,13 @@ class globalConfigSqlReplication extends viewModelBase {
         return this.connections().predefinedConnections().count(x => x.name() === connectionName) > 1;
     }
 
-    providerChanged(obj, event) {
+    providerChanged(obj: predefinedSqlConnection, event: JQueryEventObject) {
         if (event.originalEvent) {
             var curConnectionString = !!obj.connectionString() ? obj.connectionString().trim() : "";
             if (curConnectionString === "" ||
                 sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString === curConnectionString)) {
-                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } =
+                    sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == (<any>event.originalEvent.srcElement).selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
                     obj.connectionString(

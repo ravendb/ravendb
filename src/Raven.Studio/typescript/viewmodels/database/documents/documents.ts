@@ -142,7 +142,7 @@ class documents extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         if (args.withStop) {
             viewModelBase.hasContinueTestOption(true);
@@ -387,7 +387,7 @@ class documents extends viewModelBase {
     }
 
     private updateCollections(receivedCollections: Array<collection>) {
-        var deletedCollections = [];
+        var deletedCollections: collection[] = [];
 
         this.collections().forEach((col: collection) => {
             if (!receivedCollections.first((receivedCol: collection) => col.name === receivedCol.name) && col.name !== "System Documents" && col.name !== "All Documents") {
@@ -561,11 +561,11 @@ class documents extends viewModelBase {
         if (grid) {
             var selectedItem = <Document>grid.getSelectedItems(1).first();
 
-            var metadata = selectedItem["__metadata"];
+            var metadata = (<any>selectedItem)["__metadata"];
             var id = metadata["id"]; 
             var generate = new generateClassCommand(this.activeDatabase(), id, "csharp");
             var deffered = generate.execute();
-            deffered.done((code: JSON) => {
+            deffered.done((code: any) => {
                 app.showDialog(new showDataDialog("Generated Class", code["Code"]));
             });
         }
@@ -600,7 +600,7 @@ class documents extends viewModelBase {
     }
 
     // Animation callbacks for the groups list
-    showCollectionElement(element) {
+    showCollectionElement(element: Element) {
         if (element.nodeType === 1 && documents.isInitialized()) {
             $(element).hide().slideDown(500, () => {
                 ko.postbox.publish("SortCollections");
@@ -609,7 +609,7 @@ class documents extends viewModelBase {
         }
     }
 
-    hideCollectionElement(element) {
+    hideCollectionElement(element: Element) {
         if (element.nodeType === 1) {
             $(element).slideUp(1000, () => { $(element).remove(); });
         }

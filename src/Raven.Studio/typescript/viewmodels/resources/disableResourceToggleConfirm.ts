@@ -58,7 +58,7 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
         dialog.close(this);
     }
 
-    deactivate(args) {
+    deactivate(args: any) {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never carried it out.
         if (!this.disableToggleStarted) {

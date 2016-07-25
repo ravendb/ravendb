@@ -16,7 +16,7 @@ class dynamicHeightBindingHandler {
     constructor() {
         var $window = $(window);
         this.windowHeightObservable = ko.observable<number>($window.height());
-        window['ravenStudioWindowHeight'] = this.windowHeightObservable.throttle(this.throttleTimeMs);
+        (<any>window)['ravenStudioWindowHeight'] = this.windowHeightObservable.throttle(this.throttleTimeMs);
         $window.resize((ev: JQueryEventObject) => this.windowHeightObservable($window.height()));
     }
 

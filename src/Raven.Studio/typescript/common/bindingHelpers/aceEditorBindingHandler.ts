@@ -43,7 +43,7 @@ class aceEditorBindingHandler {
             var Editor = require("ace/editor").Editor;
             require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
-                    set: function (val) {
+                    set: function (val :any) {
                     },
                     value: "general"
                 }
@@ -53,7 +53,7 @@ class aceEditorBindingHandler {
             aceEditorBindingHandler.commands.push({
                 name: "Toggle Fullscreen",
                 bindKey: "Shift+F11",
-                exec: function (editor) {
+                exec: function (editor: any) {
                     aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
                     aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
                     editor.resize();
@@ -64,7 +64,6 @@ class aceEditorBindingHandler {
                         $(".fullScreenModeLabel").hide();
                         $(editor.container).find(".fullScreenModeLabel").show();
                         editor.setOption("maxLines", null);
-
                     } else {
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
                         $(".fullScreenModeLabel").show();
@@ -78,7 +77,7 @@ class aceEditorBindingHandler {
             aceEditorBindingHandler.commands.push({
                 name: "Exit FullScreen",
                 bindKey: "Esc",
-                exec: function (editor) {
+                exec: function (editor: any) {
                     if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
                         aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
                         aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
@@ -96,7 +95,7 @@ class aceEditorBindingHandler {
         aceEditorBindingHandler.customCompleters = [];
     }
 
-    static currentEditor;
+    static currentEditor: any;
 
     static customCompleters: { editorType: string; completerHostObject: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
 
@@ -134,8 +133,8 @@ class aceEditorBindingHandler {
             bubbleEnterKey: boolean;
             allowResize: boolean;
         },
-        allBindings,
-        viewModel,
+        allBindings: any,
+        viewModel: any,
         bindingContext: any) {
         var self = this;
         var bindingValues = valueAccessor();
@@ -145,7 +144,7 @@ class aceEditorBindingHandler {
         var readOnly = bindingValues.readOnly || this.defaults.readOnly;
         var typeName = bindingValues.typeName;
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
-        var langTools = null;
+        var langTools: any = null;
         var completerHostObject = bindingValues.completerHostObject;
         this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
         this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
@@ -255,7 +254,7 @@ class aceEditorBindingHandler {
 
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor: () => { code: (KnockoutObservable<string> | string); theme?: string; fontSize?: string; lang?: string; readOnly?: boolean }, allBindings, viewModel, bindingContext: any) {
+    update(element: HTMLElement, valueAccessor: () => { code: (KnockoutObservable<string> | string); theme?: string; fontSize?: string; lang?: string; readOnly?: boolean }, allBindings: any, viewModel: any, bindingContext: any) {
         var bindingValues = valueAccessor();
         var code = ko.unwrap(bindingValues.code);
         var aceEditor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");

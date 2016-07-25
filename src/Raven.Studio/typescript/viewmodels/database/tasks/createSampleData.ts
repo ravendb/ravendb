@@ -19,7 +19,7 @@ class createSampleData extends viewModelBase{
             .always(() => this.isBusy(false));
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('OGRN53');
     }

@@ -40,7 +40,7 @@
             taskState = "Completed";
         }
 
-        var status = null;
+        var status: string = null;
         if (dto.Status) {
             status = dto.Faulted || dto.Canceled ? dto.Status.Error : dto.Status.Progress;
         }

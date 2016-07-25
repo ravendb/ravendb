@@ -57,11 +57,11 @@ class trafficWatch extends viewModelBase {
         });
     }
 
-    canActivate(args): any {
+    canActivate(args:any): any {
         return true;
     }
     
-    activate(args) {
+    activate(args: any) {
         var widthUnit = 0.075;
         this.columnWidths = [
             ko.observable<number>(100 * widthUnit),
@@ -215,7 +215,7 @@ class trafficWatch extends viewModelBase {
             this.disconnect();
     }
 
-    isVisible(logEntry) {
+    isVisible(logEntry: any) {
         if (this.filterDuration() && logEntry.Duration < parseInt(this.filterDuration())) {
             return false;
         }
@@ -227,10 +227,10 @@ class trafficWatch extends viewModelBase {
     }
 
     processHttpTraceMessage(e: logNotificationDto) {
-        var logObject;
+        var logObject: any;
         
-        var mapTimings = (value) => {
-            var result = [];
+        var mapTimings = (value: any) => {
+            var result: any = [];
             if (!value) {
                 return result;
             }

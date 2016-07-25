@@ -6,7 +6,7 @@ class statusDebugWebSocket extends viewModelBase {
 
     results = ko.observable<string>("");
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
     }

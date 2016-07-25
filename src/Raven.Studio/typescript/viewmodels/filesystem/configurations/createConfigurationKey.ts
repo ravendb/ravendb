@@ -46,7 +46,7 @@ class createConfigurationKey extends dialogViewModelBase {
         }
     }
 
-    private isClientSideInputOk(keyName): boolean {
+    private isClientSideInputOk(keyName: string): boolean {
         var errorMessage = "";
 
         if (keyName == null) {
@@ -65,8 +65,8 @@ class createConfigurationKey extends dialogViewModelBase {
         return true;
     }
 
-    private checkInput(name): string {
-        var message = null;
+    private checkInput(name: string): string {
+        var message: string = null;
         //not implemented for the moment
         
         return message;

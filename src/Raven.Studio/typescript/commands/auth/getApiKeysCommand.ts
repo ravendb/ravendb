@@ -6,7 +6,7 @@ class getApiKeysCommand extends commandBase {
     execute(): JQueryPromise<Array<apiKey>> {
         var args = {
             startsWith: "Raven/ApiKeys/",
-            exclude: null,
+            exclude: <string>null,
             start: 0,
             pageSize: 256
         };

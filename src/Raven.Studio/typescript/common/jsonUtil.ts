@@ -1,12 +1,12 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 class jsonUtil {
-    static syntaxHighlight(json) {
+    static syntaxHighlight(json: any) {
         if (typeof json != 'string') {
             json = JSON.stringify(json, undefined, 2);
         }
         json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match: string) {
             var cls = 'number';
             if (/^"/.test(match)) {
                 if (/:$/.test(match)) {
@@ -29,7 +29,7 @@ class jsonUtil {
 
     static newLineNormalizingHashFunctionWithIgnoredFields = (ignoredFields: string[]) => {
         return (object: any) => {
-            return ko.toJSON(object, (k, v) => ignoredFields.indexOf(k) == -1 ? v : null).replace(/\\r\\n/g, '\\n');
+            return ko.toJSON(object, (k:string, v:string) => ignoredFields.indexOf(k) == -1 ? v : null).replace(/\\r\\n/g, '\\n');
         }
     }
 } 

@@ -37,7 +37,7 @@ class alerts extends viewModelBase {
         this.tableNavigation = new tableNavigationTrait<alert>("#alertTableContainer", this.selectedAlert, this.allAlerts, i => "#alertsContainer table tbody tr:nth-child(" + (i + 1) + ")");
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.fetchAlerts();
         var item = !!args.item && !isNaN(args.item) ? args.item : 0;

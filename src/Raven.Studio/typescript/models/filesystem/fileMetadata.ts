@@ -46,7 +46,7 @@ class fileMetadata {
                 if (!this.standardProps.contains(property.toLowerCase())) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     var value = dto[property];
-                    this[property] = value;
+                    (<any>this)[property] = value;
                     this.nonStandardProps.push(property);
                 }
             }
@@ -63,7 +63,7 @@ class fileMetadata {
 
         if (this.nonStandardProps) {
             this.nonStandardProps.forEach(p => {
-                dto[p] = this[p]
+                dto[p] = (<any>this)[p];
             });
         }
 

@@ -23,7 +23,7 @@ class scriptedIndex extends document {
     }
 
     static emptyForIndex(indexName: string): scriptedIndex {
-        var meta = [];
+        var meta: any = [];
         meta['@id'] = this.PREFIX + indexName;
         meta['Raven-Entity-Name'] = 'ScriptedIndexResults';
         return new scriptedIndex({
@@ -56,7 +56,7 @@ class scriptedIndex extends document {
         return this.deleteLater();
     }
 
-    private subscribeToObservable(observable) {
+    private subscribeToObservable(observable: KnockoutObservable<string>) {
         observable.subscribe((newValue) => {
             var message = "";
             var currentEditor = aceEditorBindingHandler.currentEditor;

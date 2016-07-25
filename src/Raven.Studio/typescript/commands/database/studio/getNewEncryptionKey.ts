@@ -7,7 +7,7 @@ class getNewEncryptionKey extends commandBase {
     }
 
     execute() {
-        var key = this.query("/studio-tasks/new-encryption-key", null, null);
+        var key = this.query<string>("/studio-tasks/new-encryption-key", null, null);
         return key;
     }
 }

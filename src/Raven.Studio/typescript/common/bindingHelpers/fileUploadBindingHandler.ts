@@ -24,10 +24,10 @@ class fileUploadBindingHandler {
         }
     }
     
-    init(element, valueAccessor) {
+    init(element: HTMLInputElement, valueAccessor: any) {
     }
 
-    update(element: HTMLInputElement, valueAccessor, allBindingsAccessor, viewModel: viewModelBase, bindingContext) {
+    update(element: HTMLInputElement, valueAccessor: any, allBindingsAccessor: KnockoutAllBindingsAccessor, viewModel: viewModelBase, bindingContext: KnockoutBindingContext) {
         var options: {
             files: KnockoutObservable<FileList>;
             directory: KnockoutObservable<string>;

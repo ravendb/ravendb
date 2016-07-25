@@ -82,7 +82,7 @@ class createResourceBase extends viewModelBase {
             return true;
         }
         else {
-            var value = licenseStatus.Attributes[name];
+            var value = (<any>licenseStatus.Attributes)[name];
             return value === "true";
         }
     }

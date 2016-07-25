@@ -22,6 +22,7 @@ import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemSta
 import filesystemEditFile = require("viewmodels/filesystem/files/filesystemEditFile");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
 import queryUtil = require("common/queryUtil");
+import changeSubscription = require("common/changeSubscription");
 
 class filesystemFiles extends viewModelBase {
 
@@ -39,7 +40,7 @@ class filesystemFiles extends viewModelBase {
     currentLevelSubdirectories = ko.observableArray<string>();
     uploadFiles = ko.observable<FileList>();
     uploadQueue = ko.observableArray<uploadItem>();
-    folderNotificationSubscriptions = {};
+    folderNotificationSubscriptions: dictionary<changeSubscription> = {};
     hasFiles: KnockoutComputed<boolean>;
     filesSelection: KnockoutComputed<checkbox>;
     hasAnyFilesSelected: KnockoutComputed<boolean>;
@@ -152,7 +153,7 @@ class filesystemFiles extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.updateHelpLink("Y1TNKH");
@@ -268,8 +269,8 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
-    createPagedList(directory): pagedList {
-        var fetcher;
+    createPagedList(directory: string): pagedList {
+        var fetcher: fetcherDto<any>;
         if (directory === filesystemFiles.revisionsFolderId) {
             fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
         } else {

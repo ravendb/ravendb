@@ -55,7 +55,7 @@ class database extends resource {
         this.statistics().fromDto(dto);
     }
 
-    private attributeValue(attributes, bundleName: string) {
+    private attributeValue(attributes: any, bundleName: string) {
         for (var key in attributes){
             if (attributes.hasOwnProperty(key) && key.toLowerCase() === bundleName.toLowerCase()) {
                 return attributes[key];

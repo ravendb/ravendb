@@ -19,7 +19,7 @@ class chunkFetcher<T> {
         return this.task;
     }
 
-    fetchChunk(skip, take) {
+    fetchChunk(skip: number, take: number) {
         this.fetcher(skip, take)
             .fail(x => this.task.reject(x))
             .done(data => {

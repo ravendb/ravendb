@@ -500,7 +500,7 @@ class editIndex extends viewModelBase {
     }
 
     private saveIndex(index: indexDefinitionDto): JQueryPromise<any> {
-        var commands = [];
+        var commands: Array<JQueryPromise<any>> = [];
 
         commands.push(new saveIndexDefinitionCommand(index, this.activeDatabase()).execute());
         if (this.scriptedIndex() !== null) {

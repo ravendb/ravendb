@@ -103,7 +103,7 @@ class timeSeriesPoints extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         //TODO: update this in documentation

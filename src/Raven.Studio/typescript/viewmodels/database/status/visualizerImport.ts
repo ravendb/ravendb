@@ -21,10 +21,10 @@ class visualizerImport extends dialogViewModelBase {
             self.dataImported(this.result);
         };
         reader.onerror = (error) => this.importTask.reject(error);
-        reader.readAsText(file)
+        reader.readAsText(file);
     }
 
-    dataImported(result) {
+    dataImported(result: any) {
         var json = JSON.parse(result);
         this.importTask.resolve(json);
         dialog.close(this);

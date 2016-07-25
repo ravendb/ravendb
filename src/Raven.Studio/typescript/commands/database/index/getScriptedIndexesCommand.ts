@@ -11,7 +11,7 @@ class getScriptedIndexesCommand extends commandBase {
     execute(): JQueryPromise<Array<scriptedIndex>> {
         var args = {
             startsWith: "Raven/ScriptedIndexResults/" + this.indexName,
-            exclude: null,
+            exclude: <string>null,
             start: 0,
             pageSize: 256
         };

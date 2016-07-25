@@ -54,7 +54,7 @@ class transformer {
         if (this.transformResults()) {
             var parameters: string[] = this.transformResults().match(matcher);
             var parametersWithDefault: string[] = this.transformResults().match(defaultMatcher);
-            var results = [];
+            var results: Array<{name : string, hasDefault: boolean}> = [];
 
             if (parameters !== null) {
                 parameters.forEach((value: string) => results.push( {

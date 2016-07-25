@@ -10,6 +10,7 @@ class logEntry {
     dateRaw = ko.observable<number>();
     humanizedTimestamp: KnockoutComputed<string>;
     timeStampText: KnockoutComputed<string>;
+    isVisible: KnockoutComputed<boolean>;
 
     constructor(dto: logDto, private nowProvider: KnockoutObservable<moment.Moment>) {
         this.level(dto.Level);

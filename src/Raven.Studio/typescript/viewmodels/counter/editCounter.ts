@@ -29,7 +29,7 @@ class editCounter extends viewModelBase {
         super();
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
         super.canActivate(args);
 
         var deffered = $.Deferred();

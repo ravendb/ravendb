@@ -1,15 +1,13 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
-import appUrl = require("common/appUrl");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import monitorCompactCommand = require("commands/filesystem/monitorCompactCommand");
 
 class startCompactCommand extends commandBase {
 
-    constructor(private fsToCompact: string, private updateCompactStatus: (compactStatusDto) => void) {
+    constructor(private fsToCompact: string, private updateCompactStatus: (status:compactStatusDto) => void) {
         super();
     }
-
+    
     execute(): JQueryPromise<any> {
 
         var result = $.Deferred();

@@ -107,7 +107,7 @@ class viewModelBase {
     /*
      * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
      */
-    activate(args, isShell = false) {
+    activate(args: any, isShell = false) {
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && (!currentDb || currentDb.name !== db.name)) {

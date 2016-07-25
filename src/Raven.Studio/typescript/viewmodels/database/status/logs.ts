@@ -46,10 +46,10 @@ class logs extends viewModelBase {
         this.sortColumn.subscribe(() => this.sortInPlace());
         this.sortAsc.subscribe(() => this.sortInPlace());
 
-        this.tableNavigation = new tableNavigationTrait<logEntry>("#logRecords", this.selectedLog, this.allLogs, i => "#logRecords > div:nth-child(" + (i + 1) + ")");
+        this.tableNavigation = new tableNavigationTrait<logEntry>("#logRecords", this.selectedLog, this.allLogs, (i: number) => "#logRecords > div:nth-child(" + (i + 1) + ")");
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.columnWidths = [
             ko.observable<number>(100),
@@ -100,9 +100,9 @@ class logs extends viewModelBase {
     }
 
     processLogResults(results: logDto[]) {
-        var mappedResults = results.map(r => {
-            var mapped = new logEntry(r, this.now);
-            mapped['isVisible'] = ko.pureComputed(() => {
+        var mappedResults: logEntry[] = results.map((r: logDto) => {
+            var mapped: logEntry = new logEntry(r, this.now);
+            mapped.isVisible = ko.pureComputed(() => {
                 var matchesSearch = this.matchesFilterAndSearch(mapped);
                 var matchesFilters = this.filteredLoggers().contains(mapped.loggerName());
                 return matchesSearch && !matchesFilters;
@@ -129,9 +129,9 @@ class logs extends viewModelBase {
     sortResults(dataToSort: logEntry[]) {
         var column = this.sortColumn();
         var asc = this.sortAsc();
-        var test = asc ? ((l, r) => l < r) : ((l, r) => l > r);
+        var test = asc ? ((l: any, r:  any) => l < r) : ((l: any, r: any) => l > r);
 
-        var sortFunc = (left, right) => {
+        var sortFunc = (left: any, right: any) => {
             if (left[column]() === right[column]()) { return 0; }
             return test(left[column](), right[column]()) ? 1 : -1;
         }
@@ -202,7 +202,7 @@ class logs extends viewModelBase {
         }
     }
 
-    sortBy(columnName, logs, event) {
+    sortBy(columnName: string) {
         if (this.sortColumn() === columnName) {
             this.sortAsc( !this.sortAsc() );
         }

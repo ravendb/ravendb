@@ -14,9 +14,10 @@ class timeSeriesType implements ICollectionBase {
     constructor(public name: string, public fields: string[], keysCount: number, private ownerTimeSeries: timeSeries) {
         this.keysCount(keysCount);
         this.colorClass = timeSeriesType.getTypeCssClass(this.name, ownerTimeSeries);
+        /* TODO:
         this["Name"] = name;
         this["Fields"] = fields.join(', ');
-        this["Keys"] = keysCount;
+        this["Keys"] = keysCount; */
     }
 
     activate() {

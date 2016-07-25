@@ -22,7 +22,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
 
         // when the activeScreen name changes - load the viewmodel
         this.activeScreen.subscribe((newValue) =>
-            require([newValue], (model) => {
+            require([newValue], (model: new () => viewModelBase) => { //TODO: avoid using require here, as it isn't type safe
                 this.currentModel = new model();
                 this.content.activateItem(this.currentModel);
             })
@@ -58,7 +58,7 @@ class databaseSettingsDialog extends dialogViewModelBase {
         var canDeactivate = this.canDeactivate();
 
         if (canDeactivate.done) {
-            canDeactivate.done((answer) => {
+            canDeactivate.done((answer: { can: boolean }) => {
                 if (answer.can) {
                     this.onSuccessfulDeactivation(moduleId);
                 }

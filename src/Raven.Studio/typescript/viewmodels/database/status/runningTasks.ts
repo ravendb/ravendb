@@ -47,9 +47,9 @@ class runningTasks extends viewModelBase {
             var column = this.sortColumn();
             var asc = this.sortAsc();
 
-            var sortFunc = (left, right) => {
+            var sortFunc = (left: any, right: any) => {
                 if (left[column] === right[column]) { return 0; }
-                var test = asc ? ((l, r) => l < r) : ((l, r) => l > r);
+                var test = asc ? ((l: any, r: any) => l < r) : ((l: any, r: any) => l > r);
                 return test(left[column], right[column]) ? 1 : -1;
             }
 
@@ -74,7 +74,7 @@ class runningTasks extends viewModelBase {
         this.taskTypes(types);
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.columnWidths = [
             ko.observable<number>(100),
@@ -154,7 +154,7 @@ class runningTasks extends viewModelBase {
         this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 60000);
     }
 
-    sortBy(columnName, logs, event) {
+    sortBy(columnName: any, logs: any[], event: JQueryEventObject) {
         if (this.sortColumn() === columnName) {
             this.sortAsc(!this.sortAsc());
         }

@@ -9,7 +9,7 @@ class cancelSideBySizeConfirm extends dialogViewModelBase {
     cancelTask = $.Deferred();
     title: string;
 
-    constructor(private indexNames: string[], private db: database, title?) {
+    constructor(private indexNames: string[], private db: database, title?: string) {
         super();
 
         if (!indexNames || indexNames.length === 0) {

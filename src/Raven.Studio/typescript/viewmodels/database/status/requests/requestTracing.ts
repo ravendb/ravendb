@@ -26,7 +26,7 @@ class requestTracing extends viewModelBase {
         this.tableNavigation = new tableNavigationTrait<requestTracingDto>("#requestTracingTableContainer", this.selectedEntry, this.allEntries, i => "#requestTracingTableContainer table tbody tr:nth-child(" + (i + 1) + ")");
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         return this.fetchRequestTracing();
     }
@@ -43,7 +43,7 @@ class requestTracing extends viewModelBase {
     }
 
     processResults(results: requestTracingDto[]) {
-        results.forEach(r => {
+        results.forEach((r: any) => {
             r['IsVisible'] = ko.computed(() => this.matchesFilter(r));
         });
         this.allEntries(results.reverse());

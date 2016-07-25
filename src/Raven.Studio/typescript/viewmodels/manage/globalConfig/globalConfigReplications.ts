@@ -13,6 +13,7 @@ import messagePublisher = require("common/messagePublisher");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import shell = require("viewmodels/shell");
+import database = require("models/resources/database");
 
 class globalConfigReplications extends viewModelBase {
 
@@ -70,7 +71,7 @@ class globalConfigReplications extends viewModelBase {
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
-        var db = null;
+        var db: database = null;
         if (db) {
             //TODO:
             if (this.settingsAccess.isForbidden()) {
@@ -99,7 +100,7 @@ class globalConfigReplications extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
@@ -115,7 +116,7 @@ class globalConfigReplications extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
     }
 
-    fetchAutomaticConflictResolution(db): JQueryPromise<any> {
+    fetchAutomaticConflictResolution(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
         /* TODO:
         new getAutomaticConflictResolutionDocumentCommand(db, true)
@@ -128,7 +129,7 @@ class globalConfigReplications extends viewModelBase {
         return deferred;
     }
 
-    fetchReplications(db): JQueryPromise<any> {
+    fetchReplications(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
 
         ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
@@ -203,7 +204,7 @@ class globalConfigReplications extends viewModelBase {
     }
 
     private saveReplicationSetup() {
-        var db = null;
+        var db: database = null;
         if (db) {
             new saveReplicationDocumentCommand(this.replicationsSetup().toDto(false), db, true)
                 .execute()
@@ -212,7 +213,7 @@ class globalConfigReplications extends viewModelBase {
     }
 
     saveAutomaticConflictResolutionSettings() {
-        var db = null;
+        var db: database = null;
         if (db) {
             new saveAutomaticConflictResolutionDocumentCommand(this.replicationConfig().toDto(), db, true)
                 .execute()

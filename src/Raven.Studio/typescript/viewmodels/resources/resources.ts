@@ -150,7 +150,7 @@ class resources extends viewModelBase {
         });
 
         this.allCheckedResourcesDisabled = ko.computed(() => {
-            var disabledStatus = null;
+            var disabledStatus: boolean = null;
             for (var i = 0; i < this.resources().length; i++) {
                 var rs: resource = this.resources()[i];
                 if (rs.isChecked()) {
@@ -447,7 +447,7 @@ class resources extends viewModelBase {
             .creationTask
             .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, tempPath: string, storageEngine: string, incrementalBackup: boolean
                 , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
-                var settings = {
+                var settings: dictionary<string> = {
                     "Raven/ActiveBundles": bundles.join(";")
                 };
                 if (storageEngine) {
@@ -486,7 +486,7 @@ class resources extends viewModelBase {
         createResourceViewModel.createFileSystemPart
             .creationTask
             .done((fileSystemName: string, bundles: string[], fileSystemPath: string, filesystemLogs: string, tempPath: string, storageEngine: string) => {
-                var settings = {
+                var settings: dictionary<string> = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
 
@@ -506,7 +506,7 @@ class resources extends viewModelBase {
         createResourceViewModel.createCounterStoragePart
             .creationTask
             .done((counterStorageName: string, bundles: string[], counterStoragePath: string, tempPath: string) => {
-                var settings = {
+                var settings: dictionary<string> = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
                 settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
@@ -520,7 +520,7 @@ class resources extends viewModelBase {
         createResourceViewModel.createTimeSeriesPart
             .creationTask
             .done((timeSeriesName: string, bundles: string[], timeSeriesPath: string, tempPath: string) => {
-                var settings = {
+                var settings: dictionary<string> = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
                 settings["Raven/TimeSeries/DataDir"] = (!this.isEmptyStringOrWhitespace(timeSeriesPath)) ? timeSeriesPath : "~\\TimeSeries\\" + timeSeriesName;
@@ -534,9 +534,9 @@ class resources extends viewModelBase {
         app.showDialog(createResourceViewModel);
     }
 
-    private showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}, clusterWide: boolean) {
+    private showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: dictionary<string>, clusterWide: boolean) {
         var securedSettings = {};
-        var savedKey;
+        var savedKey: string;
 
         var encryptionDeferred = $.Deferred();
 
@@ -642,7 +642,7 @@ class resources extends viewModelBase {
 
     private showFsCreationAdvancedStepsIfNecessary(filesystemName: string, bundles: string[], settings: {}) {
         var securedSettings = {};
-        var savedKey;
+        var savedKey: string;
 
         var encryptionDeferred = $.Deferred();
 

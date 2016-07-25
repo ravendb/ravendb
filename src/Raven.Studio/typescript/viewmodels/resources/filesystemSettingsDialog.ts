@@ -20,7 +20,7 @@ class filesystemSettingsDialog extends dialogViewModelBase {
 
         // when the activeScreen name changes - load the viewmodel
         this.activeScreen.subscribe((newValue) =>
-            require([newValue], (model) => {
+            require([newValue], (model: new() => viewModelBase) => {
                 this.currentModel = new model();
                 this.content.activateItem(this.currentModel);
             })
@@ -50,7 +50,7 @@ class filesystemSettingsDialog extends dialogViewModelBase {
         var canDeactivate = this.canDeactivate();
 
         if (canDeactivate.done) {
-            canDeactivate.done((answer) => {
+            canDeactivate.done((answer: any) => {
                 if (answer.can) {
                     this.onSuccessfulDeactivation(moduleId);
                 }

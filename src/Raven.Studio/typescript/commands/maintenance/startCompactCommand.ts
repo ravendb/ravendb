@@ -6,7 +6,7 @@ import monitorCompactCommand = require("commands/maintenance/monitorCompactComma
 
 class startCompactCommand extends commandBase {
 
-    constructor(private dbToCompact: string, private updateCompactStatus: (compactStatusDto) => void) {
+    constructor(private dbToCompact: string, private updateCompactStatus: (status: compactStatusDto) => void) {
         super();
     }
 

@@ -4,8 +4,8 @@ class synchronizationConfig {
 
     fileConflictResolution = ko.observable<string>();
     maxNumberOfSynchronizationsPerDestination = ko.observable<number>();
-    synchronizationLockTimeout = ko.observable();
-    synchronizationLockTimeoutUnit = ko.observable();
+    synchronizationLockTimeout = ko.observable<number>();
+    synchronizationLockTimeoutUnit = ko.observable<string>();
 
     static TU_MINUTES = "minutes";
     static TU_HOURS = "hours";
@@ -37,7 +37,7 @@ class synchronizationConfig {
         };
     }
 
-    private convertToMilliseconds(value, unit): number {
+    private convertToMilliseconds(value: number, unit: string): number {
         if (value && unit) {
             switch (unit) {
                 case synchronizationConfig.TU_MINUTES:
@@ -51,7 +51,7 @@ class synchronizationConfig {
         return null;
     }
 
-    private prepareInterval(milliseconds) {
+    private prepareInterval(milliseconds: number): [number, string] {
         if (milliseconds) {
             var seconds = milliseconds / 1000;
             var minutes = seconds / 60;

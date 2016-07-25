@@ -33,7 +33,7 @@ class search extends viewModelBase {
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.searchFiles(s));
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("SRTQ8C");
         this.appUrls = appUrl.forCurrentFilesystem();

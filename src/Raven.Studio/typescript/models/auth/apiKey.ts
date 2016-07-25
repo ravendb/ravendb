@@ -107,7 +107,7 @@ class apiKey extends document {
         this.databases.push(new databaseAccess(newItem));
     }
 
-    removeDatabase(database) {
+    removeDatabase(database: databaseAccess) {
         this.databases.remove(database);
     }
 
@@ -120,7 +120,7 @@ class apiKey extends document {
         }
     }
 
-    isValid(index): boolean {
+    isValid(index: number): boolean {
         var isApiKeyNameValid = this.name().indexOf("\\") === -1;
         var requiredValues = [this.name(), this.secret()];
         return requiredValues.every(v => v != null && v.length > 0) && isApiKeyNameValid;

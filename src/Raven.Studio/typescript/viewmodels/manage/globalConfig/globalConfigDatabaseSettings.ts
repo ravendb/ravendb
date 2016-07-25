@@ -6,6 +6,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import databaseSetting = require("models/database/cluster/databaseSetting");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
 import shell = require("viewmodels/shell");
+import database = require("models/resources/database");
 
 class globalConfigDatabaseSettings extends viewModelBase {
     activated = ko.observable<boolean>(false);
@@ -74,7 +75,7 @@ class globalConfigDatabaseSettings extends viewModelBase {
         this.databaseSettings.remove(itemToRemove);
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("T3P7UA");
 
@@ -82,7 +83,7 @@ class globalConfigDatabaseSettings extends viewModelBase {
         this.isSaveEnabled = ko.computed<boolean>(() => this.dirtyFlag().isDirty());
     }
 
-    private fetchClusterConfiguration(db): JQueryPromise<clusterConfigurationDto> {
+    private fetchClusterConfiguration(db: database): JQueryPromise<clusterConfigurationDto> {
 
         var currentConfiguration: JQueryPromise<clusterConfigurationDto> = new
             getDocumentWithMetadataCommand("Raven/Cluster/Configuration", null, true)

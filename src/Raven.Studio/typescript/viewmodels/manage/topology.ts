@@ -117,7 +117,7 @@ class topology extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("ES8PCB");
     }

@@ -5,9 +5,9 @@ class createEncryptionConfirmation extends dialogViewModelBase {
 
     public dialogPromise = $.Deferred();
 
-    key = ko.observable();
+    key = ko.observable<string>();
 
-    constructor(savedKey) {
+    constructor(savedKey: string) {
         super();
         this.key(savedKey);
     }

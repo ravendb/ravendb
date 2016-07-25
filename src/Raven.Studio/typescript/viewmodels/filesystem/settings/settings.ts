@@ -8,7 +8,7 @@ class settings extends viewModelBase {
     router: DurandalRootRouter = null;
     appUrls: computedAppUrls;
 
-    private bundleMap = {  versioning: "Versioning" };
+    private bundleMap: dictionary<string> = {  versioning: "Versioning" };
     userDatabasePages = ko.observableArray<string>([]);
     activeSubViewTitle: KnockoutComputed<string>;
 
@@ -54,7 +54,7 @@ class settings extends viewModelBase {
         return true;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.userDatabasePages([]);

@@ -20,7 +20,7 @@ class statusDebugDocrefs extends viewModelBase {
         return this.currentDocRefs().totalResultCount();
     });
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
         this.columns().columns([

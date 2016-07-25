@@ -462,7 +462,7 @@ class patch extends viewModelBase {
     }
 
     testPatch() {
-        var values = {};
+        var values: dictionary<string> = {};
         this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;
@@ -480,11 +480,11 @@ class patch extends viewModelBase {
         new executePatchCommand(bulkDocs, this.activeDatabase(), true)
             .execute()
             .done((result: bulkDocumentDto[]) => {
-                var testResult = new document(result[0].AdditionalData['Document']);
+                var testResult = new document((<any>result[0]).AdditionalData['Document']);
                 this.afterPatchDoc(JSON.stringify(testResult.toDto(), null, 4));
                 this.afterPatchMeta(JSON.stringify(documentMetadata.filterMetadata(testResult.__metadata.toDto()), null, 4));
-                this.updateActions(result[0].AdditionalData['Actions']);
-                this.outputLog(result[0].AdditionalData["Debug"]);
+                this.updateActions((<any>result[0]).AdditionalData['Actions']);
+                this.outputLog((<any>result[0]).AdditionalData["Debug"]);
             })
             .fail((result: JQueryXHR) => console.log(result.responseText));
         this.recordPatchRun();
@@ -543,7 +543,7 @@ class patch extends viewModelBase {
     }
 
     executePatchOnSingle() {
-        var keys = [];
+        var keys: string[] = [];
         keys.push(this.patchDocument().selectedItem());
         this.confirmAndExecutePatch(keys);
     }
@@ -559,8 +559,8 @@ class patch extends viewModelBase {
     }
 
     private executePatchByIndex() {
-        var index = null;
-        var query = null;
+        var index: string = null;
+        var query: string = null;
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 index = "Raven/DocumentsByEntityName";
@@ -572,7 +572,7 @@ class patch extends viewModelBase {
                 break;
         }
 
-        var values = {};
+        var values: dictionary<string> = {};
 
         this.patchSuccess(false);
         this.patchFailure(false);
@@ -650,7 +650,7 @@ class patch extends viewModelBase {
     }
 
     private executePatch(keys: string[]) {
-        var values = {};
+        var values: dictionary<string> = {};
         this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;

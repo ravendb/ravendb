@@ -91,7 +91,7 @@ class diskIoViewer extends viewModelBase {
         });
     }
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         var deffered = $.Deferred();
 
         new listDiskPerformanceRunsCommand()
@@ -104,7 +104,7 @@ class diskIoViewer extends viewModelBase {
         return deffered;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.updateHelpLink("K6J4EE");

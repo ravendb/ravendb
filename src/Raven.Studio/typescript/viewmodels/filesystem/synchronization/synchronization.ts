@@ -33,7 +33,7 @@ class synchronization extends viewModelBase {
         });
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
         return true;
     }
 }

@@ -4,7 +4,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import appUrl = require("common/appUrl");
 
 class monitorCompactCommand extends commandBase {
-    constructor(private parentPromise: JQueryDeferred<any>, private dbName :string,  private updateCompactStatus: (compactStatusDto) => void) {
+    constructor(private parentPromise: JQueryDeferred<any>, private dbName :string,  private updateCompactStatus: (status: compactStatusDto) => void) {
         super();
     }
 

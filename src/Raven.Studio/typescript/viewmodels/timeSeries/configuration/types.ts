@@ -47,7 +47,7 @@ class types extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.typesList(this.createTypesPagedList());

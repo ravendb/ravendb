@@ -129,7 +129,7 @@ class serverSmuggling extends viewModelBase {
         this.restoreFromLocalStorage();
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.updateHelpLink("MUJQ7G");

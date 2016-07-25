@@ -3,7 +3,7 @@
 declare var define: RequireDefine;
 declare var App: any;
 
-define(['durandal/system', 'jquery'], function (system, $) {
+define(['durandal/system', 'jquery'], function (system: any, $: JQueryStatic) {
 
     var animationTypes = [
         'bounce',
@@ -75,7 +75,7 @@ define(['durandal/system', 'jquery'], function (system, $) {
         "viewmodels/requestTracing"
     ];
 
-    function animValue(type) {
+    function animValue(type: any) {
         if (Object.prototype.toString.call(type) == '[object String]') {
             return type;
         } else {
@@ -83,23 +83,23 @@ define(['durandal/system', 'jquery'], function (system, $) {
         }
     }
 
-    function ensureSettings(settings) {
+    function ensureSettings(settings: any) {
         settings.inAnimation = settings.inAnimation || 'fadeInRight';
         settings.outAnimation = settings.outAnimation || 'fadeOut';
         return settings;
     }
 
-    function doTrans(settings) {
+    function doTrans(settings: any) {
         var parent = settings.parent,
           activeView = settings.activeView,
           newChild = settings.child,
           outAn = animValue(settings.outAnimation),
           inAn = animValue(settings.inAnimation),
-          $previousView,
+          $previousView: any,
           $newView = $(newChild).removeClass(outAn); // just need to remove outAn here, keeping the animated class so we don't get a "flash"
 
-        return system.defer(function (dfd) {
-            function outTransition(callback) {
+        return system.defer(function (dfd: any) {
+            function outTransition(callback: any) {
                 $previousView = $(activeView);
                 $previousView.addClass('animated');
                 $previousView.addClass(outAn);
@@ -145,7 +145,7 @@ define(['durandal/system', 'jquery'], function (system, $) {
 
     return App = {
         duration: 1000 * .13, // seconds
-        create: function (settings) {
+        create: function (settings: any) {
             settings = ensureSettings(settings);
             return doTrans(settings);
         }

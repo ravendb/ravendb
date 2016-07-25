@@ -37,7 +37,7 @@ class queryFacetsCommand extends commandBase {
     }
 
     private parseResults(resultSet: facetResultSetDto): pagedResultSet<any> {
-        var items = [];
+        var items: dictionary<any>[] = [];
         var totalItemCount = 0;
 
         // The .Results property contains properties in the form of [facet name]-[facet aggregation field].
@@ -66,7 +66,7 @@ class queryFacetsCommand extends commandBase {
                 
                 for (var power = 0; power < 5; power++) {
                     var curFieldName = facet.getLabelForAggregation(Math.pow(2, power));
-                    var curFieldVal = facetValue[curFieldName];
+                    var curFieldVal = (<any>facetValue)[curFieldName];
 
                     if (!!curFieldVal) {
                         if (typeof curFieldVal === "number") {

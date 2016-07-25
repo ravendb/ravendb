@@ -12,7 +12,7 @@ class updateFileMetadataCommand extends commandBase {
             this.reportInfo("Saving " + this.fileName + "...");
         }
 
-        var customHeaders = {};
+        var customHeaders: any = {};
 
         //We only want to stringify when the header's value is a json doc.
         for (var key in this.metadata) {
@@ -20,7 +20,7 @@ class updateFileMetadataCommand extends commandBase {
             if (typeof (value) != "string" && typeof (value) != "number")
                 customHeaders[key] = JSON.stringify(value);
             else {
-                customHeaders[key] = this.metadata[key]
+                customHeaders[key] = this.metadata[key];
             }
         }
 

@@ -9,11 +9,11 @@ class row {
     top = ko.observable(0);
     rowIndex = ko.observable(0);
     isInUse = ko.observable(false);
-    cellMap: { Id: any } = { Id: null };
+    cellMap: dictionary<cell> = { Id: <cell>null };
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
-    compiledCustomFunctions = {};
+    compiledCustomFunctions:dictionary<any> = {};
 
     templateNameCache:{ [key:string]:KnockoutObservable<string> } = {};
 
@@ -50,7 +50,7 @@ class row {
     }
 
     resetCells() {
-        for (var prop in this.cellMap) {
+        for (let prop in this.cellMap) {
             var cellVal: cell = this.cellMap[prop];
             if (cellVal) {
                 cellVal.reset();
@@ -74,7 +74,7 @@ class row {
         if (customColumns.customMode()) {
             customColumns.columns().forEach((column, index) => {
                 var binding = column.binding();
-                var context = {};
+                var context:dictionary<any> = {};
 
                 $.each(rowData, (name: string, value: any) => {
                     context[name] = value;
@@ -154,7 +154,7 @@ class row {
         // Bug fix: http://issues.hibernatingrhinos.com/issue/RavenDB-2002
         // Calling .data() registers it as a Knockout dependency; updating this 
         // observable later will cause the cell to redraw, thus fixing the bug.
-        if (this.cellMap && this.cellMap.Id) {
+        if (this.cellMap && this.cellMap["Id"]) {
             this.cellMap["Id"].data();
         }
 

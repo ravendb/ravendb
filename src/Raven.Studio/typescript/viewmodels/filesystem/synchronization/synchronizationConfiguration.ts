@@ -26,7 +26,7 @@ class synchronizationConfiguration extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("1K9SAA");
         this.dirtyFlag = new ko.DirtyFlag([this.config]);

@@ -10,7 +10,7 @@ class statusDebugSqlReplication extends viewModelBase {
         super();
     }
     
-    activate(args) {
+    activate(args: any) {
         var widthUnit = 8;
         this.columnWidths = [
             ko.observable<number>(widthUnit),  

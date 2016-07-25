@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 
 class checkEncryptionKey extends commandBase {
 
-    constructor(private key) {
+    constructor(private key: string) {
         super();
     }
 

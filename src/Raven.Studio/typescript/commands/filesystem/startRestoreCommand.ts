@@ -5,7 +5,7 @@ import monitorRestoreCommand = require("commands/filesystem/monitorRestoreComman
 import appUrl = require("common/appUrl");
 
 class startRestoreCommand extends commandBase {
-    constructor(private defrag: boolean, private restoreRequest: filesystemRestoreRequestDto, private updateRestoreStatus: (restoreStatusDto) => void) {
+    constructor(private defrag: boolean, private restoreRequest: filesystemRestoreRequestDto, private updateRestoreStatus: (status: restoreStatusDto) => void) {
         super();
     }
 

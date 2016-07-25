@@ -22,7 +22,7 @@ class versioning extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("RCLD9I");
 

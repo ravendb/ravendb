@@ -5,13 +5,13 @@ import pagedResultSet = require("common/pagedResultSet");
 class pagedList {
 
     totalResultCount = ko.observable(0);
-    private items = [];
+    private items: Array<any> = [];
     isFetching = false;
     queuedFetch: { skip: number; take: number; task: JQueryDeferred<pagedResultSet<any>> } = null;
     collectionName = "";
     currentItemIndex = ko.observable(0);
 
-    constructor(private fetcher: (skip: number, take: number) => JQueryPromise<pagedResultSet<any>>) {
+    constructor(private fetcher: fetcherDto<any>) {
         if (!fetcher) {
             throw new Error("Fetcher must be specified.");
         }

@@ -51,16 +51,16 @@ class statusDebugMetrics extends viewModelBase {
         return null;
     });
 
-    extractPercentiles(input) {
-        var result = [];
+    extractPercentiles(input: statusDebugMetricsDto) {
+        var result: Array<{key: string, value: string}> = [];
         for (var prop in input) {
-            var v = input[prop];
+            var v = (<any>input)[prop];
             result.push({ "key": prop, "value": v });
         }
         return result;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchStatusDebugMetrics());

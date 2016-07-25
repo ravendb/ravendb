@@ -117,7 +117,7 @@ class sqlReplications extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('J9VD59');
     }
@@ -147,7 +147,7 @@ class sqlReplications extends viewModelBase {
         
     }
 
-    itemNumber = (index) => {
+    itemNumber = (index: number) => {
         return index + 1;
     }
 

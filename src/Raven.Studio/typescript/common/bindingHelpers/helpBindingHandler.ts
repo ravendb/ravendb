@@ -23,7 +23,7 @@ class helpBindingHandler {
         $(element).append(this.link);
     }
 
-    update(element: HTMLInputElement, valueAccessor: () => any, allBindingsAccessor, viewModel: viewModelBase, bindingContext) {
+    update(element: HTMLInputElement, valueAccessor: () => any, allBindingsAccessor: KnockoutAllBindingsAccessor, viewModel: viewModelBase, bindingContext: KnockoutBindingContext) {
         var value = valueAccessor();
         var hashUnwrapped = ko.unwrap(value.hash);
         var version = viewModelBase.clientVersion();

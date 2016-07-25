@@ -30,7 +30,7 @@ class indexTerms extends viewModelBase {
     }
 
     processIndex(indexContainer: indexDefinitionContainerDto) {
-        var fields = indexContainer.Index.Fields.map(fieldName => {
+        var fields = indexContainer.Index.Fields.map((fieldName: string) => {
             return { name: fieldName, terms: ko.observableArray<string>(), hasMoreTerms: ko.observable<boolean>(false) }
         });
         this.fields(fields);

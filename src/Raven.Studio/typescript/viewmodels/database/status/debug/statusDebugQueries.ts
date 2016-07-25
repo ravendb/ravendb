@@ -16,7 +16,7 @@ class statusDebugQueries extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchCurrentQueries());

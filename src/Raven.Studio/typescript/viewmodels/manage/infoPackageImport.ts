@@ -4,7 +4,7 @@ import jszip = require('jszip');
 
 class importPackageImport extends dialogViewModelBase {
 
-    private importTask = $.Deferred();
+    private importTask = $.Deferred<any>();
     
     hasFileSelected = ko.observable(false);
     isImporting = ko.observable(false);
@@ -41,7 +41,7 @@ class importPackageImport extends dialogViewModelBase {
         reader.readAsArrayBuffer(file);
     }
 
-    dataImported(result) {
+    dataImported(result: any) {
         this.importTask.resolve(result);
         dialog.close(this);
     }

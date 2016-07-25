@@ -5,7 +5,7 @@ import getOperationStatusCommand = require("commands/operations/getOperationStat
 
 class getSlowDocCountsCommand extends commandBase {
 
-    constructor(private db: database, private updateProgress: (dto) => void) {
+    constructor(private db: database, private updateProgress: (dto: string) => void) {
         super();
     }
 

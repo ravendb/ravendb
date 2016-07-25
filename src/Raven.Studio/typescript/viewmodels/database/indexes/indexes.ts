@@ -119,7 +119,7 @@ class indexes extends viewModelBase {
         });
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
         super.canActivate(args);
 
         var deferred = $.Deferred();
@@ -133,7 +133,7 @@ class indexes extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('AIHAR1');
 
@@ -185,7 +185,7 @@ class indexes extends viewModelBase {
         var replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute();
 
         $.when<any>(statsTask, replacementTask)
-            .done((statsTaskResult, replacements: indexReplaceDocument[]) => {
+            .done((statsTaskResult: [databaseStatisticsDto], replacements: indexReplaceDocument[]) => {
 
                 var stats: databaseStatisticsDto = statsTaskResult[0];
                 this.processData(stats, replacements);
@@ -252,7 +252,7 @@ class indexes extends viewModelBase {
         });
 
         stats.Indexes
-            .map(i => {
+            .map((i: indexStatisticsDto) => {
                 var idx = new index(i);
                 if (willBeReplacedMap.has(idx.name)) {
                     idx.willBeReplacedByIndex(willBeReplacedMap.get(idx.name));

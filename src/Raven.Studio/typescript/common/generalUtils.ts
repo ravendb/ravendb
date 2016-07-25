@@ -2,7 +2,7 @@
 
 class genUtils {
     
-    static formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
+    static formatAsCommaSeperatedString(input: number, digitsAfterDecimalPoint: number) {
         var parts = input.toString().split(".");
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
@@ -14,12 +14,12 @@ class genUtils {
 
     static formatTimeSpan(input: string) {
         var timeParts = input.split(":");
-        var miliPart;
+        var miliPart: string[];
         var sec = 0, milisec = 0;
         if (timeParts.length == 3) {
             miliPart = timeParts[2].split(".");
             sec = parseInt(miliPart[0]);
-            var tmpMili;
+            var tmpMili: string;
             if (miliPart[1][0] == '0') {
                 tmpMili = miliPart[1].substring(1, 3);
             } else {
@@ -63,7 +63,7 @@ class genUtils {
     }
 
     // replace characters with their char codes, but leave A-Za-z0-9 and - in place. 
-    static escape(input) {
+    static escape(input: string) {
         var output = "";
         for (var i = 0; i < input.length; i++) {
             var ch = input.charCodeAt(i);

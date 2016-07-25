@@ -28,7 +28,7 @@ class studioConfig extends viewModelBase {
         this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
     }
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         var deffered = $.Deferred();
 
         deffered.resolve({ can: true });
@@ -51,7 +51,7 @@ class studioConfig extends viewModelBase {
 
     setEnvironmentColor(envColor: environmentColor) {
         var newDocument = this.configDocument();
-        newDocument["EnvironmentColor"] = envColor.toDto();
+        (<any>newDocument)["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
         saveTask.done(() => {
             this.pickColor();
@@ -68,7 +68,7 @@ class studioConfig extends viewModelBase {
             .execute()
             .done((saveResult: bulkDocumentDto[]) => {
                 this.configDocument(newDocument);
-                this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
+                (<any>this.configDocument()).__metadata['@etag'] = saveResult[0].Etag;
             });
     }
 }

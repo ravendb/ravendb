@@ -81,7 +81,7 @@ class replicationDestination {
         this.clearApiKeyCredentials();
     }
 
-    toggleIsAdvancedShows(item, event) {
+    toggleIsAdvancedShows(item: any, event: JQueryEventObject) {
         $(event.target).next().toggle();
     }
 
@@ -115,7 +115,7 @@ class replicationDestination {
     }
 
     mapSpecifiedCollections(input: dictionary<string>) {
-        var result = [];
+        var result: replicationPatchScript[] = [];
 
         if (!input) {
             return result;

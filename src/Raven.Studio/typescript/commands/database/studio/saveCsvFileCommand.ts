@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 
 class saveCsvFileCommand extends commandBase {
 
-    constructor(private fileData: FormData, private fileName, private db: database) {
+    constructor(private fileData: FormData, private fileName: string, private db: database) {
         super();
     }
 

@@ -22,7 +22,7 @@ class filesystemEditFile extends viewModelBase {
     fileMetadataEditor: AceAjax.Editor;
     fileMetadataText = ko.observable<string>();
     isBusy = ko.observable(false);
-    metaPropsToRestoreOnSave = [];
+    metaPropsToRestoreOnSave: {name: string, value: string }[] = [];
     isSaveEnabled: KnockoutComputed<boolean>;
 
     static editFileSelector = "#editFileContainer";
@@ -35,7 +35,7 @@ class filesystemEditFile extends viewModelBase {
         this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty());
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("RJBNGR");
         this.metadata = ko.computed(() => this.file() ? this.file().__metadata : null);
@@ -169,7 +169,7 @@ class filesystemEditFile extends viewModelBase {
     metadataChanged(meta: fileMetadata) {
         if (meta) {
             //this.metaPropsToRestoreOnSave.length = 0;
-            var metaDto = this.metadata().toDto();
+            var metaDto: any = this.metadata().toDto();
 
             // We don't want to show certain reserved properties in the metadata text area.
             // Remove them from the DTO, restore them on save.

@@ -49,7 +49,7 @@ class counterChange {
         }, true);
     }
     
-    private checkName(name: string, fieldName): string {
+    private checkName(name: string, fieldName: string): string {
         var message = "";
         if (!$.trim(name)) {
             message = "An empty " + fieldName + " is forbidden for use!";

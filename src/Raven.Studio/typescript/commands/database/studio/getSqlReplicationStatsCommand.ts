@@ -1,7 +1,8 @@
 import commandBase = require("commands/commandBase");
+import database = require("models/resources/database");
 
 class getSqlReplicationStatsCommand extends commandBase {
-    constructor(private ownerDb, private sqlReplicationName) {
+    constructor(private ownerDb: database, private sqlReplicationName: string) {
         super();
 
         if (!this.ownerDb) {
@@ -9,14 +10,14 @@ class getSqlReplicationStatsCommand extends commandBase {
         }
     }
 
-    execute(){
+    execute() {
         var args = {
             sqlReplicationName: this.sqlReplicationName
         };
 
         var url = "/studio-tasks/get-sql-replication-stats";
 
-        var resultsSelector = function (result) {
+        var resultsSelector = function (result: any) {
             result.Value["Name"] = result.Key;
             var replicationDto = result.Value;
             return replicationDto;

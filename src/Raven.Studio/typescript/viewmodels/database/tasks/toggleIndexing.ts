@@ -90,7 +90,7 @@ class toggleIndexing extends viewModelBase {
         });
     }
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         super.canActivate(args);
 
         var deferred = $.Deferred();
@@ -100,7 +100,7 @@ class toggleIndexing extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("VXOPAN");
     }

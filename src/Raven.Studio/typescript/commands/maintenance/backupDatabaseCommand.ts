@@ -4,7 +4,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 
 class backupDatabaseCommand extends commandBase {
 
-    constructor(private db: database, private backupLocation: string, private updateBackupStatus: (backupStatusDto) => void, private incremental: boolean) {
+    constructor(private db: database, private backupLocation: string, private updateBackupStatus: (status: backupStatusDto) => void, private incremental: boolean) {
         super();
     }
 

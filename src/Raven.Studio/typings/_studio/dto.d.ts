@@ -4,7 +4,7 @@ interface collectionInfoDto extends indexResultsDto<documentDto> {
 }
 
 interface documentDto extends metadataAwareDto {
-
+    [key:string]: any;
 }
 
 interface conflictsInfoDto extends indexResultsDto<conflictDto> {
@@ -392,7 +392,7 @@ interface documentCountDto {
 
 interface indexMergeSuggestionsDto {
     Suggestions: suggestionDto[];
-    Unmergables: Object;
+    Unmergables: any;
 }
 
 interface suggestionDto {
@@ -427,7 +427,7 @@ interface indexDefinitionDto {
     SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;
     Type: string;
-    MaxIndexOutputsPerDocument;
+    MaxIndexOutputsPerDocument: number;
 }
 
 /*
@@ -829,7 +829,7 @@ interface conflictVersionsDto {
     SourceId: string;
 }
 
-interface documentBase {
+interface documentBase extends dictionary<any> {
     getId(): string;
     getUrl(): string;
     getDocumentPropertyNames(): Array<string>;
@@ -921,8 +921,8 @@ interface subscriptionDto {
 interface subscriptionCriteriaDto {
     KeyStartsWith: string;
     BelongsToAnyCollection: Array<string>;
-    PropertiesMatch: Array<{ Key: string; Value; string}>;
-    PropertiesNotMatch: Array<{ Key: string; Value; string }>;
+    PropertiesMatch: Array<{ Key: string; Value: string}>;
+    PropertiesNotMatch: Array<{ Key: string; Value: string }>;
 }
 
 interface subscriptionConnectionOptionsDto {
@@ -1116,6 +1116,7 @@ interface filterSettingDto {
     Path: string;
     Values: string[];
     ShouldMatch: boolean;
+    ShouldMatchObservable?: KnockoutObservable<boolean>;
 }
 
 interface resourceStyleMap {
@@ -1459,7 +1460,7 @@ interface triggerInfoDto {
 }
 
 interface copyFromParentDto<T> {
-    copyFromParent(parent: T);
+    copyFromParent(parent: T): void;
 }
 interface topologyDto {
     CurrentLeader: string;
@@ -1582,3 +1583,13 @@ interface collectionsStatsDto {
     Collections: dictionary<number>;
 }
 
+
+interface fetcherDto<T> {
+    (skip: number, take: number): JQueryPromise<PagedResultSet<T>>;
+}
+
+interface PagedResultSet<T> {
+    items: Array<T>;
+    totalResultCount: number;
+    additionalResultInfo?: any;
+}

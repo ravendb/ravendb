@@ -56,7 +56,7 @@ class deleteDatabaseCommand extends commandBase {
         var csToDelete = this.resources.filter(r => r.type === TenantType.CounterStorage);
         var tsToDelete = this.resources.filter(r => r.type === TenantType.TimeSeries);
 
-        var deleteTasks = [];
+        var deleteTasks: Array<JQueryDeferred<resource[]>> = [];
 
         if (dbToDelete.length > 0) {
             deleteTasks.push(this.deleteTask(dbToDelete, this.multipleDatabasesPath));
@@ -100,7 +100,7 @@ class deleteDatabaseCommand extends commandBase {
 
         var url = deletePath + this.urlEncodeArgs(args);
 
-        var task = $.Deferred();
+        var task = $.Deferred<resource[]>();
         this.del(url, null, null, null, 9000 * resources.length)
             .done((resourceNames: string[]) => {
                 task.resolve(resources.filter(r => resourceNames.contains(r.name)));

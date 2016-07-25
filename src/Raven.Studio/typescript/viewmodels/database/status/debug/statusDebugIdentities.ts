@@ -17,7 +17,7 @@ class statusDebugIdentities extends viewModelBase {
         return this.currentIdentities().totalResultCount();
     });
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.columns().columns([
             new customColumnParams({ Header: "Key", Binding: "Key", DefaultWidth: 300 }),

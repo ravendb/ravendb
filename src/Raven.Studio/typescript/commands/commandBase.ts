@@ -65,7 +65,7 @@ class commandBase {
                         var keyValue = headersArray[n].split(": ");
                         if (keyValue.length == 2) {
                             //keyValue[1] = keyValue[1].replaceAll("\"", "");
-                            headersObject[keyValue[0]] = keyValue[1];
+                            (<any>headersObject)[keyValue[0]] = keyValue[1];
                         }
                     }
                     var transformedResults = resultsSelector(headersObject);
@@ -127,7 +127,7 @@ class commandBase {
             dataType: "json",
             contentType: contentType, 
             type: method,
-            headers: undefined,
+            headers: <any>undefined,
             xhr: () => {
                 var xhr = new XMLHttpRequest();
                 xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
@@ -148,7 +148,7 @@ class commandBase {
         
         if (options) {
             for (var prop in options) {
-                defaultOptions[prop] = options[prop];
+                (<any>defaultOptions)[prop] = (<any>options)[prop];
             }
         }
 
@@ -265,9 +265,9 @@ class commandBase {
     }
 
     retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {
-        this.ajax.apply(this, orignalArguments).done((results, status, xhr) => {
+        this.ajax.apply(this, orignalArguments).done((results: any, status: any, xhr: any) => {
             task.resolve(results, status, xhr);
-        }).fail((request, status, error) => {
+        }).fail((request: any, status: any, error: any) => {
                 task.reject(request, status, error);
         });
     }
@@ -283,13 +283,13 @@ class commandBase {
         return $.map(input, (value, key) => key + "=" + value).join(',');
     }
 
-    base64ToBigInt(input) {
+    base64ToBigInt(input: any) {
         input = forge.util.decode64(input);
         var hex = forge.util.bytesToHex(input);
         return new forge.jsbn.BigInteger(hex, 16);
     }
 
-    encryptAsymmetric(exponent, modulus, data) {
+    encryptAsymmetric(exponent: any, modulus: any, data: any) {
         var e = this.base64ToBigInt(exponent);
         var n = this.base64ToBigInt(modulus);
         var rsa = forge.pki.rsa;

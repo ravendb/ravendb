@@ -10,7 +10,7 @@ class sqlReplicationStatsDialog extends dialogViewModelBase {
         super();
     }
 
-    activate(args) {
+    activate(args: any) {
         this.fetchSqlReplicationStats();
     }
 

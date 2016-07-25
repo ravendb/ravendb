@@ -76,7 +76,7 @@ class periodicExport extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("OU78CB");
         
@@ -92,7 +92,7 @@ class periodicExport extends viewModelBase {
         });
     }
 
-    fetchPeriodicExportSetup(db): JQueryPromise<any> {
+    fetchPeriodicExportSetup(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getEffectivePeriodicExportCommand(db)
             .execute()
@@ -108,7 +108,7 @@ class periodicExport extends viewModelBase {
         return deferred;
     }
 
-    fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
+    fetchPeriodicExportAccountsSettings(db: database): JQueryPromise<any> {
         var task = $.Deferred();
         var dbSettingsTask = new getDatabaseSettingsCommand(db)
             .execute()

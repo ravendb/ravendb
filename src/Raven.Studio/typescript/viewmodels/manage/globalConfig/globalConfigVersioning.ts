@@ -5,6 +5,8 @@ import getVersioningsCommand = require("commands/database/documents/getVersionin
 import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import database = require("models/resources/database");
+
 
 class globalConfigVersioning extends viewModelBase {
     activated = ko.observable<boolean>(false);
@@ -31,7 +33,7 @@ class globalConfigVersioning extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("1UZ5WL");
         this.toRemove = [];
@@ -40,7 +42,7 @@ class globalConfigVersioning extends viewModelBase {
         this.isSaveEnabled = ko.computed<boolean>(() => this.dirtyFlag().isDirty());
     }
 
-    private fetchVersioningEntries(db): JQueryPromise<any> {
+    private fetchVersioningEntries(db: database): JQueryPromise<any> {
         var task: JQueryPromise<versioningEntry[]> = new getVersioningsCommand(db, true).execute();
 
         task.done((versionings: versioningEntry[]) => this.versioningsLoaded(versionings));

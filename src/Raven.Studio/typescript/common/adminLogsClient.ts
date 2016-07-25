@@ -4,7 +4,6 @@ import appUrl = require('common/appUrl');
 import changeSubscription = require('common/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
-import changesApi = require("common/changesApi");
 import idGenerator = require("common/idGenerator");
 import adminLogsConfigureCommand = require("commands/database/debug/adminLogsConfigureCommand");
 
@@ -72,7 +71,7 @@ class adminLogsClient {
 
     private send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
         this.connectionOpeningTask.done(() => {
-            var args = {
+            var args: any = {
                 id: this.eventsId,
                 command: command
             };
@@ -85,7 +84,7 @@ class adminLogsClient {
         });
     }
 
-    private fireEvents<T>(events: Array<any>, param: T, filter: (T) => boolean) {
+    private fireEvents<T>(events: Array<any>, param: T, filter: (obj: T) => boolean) {
         for (var i = 0; i < events.length; i++) {
             if (filter(param)) {
                 events[i].fire(param);
@@ -98,7 +97,7 @@ class adminLogsClient {
         if (!!eventDto.Type && eventDto.Type == 'Heartbeat') {
             return;
         }
-        this.fireEvents(this.adminLogsHandlers(), eventDto, (e) => true);
+        this.fireEvents(this.adminLogsHandlers(), eventDto, () => true);
     }
 
 

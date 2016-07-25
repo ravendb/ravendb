@@ -77,7 +77,7 @@ class timeSeriesTypes extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         //TODO: update this in documentation
@@ -220,7 +220,7 @@ class timeSeriesTypes extends viewModelBase {
     }
 
     private updateTypes(receivedTypes: Array<timeSeriesType>) {
-        var deletedTypes = [];
+        var deletedTypes: Array<timeSeriesType> = [];
 
         this.types().forEach((t: timeSeriesType) => {
             if (!receivedTypes.first((receivedGroup: timeSeriesType) => t.name === receivedGroup.name)) {
@@ -289,7 +289,7 @@ class timeSeriesTypes extends viewModelBase {
     }
 
     // Animation callbacks for the types list
-    showTypeElement(element) {
+    showTypeElement(element: any) {
         if (element.nodeType === 1 && timeSeriesTypes.isInitialized()) {
             $(element).hide().slideDown(500, () => {
                 ko.postbox.publish("SortTypes");
@@ -298,7 +298,7 @@ class timeSeriesTypes extends viewModelBase {
         }
     }
 
-    hideTypeElement(element) {
+    hideTypeElement(element: any) {
         if (element.nodeType === 1) {
             $(element).slideUp(1000, () => { $(element).remove(); });
         }

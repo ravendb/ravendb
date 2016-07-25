@@ -109,7 +109,7 @@ class infoPackage extends viewModelBase {/*
         this.isForbidden(shell.isGlobalAdmin() === false);
     }
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         return true;
     }
 

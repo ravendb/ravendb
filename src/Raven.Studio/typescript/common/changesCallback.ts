@@ -3,7 +3,7 @@
 // we use this function wrapper as knockout calls functions stored directly in observableArray
 class changesCallback<T> {
 
-    constructor(private onFire: (T) => void) {
+    constructor(private onFire: (arg: T) => void) {
 
     }
 

@@ -12,6 +12,7 @@ import deletePointsCommand = require("commands/timeSeries/deletePointsCommand");
 import deleteTypesCommand = require("commands/timeSeries/deleteTypesCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import commandBase = require("commands/commandBase");
 
 class deleteItems extends dialogViewModelBase {
 
@@ -31,7 +32,7 @@ class deleteItems extends dialogViewModelBase {
 
     deleteItems() {
         var deleteItemsIds = this.items().map(i => i.getUrl());
-        var deleteCommand;
+        var deleteCommand: commandBase;
         var firstItem = this.items()[0];
         if (firstItem instanceof document) {
             deleteCommand = new deleteDocumentsCommand(deleteItemsIds, appUrl.getDatabase());
@@ -70,7 +71,7 @@ class deleteItems extends dialogViewModelBase {
         var deleteCommandTask = deleteCommand.execute();
 
         deleteCommandTask.done(() => this.deletionTask.resolve(this.items()));
-        deleteCommandTask.fail(response => this.deletionTask.reject(response));
+        deleteCommandTask.fail((response: any) => this.deletionTask.reject(response));
 
         this.deletionStarted = true;
         dialog.close(this);
@@ -90,7 +91,7 @@ class deleteItems extends dialogViewModelBase {
         dialog.close(this);
     }
 
-    deactivate(args) {
+    deactivate(args:any) {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never carried it out.
         if (!this.deletionStarted) {

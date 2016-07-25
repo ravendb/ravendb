@@ -8,7 +8,7 @@ class settings extends viewModelBase {
     router: DurandalRootRouter = null;
     appUrls: computedAppUrls;
 
-    private bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index", periodicbackup: "Periodic Export" };
+    private bundleMap: dictionary<string> = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index", periodicbackup: "Periodic Export" };
     private sqlSubBundles = ["sqlreplicationconnectionstringsmanagement", "editsqlreplication"];
     userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions", "Studio Config"]);
     activeSubViewTitle: KnockoutComputed<string>;
@@ -78,7 +78,7 @@ class settings extends viewModelBase {
         return true;
     }
 
-    isEditingSqlReplication(navigationalModel: any, curNavHash: any) {
+    isEditingSqlReplication(navigationalModel: DurandalRouteConfiguration[], curNavHash: any) {
         var activeRoute = navigationalModel.first(r => r.isActive());
         if (!!activeRoute && !!curNavHash && !!activeRoute.hash) {
             return curNavHash.indexOf('databases/settings/sqlReplication') >= 0 &&
@@ -88,7 +88,7 @@ class settings extends viewModelBase {
         return false;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.userDatabasePages(["Database Settings", "Custom Functions", "Studio Config"]);

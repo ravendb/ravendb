@@ -65,7 +65,7 @@ class restore extends viewModelBase {
     isBusy = ko.observable<boolean>();
     anotherRestoreInProgres = ko.observable<boolean>(false);
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         var deferred = $.Deferred();
 
         this.isForbidden(shell.isGlobalAdmin() === false);
@@ -102,7 +102,7 @@ class restore extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("FT7RV6");
     }

@@ -4,7 +4,7 @@ import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurat
 
 class backupFilesystemCommand extends commandBase {
 
-    constructor(private fs: filesystem, private backupLocation: string, private updateBackupStatus: (backupStatusDto) => void, private incremental: boolean) {
+    constructor(private fs: filesystem, private backupLocation: string, private updateBackupStatus: (status: backupStatusDto) => void, private incremental: boolean) {
         super();
     }
 

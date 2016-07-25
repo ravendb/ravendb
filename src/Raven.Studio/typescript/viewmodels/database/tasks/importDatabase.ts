@@ -39,7 +39,7 @@ class importDatabase extends viewModelBase {
         this.updateHelpLink("YD9M1R");
     }
 
-    canDeactivate(isClose) {
+    canDeactivate(isClose: boolean) {
         super.canDeactivate(isClose);
 
         if (this.isUploading()) {
@@ -85,7 +85,7 @@ class importDatabase extends viewModelBase {
     }
 
     addFilter() {
-        var filter = {
+        var filter: filterSettingDto = {
             Path: "",
             ShouldMatch: false,
             ShouldMatchObservable: ko.observable(false),

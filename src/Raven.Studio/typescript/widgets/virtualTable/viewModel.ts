@@ -351,7 +351,7 @@ class ctor {
 
             var editUrl: string;
             if (rowData instanceof counterSummary) {
-                editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group Name"], rowData["Counter Name"]);
+                editUrl = appUrl.forEditCounter(appUrl.getResource(), (<any>rowData)["Group Name"], (<any>rowData)["Counter Name"]);
             } else if (rowData instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(rowData["Type"], rowData["Key"], appUrl.getTimeSeries());
             } else {
@@ -456,7 +456,7 @@ class ctor {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 
-        var columnsNeeded = {};
+        var columnsNeeded: dictionary<any> = {};
 
         var hasOverrides = this.settings.customColumns().hasOverrides();
 
@@ -571,7 +571,7 @@ class ctor {
         var positionCheck = viewportTop;
 
         this.firstVisibleRow = null;
-        var rowAtPosition = null;
+        var rowAtPosition:row = null;
         while (positionCheck < viewportBottom) {
             rowAtPosition = this.findRowAtY(positionCheck);
             if (!rowAtPosition) {
@@ -683,7 +683,7 @@ class ctor {
     }
 
     selectAll(documentCount: number) {
-        var allIndices = [];
+        var allIndices:Array<number> = [];
 
         /*this.settings.itemsSource().totalResultCount()*/
         for (var i = 0; i < documentCount; i++) {
@@ -698,7 +698,7 @@ class ctor {
     }
 
     selectSome() {
-        var allIndices = [];
+        var allIndices: Array<number> = [];
 
         var firstVisibleRowNumber = this.firstVisibleRow.rowIndex();
         var lastVisibleRowNumber = this.lastVisibleRow.rowIndex();

@@ -36,12 +36,12 @@ class svgDownloader {
         $("#downloadSvg").remove();
     }
 
-    static b64toBlob(b64Data, contentType, sliceSize?): Blob {
+    static b64toBlob(b64Data: string, contentType:string, sliceSize?:number): Blob {
         contentType = contentType || '';
         sliceSize = sliceSize || 512;
 
         var byteCharacters = atob(b64Data);
-        var byteArrays = [];
+        var byteArrays: Uint8Array[] = [];
 
         for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
             var slice = byteCharacters.slice(offset, offset + sliceSize);

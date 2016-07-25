@@ -13,7 +13,7 @@ class status extends viewModelBase {
     currentRouteTitle: KnockoutComputed<string>;
     appUrls: computedAppUrls;
 
-    private bundleMap = { replication: "Replication Stats", sqlreplication: "SQL Replication Stats" };
+    private bundleMap: dictionary<string> = { replication: "Replication Stats", sqlreplication: "SQL Replication Stats" };
     userDatabasePages = ko.observableArray(status.initialVisibleViews.slice());
 
     constructor() {
@@ -71,7 +71,7 @@ class status extends viewModelBase {
         return true;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.userDatabasePages(status.initialVisibleViews.slice());

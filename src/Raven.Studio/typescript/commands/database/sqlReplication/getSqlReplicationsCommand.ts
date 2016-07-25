@@ -11,7 +11,7 @@ class getSqlReplicationsCommand extends commandBase {
     execute(): JQueryPromise<Array<sqlReplication>> {
         var args = {
             startsWith: "Raven/SqlReplication/Configuration/",
-            exclude: null,
+            exclude: <string>null,
             start: 0,
             pageSize: 256
         };

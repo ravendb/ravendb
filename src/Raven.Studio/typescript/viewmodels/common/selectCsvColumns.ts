@@ -172,7 +172,7 @@ class selectColumns extends dialogViewModelBase {
         return super.enterKeyPressed();
     }
 
-    consumeUpDownArrowKeys(columnParams, event: KeyboardEvent): boolean {
+    consumeUpDownArrowKeys(columnParams: csvColumn, event: KeyboardEvent): boolean {
         if (event.keyCode === 38 || event.keyCode === 40) {
             event.preventDefault();
             return false;

@@ -17,7 +17,7 @@ class sqlReplicationStats {
         this.name(replicationStats.Name);
         this.metrics(replicationStats.Metrics);
         this.rateMetrics = ko.computed(() => {
-             var computedRateMetrics = [];
+             var computedRateMetrics: metricsDataDto[] = [];
              var generalMetrics = this.metrics().GeneralMetrics;
              var tablesMetrics = this.metrics().TablesMetrics;
 
@@ -25,10 +25,10 @@ class sqlReplicationStats {
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
                      if (value.Type == "Meter") {
                          value["Name"] = key;
-                         value["Table"] = "";
+                         (<any>value)["Table"] = "";
                          $.map(value, (propertyValue, propertyName) => {
                              if (!isNaN(propertyValue)) {
-                                 value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
+                                 (<any>value)[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
                              }
                          });
                          computedRateMetrics.push(value);
@@ -58,16 +58,16 @@ class sqlReplicationStats {
          });
 
          this.histogramMetrics = ko.computed(() => {
-             var computedHistogramMetrics = [];
+             var computedHistogramMetrics: any[] = [];
              var generalMetrics = this.metrics().GeneralMetrics;
              var tablesMetrics = this.metrics().TablesMetrics;
 
              if (!!generalMetrics) {
                  $.map(generalMetrics, (value: metricsDataDto, key: string) => {
                      if (value.Type === "Histogram") {
-                         value["Name"] = key;
-                         value["Table"] = "";
-                         value["Percentiles"] = $.map(value["Percentiles"], (percentileValue, percentile) => {
+                         value.Name = key;
+                         (<any>value)["Table"] = "";
+                         (<any>value)["Percentiles"] = $.map((<any>value)["Percentiles"], (percentileValue, percentile) => {
                              return {
                                  percentileValue: genUtils.formatAsCommaSeperatedString(percentileValue, 2),
                                  percentile: percentile
@@ -75,7 +75,7 @@ class sqlReplicationStats {
                          });
                          $.map(value, (propertyValue, propertyName) => {
                              if (!isNaN(propertyValue)) {
-                                 value[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
+                                 (<any>value)[propertyName] = genUtils.formatAsCommaSeperatedString(propertyValue, 2);
                              }
                          });
                          computedHistogramMetrics.push(value);

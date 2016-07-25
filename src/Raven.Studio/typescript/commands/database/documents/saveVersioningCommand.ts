@@ -13,7 +13,7 @@ class saveVersioningCommand extends commandBase {
         var commands: bulkDocumentDto[] = [];
 
         this.versioningEntries.forEach((dto: versioningEntryDto) => {
-            var entry: document = new document(dto);
+            var entry: any = new document(dto);
             commands.push({
                 Key: (this.globalConfig ? "Raven/Global/Versioning/": "Raven/Versioning/") + entry["Id"],
                 Method: "PUT",
@@ -24,7 +24,7 @@ class saveVersioningCommand extends commandBase {
         });
 
         this.removeEntries.forEach((dto: versioningEntryDto) => {
-            var entry: document = new document(dto);
+            var entry: any = new document(dto);
             commands.push({
                 Key: (this.globalConfig ? "Raven/Global/Versioning/" : "Raven/Versioning/") + entry["Id"],
                 Method: "DELETE",

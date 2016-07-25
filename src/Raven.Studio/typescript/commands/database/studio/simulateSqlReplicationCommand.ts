@@ -5,7 +5,7 @@ import sqlReplication = require("models/database/sqlReplication/sqlReplication")
 
 class simulateSqlReplicationCommand extends  commandBase{
     
-    constructor(private db: database, private simulatedSqlReplication: sqlReplication, private documentId: string, private performRolledbackTransaction) {
+    constructor(private db: database, private simulatedSqlReplication: sqlReplication, private documentId: string, private performRolledbackTransaction: boolean) {
         super();
     }
 

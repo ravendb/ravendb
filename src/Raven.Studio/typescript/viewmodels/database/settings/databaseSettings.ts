@@ -60,7 +60,7 @@ class databaseSettings extends viewModelBase {
         });
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
         super.canActivate(args);
         var deferred = $.Deferred();
 
@@ -80,7 +80,7 @@ class databaseSettings extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('3QMLGH');
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText], false, jsonUtil.newLineNormalizingHashFunction);
@@ -155,12 +155,12 @@ class databaseSettings extends viewModelBase {
                     var meta = JSON.parse(this.metadataText());
 
                     updatedDto['@metadata'] = meta;
-                    updatedDto['@metadata']['@etag'] = this.document().__metadata['@etag'];
+                    updatedDto['@metadata']['@etag'] = (<any>this.document()).__metadata['@etag'];
                     var newDoc = new document(updatedDto);
                     var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
                     var saveTask = saveCommand.execute();
                     saveTask.done((saveResult: databaseDocumentSaveDto) => {
-                        this.document().__metadata['@etag'] = saveResult.ETag;
+                        (<any>this.document()).__metadata['@etag'] = saveResult.ETag;
                         this.metadataText("{}");
                         this.isEditingEnabled(false);
                         this.formatDocument();

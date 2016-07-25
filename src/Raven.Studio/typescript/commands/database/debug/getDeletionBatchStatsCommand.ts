@@ -13,8 +13,8 @@ class getDeletionBatchStatsCommand extends commandBase {
         var args = { lastId: this.lastId };
         var parser = d3.time.format.iso;
 
-        return this.query<deletionBatchInfoDto[]>(url, args, this.db, result => {
-            result.forEach(item => {
+        return this.query<deletionBatchInfoDto[]>(url, args, this.db, (result: deletionBatchInfoDto[]) => {
+            result.forEach(item => {    
                 item.StartedAtDate = parser.parse(item.StartedAt);
             });
             return result;

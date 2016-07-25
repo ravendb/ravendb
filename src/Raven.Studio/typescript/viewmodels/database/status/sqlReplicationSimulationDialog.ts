@@ -89,19 +89,19 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
         }
     }
 
-    documentIdSubmitted(submittedDocumentId) {
+    documentIdSubmitted(submittedDocumentId: string) {
         this.documentId(submittedDocumentId);
         $('#docIdInput').focus();
         this.getResults(false);
     }
 
     getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name'], this.db);
+        return collection.getCollectionCssClass((<any>doc)['@metadata']['Raven-Entity-Name'], this.db);
     }
 
-    keyPressedOnDocumentAutocomplete(doc: documentMetadataDto, event) {
+    keyPressedOnDocumentAutocomplete(doc: documentMetadataDto, event: JQueryKeyEventObject) {
         if (event.keyCode == 13 && !!doc) {
-            var docId = !!doc['@metadata'] ? doc['@metadata']['@id'] : null;
+            var docId = !!(<any>doc)['@metadata'] ? (<any>doc)['@metadata']['@id'] : null;
             if (!!docId) {
                 this.documentId(docId);
             }

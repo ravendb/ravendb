@@ -49,8 +49,8 @@ interface JQuery {
 
 
 interface JwertyStatic {
-    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any);
-    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any, context: any, selector: string);
+    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any): void;
+    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any, context: any, selector: string): void;
 }
 
 declare var jwerty: JwertyStatic;
@@ -86,8 +86,8 @@ declare module "ace/ace" {
 /// ES6 - shim
 ///
 interface String {
-    codePointAt();
-    repeat();
+    codePointAt(): number;
+    repeat(count: number): string;
     startsWith(str: string): boolean;
     endsWith(str: string): boolean;
     contains(str: string): boolean;
@@ -124,11 +124,19 @@ interface KnockoutObservableArray<T> {
     pushAll(items: T[]): number;
     contains(item: T): boolean;
     first(filter?: (item: T) => boolean): T;
-    last(filter?: (item) => boolean): T;
+    last(filter?: (item: T) => boolean): T;
 }
 
 interface KnockoutStatic {
-    DirtyFlag(any, isInitiallyDirty?, hashFunction?): void;
+    DirtyFlag: {
+        new (inputs: any[], isInitiallyDirty?: boolean, hashFunction?: (obj: any) => string): () => DirtyFlag;
+    }
+}
+
+interface DirtyFlag {
+    isDirty(): boolean;
+    reset(): void;
+    forceDirty(): void;
 }
 
 interface Function {
@@ -148,9 +156,9 @@ interface Date {
 }
 
 interface Spinner {
-    stop();
+    stop() :void;
     spin(): Spinner;
-    spin(p1: HTMLElement);
+    spin(p1: HTMLElement): Spinner;
     el: Node;
 }
 
@@ -158,13 +166,13 @@ declare var Spinner: {
     new (spinnerOptions: {
         lines: number; length: number; width: number; radius: number; scale: number; corners: number;
         color: any; opacity: number; rotate: number; direction: number; speed: number; trail: number; fps: number; zIndex: number;
-        className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string
+        className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string;
     }): Spinner;
 }
 
 declare class EventSource {
-    constructor(string);
-    close();
+    constructor(string: string);
+    close(): void;
     onerror: (event: any) => void;
     onmessage: (event: any) => void;
     onopen: (event: any) => void;
@@ -187,10 +195,10 @@ interface Array<T> {
 interface String {
     capitalizeFirstLetter: () => string;
     hashCode: () => number;
-    replaceAll: (find, replace) => string;
-    reverse: (input) => string;
-    count: (input) => number;
-    fixedCharCodeAt: (input, position) => number;
+    replaceAll: (find: string, replace:string) => string;
+    reverse: (input: string) => string;
+    count: (input: string) => number;
+    fixedCharCodeAt: (index: number) => number;
     getSizeInBytesAsUTF8: () => number;
     multiply: (amount: number) => string;
     paddingLeft: (paddingChar: string, paddingLength: number) => string;
@@ -204,7 +212,7 @@ interface String {
 
 // Storage extensions
 interface Storage {
-    getObject: (string) => any;
+    getObject: (string: string) => any;
     setObject: (key: string, value: any) => void;
 }
 
@@ -215,7 +223,7 @@ interface DurandalRouteConfiguration {
 
 declare module AceAjax {
     interface IEditSession {
-        foldAll();
+        foldAll(): void;
     }
 }
 

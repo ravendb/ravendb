@@ -59,7 +59,7 @@ class exportDatabase extends viewModelBase {
             var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefualtFileName()) : "raven.dump"; 
             var commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
 
-            var types = [];
+            var types: Array<string> = [];
             if (this.includeDocuments()) {
                  types.push("Documents");
             }

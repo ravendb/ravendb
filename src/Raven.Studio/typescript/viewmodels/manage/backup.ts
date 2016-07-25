@@ -99,12 +99,12 @@ class backupDatabase extends viewModelBase {
     
     isForbidden = ko.observable<boolean>();
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         this.isForbidden(!shell.isGlobalAdmin());
         return true;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("FT7RV6");
     }

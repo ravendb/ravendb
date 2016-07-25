@@ -52,7 +52,7 @@ class autoRefreshBindingHandler {
             context.autorefreshEnabled(false);
         }
 
-        var childBindingContext = bindingContext.createChildContext(context, null, context => ko.utils.extend(context, autoRefreshBindingHandler));
+        var childBindingContext = bindingContext.createChildContext(context, null, (context: KnockoutBindingContext) => ko.utils.extend(context, autoRefreshBindingHandler));
         ko.applyBindingsToDescendants(childBindingContext, element);
 
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
@@ -173,7 +173,7 @@ class autoRefreshBindingHandler {
         }
     }
 
-    update(element: HTMLInputElement, valueAccessor: () => any, allBindingsAccessor, viewModel: viewModelBase, bindingContext) {
+    update(element: HTMLInputElement, valueAccessor: () => any, allBindingsAccessor: KnockoutAllBindingsAccessor, viewModel: viewModelBase, bindingContext: KnockoutBindingContext) {
     }
 }
 

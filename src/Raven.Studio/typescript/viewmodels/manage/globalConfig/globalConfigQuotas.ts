@@ -38,7 +38,7 @@ class globalConfigQuotas extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.initializeDirtyFlag();
         this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
@@ -50,13 +50,13 @@ class globalConfigQuotas extends viewModelBase {
             .done((doc: document) => {
                 this.settingsDocument(doc);
                 // we make decision based on first available property 
-                var activated = !!doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"];
+                var activated = !!(<any>doc)["Settings"]["Raven/Quotas/Size/HardLimitInKB"];
                 this.activated(activated);
                 if (activated) {
-                    this.maximumSize(doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024);
-                    this.warningLimitThreshold(doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024);
-                    this.maxNumberOfDocs(doc["Settings"]["Raven/Quotas/Documents/HardLimit"]);
-                    this.warningThresholdForDocs(doc["Settings"]["Raven/Quotas/Documents/SoftLimit"]);
+                    this.maximumSize((<any>doc)["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024);
+                    this.warningLimitThreshold((<any>doc)["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024);
+                    this.maxNumberOfDocs((<any>doc)["Settings"]["Raven/Quotas/Documents/HardLimit"]);
+                    this.warningThresholdForDocs((<any>doc)["Settings"]["Raven/Quotas/Documents/SoftLimit"]);
                 }
             });
     }
@@ -75,10 +75,10 @@ class globalConfigQuotas extends viewModelBase {
     }
 
     syncChanges(deleteConfig:boolean) {
-        var settingsDocument = this.settingsDocument();
+        var settingsDocument:any = this.settingsDocument();
         settingsDocument["@metadata"] = this.settingsDocument().__metadata;
-        settingsDocument["@metadata"]["@etag"] = this.settingsDocument().__metadata["@etag"];
-        var doc = new document(settingsDocument.toDto(true));
+        settingsDocument["@metadata"]["@etag"] = (<any>this.settingsDocument()).__metadata["@etag"];
+        var doc: any = new document(settingsDocument.toDto(true));
 
         if (deleteConfig) {
             delete doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"];
@@ -99,7 +99,7 @@ class globalConfigQuotas extends viewModelBase {
 
         var saveTask = new saveGlobalSettingsCommand(null, doc).execute();
         saveTask.done((saveResult: databaseDocumentSaveDto) => {
-            this.settingsDocument().__metadata["@etag"] = saveResult.ETag;
+            (<any>this.settingsDocument()).__metadata["@etag"] = saveResult.ETag;
             this.dirtyFlag().reset(); //Resync Changes
         });
     }

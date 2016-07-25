@@ -16,6 +16,7 @@ import replicateIndexesCommand = require("commands/database/replication/replicat
 import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 import appUrl = require("common/appUrl");
+import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 
@@ -119,7 +120,7 @@ class replications extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("7K1KES");
 
@@ -148,7 +149,7 @@ class replications extends viewModelBase {
         $.each(this.replicationsSetup().destinations(), this.addScriptHelpPopover);
     }
 
-    private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
+    private fetchServerPrefixForHiLoCommand(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getServerPrefixForHiLoCommand(db)
             .execute()
@@ -157,7 +158,7 @@ class replications extends viewModelBase {
         return deferred;
     }
 
-    fetchAutomaticConflictResolution(db): JQueryPromise<any> {
+    fetchAutomaticConflictResolution(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getEffectiveConflictResolutionCommand(db)
             .execute()
@@ -171,7 +172,7 @@ class replications extends viewModelBase {
         return deferred;
     }
 
-    fetchReplications(db): JQueryPromise<any> {
+    fetchReplications(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
         ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
 

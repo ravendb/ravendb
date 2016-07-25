@@ -5,7 +5,7 @@ import monitorRestoreCommand = require("commands/maintenance/monitorRestoreComma
 import appUrl = require("common/appUrl");
 
 class startRestoreCommand extends commandBase {
-    constructor(private defrag: boolean, private restoreRequest: databaseRestoreRequestDto, private updateRestoreStatus: (restoreStatusDto) => void) {
+    constructor(private defrag: boolean, private restoreRequest: databaseRestoreRequestDto, private updateRestoreStatus: (status: restoreStatusDto) => void) {
         super();
     }
 

@@ -31,12 +31,12 @@ class statusDebugPersistAutoIndex extends viewModelBase {
         this.indexName(indexName);
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
         super.canActivate(args);
 
         var deferred = $.Deferred();

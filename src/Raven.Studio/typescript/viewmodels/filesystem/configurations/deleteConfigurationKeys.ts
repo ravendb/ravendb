@@ -23,7 +23,7 @@ class deleteConfigurationKeys extends dialogViewModelBase {
     deleteKeys() {
         this.deletionStarted = true;
         var deleteItemsIds = this.keys().map(i => i.key);
-        var deletionTasks = [];
+        var deletionTasks: Array<JQueryPromise<any>> = [];
         for (var i = 0; i < deleteItemsIds.length; i++) {
             deletionTasks.push(new deleteConfigurationKeyCommand(this.fs, deleteItemsIds[i]).execute());
         }
@@ -32,7 +32,7 @@ class deleteConfigurationKeys extends dialogViewModelBase {
 
         combinedTask
             .done(() => this.deletionTask.resolve(this.keys()))
-            .fail(response => this.deletionTask.reject(response));
+            .fail((response: any) => this.deletionTask.reject(response));
 
         dialog.close(this);
     }
@@ -41,7 +41,7 @@ class deleteConfigurationKeys extends dialogViewModelBase {
         dialog.close(this);
     }
 
-    deactivate(args) {
+    deactivate(args: any) {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never carried it out.
         if (!this.deletionStarted) {

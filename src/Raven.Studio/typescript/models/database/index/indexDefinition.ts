@@ -140,7 +140,7 @@ class indexDefinition {
 
     private makeSpatialIndexesObject(): any {
         var spatialIndexesObj = {};
-        this.spatialFields().forEach(f => spatialIndexesObj[f.name()] = f.toDto());
+        this.spatialFields().forEach(f => (<any>spatialIndexesObj)[f.name()] = f.toDto());
         return spatialIndexesObj;
     }
 
@@ -148,7 +148,7 @@ class indexDefinition {
         var obj = {};
         this.luceneFields()
             .filter(filter)
-            .forEach(f => obj[f.name()] = selector(f));
+            .forEach(f => (<any>obj)[f.name()] = selector(f));
         return obj;
     }
 
@@ -162,7 +162,7 @@ class indexDefinition {
             this.termVectors
         ];
 
-        var keys = [];
+        var keys: Array<string> = [];
         for (var i = 0; i < fieldSources.length; i++) {
             var src = fieldSources[i];
             if (src == null)
@@ -184,7 +184,7 @@ class indexDefinition {
         // The spatial fields are stored as properties on the .spatialIndexes object.
         // The property names will be one of the .fields.
         
-        var fields = [];
+        var fields: spatialIndexField[] = [];
         if (this.spatialIndexes == null)
             return fields;
 

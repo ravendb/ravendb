@@ -4,7 +4,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 class statusDebugChanges extends viewModelBase {
     data = ko.observable<Array<statusDebugChangesDto>>();
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.activeDatabase.subscribe(() => this.fetchStatusDebugChanges());

@@ -13,7 +13,7 @@ class getFilteredOutIndexStatsCommand extends commandBase {
         var parser = d3.time.format.iso;
 
         return this.query<filteredOutIndexStatDto[]>(url, null, this.db, result => {
-            result.map(item => {
+            result.map((item: filteredOutIndexStatDto) => {
                 item.TimestampParsed = parser.parse(item.Timestamp);
             });
             return result;

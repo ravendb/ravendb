@@ -114,19 +114,18 @@ class editSqlReplication extends viewModelBase {
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
-    providerChanged(obj, event) {
+    providerChanged(obj: sqlReplication, event: JQueryEventObject) {
         if (event.originalEvent && obj.connectionStringType() == obj.CONNECTION_STRING) {
             var curConnectionString = !!this.editedReplication().connectionStringValue() ? this.editedReplication().connectionStringValue().trim() : "";
             if (curConnectionString === "" ||
                 sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
-                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == (<any>event.originalEvent.srcElement).selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
                     this.editedReplication().connectionStringValue(
                         matchingConnectionStringValue
                         );
                 }
-
             }
         }
     }
@@ -232,7 +231,7 @@ class editSqlReplication extends viewModelBase {
             }
             $('input[name="name"]')
                 .filter(function () { return this.value === newName; })
-                .each((index, element: any) => {
+                .each((index: number, element: any) => {
                     element.setCustomValidity(message);
                 });
         });
@@ -244,9 +243,8 @@ class editSqlReplication extends viewModelBase {
     }
 
 
-    private isSqlReplicationNameExists(name): boolean {
-        var count = 0;
-        return !!this.loadedSqlReplications.first(x=> x == name);
+    private isSqlReplicationNameExists(name: string): boolean {
+        return !!this.loadedSqlReplications.first(x => x === name);
     }
 
     private initializeAceValidity(element: Element) {

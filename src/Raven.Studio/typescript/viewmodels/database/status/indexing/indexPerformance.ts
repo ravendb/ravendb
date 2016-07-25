@@ -217,7 +217,7 @@ class metrics extends viewModelBase {
             .execute();
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         $(document).bind("fullscreenchange", function () {

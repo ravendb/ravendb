@@ -5,7 +5,7 @@ class userInfo extends viewModelBase {
 
     data = ko.observable<userInfoDto>();
     
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.activeDatabase.subscribe(() => this.fetchUserInfo());

@@ -85,7 +85,7 @@ class visualizer extends viewModelBase {
         return !(navigator && navigator.msSaveBlob);
     });
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         if (args && args.index) {

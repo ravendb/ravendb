@@ -11,8 +11,8 @@ class getReducingBatchStatsCommand extends commandBase {
     execute(): JQueryPromise<reducingBatchInfoDto[]> {
         var url = "/debug/reducing-batch-stats";
         var args = { lastId: this.lastId };
-        var inlinePerfStats = (entry) => {
-            var result = [];
+        var inlinePerfStats = (entry: any[]) => {
+            var result: { indexName: string, stats: any[] }[] = [];
             d3.map<any[]>(entry).entries().forEach(e => {
                 e.value.forEach(s => {
                     result.push({
@@ -27,14 +27,14 @@ class getReducingBatchStatsCommand extends commandBase {
         var parser = d3.time.format.iso;
 
         return this.query<reducingBatchInfoDto[]>(url, args, this.db, result => {
-            var mappedResult: any = result.map(item => {
+            var mappedResult: reducingBatchInfoDto[] = result.map((item: reducingBatchInfoDto) => {
                 return {
                 Id: item.Id,
                 IndexesToWorkOn: item.IndexesToWorkOn,
                 TotalDurationMs: item.TotalDurationMs,
                 StartedAt: item.StartedAt,
                 StartedAtDate: parser.parse(item.StartedAt),
-                PerfStats: inlinePerfStats(item.PerformanceStats),
+                PerfStats: inlinePerfStats((<any>item).PerformanceStats),
                 TimeSinceFirstReduceInBatchCompletedMs: item.TimeSinceFirstReduceInBatchCompletedMs
             }
             });
@@ -42,7 +42,7 @@ class getReducingBatchStatsCommand extends commandBase {
             mappedResult.forEach(r => {
                 r.PerfStats.forEach(s => {
                     s.stats.LevelStats.forEach(l => {
-                        l.Operations.filter(x => !("Name" in x)).forEach(o => {
+                        l.Operations.filter(x => !("Name" in x)).forEach((o: parallelPefromanceStatsDto) => {
                             o.BatchedOperations.forEach(b => {
                                 b.Operations.forEach(x => {
                                     x.ParallelParent = b;

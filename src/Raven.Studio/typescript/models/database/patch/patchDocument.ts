@@ -26,7 +26,7 @@ class patchDocument extends document {
     }
 
     static empty() {
-        var meta = {};
+        var meta: any = {};
         meta['Raven-Entity-Name'] = 'PatchDocuments';
         return new patchDocument({
             '@metadata': meta,

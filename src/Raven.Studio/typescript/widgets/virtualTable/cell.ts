@@ -24,7 +24,7 @@ class cell {
         this.data(data);
     }
 
-    private isNumber(o) {
+    private isNumber(o: any) {
         return typeof o === "number" && isFinite(o);
     }
 

@@ -52,7 +52,7 @@ class configuration extends viewModelBase {
         });
     }
 
-    activate(navigationArgs) {
+    activate(navigationArgs: any) {
         super.activate(navigationArgs);
 
         this.updateHelpLink("J3KIEN");

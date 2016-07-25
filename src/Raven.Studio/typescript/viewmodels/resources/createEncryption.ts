@@ -8,7 +8,7 @@ class createEncryption extends dialogViewModelBase {
     public creationEncryption = $.Deferred();
     creationEncryptionStarted = false;
 
-    key = ko.observable();
+    key = ko.observable<string>();
     encryptionAlgorithm = ko.observable('Rijndael');
     encryptionBits = ko.observable<number>(256);
     isEncryptedIndexes = ko.observable(true);    

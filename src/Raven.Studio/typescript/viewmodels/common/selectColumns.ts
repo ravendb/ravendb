@@ -27,7 +27,7 @@ class selectColumns extends dialogViewModelBase {
     lineHeight: number = 51;
     isScrollNeeded: KnockoutComputed<boolean>;
 
-    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context, private database: database, names: string[]) {
+    constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context: any, private database: database, names: string[]) {
         super();
         this.columnsNames(names);
         this.generateCompletionBase();
@@ -216,14 +216,14 @@ class selectColumns extends dialogViewModelBase {
         return super.enterKeyPressed();
     }
 
-    consumeUpDownArrowKeys(columnParams, event: KeyboardEvent): boolean {
+    consumeUpDownArrowKeys(columnParams: any, event: KeyboardEvent): boolean {
         if (event.keyCode === 38 || event.keyCode === 40) {
             event.preventDefault();
             return false;
         }
         return true;
     }
-    consumeClick(columnParams, event: KeyboardEvent): boolean {
+    consumeClick(columnParams: any, event: KeyboardEvent): boolean {
         if (columnParams.binding().length === 0) {
             columnParams.binding.valueHasMutated();
             event.preventDefault();

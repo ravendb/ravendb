@@ -29,7 +29,7 @@ class exploration extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         var deffered = $.Deferred();
 
         new getIndexTermsCommand("Raven/DocumentsByEntityName", "Tag", this.activeDatabase())

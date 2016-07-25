@@ -5,7 +5,7 @@ import pagedResultSet = require("common/pagedResultSet");
 
 class getSystemDocumentsCommand extends commandBase {
 
-    constructor(private db: database, private skip: number, private take: number, private totalResultCount) {
+    constructor(private db: database, private skip: number, private take: number, private totalResultCount: number) {
         super();
     }
 
@@ -16,7 +16,7 @@ class getSystemDocumentsCommand extends commandBase {
         // This means we can't really do proper paging. 
         var args = {
             startsWith: "Raven/",
-            exclude: null,
+            exclude: <string>null,
             start: this.skip,
             pageSize: this.take
         };

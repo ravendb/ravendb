@@ -11,7 +11,7 @@ class getPatchesCommand extends commandBase {
     execute(): JQueryPromise<Array<patchDocument>> {
         var args = {
             startsWith: "Studio/Patch/",
-            exclude: null,
+            exclude: <string>null,
             start: 0,
             pageSize: 256
         };

@@ -1,6 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import versioningEntry = require("models/database/documents/versioningEntry");
 import appUrl = require("common/appUrl");
+import database = require("models/resources/database");
 import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
 import getEffectiveVersioningsCommand = require("commands/database/globalConfig/getEffectiveVersioningsCommand");
 import configurationDocument = require("models/database/globalConfig/configurationDocument");
@@ -31,7 +32,7 @@ class versioning extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("1UZ5WL");
         this.toRemove = [];
@@ -40,7 +41,7 @@ class versioning extends viewModelBase {
         this.isSaveEnabled = ko.computed<boolean>(() => this.dirtyFlag().isDirty());
     }
 
-    private fetchVersioningEntries(db): JQueryPromise<any>{
+    private fetchVersioningEntries(db: database): JQueryPromise<any>{
         var task: JQueryPromise<configurationDocument<versioningEntry>[]> = new getEffectiveVersioningsCommand(db).execute();
         task.done((versionings: configurationDocument<versioningEntry>[]) => this.versioningsLoaded(versionings));
         return task;

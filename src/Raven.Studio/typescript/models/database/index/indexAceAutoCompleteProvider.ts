@@ -13,9 +13,9 @@ class indexAceAutoCompleteProvider {
     getCollectionAliasesInsideIndexText(session: any): { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] {
         var aliases: { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] = [];
 
-        var curAliasKey = null;
-        var curAliasValuePrefix = null;
-        var curAliasValueSuffix = null;
+        var curAliasKey: string = null;
+        var curAliasValuePrefix: string = null;
+        var curAliasValueSuffix: string = null;
 
         for (var curRow = 0; curRow < session.getLength(); curRow++) {
             var curRowTokens = session.getTokens(curRow);
@@ -169,7 +169,7 @@ class indexAceAutoCompleteProvider {
         var dotPrefixes = firstMapSrting.match(/[.]\w*/g);
         var equalPrefixes = firstMapSrting.match(/\w*\s*=\s*/g);
 
-        var autoCompletes = [];
+        var autoCompletes: string[] = [];
 
         if (!!dotPrefixes) {
             dotPrefixes.forEach(curPrefix => {

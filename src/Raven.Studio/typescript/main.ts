@@ -27,7 +27,7 @@ define('knockout', () => ko);
 define('nvd3', ['d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], (d3, nv, timelines, chart) => nv);
 define('dagre', ['d3', 'd3/dagre'], (d3, dagre) => dagre);
 */
-define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], (system, app, viewLocator, dialog, composition) => {
+define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], (system: any, app: any, viewLocator: any, dialog: any, composition: any) => {
     system.debug(true);
     
     NProgress.configure({ showSpinner: false });

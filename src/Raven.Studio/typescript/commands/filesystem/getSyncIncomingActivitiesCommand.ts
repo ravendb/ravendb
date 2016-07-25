@@ -23,7 +23,7 @@ class getSyncIncomingActivitiesCommand extends commandBase {
 
     getActivities(): JQueryPromise<filesystemListPageDto<synchronizationDetail>> {
         var url: string;
-        var resultsSelector;
+        var resultsSelector: (x: filesystemListPageDto<synchronizationDetailsDto | synchronizationReportDto>) => { TotalCount: number, Items: Array<synchronizationDetail> };
 
         switch (this.activity) {
             case synchronizationActivity.Active:

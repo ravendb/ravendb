@@ -30,11 +30,11 @@ class periodicExportSetup {
     azureStorageAccount = ko.observable<string>();
     azureStorageKey = ko.observable<string>();
 
-    incrementalBackupInterval = ko.observable();
-    incrementalBackupIntervalUnit = ko.observable();
+    incrementalBackupInterval = ko.observable<number>();
+    incrementalBackupIntervalUnit = ko.observable<string>();
 
-    fullBackupInterval = ko.observable();
-    fullBackupIntervalUnit = ko.observable();
+    fullBackupInterval = ko.observable<number>();
+    fullBackupIntervalUnit = ko.observable<string>();
 
     private dbSettingsDto: documentDto;
 
@@ -151,7 +151,7 @@ class periodicExportSetup {
 
         var labels = bucketName.split(".");
         var labelRegExp = /^[a-z0-9-]+$/;
-        var validLabel = label => {
+        var validLabel = (label: string) => {
             if (label == null || label.length == 0) {
                 return false;
             }
@@ -242,7 +242,7 @@ class periodicExportSetup {
         return ((this.type() === expectedType && this.remoteUploadEnabled()) ? this.mainValue() : null);
     }
 
-    private convertToMilliseconds(value, unit): number {
+    private convertToMilliseconds(value: number, unit: string): number {
         if (value && unit) {
             switch (unit) {
                 case this.TU_MINUTES:
@@ -304,7 +304,7 @@ class periodicExportSetup {
         return this.toDatabaseSettingsDto()["@metadata"]["@etag"];
     }
 
-    setEtag(newEtag) {
+    setEtag(newEtag: string) {
         this.toDatabaseSettingsDto()["@metadata"]["@etag"] = newEtag;
     }
 
@@ -340,7 +340,7 @@ class periodicExportSetup {
         this.unsupported(count > 1);
     }
 
-    private prepareBackupInterval(milliseconds) {
+    private prepareBackupInterval(milliseconds: number):[number, string] {
         if (milliseconds) {
             var seconds = milliseconds / 1000;
             var minutes = seconds / 60;

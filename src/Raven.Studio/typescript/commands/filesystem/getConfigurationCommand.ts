@@ -12,7 +12,7 @@ class getConfigurationCommand extends commandBase {
 
         var url = "/config/non-generated";
 
-        return this.query<configurationKey[]>(url, null, this.fs, results => results.map( x => new configurationKey(this.fs, x)))
+        return this.query<configurationKey[]>(url, null, this.fs, results => results.map((x: string) => new configurationKey(this.fs, x)))
                    .fail(response => this.reportError("Failed to retrieve filesystem configuration.", response.responseText, response.statusText));
     }
 }

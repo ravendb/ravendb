@@ -105,7 +105,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                 messagePublisher.reportError("Index paste failed, invalid json string", e);
             }
 
-            var allOperationsPromises = [];
+            var allOperationsPromises: Array<JQueryPromise<any>> = [];
             var succeededIndexes: string[] = [];
             var failedIndexes: string[] = [];
             var succeededTransformers: string[] = [];

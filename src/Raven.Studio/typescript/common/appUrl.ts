@@ -459,11 +459,11 @@ class appUrl {
         return "#databases/status/debug/tasks?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugRoutes(db): string {
+    static forStatusDebugRoutes(db: database): string {
         return "#databases/status/debug/routes?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forRequestTracing(db): string {
+    static forRequestTracing(db: database): string {
         return "#databases/status/requests/tracking?" + appUrl.getEncodedDbPart(db);
     }
 
@@ -986,7 +986,7 @@ class appUrl {
         var routerInstruction = router.activeInstruction();
         if (routerInstruction) {
 
-            var currentResourceName = null;
+            var currentResourceName: string = null;
             var currentResourceType: string = null;
             var currentResourceTypeEnum: TenantType;
             var dbInUrl = routerInstruction.queryParams[database.type];
@@ -1099,7 +1099,7 @@ class appUrl {
 
                 var fragment = instruction.fragment;
                 var appUrls: computedAppUrls = appUrl.currentDbComputeds;
-                var newLoationHref;
+                var newLoationHref: string;
                 if (fragment.indexOf("admin/settings") == 0) { //admin settings section
                     newLoationHref = appUrls.adminSettings();
                 } else {
@@ -1111,7 +1111,7 @@ class appUrl {
     }
 
     public static urlEncodeArgs(args: any): string {
-        var propNameAndValues = [];
+        var propNameAndValues: Array<string> = [];
         for (var prop in args) {
             var value = args[prop];
             if (value instanceof Array) {

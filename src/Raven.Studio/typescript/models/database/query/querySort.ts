@@ -47,7 +47,7 @@ class querySort {
     }
 
     toHumanizedString(): string {
-        var str;
+        var str: string;
 
         if (this.isRange()) {
             if (this.isAscending()) {

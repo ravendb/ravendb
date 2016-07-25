@@ -58,7 +58,7 @@ class conflicts extends viewModelBase {
         }
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 

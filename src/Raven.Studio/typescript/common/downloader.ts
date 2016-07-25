@@ -18,7 +18,7 @@ class downloader {
         }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get single auth token for download.", errorThrown));
     }
 
-    downloadByPost(rs: resource, url: string, requestData,
+    downloadByPost(rs: resource, url: string, requestData: any,
             isDownloading: KnockoutObservable<boolean>, downloadStatus: KnockoutObservable<string>) {
         new getSingleAuthTokenCommand(rs).execute().done((token: singleAuthToken) => {
 

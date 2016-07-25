@@ -17,7 +17,7 @@ class deleteTypesCommand extends commandBase {
         var successMessage = this.types.length > 1 ? "Deleted " + this.types.length + " types" : "Deleted " + this.types[0];
 
         var combinedTask = $.when.apply($, deletionTasks)
-            .done(x => this.reportSuccess(successMessage))
+            .done(() => this.reportSuccess(successMessage))
             .fail((response: JQueryXHR) => this.reportError("Failed to delete type", response.responseText, response.statusText));
 
         return combinedTask;

@@ -77,7 +77,7 @@ class etl extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("B8WXPY");
 
@@ -104,7 +104,7 @@ class etl extends viewModelBase {
         $.each(this.replicationsSetup().destinations(), this.addScriptHelpPopover);
     }
 
-    fetchReplications(db): JQueryPromise<any> {
+    fetchReplications(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
         ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
 

@@ -22,7 +22,7 @@ class status extends viewModelBase {
 
     isFsSyncUpToDate: boolean = true;
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("T6FI4K");
 

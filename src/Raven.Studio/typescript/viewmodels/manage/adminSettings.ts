@@ -25,11 +25,11 @@ class adminSettings extends viewModelBase {
             });
     }
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         return true;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         if (!license.licenseStatus()) {
             // we want to make sure license information is loaded before building route info

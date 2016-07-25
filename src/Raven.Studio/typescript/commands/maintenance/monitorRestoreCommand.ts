@@ -4,7 +4,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import appUrl = require("common/appUrl");
 
 class monitorRestoreCommand extends commandBase {
-    constructor(private parentPromise: JQueryDeferred<any>, private updateRestoreStatus: (restoreStatusDto) => void) {
+    constructor(private parentPromise: JQueryDeferred<any>, private updateRestoreStatus: (status: restoreStatusDto) => void) {
         super();
     }
 

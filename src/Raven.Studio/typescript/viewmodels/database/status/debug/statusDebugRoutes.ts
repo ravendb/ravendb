@@ -29,7 +29,7 @@ class statusDebugRoutes extends viewModelBase {
         $("#statusDebugRoutesEditor").off('DynamicHeightSet');
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
 

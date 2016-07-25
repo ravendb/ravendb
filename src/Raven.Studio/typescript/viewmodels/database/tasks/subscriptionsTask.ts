@@ -7,7 +7,7 @@ class SubscriptionsTask extends viewModelBase {
 
     data = ko.observableArray<Subscription>();
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.updateHelpLink("23PHKW");

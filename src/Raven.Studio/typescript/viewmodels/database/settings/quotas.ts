@@ -46,7 +46,7 @@ class quotas extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('594W7T');
         this.initializeDirtyFlag();
@@ -98,10 +98,10 @@ class quotas extends viewModelBase {
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-            var settingsDocument = this.settingsDocument();
+            var settingsDocument: any = this.settingsDocument();
             settingsDocument["@metadata"] = this.settingsDocument().__metadata;
-            settingsDocument["@metadata"]["@etag"] = this.settingsDocument().__metadata["@etag"];
-            var doc = new document(settingsDocument.toDto(true));
+            settingsDocument["@metadata"]["@etag"] = (<any>this.settingsDocument()).__metadata["@etag"];
+            var doc: any = new document(settingsDocument.toDto(true));
             if (this.usingGlobal()) {
                 delete doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"]; 
                 delete doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"];
@@ -116,7 +116,7 @@ class quotas extends viewModelBase {
             
             var saveTask = new saveDatabaseSettingsCommand(db, doc).execute();
             saveTask.done((saveResult: databaseDocumentSaveDto) => {
-                this.settingsDocument().__metadata["@etag"] = saveResult.ETag;
+                (<any>this.settingsDocument()).__metadata["@etag"] = saveResult.ETag;
                 this.dirtyFlag().reset(); //Resync Changes
             });
         }

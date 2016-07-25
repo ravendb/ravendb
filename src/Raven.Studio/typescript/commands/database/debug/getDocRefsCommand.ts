@@ -28,14 +28,10 @@ class getDocRefsCommand extends commandBase {
         this.query<statusDebugDocrefsDto>(url, args, this.ownerDb).
             fail(response => docRefsTask.reject(response)).
             done((docRefs:statusDebugDocrefsDto) => {
-                var items = $.map(docRefs.Results, r => { 
+                var items = $.map(docRefs.Results, r => {
                     return {
-                        getId: function () {
-                            return r;
-                        },
-                        getDocumentPropertyNames: function () {
-                            return ["Id"];
-                        }
+                        getId: () => r,
+                        getDocumentPropertyNames: () => <Array<string>>["Id"]
                     }
                 });
                 var resultsSet = new pagedResultSet(items, docRefs.TotalCount);

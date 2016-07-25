@@ -7,6 +7,7 @@ import deleteTransformerConfirm = require("viewmodels/database/transformers/dele
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
 import changesContext = require("common/changesContext");
+import database = require("models/resources/database");
 import copyTransformerDialog = require("viewmodels/database/transformers/copyTransformerDialog");
 
 class transformers extends viewModelBase {
@@ -43,7 +44,7 @@ class transformers extends viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
     }
 
-    private fetchTransformers(db) {
+    private fetchTransformers(db: database) {
         return new getTransformersCommand(db)
             .execute()
             .done((transformers: transformerDto[]) => {

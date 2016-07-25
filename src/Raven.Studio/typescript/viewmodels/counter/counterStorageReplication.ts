@@ -1,5 +1,6 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
+import counterStorage = require("models/counter/counterStorage");
 import counterStorageReplicationSetup = require("models/counter/counterStorageReplicationSetup");
 import counterStorageReplicationDestination = require("models/counter/counterStorageReplicationDestination");
 import getCounterStorageReplicationCommand = require("commands/counter/getCounterStorageReplicationCommand");
@@ -27,7 +28,7 @@ class counterStorageReplication extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
@@ -36,7 +37,7 @@ class counterStorageReplication extends viewModelBase {
         });
     }
 
-    fetchCountersDestinations(counterStorage, reportFetchProgress: boolean = false): JQueryPromise<any> {
+    fetchCountersDestinations(counterStorage: counterStorage, reportFetchProgress: boolean = false): JQueryPromise<any> {
         var deferred = $.Deferred();
         if (counterStorage) {
             new getCounterStorageReplicationCommand(counterStorage, reportFetchProgress)

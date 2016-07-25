@@ -31,7 +31,7 @@ class autoCompleteBindingHandler {
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => string, allBindings: () => any, viewModel, bindingContext: any) {
+    init(element: HTMLElement, valueAccessor: () => string, allBindings: () => any, viewModel: any, bindingContext: any) {
         var inputId = valueAccessor();
         var input = $(inputId);
         if (input.length !== 1) {

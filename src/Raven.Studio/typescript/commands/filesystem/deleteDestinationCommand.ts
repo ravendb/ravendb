@@ -19,14 +19,11 @@ class deleteDestinationCommand extends commandBase {
 
                 if (data && data.hasOwnProperty('Destinations')) {
 
-                    var value = data['Destinations'];
-                    if (!(value instanceof Array))
-                        value = [value];
+                    var destinationsRaw = data['Destinations'];
+                    var destinations: synchronizationDestinationDto[] =
+                        (destinationsRaw instanceof Array) ? destinationsRaw : [destinationsRaw];
 
-                    var dtos = value.map(x => <synchronizationDestinationDto> x);
-                     
-                    dtos = dtos.filter(x => x.ServerUrl != serverUrl || x.FileSystem != fileSystem);
-
+                    var dtos = destinations.filter(x => x.ServerUrl !== serverUrl || x.FileSystem !== fileSystem);
                     data.Destinations = dtos;
 
                     var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");

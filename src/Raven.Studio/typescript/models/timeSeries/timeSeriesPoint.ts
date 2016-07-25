@@ -15,7 +15,7 @@ class timeSeriesPoint implements documentBase {
         this.values = values;
 
         for (var i = 0; i < this.fields.length; i++) {
-            this[fields[i]] = values[i];
+            (<any>this)[fields[i]] = values[i];
         }
     }
 

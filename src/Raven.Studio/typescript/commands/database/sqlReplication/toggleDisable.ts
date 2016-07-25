@@ -1,7 +1,8 @@
 import commandBase = require("commands/commandBase");
+import database = require("models/resources/database");
 
 class resetSqlReplicationCommand extends commandBase {
-    constructor(private db, private disable: boolean) {
+    constructor(private db: database, private disable: boolean) {
         super();
     }
 

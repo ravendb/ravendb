@@ -130,7 +130,7 @@ class sqlReplication extends document {
         }
     }
 
-    setConnectionStringType(strType) {
+    setConnectionStringType(strType: string) {
         this.connectionStringType(strType);
     }
 
@@ -205,7 +205,7 @@ class sqlReplication extends document {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
     }
 
-    saveNewRavenEntityName(newRavenEntityName) {
+    saveNewRavenEntityName(newRavenEntityName: string) {
         this.ravenEntityName(newRavenEntityName);
     }
 

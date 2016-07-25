@@ -48,7 +48,7 @@ class documentMetadata {
                     property.toUpperCase() !== '@etag'.toUpperCase() &&
                     property.toUpperCase() !== 'toDto'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
-                    this[property] = dto[property];
+                    (<any>this)[property] = (<any>dto)[property];
                     this.nonStandardProps.push(property);
                 }
             }
@@ -68,7 +68,7 @@ class documentMetadata {
         };
 
         if (this.nonStandardProps) {
-            this.nonStandardProps.forEach(p => dto[p] = this[p]);
+            this.nonStandardProps.forEach(p => dto[p] = (<any>this)[p]);
         }
 
         return dto;
@@ -92,10 +92,10 @@ class documentMetadata {
 
         for (var property in metaDto) {
             if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
-                if (metaDto[property] && removedProps) {
-                    removedProps.push({ name: property, value: metaDto[property].toString() });
+                if ((<any>metaDto)[property] && removedProps) {
+                    removedProps.push({ name: property, value: (<any>metaDto)[property].toString() });
                 }
-                delete metaDto[property];
+                delete (<any>metaDto)[property];
             }
         }
         return metaDto;

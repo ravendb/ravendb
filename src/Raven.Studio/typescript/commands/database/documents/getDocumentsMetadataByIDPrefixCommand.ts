@@ -11,7 +11,7 @@ class getDocumentsMetadataByIDPrefixCommand extends commandBase {
         var url = '/docs';
         var args = {
             'startsWith': this.prefix,
-            'exclude': null,
+            'exclude': <string> null,
             'start': 0,
             'pageSize': this.resultsAmount,
             'metadata-only': true

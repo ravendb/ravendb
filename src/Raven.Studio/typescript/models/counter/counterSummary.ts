@@ -4,13 +4,14 @@ class counterSummary implements documentBase {
     Total: number; 
 
     constructor(dto: counterSummaryDto, private isAllGroupsGroup: boolean = false) {
-        this["Counter Name"] = dto.CounterName;
-        this["Group Name"] = dto.GroupName;
+        var self = <any>this;
+        self["Counter Name"] = dto.CounterName;
+        self["Group Name"] = dto.GroupName;
         this.Total = dto.Total;
     }
 
     getEntityName() {
-        return this["Group Name"];
+        return (<any>this)["Group Name"];
     }
 
     getDocumentPropertyNames(): Array<string> {
@@ -22,7 +23,7 @@ class counterSummary implements documentBase {
     }
 
     getId() {
-        return this["Counter Name"];
+        return (<any>this)["Counter Name"];
     }
 
     getUrl() {

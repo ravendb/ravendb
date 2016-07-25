@@ -71,7 +71,7 @@ class reporting extends viewModelBase {
 
         var uriContent = encodeURIComponent(str);
         var link = document.createElement('a');
-        link["download"] = this.selectedIndexName() ? "Reporting_" + this.selectedIndexName() + ".csv" : "reporting.csv";
+        (<any>link)["download"] = this.selectedIndexName() ? "Reporting_" + this.selectedIndexName() + ".csv" : "reporting.csv";
         link.href = 'data:,' + uriContent;
         link.click();
         return true;
@@ -164,7 +164,7 @@ class reporting extends viewModelBase {
 
     addValue(fieldName: string) {
         var sortOps = this.sortOptions();
-        var sortOption = (fieldName in sortOps) ? sortOps[fieldName] : "String";
+        var sortOption = (fieldName in sortOps) ? (<any>sortOps)[fieldName] : "String";
         var val = facet.fromNameAndAggregation(this.selectedField(), fieldName, this.mapSortToType(sortOption));
         this.addedValues.push(val);
     }

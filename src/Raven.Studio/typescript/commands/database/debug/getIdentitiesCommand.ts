@@ -33,7 +33,7 @@ class getIdentitiesCommand extends commandBase {
                         getUrl: () => r.Key,
                         'Value': r.Value,
                         'Key': r.Key,
-                        getDocumentPropertyNames: () => ["Key", "Value"]
+                        getDocumentPropertyNames: () => <Array<string>>["Key", "Value"]
                     }
                 });
                 var resultsSet = new pagedResultSet(items, identities.TotalCount);

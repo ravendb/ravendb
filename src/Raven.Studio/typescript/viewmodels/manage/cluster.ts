@@ -60,7 +60,7 @@ class cluster extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.updateHelpLink("11HBHO");

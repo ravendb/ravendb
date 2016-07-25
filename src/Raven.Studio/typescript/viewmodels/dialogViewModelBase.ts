@@ -32,7 +32,7 @@ class dialogViewModelBase {
         $(".messageBox").width(width + 2);
     }
 
-    deactivate(args) {
+    deactivate(args: any) {
         $(this.dialogSelectorName === "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName).unbind("keydown.jwerty");
     }
 

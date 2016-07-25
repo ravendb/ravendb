@@ -22,7 +22,7 @@ class disableResourceToggleCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var action = this.isSettingDisabled ? "disable" : "enable";
 
-        var toggleTask;
+        var toggleTask: JQueryPromise<any>;
         if (this.resources.length == 1) {
             toggleTask = this.disableOneResource(action);
         } else {

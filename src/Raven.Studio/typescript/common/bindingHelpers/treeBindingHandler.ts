@@ -32,7 +32,7 @@ class treeBindingHandler {
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => KnockoutObservable<bindingOptions>, allBindings, viewModel, bindingContext: any) {
+    init(element: HTMLElement, valueAccessor: () => KnockoutObservable<bindingOptions>, allBindings: any, viewModel: any, bindingContext: any) {
         var options: bindingOptions = ko.utils.unwrapObservable(valueAccessor());
 
         var tree = $(element).dynatree({
@@ -62,7 +62,7 @@ class treeBindingHandler {
     }
 
     static loadNodeChildren(tree: string, node: DynaTreeNode, options: bindingOptions) {
-        var dir;
+        var dir: string;
         if (node && node.data && node.data.key != "/") {
             dir = node.data.key;
         }
@@ -93,7 +93,7 @@ class treeBindingHandler {
                     }
                 }
 
-                var nodesToRemove = [];
+                var nodesToRemove: number[] = [];
                 //mark deleted nodes filtering transient
                 for (var k = 0; k < node.getChildren().length; k++) {
                     var nodeK = node.getChildren()[k];
@@ -133,7 +133,7 @@ class treeBindingHandler {
         treeBindingHandler.loadNodeChildren(tree, node, null)
     }
 
-    static onActivateAndSelect(node, valueAccessor: any) {
+    static onActivateAndSelect(node: DynaTreeNode, valueAccessor: any) {
         var options: {
             selectedNode: KnockoutObservable<string>;
             addedNode: KnockoutObservable<string>;
@@ -143,7 +143,7 @@ class treeBindingHandler {
         var selectedNode = node.data && node.data.key != "/" ? node.data.key : null;
         options.selectedNode(selectedNode);
         if (node.data) {
-            var siblings = [];
+            var siblings: DynaTreeNode[] = [];
             if (node.hasChildren()) {
                siblings = node.getChildren();
             }
@@ -153,7 +153,7 @@ class treeBindingHandler {
     }
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
+    update(element: HTMLElement, valueAccessor: () => KnockoutObservable <bindingOptions>, allBindings: any, viewModel: any, bindingContext: any) {
         var options: {
             selectedNode: KnockoutObservable<string>;
             addedNode: KnockoutObservable<folderNodeDto>;

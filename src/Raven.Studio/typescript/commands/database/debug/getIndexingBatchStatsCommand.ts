@@ -11,7 +11,7 @@ class getIndexingBatchStatsCommand extends commandBase {
 
     execute(): JQueryPromise<indexingBatchInfoDto[]> {
         var url = "/debug/indexing-batch-stats";
-        var entryMapping = (entry) => {
+        var entryMapping = (entry: { key: string, value: any}) => {
             return {
                 indexName: entry.key,
                 stats: entry.value
@@ -22,23 +22,23 @@ class getIndexingBatchStatsCommand extends commandBase {
         var parser = d3.time.format.iso;
 
         return this.query<indexingBatchInfoDto[]>(url, args, this.db, result => {
-            var mappedResult = result.map(item => {
+            var mappedResult: indexingBatchInfoDto[] = result.map((item: indexingBatchInfoDto) => {
                 return {
-                Id: item.Id,
-                BatchType: item.BatchType,
-                IndexesToWorkOn: item.IndexesToWorkOn,
-                TotalDocumentCount: item.TotalDocumentCount,
-                TotalDocumentSize: item.TotalDocumentSize,
-                StartedAt: item.StartedAt,
-                StartedAtDate: parser.parse(item.StartedAt),
-                TotalDurationMs: item.TotalDurationMs,
-                PerfStats: d3.map(item.PerformanceStats).entries().map(entryMapping)
-            }
+                    Id: item.Id,
+                    BatchType: item.BatchType,
+                    IndexesToWorkOn: item.IndexesToWorkOn,
+                    TotalDocumentCount: item.TotalDocumentCount,
+                    TotalDocumentSize: item.TotalDocumentSize,
+                    StartedAt: item.StartedAt,
+                    StartedAtDate: parser.parse(item.StartedAt),
+                    TotalDurationMs: item.TotalDurationMs,
+                    PerfStats: d3.map((<any>item).PerformanceStats).entries().map(entryMapping)
+                }
             });
 
             mappedResult.forEach(r => {
                 r.PerfStats.forEach(p => {
-                    p.stats.Operations.filter(x => !("Name" in x)).forEach(o => {
+                    p.stats.Operations.filter(x => !("Name" in x)).forEach((o: parallelPefromanceStatsDto) => {
                         o.BatchedOperations.forEach(b => {
                             b.Operations.forEach(x => { 
                                 x.ParallelParent = b;

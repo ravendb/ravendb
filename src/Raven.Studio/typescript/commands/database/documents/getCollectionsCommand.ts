@@ -31,7 +31,7 @@ class getCollectionsCommand extends commandBase {
 
         new getIndexTermsCommand("Raven/DocumentsByEntityName", "Tag", this.ownerDb)
             .execute()
-            .done((terms: string[], status, xhr) => {
+            .done((terms: string[], status: any, xhr: JQueryXHR) => {
 
                 if (this.previousValues.length > 0 && this.lastQueryDate()) {
 

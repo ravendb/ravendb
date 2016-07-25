@@ -14,7 +14,7 @@ declare var define: RequireDefine;
  * @requires composition
  * @requires jquery
  */
-define(['durandal/system', 'durandal/composition', 'jquery'], function(system, composition, $) {
+define(['durandal/system', 'durandal/composition', 'jquery'], function(system: any, composition: any, $: JQueryStatic) {
     var fadeOutDuration = 100;
     var endValues = {
         left: '0px',
@@ -41,7 +41,7 @@ define(['durandal/system', 'durandal/composition', 'jquery'], function(system, c
 
     if(!animation) {
         for(var i = 0; i < domPrefixes.length; i++) {
-            if(elm.style[domPrefixes[i] + 'AnimationName'] !== undefined) {
+            if((<any>elm).style[domPrefixes[i] + 'AnimationName'] !== undefined) {
                 animation = true;
                 break;
             }
@@ -58,7 +58,7 @@ define(['durandal/system', 'durandal/composition', 'jquery'], function(system, c
         system.log('Using jQuery animations.');
     }
 
-    function removeAnimationClasses(ele, fadeOnly){
+    function removeAnimationClasses(ele: Element, fadeOnly: boolean) {
         ele.classList.remove(fadeOnly ? 'entrance-in-fade' : 'entrance-in');
         ele.classList.remove('entrance-out');
     }
@@ -67,8 +67,8 @@ define(['durandal/system', 'durandal/composition', 'jquery'], function(system, c
      * @class EntranceModule
      * @constructor
      */
-    var entrance = function(context) {
-        return system.defer(function(dfd) {
+    var entrance = function(context: any) {
+        return system.defer(function(dfd: any) {
             function endTransition() {
                 dfd.resolve();
             }

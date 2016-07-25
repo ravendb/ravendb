@@ -41,7 +41,7 @@ class sqlReplicationPerfStats extends viewModelBase {
         return new getSqlReplicationPerfStatsCommand(this.activeDatabase()).execute();
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.activeDatabase.subscribe((db: database) => {

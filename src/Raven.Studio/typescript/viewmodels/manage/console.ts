@@ -62,7 +62,7 @@ class consoleJs extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         this.updateHelpLink("6BJCAJ");

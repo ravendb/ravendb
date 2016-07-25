@@ -89,7 +89,7 @@ class counters extends viewModelBase {
         });
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
 
         //TODO: update this in documentation
@@ -311,7 +311,7 @@ class counters extends viewModelBase {
     }
 
     private updateGroups(receivedGroups: Array<counterGroup>) {
-        var deletedGroups = [];
+        var deletedGroups: counterGroup[] = [];
 
         this.groups().forEach((group: counterGroup) => {
             if (!receivedGroups.first((receivedGroup: counterGroup) => group.name === receivedGroup.name) && group.name !== "All Groups") {
@@ -396,7 +396,7 @@ class counters extends viewModelBase {
     }
 
     // Animation callbacks for the groups list
-    showGroupElement(element) {
+    showGroupElement(element: Element) {
         if (element.nodeType === 1 && counters.isInitialized()) {
             $(element).hide().slideDown(500, () => {
                 ko.postbox.publish("SortGroups");
@@ -405,7 +405,7 @@ class counters extends viewModelBase {
         }
     }
 
-    hideGroupElement(element) {
+    hideGroupElement(element: Element) {
         if (element.nodeType === 1) {
             $(element).slideUp(1000, () => { $(element).remove(); });
         }

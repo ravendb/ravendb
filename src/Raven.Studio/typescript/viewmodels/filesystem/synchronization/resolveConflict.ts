@@ -3,16 +3,16 @@ import dialog = require("plugins/dialog");
 
 class resolveConflict extends dialogViewModelBase {
 
-    public resolveTask = $.Deferred();
+    resolveTask = $.Deferred<void>();
     resolveTaskStarted = false;
 
-    public message = ko.observable('');
-    public title = ko.observable('');
+    message = ko.observable<string>('');
+    title = ko.observable<string>('');
 
-    constructor(message, title) {
+    constructor(message: string, title: string) {
         super();
-        this.message = message;
-        this.title = title;
+        this.message(message);
+        this.title(title);
     }
 
     cancel() {
@@ -29,8 +29,8 @@ class resolveConflict extends dialogViewModelBase {
 
     resolve() {
         this.resolveTaskStarted = true;
-            this.resolveTask.resolve();
-            dialog.close(this);
+        this.resolveTask.resolve();
+        dialog.close(this);
     }
 }
 

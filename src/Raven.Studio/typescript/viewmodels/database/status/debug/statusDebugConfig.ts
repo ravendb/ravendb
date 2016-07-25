@@ -14,7 +14,7 @@ class statusDebugConfig extends viewModelBase {
         this.isForbidden = ko.computed(() => !this.data());
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
         super.canActivate(args);
 
         var deffered = $.Deferred();
@@ -22,7 +22,7 @@ class statusDebugConfig extends viewModelBase {
         return deffered;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchStatusDebugConfig());

@@ -12,14 +12,14 @@ import getConfigurationSettingsCommand = require("commands/database/globalConfig
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
 
 class createDefaultSettingsCommand extends commandBase {
-    constructor(private db: database, private bundles) {
+    constructor(private db: database, private bundles: string[]) {
         super();
     }
 
     execute(): JQueryPromise<any> {
         this.reportInfo("Creating default settings for '" + this.db.name + "'...");
-        
-        var tasksToWatch = []; 
+
+        var tasksToWatch: Array<JQueryPromise<any>> = []; 
         if (this.bundles.contains("Quotas")) {
             tasksToWatch.push(this.updateQuotasSettings());
         }
@@ -36,7 +36,7 @@ class createDefaultSettingsCommand extends commandBase {
     }
 
     private fillDefaultQuotasSettings(doc: document): document {
-        var result = new document(doc.toDto(true));
+        var result: any = new document(doc.toDto(true));
         result["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = (50 * 1024).toString(); 
         result["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = (45 * 1024).toString();
         result["Settings"]["Raven/Quotas/Documents/HardLimit"] = (10000).toString();

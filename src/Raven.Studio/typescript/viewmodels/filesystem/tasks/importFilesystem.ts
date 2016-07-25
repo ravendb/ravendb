@@ -19,7 +19,7 @@ class importDatabase extends viewModelBase {
         this.updateHelpLink("N822WN");
     }
 
-    canDeactivate(isClose) {
+    canDeactivate(isClose: boolean) {
         super.canDeactivate(isClose);
         
         if (this.isUploading()) {

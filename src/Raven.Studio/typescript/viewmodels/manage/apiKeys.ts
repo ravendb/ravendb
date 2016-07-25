@@ -18,7 +18,7 @@ class apiKeys extends viewModelBase {
         this.searchText.throttle(200).subscribe(value => this.filterKeys(value));
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
         var deferred = $.Deferred();
 
         if (this.settingsAccess.isForbidden()) {
@@ -30,7 +30,7 @@ class apiKeys extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('9CGJ4Y');
         this.dirtyFlag = new ko.DirtyFlag([this.apiKeys]);

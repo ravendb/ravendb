@@ -21,7 +21,7 @@ class activityItems {
     });
 
     allPages = ko.computed(() =>{
-        var pages = [];
+        var pages: { pageNumber: number}[] = [];
 
         for (var i = 0; i <= this.maxPageIndex(); i++) {
             pages.push({ pageNumber: (i + 1) });
@@ -30,7 +30,7 @@ class activityItems {
         return pages;
     });
 
-    moveToPage(index) {
+    moveToPage(index: number) {
         this.pageIndex(index);
         this.retrieveItems();
     };

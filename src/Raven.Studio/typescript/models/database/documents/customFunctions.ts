@@ -11,7 +11,7 @@ class customFunctions {
             };
             this.__metadata = new documentMetadata();
         } else {
-            this.__metadata = new documentMetadata(dto["@metadata"]);
+            this.__metadata = new documentMetadata((<any>dto)["@metadata"]);
         }
 
         this.functions = dto.Functions;
@@ -23,7 +23,7 @@ class customFunctions {
         };
 
         if (includeMetadata && this.__metadata) {
-            dto['@metadata'] = this.__metadata.toDto();
+            (<any>dto)['@metadata'] = this.__metadata.toDto();
         }
         return dto;
     }

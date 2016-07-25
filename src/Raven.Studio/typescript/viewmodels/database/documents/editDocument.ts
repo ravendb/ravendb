@@ -35,7 +35,7 @@ class editDocument extends viewModelBase {
     text: KnockoutComputed<string>;
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
-    metaPropsToRestoreOnSave = [];
+    metaPropsToRestoreOnSave: any[] = [];
     editedDocId: KnockoutComputed<string>;
     userSpecifiedId = ko.observable("").extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
@@ -74,7 +74,7 @@ class editDocument extends viewModelBase {
 
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
         this.isConflictDocument = ko.computed(() => {
-            var metadata = this.metadata();
+            var metadata: any = this.metadata();
 
             return metadata != null && !!metadata["Raven-Replication-Conflict"] && !metadata.id.contains("/conflicts/");
         });
@@ -92,8 +92,8 @@ class editDocument extends viewModelBase {
 
         this.documentSize = ko.computed(() => {
             try {
-                var size: Number = ((this.documentText().getSizeInBytesAsUTF8() + this.metadataText().getSizeInBytesAsUTF8()) / 1024);
-                return genUtils.formatAsCommaSeperatedString(size,2);    
+                var size: number = ((this.documentText().getSizeInBytesAsUTF8() + this.metadataText().getSizeInBytesAsUTF8()) / 1024);
+                return genUtils.formatAsCommaSeperatedString(size, 2);    
             } catch (e) {
                 return "cannot compute";
             } 
@@ -242,7 +242,7 @@ class editDocument extends viewModelBase {
         }
     }
 
-    activate(navigationArgs) {
+    activate(navigationArgs: any) {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
 
@@ -334,7 +334,7 @@ class editDocument extends viewModelBase {
         $(".changeNotification").highlight();
     }
 
-    updateNewlineLayoutInDocument(unescapeNewline) {
+    updateNewlineLayoutInDocument(unescapeNewline: boolean) {
         var dirtyFlagValue = this.dirtyFlag().isDirty();
         if (unescapeNewline == true) {
             this.documentText(this.unescapeNewlinesAndTabsInTextFields(this.documentText()));
@@ -380,12 +380,12 @@ class editDocument extends viewModelBase {
 
     editNewDocument() {
         this.isCreatingNewDocument(true);
-        var newDocument = document.empty();
+        var newDocument: any = document.empty();
         newDocument["Name"] = "...";
         this.document(newDocument);
     }
 
-    failedToLoadDoc(docId, errorResponse) {
+    failedToLoadDoc(docId: string, errorResponse: string) {
         messagePublisher.reportError("Could not find " + docId + " document");
     }
 
@@ -487,7 +487,7 @@ class editDocument extends viewModelBase {
         }
         curToken = iterator.stepBackward();
 
-        var lastTextSectionPosEnd = null;
+        var lastTextSectionPosEnd:{ row: number, column: number} = null;
         
         while (curToken) {
             if (curToken.type === "string" || curToken.type == "constant.language.escape") {
@@ -548,7 +548,7 @@ class editDocument extends viewModelBase {
             this.documentNameElement.focus();
         } else {
             try {
-                var updatedDto;
+                var updatedDto: any;
                 if (this.isNewLineFriendlyMode()) {
                     updatedDto = JSON.parse(this.escapeNewlinesAndTabsInTextFields(this.documentText()));
                 } else {
@@ -679,7 +679,7 @@ class editDocument extends viewModelBase {
     findRelatedDocumentsCandidates(doc: documentBase): string[] {
         var results: string[] = [];
         var initialDocumentFields = doc.getDocumentPropertyNames();
-        var documentNodesFlattenedList = [];
+        var documentNodesFlattenedList: any[] = [];
 
         // get initial nodes list to work with
         initialDocumentFields.forEach(curField => {
@@ -910,13 +910,13 @@ class editDocument extends viewModelBase {
         }
     }
 
-    loadRelatedDocumentsList(document) {
+    loadRelatedDocumentsList(document: documentBase) {
         var relatedDocumentsCandidates: string[] = this.findRelatedDocumentsCandidates(document);
         var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
         var response = docIDsVerifyCommand.execute();
         if (response.then) {
-            response.done(verifiedIDs => {
-                this.relatedDocumentHrefs(verifiedIDs.map(verified => {
+            response.done((verifiedIDs: any) => {
+                this.relatedDocumentHrefs(verifiedIDs.map((verified: any) => {
                     return {
                         id: verified.toString(),
                         href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
@@ -924,7 +924,7 @@ class editDocument extends viewModelBase {
                 }));
             });
         } else {
-            this.relatedDocumentHrefs(response.map(verified => {
+            this.relatedDocumentHrefs(response.map((verified: any) => {
                 return {
                     id: verified.toString(),
                     href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
@@ -986,7 +986,7 @@ class editDocument extends viewModelBase {
         var doc: document = this.document();
         var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         var deffered = generate.execute();
-        deffered.done((code: JSON) => {
+        deffered.done((code: any) => {
             app.showDialog(new showDataDialog("Generated Class", code["Code"]));
         });
     }

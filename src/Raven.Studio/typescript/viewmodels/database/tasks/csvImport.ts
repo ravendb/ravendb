@@ -10,7 +10,7 @@ class csvImport extends viewmodelBase {
         this.hasFileSelected(true);
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('CX96R3');
     }

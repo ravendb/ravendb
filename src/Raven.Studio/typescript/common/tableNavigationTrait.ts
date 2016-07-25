@@ -1,7 +1,7 @@
 
 class tableNavigationTrait<T> {
 
-    constructor(private containerSelector: string, private currentItem: KnockoutObservable<T>, private allItems: KnockoutObservableArray<T> | KnockoutComputed<T[]>, private nThRowSelector: (int) => string) {
+    constructor(private containerSelector: string, private currentItem: KnockoutObservable<T>, private allItems: KnockoutObservableArray<T> | KnockoutComputed<T[]>, private nThRowSelector: (idx: number) => string) {
         // empty by design
     }
 

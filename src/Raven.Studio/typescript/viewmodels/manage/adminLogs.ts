@@ -22,12 +22,12 @@ class adminLogs extends viewModelBase {
     adminLogsConfig = ko.observable<adminLogsConfig>();
     isForbidden = ko.observable<boolean>();
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
     
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink('57BGF7');
     }

@@ -10,8 +10,8 @@ class getFileCommand extends commandBase {
     }
 
     execute(): JQueryPromise<file> {
-        var url = "/files/" + encodeURIComponent(this.name);
-        var resultsSelector = metadata => {
+        var url = "/files/" + encodeURIComponent(this.name);   
+        var resultsSelector = (metadata: any) => {
             var fileHeaders = new file();
             fileHeaders.id(this.name);
 

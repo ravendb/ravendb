@@ -63,7 +63,7 @@ class studioConfig extends viewModelBase {
         this.rawFormat(numberFormattingStorage.shouldUseRaw());
     }
 
-    canActivate(args): any {
+    canActivate(args: any): any {
         var deferred = $.Deferred();
 
         if (this.isForbidden() === false) {
@@ -81,7 +81,7 @@ class studioConfig extends viewModelBase {
         return deferred;
     }
 
-    activate(args) {
+    activate(args: any) {
         super.activate(args);
         this.updateHelpLink("4J5OUB");
     }
@@ -106,7 +106,7 @@ class studioConfig extends viewModelBase {
 
     setEnvironmentColor(envColor: environmentColor) {
         var newDocument = this.configDocument();
-        newDocument["EnvironmentColor"] = envColor.toDto();
+        (<any>newDocument)["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
         saveTask.done(() => {
             shell.selectedEnvironmentColorStatic(this.selectedColor());
