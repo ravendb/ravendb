@@ -33,7 +33,12 @@ namespace Raven.Server.Documents.Queries.Results
             if (_fieldsToFetch.IsProjection)
                 return GetProjection(input, id);
 
-            return _documentsStorage.Get(_context, id);
+            var doc = _documentsStorage.Get(_context, id);
+            if (doc == null)
+                return null;
+
+            doc.EnsureMetadata();
+            return doc;
         }
 
         private Document GetProjection(Lucene.Net.Documents.Document input, string id)
@@ -77,6 +82,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             doc.Data = newData;
+            doc.EnsureMetadata();
 
             return doc;
         }

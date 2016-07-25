@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 _referencedCollectionRewriter,
                 SelectManyRewriter.QuerySyntax,
                 DynamicExtensionMethodsRewriter.Instance,
+                DynamicLambdaExpressionsRewriter.Instance,
                 RecurseRewriter.Instance
             };
         }

@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using Raven.Server.Documents.Includes;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Transformers
@@ -15,11 +16,11 @@ namespace Raven.Server.Documents.Transformers
         private readonly IndexingFunc _transformer;
         private readonly DocumentsOperationContext _context;
 
-        public TransformationScope(IndexingFunc transformer, BlittableJsonReaderObject transformerParameters, DocumentsStorage documentsStorage, DocumentsOperationContext context)
+        public TransformationScope(IndexingFunc transformer, BlittableJsonReaderObject transformerParameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, DocumentsOperationContext context)
         {
             _transformer = transformer;
             _context = context;
-            CurrentTransformationScope.Current = new CurrentTransformationScope(transformerParameters, documentsStorage, context);
+            CurrentTransformationScope.Current = new CurrentTransformationScope(transformerParameters, include, documentsStorage, context);
         }
 
         public void Dispose()
@@ -55,18 +56,11 @@ namespace Raven.Server.Documents.Transformers
                             var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                             if (propertyValueAsEnumerable != null)
                             {
-                                value[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x =>
-                                {
-                                    var dynamicDocument = x as DynamicDocumentObject;
-                                    if (dynamicDocument != null)
-                                        return (BlittableJsonReaderObject)dynamicDocument;
-
-                                    return x;
-                                }));
+                                value[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(ConvertType));
                                 continue;
                             }
 
-                            value[property.Key] = propertyValue;
+                            value[property.Key] = ConvertType(propertyValue);
                         }
 
                         values.Add(value);
@@ -83,6 +77,22 @@ namespace Raven.Server.Documents.Transformers
                     yield return document;
                 }
             }
+        }
+
+        private static object ConvertType(object value)
+        {
+            if (value == null)
+                return null;
+
+            var dynamicDocument = value as DynamicDocumentObject;
+            if (dynamicDocument != null)
+                return (BlittableJsonReaderObject)dynamicDocument;
+
+            var transformerParameter = value as TransformerParameter;
+            if (transformerParameter != null)
+                return transformerParameter.OriginalValue;
+
+            return value;
         }
     }
 }

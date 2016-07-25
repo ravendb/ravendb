@@ -20,6 +20,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private const string IsArrayFieldSuffix = "_IsArray";
 
+        private const string ConvertToJsonSuffix = "_ConvertToJson";
+
         private const string TrueString = "true";
 
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
@@ -107,7 +109,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
-            
+
             if (valueType == ValueType.BoostedValue)
             {
                 var boostedValue = (BoostedValue)value;
@@ -153,6 +155,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 yield return GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, storage, indexing, termVector); // TODO arek - ToString()? anything better?
             }
+            else if (valueType == ValueType.DynamicJsonObject)
+            {
+                var val = (DynamicBlittableJson)value;
+                yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield return GetOrCreateField(path, val.ToString(), null, storage, indexing, termVector);
+                yield break;
+            }
 
             foreach (var numericField in GetOrCreateNumericField(field, value, storage))
                 yield return numericField;
@@ -175,6 +184,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is LazyDoubleValue) return ValueType.Double;
 
             if (value is IConvertible) return ValueType.Convertible;
+
+            if (value is DynamicBlittableJson) return ValueType.DynamicJsonObject;
 
             return ValueType.Numeric;
         }
@@ -316,7 +327,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             Numeric,
 
-            BoostedValue
+            BoostedValue,
+
+            DynamicJsonObject
         }
     }
 }

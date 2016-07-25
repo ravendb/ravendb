@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -131,7 +130,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (transformer != null)
                 {
-                    using (var scope = transformer.OpenTransformationScope(null, Database.DocumentsStorage, context))
+                    using (var scope = transformer.OpenTransformationScope(null, null, Database.DocumentsStorage, context))
                     {
                         writer.WriteDocuments(context, scope.Transform(documents), metadataOnly);
                         return;
@@ -163,8 +162,6 @@ namespace Raven.Server.Documents.Handlers
                 includeDocs.Gather(document);
             }
 
-            includeDocs.Fill(includes);
-
             long actualEtag = ComputeEtagsFor(documents);
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
             {
@@ -181,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (transformer != null)
                 {
-                    using (var scope = transformer.OpenTransformationScope(null, Database.DocumentsStorage, context))
+                    using (var scope = transformer.OpenTransformationScope(null, includeDocs, Database.DocumentsStorage, context))
                     {
                         writer.WriteDocuments(context, scope.Transform(documents), metadataOnly);
                     }
@@ -190,6 +187,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteDocuments(context, documents, metadataOnly);
                 }
+
+                includeDocs.Fill(includes);
 
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));

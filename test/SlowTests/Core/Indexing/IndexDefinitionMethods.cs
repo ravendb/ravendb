@@ -74,18 +74,19 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: AsDocument")]
+        [Fact]
         public async Task CanUseAsDocumentToIndexAllDocumentFields()
         {
             using (var store = await GetDocumentStore())
             {
-                new Companies_AllProperties().Execute(store);
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Name = "Name2", Address1 = "Address1" });
                     session.Store(new Company { Name = "Name0", Address1 = "Some Address" });
                     session.SaveChanges();
+
+                    new Companies_AllProperties().Execute(store);
+
                     WaitForIndexing(store);
 
                     var companies = session.Query<Companies_AllProperties.Result, Companies_AllProperties>()
