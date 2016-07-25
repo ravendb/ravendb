@@ -144,10 +144,10 @@ namespace Indexing.Benchmark
                         ShippedAt = DateTime.Now,
                         ShipTo = new Address
                         {
-                            City = "City",
-                            Country = "Country",
-                            Street = "Street",
-                            ZipCode = 12345
+                            Country = $"Country{_random.Next(0, 10)}",
+                            City = $"City{_random.Next(0, 100)}",
+                            Street = $"Street{_random.Next(0, 1000)}",
+                            ZipCode = _random.Next(0, 9999)
                         },
                         ShipVia = $"shippers/{_random.Next(0, 10)}"
                     };

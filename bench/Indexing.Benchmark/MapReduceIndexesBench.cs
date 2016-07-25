@@ -1,4 +1,6 @@
-﻿using Raven.Client;
+﻿using System.Linq;
+using Indexing.Benchmark.Entities;
+using Raven.Client;
 using Raven.Client.Indexes;
 #if v35
 using Raven.Abstractions.Indexing;
@@ -27,6 +29,11 @@ namespace Indexing.Benchmark
             new IndexingTestRun
             {
               Index = new Orders_ByCompany_Fanout(),
+              NumberOfRelevantDocs = _numberOfOrdersInDb
+            },
+            new IndexingTestRun
+            {
+              Index = new Orders_ByMultipleFields(),
               NumberOfRelevantDocs = _numberOfOrdersInDb
             }
         };
@@ -109,6 +116,44 @@ select new
     Total = g.Sum(x=> x.Total)
 }"
                 };
+            }
+        }
+
+        public class Orders_ByMultipleFields : AbstractIndexCreationTask<Order, Orders_ByMultipleFields.ReduceResults>
+        {
+            public class ReduceResults 
+            {
+                public string Company { get; set; }
+                public string ShipVia { get; set; }
+                public string Employee { get; set; }
+                public int Count { get; set; }
+            }
+            public Orders_ByMultipleFields()
+            {
+                Map = orders => from order in orders
+                                select new ReduceResults
+                                {
+                                    Company = order.Company,
+                                    ShipVia = order.ShipVia,
+                                    Employee = order.Employee,
+                                    Count = 1
+                                };
+
+                Reduce = results => from result in results
+                    group result by new
+                    {
+                        result.Company,
+                        result.ShipVia,
+                        result.Employee,
+                    }
+                    into g
+                    select new
+                    {
+                        Company = g.Key.Company,
+                        ShipVia = g.Key.ShipVia,
+                        Employee = g.Key.Employee,
+                        Count = g.Sum(x => x.Count)
+                    };
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Data.Indexes;
@@ -150,11 +151,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymusObjectToBlittableMapResultsEnumerableWrapper _parent;
+                private readonly HashSet<string> _groupByFields;
 
                 public Enumerator(IEnumerator enumerator, AnonymusObjectToBlittableMapResultsEnumerableWrapper parent)
                 {
                     _enumerator = enumerator;
                     _parent = parent;
+                    _groupByFields = _parent._index.Definition.GroupByFields;
                 }
 
                 public bool MoveNext()
@@ -169,29 +172,75 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     var accessor = _parent._propertyAccessor ?? (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
 
                     var mapResult = new DynamicJsonValue();
-                    var reduceKey = new DynamicJsonValue();
+                    ulong reduceHashKey;
+
+                    var hash64Context = Hashing.Streamed.XXHash64.BeginProcess();
 
                     foreach (var property in accessor.Properties)
                     {
                         var value = property.Value(document);
 
                         mapResult[property.Key] = value;
-
-                        if (_parent._index.Definition.GroupByFields.Contains(property.Key))
-                            reduceKey[property.Key] = value;
+                        
+                        if (_groupByFields.Contains(property.Key))
+                        {
+                            AddValueToReduceHash(value, hash64Context);
+                        }
                     }
 
-                    ulong reduceHashKey;
-                    using (var reduceKeyObject = _parent._indexContext.ReadObject(reduceKey, "reduce-key"))
-                    {
-                        reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer, reduceKeyObject.Size);
-                    }
+                    reduceHashKey = Hashing.Streamed.XXHash64.EndProcess(hash64Context);
 
                     Current.Data = _parent._indexContext.ReadObject(mapResult, "map-result");
                     Current.ReduceKeyHash = reduceHashKey;
                     Current.State = _parent._index.GetReduceKeyState(reduceHashKey, _parent._indexContext, create: true);
 
                     return true;
+                }
+
+                private static void AddValueToReduceHash(object value, Hashing.Streamed.XXHash64Context hash64Context)
+                {
+                    var lsv = value as LazyStringValue;
+                    if (lsv != null)
+                    {
+                        var size = lsv.Size & ~0xF; // we need 16 bytes alignment TODO arek
+
+                        Hashing.Streamed.XXHash64.Process(hash64Context, lsv.Buffer, size);
+                        return;
+                    }
+
+                    var s = value as string;
+                    if (s != null)
+                    {
+                        fixed (char* p = s)
+                        {
+                            Hashing.Streamed.XXHash64.Process(hash64Context, (byte*)p,
+                                s.Length * sizeof(char));
+                        }
+                        return;
+                    }
+
+                    var lcsv = value as LazyCompressedStringValue;
+                    if (lcsv != null)
+                    {
+                        Hashing.Streamed.XXHash64.Process(hash64Context, lcsv.Buffer, lcsv.CompressedSize);
+                        return;
+                    }
+
+                    if (value is long)
+                    {
+                        var l = (long)value;
+                        Hashing.Streamed.XXHash64.Process(hash64Context, (byte*)&l, sizeof(long));
+                        return;
+                    }
+
+                    if (value is decimal)
+                    {
+                        var l = (decimal)value;
+                        Hashing.Streamed.XXHash64.Process(hash64Context, (byte*)&l, sizeof(decimal));
+                        return;
+                    }
+
+                    throw new NotSupportedException($"Unhandled type: {value.GetType()}");
                 }
 
                 public void Reset()
