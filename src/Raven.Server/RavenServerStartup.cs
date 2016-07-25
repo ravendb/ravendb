@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Xml;
-
+using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,7 +62,17 @@ namespace Raven.Server
                         .Append("- - - - - - - - - - - - - - - - - - - - -")
                         .AppendLine();
                     sb.Append(e);
-                    await response.WriteAsync(e.ToString());
+                    string errorString;
+
+                    try
+                    {
+                        errorString = e.ToAsyncString();
+                    }
+                    catch (Exception)
+                    {
+                        errorString = e.ToString();
+                    }
+                    await response.WriteAsync(errorString);
                 }
             });
         }

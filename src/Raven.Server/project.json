@@ -31,6 +31,7 @@
   },
 
   "dependencies": {
+    "AsyncFriendlyStackTrace": "1.4.0",
     "Jint": "2.8.1",
     "Lucene.Net": "3.0.4-*",
     "Lucene.Net.Contrib.Spatial.NTS": "3.0.4-*",

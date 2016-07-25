@@ -24,6 +24,11 @@ namespace Voron.Data.Tables
             return ptrSize.Ptr;
         }
 
+        public void Add(Slice slice)
+        {
+            Add(slice.Content.Ptr, slice.Size);
+        }
+
         public void Add(ulong* ptr)
         {
             Add((byte*)ptr, sizeof(ulong));

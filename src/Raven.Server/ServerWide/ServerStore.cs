@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +16,7 @@ using Voron;
 using Voron.Data;
 using Sparrow;
 using Sparrow.Logging;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide
 {
@@ -32,6 +34,7 @@ namespace Raven.Server.ServerWide
         private StorageEnvironment _env;
 
         private UnmanagedBuffersPool _pool;
+        private TableSchema _itemsSchema;
 
         public readonly DatabasesLandlord DatabasesLandlord;
 
@@ -50,6 +53,15 @@ namespace Raven.Server.ServerWide
             _loggerSetup = loggerSetup;
 
             DatabasesLandlord = new DatabasesLandlord(this, _loggerSetup);
+
+            // We use the follow format for the items data
+            // { lowered key, key, data }
+            _itemsSchema = new TableSchema();
+            _itemsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 0
+            });
         }
 
         public TransactionContextPool ContextPool;
@@ -77,7 +89,8 @@ namespace Raven.Server.ServerWide
                 _env = new StorageEnvironment(options, _loggerSetup);
                 using (var tx = _env.WriteTransaction())
                 {
-                    tx.CreateTree("items");
+                    tx.DeleteTree("items");// note the different casing, we remove the old items tree 
+                    _itemsSchema.Create(tx, "Items");
                     tx.Commit();
                 }
             }
@@ -99,17 +112,19 @@ namespace Raven.Server.ServerWide
 
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
         {
-            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
-            var result = dbs.Read(id);
-            if (result == null)
+            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
+            var reader = items.ReadByKey(Slice.From(ctx.Allocator, id.ToLowerInvariant()));
+            if (reader == null)
                 return null;
-            return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, ctx);
+            int size;
+            var ptr = reader.Read(2, out size);
+            return new BlittableJsonReaderObject(ptr, size, ctx);
         }
 
         public void Delete(TransactionOperationContext ctx, string id)
         {
-            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
-            dbs.Delete(id);
+            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
+            items.DeleteByKey(Slice.From(ctx.Allocator, id.ToLowerInvariant()));
         }
 
         public class Item
@@ -120,45 +135,45 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
         {
-            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
-            using (var it = dbs.Iterate(true))
+            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
+            var loweredPrefix = Slice.From(ctx.Allocator, prefix.ToLowerInvariant());
+            foreach (var result in items.SeekByPrimaryKey(loweredPrefix, startsWith: true))
             {
-                it.RequiredPrefix = Slice.From(ctx.Allocator, prefix, ByteStringType.Immutable);
-                if (it.Seek(it.RequiredPrefix) == false)
-                    yield break;
-
-                do
+                if (start > 0)
                 {
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
-                    if (take-- <= 0)
-                        yield break;
-
-                    yield return GetCurrentItem(ctx, it);
-                } while (it.MoveNext());
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
+                yield return GetCurrentItem(ctx, result);
             }
         }
 
-        private static Item GetCurrentItem(JsonOperationContext ctx, IIterator it)
+        private static Item GetCurrentItem(JsonOperationContext ctx, TableValueReader reader)
         {
-            var readerForCurrent = it.CreateReaderForCurrent();
+            int size;
             return new Item
             {
-                Data = new BlittableJsonReaderObject(readerForCurrent.Base, readerForCurrent.Length, ctx),
-                Key = it.CurrentKey.ToString()
+                Data = new BlittableJsonReaderObject(reader.Read(2, out size), size, ctx),
+                Key = Encoding.UTF8.GetString(reader.Read(1, out size), size)
             };
         }
 
 
         public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc)
         {
-            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
+            var idAsSlice = Slice.From(ctx.Allocator, id);
+            var loweredId = Slice.From(ctx.Allocator, id.ToLowerInvariant());
+            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
 
-            var ptr = dbs.DirectAdd(id, doc.Size);
-            doc.CopyTo(ptr);
+
+            items.Set(new TableValueBuilder
+            {
+                loweredId,
+                idAsSlice,
+                {doc.BasePointer, doc.Size}
+            });
         }
 
         public void Dispose()

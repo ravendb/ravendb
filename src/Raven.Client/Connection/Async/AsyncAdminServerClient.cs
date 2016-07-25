@@ -221,7 +221,9 @@ namespace Raven.Client.Connection.Async
             {
                 request = adminRequest.CreateStreamApiKeysRequest();
                 resp = await request.ExecuteRawResponseAsync();
+                await resp.AssertNotFailingResponse().ConfigureAwait(false);
                 stream = await resp.GetResponseStreamWithHttpDecompression();
+
                 return YieldResults(stream, request); // stream and request - must be disposed manually when YieldResults finishes
             }
             catch (Exception)
@@ -234,7 +236,7 @@ namespace Raven.Client.Connection.Async
 
         private IEnumerable<NamedApiKeyDefinition> YieldResults(Stream stream, HttpJsonRequest request)
         {
-            using(request)
+            using (request)
             using(stream)
             using (var jtr = new JsonTextReader(new StreamReader(stream)))
             {
