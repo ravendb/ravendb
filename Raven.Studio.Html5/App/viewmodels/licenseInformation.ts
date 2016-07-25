@@ -11,6 +11,8 @@ class licenseInformation extends viewModelBase {
 
     connectivityStatus = ko.observable<string>("pending");
     isForbidden = ko.observable<boolean>();
+    forceButtonEnabled = ko.pureComputed(() => this.connectivityStatus() === "success");
+    forceInProgress = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -41,10 +43,14 @@ class licenseInformation extends viewModelBase {
     }
 
     forceUpdate() {
+        this.forceInProgress(true);
         new forceLicenseUpdate().execute()
             .always(() => {
-                this.fetchLicenseStatus()
-                    .always(() => this.showLicenseDialog());
+                $.when(this.fetchLicenseStatus())
+                    .always(() => {
+                        this.forceInProgress(false);
+                        this.showLicenseDialog();
+                    });
             });
     }
 
