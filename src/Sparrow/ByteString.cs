@@ -661,26 +661,24 @@ namespace Sparrow
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
         {
-            // The allocation is big, therefore we will just allocate the segment and move on.   
-
             SegmentInformation segment;
             if (length > MaxAllocationBlockSizeInBytes)
             {
+                // The allocation is big, therefore we will just allocate the segment and move on.   
                 var memory = new UnmanagedGlobalSegment(length);
                 byte* start = (byte*)memory.Segment.ToPointer();
                 byte* end = start + memory.Size;
                                 
                 segment = new SegmentInformation { Memory = memory, Start = start, Current = start, End = end, CanDispose = true };
-                _wholeSegments.Add(segment);
             }
             else
             {                                                     
                 segment = AllocateSegment(length + sizeof(ByteStringStorage));
             }
+            _wholeSegments.Add(segment);
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
-            _wholeSegments.Add(segment);
 
             return byteString;
         }
