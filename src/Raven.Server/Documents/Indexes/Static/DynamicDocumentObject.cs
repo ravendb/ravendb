@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.Reflection;
@@ -118,6 +119,21 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException($"Could not get '{key}' value of dynamic object");
 
             return TypeConverter.Convert<T>(result, false);
+        }
+
+        public IEnumerable<object> Select(Func<object, object> func)
+        {
+            var list = new List<object>();
+            foreach (var property in _dynamicJson.GetPropertyNames())
+            {
+                object result;
+                if (_dynamicJson.TryGetByName(property, out result) == false)
+                    throw new InvalidOperationException("Should not happen.");
+
+                list.Add(func(new KeyValuePair<string, object>(property, result)));
+            }
+
+            return new DynamicBlittableJson.DynamicArray(list);
         }
 
         public static implicit operator BlittableJsonReaderObject(DynamicDocumentObject self)

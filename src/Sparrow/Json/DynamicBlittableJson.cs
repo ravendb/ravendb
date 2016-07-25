@@ -171,5 +171,10 @@ namespace Sparrow.Json
         {
             return TryGetByName((string)indexes[0], out result);
         }
+
+        public override string ToString()
+        {
+            return BlittableJsonReaderObject.ToString();
+        }
     }
 }
