@@ -22,6 +22,11 @@ namespace Raven.Server.Documents.Includes
             _includes = includes;
         }
 
+        public void Add(string id)
+        {
+            _includedIds.Add(id);
+        }
+
         public void Gather(Document document)
         {
             foreach (var include in _includes)

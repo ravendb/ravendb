@@ -5,16 +5,16 @@ namespace Raven.Server.Documents.Transformers
 {
     public class TransformerParameter
     {
-        private readonly object _value;
-
         public TransformerParameter(object value)
         {
-            _value = value;
+            OriginalValue = value;
         }
+
+        public readonly object OriginalValue;
 
         public T Value<T>()
         {
-            return TypeConverter.Convert<T>(_value, cast: false);
+            return TypeConverter.Convert<T>(OriginalValue, cast: false);
         }
     }
 }

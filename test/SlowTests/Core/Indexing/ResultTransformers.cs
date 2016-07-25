@@ -311,7 +311,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Includes in transformers")]
+        [Fact]
         public async Task CanSpecifyTransformerParameterAndIncludeInTransformer()
         {
             using (var store = await GetDocumentStore())

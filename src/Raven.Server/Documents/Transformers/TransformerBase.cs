@@ -20,11 +20,11 @@ namespace Raven.Server.Documents.Transformers
 
             var keyLazy = keyOrEnumerable as LazyStringValue;
             if (keyLazy != null)
-                return CurrentTransformationScope.Current.LoadDocument(keyLazy, null, collectionName);
+                return CurrentTransformationScope.Current.LoadDocument(keyLazy, null);
 
             var keyString = keyOrEnumerable as string;
             if (keyString != null)
-                return CurrentTransformationScope.Current.LoadDocument(null, keyString, collectionName);
+                return CurrentTransformationScope.Current.LoadDocument(null, keyString);
 
             var enumerable = keyOrEnumerable as IEnumerable;
             if (enumerable != null)
@@ -44,6 +44,14 @@ namespace Raven.Server.Documents.Transformers
             throw new InvalidOperationException(
                 "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
                 keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
+        }
+
+        public dynamic Include(object key)
+        {
+            if (CurrentTransformationScope.Current == null)
+                throw new InvalidOperationException("Transformation scope was not initialized.");
+
+            return CurrentTransformationScope.Current.Include(key);
         }
 
         public dynamic Parameter(string key)
