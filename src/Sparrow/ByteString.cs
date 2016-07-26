@@ -332,7 +332,7 @@ namespace Sparrow
         }
     }
 
-    sealed class UnmanagedGlobalSegment : IDisposable
+    public sealed class UnmanagedGlobalSegment : IDisposable
     {
         public readonly IntPtr Segment;
         public readonly int Size;
@@ -381,9 +381,32 @@ namespace Sparrow
         #endregion
     }
 
+    public unsafe class ByteStringMemoryCache
+    {
+        private static readonly ObjectPool<UnmanagedGlobalSegment, int> GlobalPool = new ObjectPool<UnmanagedGlobalSegment, int>(size => new UnmanagedGlobalSegment(size), 50);
+
+        public static UnmanagedGlobalSegment Allocate(int size)
+        {
+            // We try to allocate from the pool (fast allocate).
+            var memorySegment = GlobalPool.Allocate(size);
+            if (memorySegment.Size < size)
+            {
+                // not big enough, so we'll discard it and create a bigger instance
+                // it will go into the pool afterward and be available for future use
+                memorySegment.Dispose();
+                memorySegment = GlobalPool.AllocateInstance(size);
+            }
+            return memorySegment;
+        }
+
+        public static void Free(UnmanagedGlobalSegment memory)
+        {
+            GlobalPool.Free(memory);
+        }
+    }
+
     public unsafe class ByteStringContext : IDisposable
     {        
-        private static readonly ObjectPool<UnmanagedGlobalSegment, int> _globalPool = new ObjectPool<UnmanagedGlobalSegment, int>(size => new UnmanagedGlobalSegment(size), 50);
 
         private class SegmentInformation
         {
@@ -794,15 +817,7 @@ namespace Sparrow
 
         private SegmentInformation AllocateSegment(int size)
         {
-            // We try to allocate from the pool (fast allocate).
-            var memorySegment = _globalPool.Allocate(size);
-            if (memorySegment.Size < size)
-            {
-                // not big enough, so we'll discard it and create a bigger instance
-                // it will go into the pool afterward and be available for future use
-                memorySegment.Dispose(); 
-                memorySegment = _globalPool.AllocateInstance(size);
-            }            
+            var memorySegment = ByteStringMemoryCache.Allocate(size);
 
             byte* start = (byte*)memorySegment.Segment.ToPointer();
             byte* end = start + memorySegment.Size;
@@ -816,15 +831,7 @@ namespace Sparrow
 
         private void AllocateExternalSegment(int size)
         {
-            // We try to allocate from the pool (fast allocate).
-            var memorySegment = _globalPool.Allocate(size);
-            if (memorySegment.Size < size)
-            {
-                // not big enough, so we'll discard it and create a bigger instance
-                // it will go into the pool afterward and be available for future use
-                memorySegment.Dispose();
-                memorySegment = _globalPool.AllocateInstance(size);
-            }
+            var memorySegment = ByteStringMemoryCache.Allocate(size);
 
             byte* start = (byte*)memorySegment.Segment.ToPointer();
             byte* end = start + memorySegment.Size;
@@ -1115,7 +1122,7 @@ namespace Sparrow
                             else
                             {
                                 // We have allocated from the pool. Then we are releasing it. 
-                                _globalPool.Free(segment.Memory);
+                                ByteStringMemoryCache.Free(segment.Memory);
                             }
                         }
                     }
