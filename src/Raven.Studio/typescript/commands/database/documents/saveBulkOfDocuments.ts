@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class saveBulkOfDocuments extends commandBase {
 
@@ -10,7 +11,7 @@ class saveBulkOfDocuments extends commandBase {
     // performs bulk save of an array of objects 
     execute(): JQueryPromise<any> {
         
-        var saveBulkTask = this.post("/bulk_docs", ko.toJSON(this.bulkDocuments), this.db);
+        var saveBulkTask = this.post(endpoints.databases.batch.bulk_docs, ko.toJSON(this.bulkDocuments), this.db);
         this.reportInfo("Performing bulk save of " + this.dataTypes);
 
         saveBulkTask.done(() => this.reportSuccess("Saved all bulk of documents"));

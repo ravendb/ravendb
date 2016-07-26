@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
+import endpoints = require("endpoints");
 
 class getDocumentWithMetadataCommand extends commandBase {
 
@@ -17,9 +18,8 @@ class getDocumentWithMetadataCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-
         var documentResult = $.Deferred();
-        var postResult = this.post("/docs", JSON.stringify([this.id]), this.db);
+        var postResult = this.post(endpoints.databases.document.docs, JSON.stringify([this.id]), this.db);
         postResult.fail(xhr => documentResult.fail(xhr));
         postResult.done((queryResult: queryResultDto) => {
             if (queryResult.Results.length === 0) {

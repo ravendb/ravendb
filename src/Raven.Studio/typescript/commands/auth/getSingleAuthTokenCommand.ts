@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
+import endpoints = require("endpoints");
 
 class getSingleAuthTokenCommand extends commandBase {
 
@@ -12,7 +13,6 @@ class getSingleAuthTokenCommand extends commandBase {
     }
 
     execute(): JQueryPromise<singleAuthToken> {
-        var url = "/singleAuthToken";
         var args: { CheckIfMachineAdmin: boolean } = null;
 
         if (this.checkIfMachineAdmin) {
@@ -21,7 +21,7 @@ class getSingleAuthTokenCommand extends commandBase {
             };
         }
             
-        var getTask = this.query(url, args, this.resource);
+        var getTask = this.query(endpoints.databases.singleAuthToken.singleAuthToken, args, this.resource);
 
         return getTask;
     }

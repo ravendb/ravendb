@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class deleteDocsMatchingQueryCommand extends commandBase {
     constructor(private indexName: string, private queryText: string, private db: database) {
@@ -15,7 +16,7 @@ class deleteDocsMatchingQueryCommand extends commandBase {
             allowStale: false
         };
 
-        var url = "/bulk_docs/" + this.indexName + this.urlEncodeArgs(args);
+        var url = endpoints.databases.batch.bulk_docs + "/" + this.indexName + this.urlEncodeArgs(args);
         var task = this.del(url, null, this.db);
         task.done(() => this.reportSuccess("Docs deleted"));
         task.fail((response: JQueryXHR) => this.reportError("Error deleting docs matching query", response.responseText, response.statusText));
