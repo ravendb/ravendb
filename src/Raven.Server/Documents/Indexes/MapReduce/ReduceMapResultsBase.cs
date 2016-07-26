@@ -40,6 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _indexStorage = indexStorage;
             _metrics = metrics;
             _mapReduceContext = mapReduceContext;
+            _logger = indexStorage.DocumentDatabase.LoggerSetup.GetLogger<ReduceMapResultsBase<T>>(indexStorage.DocumentDatabase.Name);
         }
 
         public string Name => "Reduce";
@@ -47,8 +48,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
-            _logger = databaseContext.DocumentDatabase.LoggerSetup.GetLogger<ReduceMapResultsBase<T>>(databaseContext.DocumentDatabase.Name);
-
             if (_mapReduceContext.StateByReduceKeyHash.Count == 0)
                 return false;
 
@@ -128,8 +127,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
 
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations(message, e);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(message, e);
 
                         if (parentPage == -1)
                         {
@@ -198,8 +197,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a branch page #{page} of '{_indexDefinition.Name}' index.";
 
-                            if (_logger.IsOperationsEnabled)
-                                _logger.Operations(message,e);
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info(message,e);
 
                             stats.RecordReduceErrors(aggregatedEntries);
                             stats.AddReduceError(message + $" Message: {message}.");

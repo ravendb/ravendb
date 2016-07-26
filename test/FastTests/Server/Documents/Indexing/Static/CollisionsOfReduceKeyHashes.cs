@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+                var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] {"Users"}, new[]
                 {
                     new IndexField
                     {
@@ -52,10 +52,16 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }), database);
 
                 var mapReduceContext = new MapReduceIndexingContext();
+                using (var pool = new UnmanagedBuffersPool("test"))
+                using (var contextPool = new TransactionContextPool(pool, database.DocumentsStorage.Environment))
+                {
+                    var indexStorage = new IndexStorage(index, contextPool, database);
 
-                var reducer = new ReduceMapResultsOfAutoIndex(index.Definition, null, new MetricsCountersManager(new MetricsScheduler()), mapReduceContext);
+                    var reducer = new ReduceMapResultsOfAutoIndex(index.Definition, indexStorage, 
+                        new MetricsCountersManager(new MetricsScheduler()), mapReduceContext);
 
-                await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
+                    await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
+                }
             }
         }
 
@@ -81,10 +87,14 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }, database);
 
                 var mapReduceContext = new MapReduceIndexingContext();
+                using (var pool = new UnmanagedBuffersPool("test"))
+                using (var contextPool = new TransactionContextPool(pool, database.DocumentsStorage.Environment))
+                {
+                    var indexStorage = new IndexStorage(index, contextPool, database);
+                    var reducer = new ReduceMapResultsOfStaticIndex(index._compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(new MetricsScheduler()), mapReduceContext);
 
-                var reducer = new ReduceMapResultsOfStaticIndex(index._compiled.Reduce, index.Definition, null, new MetricsCountersManager(new MetricsScheduler()), mapReduceContext);
-
-                await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
+                    await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
+                }
             }
         }
 
