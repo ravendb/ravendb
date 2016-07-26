@@ -368,7 +368,7 @@ namespace Sparrow.Json
             ValidateDouble = 1,
             CompressStrings = 2,
             CompressSmallStrings = 4,
-            ToDisk = ValidateDouble | CompressStrings | CompressSmallStrings
+            ToDisk = ValidateDouble | CompressStrings
         }
 
         public struct WriteToken
