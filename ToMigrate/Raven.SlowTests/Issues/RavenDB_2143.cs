@@ -3,9 +3,7 @@ using System.Threading;
 
 using Raven.Client.Extensions;
 using Raven.Database.Config;
-using Raven.Database.Config.Settings;
 using Raven.Tests.Helpers;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -13,10 +11,10 @@ namespace Raven.SlowTests.Issues
 {
     public class RavenDB_2143 : RavenTestBase
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Tenants.FrequencyToCheckForIdle,new TimeSetting(3, TimeUnit.Seconds), "3");
-            configuration.Modify(x => x.Tenants.MaxIdleTime, new TimeSetting(1, TimeUnit.Seconds), "1");
+            configuration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"] = "3";
+            configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"] = "1";
         }
 
         [Fact]

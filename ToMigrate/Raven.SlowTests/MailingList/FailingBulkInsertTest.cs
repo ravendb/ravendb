@@ -22,7 +22,7 @@ namespace Raven.SlowTests.MailingList
         public void CanBulkInsert(BulkInsertOptions options)
         {
             var bulkInsertSize = 20000;
-            using (var store = NewDocumentStore(requestedStorage:"voron"))
+            using (var store = NewDocumentStore(requestedStorage:"esent"))
             {
                 new SampleData_Index().Execute(store);
                 using (var bulkInsert = store.BulkInsert(options: options))
@@ -51,7 +51,7 @@ namespace Raven.SlowTests.MailingList
         public void CanBulkInsertConcurrently(BulkInsertOptions options)
         {
             var bulkInsertSize = 5000;
-            using (var store = NewDocumentStore(requestedStorage: "voron"))
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
                 new SampleData_Index().Execute(store);
 
@@ -125,7 +125,7 @@ namespace Raven.SlowTests.MailingList
         [PropertyData("InsertOptions")]
         public void CanBulkInsert_LowLevel(BulkInsertOptions options)
         {
-            using (var store = NewDocumentStore(requestedStorage:"voron"))
+            using (var store = NewDocumentStore(requestedStorage:"esent"))
             {
                 store.SystemDatabase.Documents.BulkInsert(options, YieldDocumentBatch(store), Guid.NewGuid(), CancellationToken.None);
 

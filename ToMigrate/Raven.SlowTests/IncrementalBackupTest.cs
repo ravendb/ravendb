@@ -4,12 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.IO;
-
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -43,11 +42,11 @@ namespace Raven.SlowTests
                     session.SaveChanges();
                 }
 
-                var indexDefinitionsFolder = Path.Combine(store.SystemDatabase.Configuration.Core.DataDirectory,"IndexDefinitions");
+                var indexDefinitionsFolder = Path.Combine(store.SystemDatabase.Configuration.DataDirectory,"IndexDefinitions");
                 if (!Directory.Exists(indexDefinitionsFolder))
                     Directory.CreateDirectory(indexDefinitionsFolder);
 
-                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));			    
+                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState()));			    
                 WaitForBackup(store.SystemDatabase, true);
 
                 using (var session = store.OpenSession())
@@ -56,16 +55,17 @@ namespace Raven.SlowTests
                     session.SaveChanges();
                 }
 
-                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
+                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState()));
                 WaitForBackup(store.SystemDatabase, true);
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
-            configuration.Get().Initialize();
-            configuration.Modify(x => x.Storage.AllowIncrementalBackups, true);
+            configuration.Settings["Raven/Esent/CircularLog"] = "false";
+            configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
+            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.Initialize();
         }
 
         public override void Dispose()

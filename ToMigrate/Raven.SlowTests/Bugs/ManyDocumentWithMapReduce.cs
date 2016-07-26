@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -18,9 +17,9 @@ namespace Raven.SlowTests.Bugs
             public int Id { get; set; }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x .Core.MaxPageSize, 10000);
+            configuration.MaxPageSize = 10000;
         }
 
         [Theory]

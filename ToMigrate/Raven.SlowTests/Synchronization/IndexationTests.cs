@@ -9,18 +9,16 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.SlowTests.Synchronization
 {
     public class IndexationTests : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Get().EnableResponseLoggingForEmbeddedDatabases = true;
+            configuration.EnableResponseLoggingForEmbeddedDatabases = true;
         }
 
         private class Person
@@ -61,12 +59,10 @@ namespace Raven.SlowTests.Synchronization
 
             }
         }
-
-        [Theory]
-        [PropertyData("Storages")]
-        public void IndexerTest(string storage)
+        [Fact]
+        public void IndexerTest()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage, configureStore: s => s.Conventions.AcceptGzipContent = false))
+            using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: s => s.Conventions.AcceptGzipContent = false))
             {
                 var index = new RavenDocumentsByEntityName();
                 index.Execute(store);
@@ -95,11 +91,10 @@ namespace Raven.SlowTests.Synchronization
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void ReducerTest(string storage)
+        [Fact]
+        public void ReducerTest()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage, configureStore: documentStore => documentStore.Conventions.AcceptGzipContent = false))
+            using (var store = NewDocumentStore(requestedStorage:"esent", configureStore: documentStore => documentStore.Conventions.AcceptGzipContent = false))
             {
                 var index1 = new RavenDocumentsByEntityName();
                 index1.Execute(store);
@@ -116,8 +111,6 @@ namespace Raven.SlowTests.Synchronization
                 Task.WaitAll(tasks.ToArray());
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(1));
-
-                Assert.Equal(20000, store.DatabaseCommands.GetStatistics().CountOfDocuments);
 
                 using (var session = store.OpenSession())
                 {
