@@ -119,7 +119,7 @@ namespace Indexing.Benchmark
             var numberOfAdditionaMapIndexes = 10;
             var numberOfAdditionalMapReduceIndexes = 5;
 
-            Console.WriteLine($"Putting more indexes: {numberOfAdditionaMapIndexes} map and {numberOfAdditionalMapReduceIndexes} map-reduce");
+            Console.WriteLine($"Putting additional indexes: {numberOfAdditionaMapIndexes} map and {numberOfAdditionalMapReduceIndexes} map-reduce");
             
             for (int i = 0; i < numberOfAdditionaMapIndexes / 2; i++)
             {
