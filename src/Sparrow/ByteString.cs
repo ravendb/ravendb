@@ -388,21 +388,21 @@ namespace Sparrow
     /// </summary>
     public class ByteStringMemoryCache
     {
-        private static readonly ConcurrentDictionary<int, WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>>> Global = new ConcurrentDictionary<int, WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>>>();
+        private static readonly ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>> Global = new ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>>();
 
         [ThreadStatic]
-        private static ConcurrentQueue<UnmanagedGlobalSegment> _threadLocal;
+        private static ConcurrentStack<UnmanagedGlobalSegment> _threadLocal;
 
         [ThreadStatic]
         private static int _lastVictimId;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ConcurrentQueue<UnmanagedGlobalSegment> GetThreadLocalQueue()
+        private static ConcurrentStack<UnmanagedGlobalSegment> GetThreadLocalQueue()
         {
             if (_threadLocal == null)
             {
-                _threadLocal = new ConcurrentQueue<UnmanagedGlobalSegment>();
-                Global[Thread.CurrentThread.ManagedThreadId] = new WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>>(_threadLocal);
+                _threadLocal = new ConcurrentStack<UnmanagedGlobalSegment>();
+                Global[Thread.CurrentThread.ManagedThreadId] = new WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>(_threadLocal);
             }
             return _threadLocal;
         }
@@ -411,7 +411,7 @@ namespace Sparrow
         {
             var local = GetThreadLocalQueue();
             UnmanagedGlobalSegment memorySegment;
-            if (local.TryDequeue(out memorySegment))
+            if (local.TryPop(out memorySegment))
             {
                 if (memorySegment.Size >= size)
                 {
@@ -424,24 +424,24 @@ namespace Sparrow
 
             var victimQueue = TryGetVictimQueue();
 
-            if (victimQueue != null && victimQueue.TryDequeue(out memorySegment))
+            if (victimQueue != null && victimQueue.TryPop(out memorySegment))
             {
                 if (memorySegment.Size >= size)
                 {
                     return memorySegment;
                 }
                 // it is not my memory to dispose of, return it to the thread's usage
-                victimQueue.Enqueue(memorySegment);
+                victimQueue.Push(memorySegment);
             }
 
             // have to allocate it directly
             return new UnmanagedGlobalSegment(size);
         }
 
-        private static ConcurrentQueue<UnmanagedGlobalSegment> TryGetVictimQueue()
+        private static ConcurrentStack<UnmanagedGlobalSegment> TryGetVictimQueue()
         {
-            ConcurrentQueue<UnmanagedGlobalSegment> victimQueue = null;
-            WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>> value;
+            ConcurrentStack<UnmanagedGlobalSegment> victimQueue = null;
+            WeakReference<ConcurrentStack<UnmanagedGlobalSegment>> value;
             if (Global.TryGetValue(_lastVictimId, out value))
             {
                 if (value.TryGetTarget(out victimQueue) == false)
@@ -476,13 +476,15 @@ namespace Sparrow
         public static void Free(UnmanagedGlobalSegment memory)
         {
             var local = GetThreadLocalQueue();
-            local.Enqueue(memory);
-            while (local.Count > 64)
+            local.Push(memory);
+            if (local.Count > 16*1024) // we allow very deep buffers because there are many async requests per thread
             {
-                // TODO: better policy, maybe look at the last checkout time or something like that?
-                if (local.TryDequeue(out memory))
+                var temp = new UnmanagedGlobalSegment[local.Count];
+                var count = local.TryPopRange(temp);
+                local.PushRange(temp, 0, count/2);
+                for (int i = count/2; i < temp.Length; i++)
                 {
-                    memory.Dispose();
+                    temp[i].Dispose();
                 }
             }
         }
