@@ -1,9 +1,8 @@
-﻿using System;
-using Raven.Server.Utils;
+﻿using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Transformers
 {
-    public class TransformerParameter
+    public class TransformerParameter : Client.Data.Transformers.TransformerParameter
     {
         public TransformerParameter(object value)
         {
@@ -12,7 +11,7 @@ namespace Raven.Server.Documents.Transformers
 
         public readonly object OriginalValue;
 
-        public T Value<T>()
+        public override T Value<T>()
         {
             return TypeConverter.Convert<T>(OriginalValue, cast: false);
         }
