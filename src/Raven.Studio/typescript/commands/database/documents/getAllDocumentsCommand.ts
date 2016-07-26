@@ -2,6 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import pagedResultSet = require("common/pagedResultSet");
 import document = require("models/database/documents/document");
+import endpoints = require("endpoints");
 
 /*
  * getAllDocumentsCommand is a specialized command that fetches all the documents in a specified database.
@@ -38,7 +39,7 @@ class getAllDocumentsCommand extends commandBase {
     }
 
     private fetchTotalResultCount(): JQueryPromise<number> {
-        var url = "/collections/stats";
+        var url = endpoints.databases.collections.collectionsStats;
         var countSelector = (dto: collectionsStatsDto) => dto.NumberOfDocuments;
         return this.query(url, null, this.ownerDatabase, countSelector);
     }

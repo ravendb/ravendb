@@ -1,17 +1,23 @@
-﻿/// <binding AfterBuild='compile' ProjectOpened='tsd, bower' />
+﻿/// <binding BeforeBuild='parse-handlers' AfterBuild='compile' ProjectOpened='tsd, bower' />
 var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
     fileExists = require('file-exists'),
     del = require('del'),
+    Map = require('es6-map'),
     glob = require('glob'),
     fs = require('fs'),
     path = require('path'),
-    runSequence = require('run-sequence');
+    runSequence = require('run-sequence'),
+    parseHandlers = require('./gulp/parseHandlers');
 
 var gutil = require('gulp-util');
 
 var paths = {
+    handlersToParse: [
+        '../Raven.Server/**/*Handler.cs'
+    ],
+    handlersConstantsTargetDir: './typescript/',
     tsdConfig: './tsd.json',
     tsSource: './typescript/**/*.ts',
     typings: './typings/**/*.d.ts',
@@ -104,6 +110,13 @@ var newestFileFinder = function (targetGlob) {
         return newestFile;
     }
 }
+
+gulp.task('parse-handlers',
+    function() {
+        return gulp.src(paths.handlersToParse)
+            .pipe(parseHandlers('endpoints.ts'))
+            .pipe(gulp.dest(paths.handlersConstantsTargetDir));
+    });
 
 gulp.task('old-less', function () {
     return gulp.src(paths.oldLessSource)

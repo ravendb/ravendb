@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
+import endpoints = require("endpoints");
 
 class evalByQueryCommand extends commandBase {
 
@@ -17,7 +18,7 @@ class evalByQueryCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Patching documents...");
 
-        var url = "/bulk_docs/" + encodeURIComponent(this.indexName);
+        var url = endpoints.databases.batch.bulk_docs + "/" + encodeURIComponent(this.indexName);
         var urlParams = "?query=" + encodeURIComponent(this.queryStr) + "&allowStale=true";
         var patchTask = this.evalJs(url + urlParams, this.patchPayload, this.db);
         // patch is made asynchronically so we infom user about operation start - not about actual completion. 

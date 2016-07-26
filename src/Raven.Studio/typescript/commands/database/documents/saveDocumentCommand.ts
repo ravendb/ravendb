@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class saveDocumentCommand extends commandBase {
 
@@ -16,7 +17,7 @@ class saveDocumentCommand extends commandBase {
         var commands: Array<bulkDocumentDto> = [this.document.toBulkDoc("PUT")];
 
         var args = ko.toJSON(commands);
-        var url = "/bulk_docs";
+        var url = endpoints.databases.batch.bulk_docs;
         var saveTask = this.post(url, args, this.db);
 
         if (this.reportSaveProgress) {
