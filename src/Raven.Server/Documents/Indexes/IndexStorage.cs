@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data.Tables;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -24,6 +25,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly Index _index;
 
         private readonly TransactionContextPool _contextPool;
+        public DocumentDatabase DocumentDatabase { get; }
 
         private readonly TableSchema _errorsSchema = new TableSchema();
 
@@ -31,10 +33,11 @@ namespace Raven.Server.Documents.Indexes
 
         public const int MaxNumberOfKeptErrors = 500;
 
-        public IndexStorage(Index index, TransactionContextPool contextPool)
+        public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase loggerSetup)
         {
             _index = index;
             _contextPool = contextPool;
+            DocumentDatabase = loggerSetup;
         }
 
         public void Initialize(StorageEnvironment environment)
