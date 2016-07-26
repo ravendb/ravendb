@@ -11,6 +11,7 @@ using System.Diagnostics;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -59,14 +60,10 @@ namespace Raven.Server.ServerWide.Context
             public void Dispose()
             {
                 Context.Reset();
+                Parent._contextPool.Push(Context);
                 //TODO: this probably should have low memory handle
                 //TODO: need better policies, stats, reporting, etc
-                if (Parent._contextPool.Count > 25) // don't keep too much of them around
-                {
-                    Context.Dispose();
-                    return;
-                }
-                Parent._contextPool.Push(Context);
+                Parent._contextPool.ReduceSizeIfTooBig(4096);
             }
         }
 

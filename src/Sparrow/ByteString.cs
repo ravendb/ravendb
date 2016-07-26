@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 
 namespace Sparrow
 {
@@ -397,7 +398,7 @@ namespace Sparrow
         private static int _lastVictimId;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ConcurrentStack<UnmanagedGlobalSegment> GetThreadLocalQueue()
+        private static ConcurrentStack<UnmanagedGlobalSegment> GetThreadLocalCollection()
         {
             if (_threadLocal == null)
             {
@@ -409,7 +410,7 @@ namespace Sparrow
 
         public static UnmanagedGlobalSegment Allocate(int size)
         {
-            var local = GetThreadLocalQueue();
+            var local = GetThreadLocalCollection();
             UnmanagedGlobalSegment memorySegment;
             if (local.TryPop(out memorySegment))
             {
@@ -475,18 +476,9 @@ namespace Sparrow
 
         public static void Free(UnmanagedGlobalSegment memory)
         {
-            var local = GetThreadLocalQueue();
+            var local = GetThreadLocalCollection();
             local.Push(memory);
-            if (local.Count > 16*1024) // we allow very deep buffers because there are many async requests per thread
-            {
-                var temp = new UnmanagedGlobalSegment[local.Count];
-                var count = local.TryPopRange(temp);
-                local.PushRange(temp, 0, count/2);
-                for (int i = count/2; i < temp.Length; i++)
-                {
-                    temp[i].Dispose();
-                }
-            }
+            local.ReduceSizeIfTooBig(4096);
         }
     }
 
