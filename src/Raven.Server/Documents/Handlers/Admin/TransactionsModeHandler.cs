@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.TimeSeries;
@@ -17,79 +18,56 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
             TransactionsMode mode;
-            if (Enum.TryParse(modeStr, out mode) == false)
+            if (Enum.TryParse(modeStr, true,  out mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
             var configDuration = TimeSpan.FromMinutes(Database.Configuration.Storage.TransactionsModeDuration);
             var duration = GetTimeSpanQueryString("duration", required: false) ?? configDuration;
-            var storageEnvironments = Database.GetAllStoragesEnvironment();
-
-            var rc = 304;
-            foreach (var storageEnvironment in storageEnvironments)
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                DocumentsOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
+                writer.WriteStartObject();
+                writer.WritePropertyName(context.GetLazyStringFor("Environments"));
+                writer.WriteStartArray();
+                bool first = true;
+                foreach (var storageEnvironment in Database.GetAllStoragesEnvironment())
                 {
-                    using (var tx = context.OpenWriteTransaction())
+                    if (storageEnvironment == null)
+                        continue;
+
+                    if (first == false)
                     {
-                        var result = storageEnvironment?.SetTransactionMode(mode, duration, tx.InnerTransaction.LowLevelTransaction);
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            if (result == null)
+                        writer.WriteComma();
+                    }
+                    first = false;
+
+                    var result = storageEnvironment.SetTransactionMode(mode, duration);
+                    switch (result)
+                    {
+                        case TransactionsModeResult.ModeAlreadySet:
+                            context.Write(writer, new DynamicJsonValue
                             {
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = mode.ToString(),
-                                    ["Path"] = storageEnvironment.Options.BasePath,
-                                    ["Result"] = "Storage Environment doesn't exists yet"
-                                });
-                            }
-                            else if (result == TransactionsModeResult.ModeAlreadySet)
+                                ["Type"] = mode.ToString(),
+                                ["Path"] = storageEnvironment.Options.BasePath,
+                                ["Result"] = "Mode Already Set"
+                            });
+                            break;
+                        case TransactionsModeResult.SetModeSuccessfully:
+                            context.Write(writer, new DynamicJsonValue
                             {
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = mode.ToString(),
-                                    ["Path"] = storageEnvironment.Options.BasePath,
-                                    ["Result"] = "Mode Already Set"
-                                });
-                            }
-                            else if (result == TransactionsModeResult.SetModeSuccessfully)
-                            {
-                                if (rc == 304)
-                                    rc = 200;
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = mode.ToString(),
-                                    ["Path"] = storageEnvironment.Options.BasePath,
-                                    ["Result"] = "Mode Set Successfully"
-                                });
-                            }
-                            else if (result == TransactionsModeResult.CannotSetMode)
-                            {
-                                rc = 408; // Request Timeout (Cannot aquire locks)
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = mode.ToString(),
-                                    ["Path"] = storageEnvironment.Options.BasePath,
-                                    ["Result"] = "Server is Busy. Cannot Aquire Write Lock. Try Later"
-                                });
-                            }
-                            else
-                            {
-                                rc = 500;
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = mode.ToString(),
-                                    ["Path"] = storageEnvironment.Options.BasePath,
-                                    ["Result"] = "Undefined/Unhandled Mode"
-                                });
-                            }
-                        }
+                                ["Type"] = mode.ToString(),
+                                ["Path"] = storageEnvironment.Options.BasePath,
+                                ["Result"] = "Mode Set Successfully"
+                            });
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException("Result is unexpected value: " + result);
                     }
                 }
+                writer.WriteEndArray();
+                writer.WriteEndObject();
             }
-
-            HttpContext.Response.StatusCode = rc;
             return Task.CompletedTask;
         }
     }

@@ -11,7 +11,5 @@
     {
         SetModeSuccessfully,
         ModeAlreadySet,
-        CannotSetMode
-
     }
 }
