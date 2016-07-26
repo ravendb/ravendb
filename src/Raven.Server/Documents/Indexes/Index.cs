@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _initialized;
 
-        private UnmanagedBuffersPool _unmanagedBuffersPool;
+        protected UnmanagedBuffersPool _unmanagedBuffersPool;
 
         private StorageEnvironment _environment;
 

@@ -95,7 +95,7 @@ namespace Indexing.Benchmark
                 staleIndexes.Add(indexName);
             }
 
-            Console.WriteLine("All indexes reset");
+            Console.WriteLine("All indexes were reset");
 
             _store.DatabaseCommands.Admin.StartIndexing();
 
