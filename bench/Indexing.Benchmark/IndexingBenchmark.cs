@@ -82,7 +82,7 @@ namespace Indexing.Benchmark
 
                 sw.Stop();
 
-                Console.WriteLine($"It took {sw.Elapsed} to return a non stale result. {(double)test.NumberOfRelevantDocs / sw.Elapsed.Seconds:#,#} docs / sec indexed");
+                Console.WriteLine($"It took {sw.Elapsed} to return a non stale result. {(double)test.NumberOfRelevantDocs / sw.Elapsed.TotalSeconds:#,#} docs / sec indexed");
             }
         }
     }
