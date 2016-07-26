@@ -33,7 +33,7 @@ namespace Indexing.Benchmark
             },
             new IndexingTestRun
             {
-              Index = new Orders_ByMultipleFields(),
+              Index = new Orders_GroupByMultipleFields(),
               NumberOfRelevantDocs = _numberOfOrdersInDb
             }
         };
@@ -51,7 +51,7 @@ namespace Indexing.Benchmark
 
             public override string IndexName
             {
-                get { return "Orders/ByCompany"; }
+                get { return "Orders/GroupByCompany"; }
             }
 
             public override IndexDefinition CreateIndexDefinition()
@@ -91,7 +91,7 @@ select new
 
             public override string IndexName
             {
-                get { return "Orders/ByCompany_Fanout"; }
+                get { return "Orders/GroupByCompany_Fanout"; }
             }
 
             public override IndexDefinition CreateIndexDefinition()
@@ -119,7 +119,7 @@ select new
             }
         }
 
-        public class Orders_ByMultipleFields : AbstractIndexCreationTask<Order, Orders_ByMultipleFields.ReduceResults>
+        public class Orders_GroupByMultipleFields : AbstractIndexCreationTask<Order, Orders_GroupByMultipleFields.ReduceResults>
         {
             public class ReduceResults 
             {
@@ -128,7 +128,7 @@ select new
                 public string Employee { get; set; }
                 public int Count { get; set; }
             }
-            public Orders_ByMultipleFields()
+            public Orders_GroupByMultipleFields()
             {
                 Map = orders => from order in orders
                                 select new ReduceResults
@@ -154,6 +154,47 @@ select new
                         Employee = g.Key.Employee,
                         Count = g.Sum(x => x.Count)
                     };
+            }
+        }
+
+        public class Employees_GroupByCountry : AbstractIndexCreationTask<Employee, Employees_GroupByCountry.ReduceResult>
+        {
+            private readonly int _number;
+
+            public class ReduceResult
+            {
+                public string Country { get; set; }
+                public int Count { get; set; }
+            }
+
+            public Employees_GroupByCountry(int number)
+            {
+                _number = number;
+                Map = employees => from e in employees
+                    select new ReduceResult
+                    {
+                        Country = e.Address.Country,
+                        Count = 1
+                    };
+
+                Reduce = results => from r in results
+                    group r by r.Country
+                    into g
+                    select new ReduceResult
+                    {
+                        Country = g.Key,
+                        Count = g.Sum(x => x.Count)
+                    };
+            }
+
+            public override string IndexName
+            {
+                get
+                {
+                    var name = base.IndexName;
+
+                    return $"{name}-{_number}";
+                }
             }
         }
     }
