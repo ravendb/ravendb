@@ -141,5 +141,23 @@ namespace Raven.Bundles.Replication.Responders
 
             return false;
         }
+
+        protected override bool TryResolveConflictByCheckingIfIdentical(RavenJObject metadata, byte[] document, Attachment existing, out RavenJObject resolvedMetadataToSave)
+        {
+            //if the metadata is not equal there is no reason the compare the data
+            if (CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(existing.Metadata, metadata, out resolvedMetadataToSave) == false)
+                return false;
+            var data = existing.Data();
+            for (var i = 0; i < document.Length; i++)
+            {
+                var readByte = data.ReadByte();
+                if (readByte == -1 || document[i] != readByte)
+                    return false;
+            }
+            if (data.ReadByte() != -1)
+                return false;
+            //if we got here the data is equal and the metadata was also equal enough.
+            return true;
+        }
     }
 }
