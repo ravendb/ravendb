@@ -8,7 +8,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
+using Sparrow.Logging;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
@@ -19,8 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
-        protected readonly ILog Log = LogManager.GetLogger(typeof(ReduceMapResultsBase<T>));
-
+        private Logger _logger;
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
         protected readonly T _indexDefinition;
         private readonly IndexStorage _indexStorage;
@@ -48,6 +47,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
+            _logger = databaseContext.DocumentDatabase.LoggerSetup.GetLogger<ReduceMapResultsBase<T>>(databaseContext.DocumentDatabase.Name);
+
             if (_mapReduceContext.StateByReduceKeyHash.Count == 0)
                 return false;
 
@@ -127,8 +128,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
 
-                        if (Log.IsWarnEnabled)
-                            Log.WarnException(message, e);
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations(message, e);
 
                         if (parentPage == -1)
                         {
@@ -197,8 +198,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a branch page #{page} of '{_indexDefinition.Name}' index.";
 
-                            if (Log.IsWarnEnabled)
-                                Log.WarnException(message, e);
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations(message,e);
 
                             stats.RecordReduceErrors(aggregatedEntries);
                             stats.AddReduceError(message + $" Message: {message}.");

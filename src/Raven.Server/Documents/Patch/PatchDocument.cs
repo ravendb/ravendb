@@ -13,13 +13,13 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
 {
     public class PatchDocument
     {
-        protected static readonly ILog Log = LogManager.GetLogger(typeof (PatchDocument).FullName);
-
+        protected static Logger _logger;
         private const int MaxRecursionDepth = 128;
         private readonly int maxSteps;
         private readonly int additionalStepsPerSize;
@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.Patch
         public PatchDocument(DocumentDatabase database)
         {
             _database = database;
+            _logger = database.LoggerSetup.GetLogger<PatchDocument>(database.Name);
             maxSteps = database.Configuration.Patching.MaxStepsForScript;
             additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
@@ -63,8 +64,8 @@ namespace Raven.Server.Documents.Patch
             bool skipPatchIfEtagMismatch = false)
         {
             var document = _database.DocumentsStorage.Get(context, documentKey);
-            if (Log.IsDebugEnabled)
-                Log.Debug(string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentKey, document != null));
+            if (_logger.IsInfoEnabled)
+                _logger.Info(string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentKey, document != null));
 
             if (etag.HasValue && document != null && document.Etag != etag.Value)
             {
@@ -78,8 +79,8 @@ namespace Raven.Server.Documents.Patch
                     };
                 }
 
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Got concurrent exception while tried to patch the following document: {documentKey}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Got concurrent exception while tried to patch the following document: {documentKey}");
                 throw new ConcurrencyException($"Could not patch document '{documentKey}' because non current etag was used")
                 {
                     ActualETag = document.Etag,
@@ -92,8 +93,9 @@ namespace Raven.Server.Documents.Patch
             {
                 if (patchIfMissing == null)
                 {
-                    if (Log.IsDebugEnabled)
-                        Log.Debug("Tried to patch a not exists document and patchIfMissing is null");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Tried to patch a not exists document and patchIfMissing is null");
+
                     return new PatchResultData
                     {
                         PatchResult = PatchResult.DocumentDoesNotExists
@@ -114,8 +116,9 @@ namespace Raven.Server.Documents.Patch
 
             if (modifiedDocument == null)
             {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"After applying patch, modifiedDocument is null and document is null? {document == null}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"After applying patch, modifiedDocument is null and document is null? {document == null}");
+
                 result.PatchResult = PatchResult.Skipped;
                 return result;
             }
