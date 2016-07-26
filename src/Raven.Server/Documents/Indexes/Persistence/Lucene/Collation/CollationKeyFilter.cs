@@ -7,7 +7,9 @@
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices;
+using System.Security;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Sparrow;
@@ -43,24 +45,49 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
             return true;
         }
 
-        private unsafe byte[] GetCollationKey(string text)
+        private byte[] GetCollationKey(string text)
         {
             if (Platform.RunningOnPosix)
-                throw new NotImplementedException();
+                return GetCollationKeyPosix(text);
 
+            return GetCollationKeyWin32(text);
+        }
+
+        private unsafe byte[] GetCollationKeyPosix(string text)
+        {
+            var sortHandle = PosixHelper.Instance.GetSortHandle(_cultureInfo.CompareInfo);
+
+            var length = PosixNativeMethods.GetSortKey(sortHandle, text, text.Length, null, 0, CompareOptions.None);
+            if (length == 0)
+                throw new Win32Exception();
+
+            var sortKey = new byte[length];
+
+            fixed (byte* pSortKey = sortKey)
+            {
+                length = PosixNativeMethods.GetSortKey(sortHandle, text, text.Length, pSortKey, sortKey.Length, CompareOptions.None);
+                if (length == 0)
+                    throw new Win32Exception();
+
+                return sortKey;
+            }
+        }
+
+        private unsafe byte[] GetCollationKeyWin32(string text)
+        {
             var length = Win32NativeMethods.LCMapStringEx(_cultureInfo.CompareInfo.Name, Win32NativeMethods.LCMAP_SORTKEY, text, text.Length, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
             if (length == 0)
                 throw new Win32Exception();
 
-            var result = new byte[length];
+            var sortKey = new byte[length];
 
-            fixed (byte* r = result)
+            fixed (byte* pSortKey = sortKey)
             {
-                length = Win32NativeMethods.LCMapStringEx(_cultureInfo.CompareInfo.Name, Win32NativeMethods.LCMAP_SORTKEY, text, text.Length, (IntPtr)r, result.Length, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                length = Win32NativeMethods.LCMapStringEx(_cultureInfo.CompareInfo.Name, Win32NativeMethods.LCMAP_SORTKEY, text, text.Length, (IntPtr)pSortKey, sortKey.Length, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
                 if (length == 0)
                     throw new Win32Exception();
 
-                return result;
+                return sortKey;
             }
         }
 
@@ -79,6 +106,35 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
                 IntPtr lpVersionInformation,
                 IntPtr lpReserved,
                 IntPtr sortHandle);
+        }
+
+        private static class PosixNativeMethods
+        {
+            [SecurityCritical]
+            [DllImport("System.Globalization.Native", CharSet = CharSet.Unicode, EntryPoint = "GlobalizationNative_GetSortKey")]
+            public static extern unsafe int GetSortKey(SafeHandle sortHandle, string str, int strLength, byte* sortKey, int sortKeyLength, CompareOptions options);
+        }
+
+        private class PosixHelper
+        {
+            public delegate SafeHandle GetSortHandleDelegate(CompareInfo value);
+
+            public static readonly PosixHelper Instance = new PosixHelper();
+
+            public readonly GetSortHandleDelegate GetSortHandle;
+
+            private PosixHelper()
+            {
+                GetSortHandle = CreateGetSortHandleMethod().Compile();
+            }
+
+            private static Expression<GetSortHandleDelegate> CreateGetSortHandleMethod()
+            {
+                var parameter = Expression.Parameter(typeof(CompareInfo), "value");
+                var member = Expression.Field(parameter, "m_sortHandle");
+
+                return Expression.Lambda<GetSortHandleDelegate>(member, parameter);
+            }
         }
     }
 }
