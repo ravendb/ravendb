@@ -4,13 +4,11 @@
 //  </copyright>
 // ----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Core.Utils.Entities;
-
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation.Cultures;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Utils.Indexes
@@ -25,9 +23,7 @@ namespace SlowTests.Core.Utils.Indexes
 
             Sort(c => c.Name, SortOptions.String);
 
-            throw new NotImplementedException();
-
-            //Analyzers.Add(c => c.Name, typeof(Raven.Database.Indexing.Collation.Cultures.PlCollationAnalyzer).ToString());
+            Analyzers.Add(c => c.Name, typeof(PlCollationAnalyzer).ToString());
         }
     }
 }
