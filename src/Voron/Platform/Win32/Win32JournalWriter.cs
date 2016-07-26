@@ -63,7 +63,19 @@ namespace Voron.Platform.Win32
             _nativeOverlapped->EventHandle = IntPtr.Zero;
 
             int written;
-            var writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, numberOfPages * _options.PageSize, out written, _nativeOverlapped);
+            bool writeSuccess;
+            if (_options.IoMetrics != null) // ADIADI :: do something about that!
+            using (_options.IoMetrics.MeterIoRate(numberOfPages * _options.PageSize))
+            {
+                writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, numberOfPages * _options.PageSize, out written,
+                    _nativeOverlapped);
+            }
+            else
+            {
+                Console.WriteLine("ADIADI");
+                writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, numberOfPages * _options.PageSize, out written,
+                   _nativeOverlapped);
+            }
 
             if (writeSuccess == false)
                 throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename,
