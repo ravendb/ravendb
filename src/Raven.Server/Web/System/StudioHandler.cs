@@ -70,21 +70,14 @@ namespace Raven.Server.Web.System
 #if DEBUG
             ravenPath = Path.GetFullPath(ravenPath).Replace($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}", $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}");
 #endif
-            Console.WriteLine("Studio path: " + ravenPath);
-
-            var fullPath = Path.GetFullPath(ravenPath);
-
-           Console.WriteLine("Full path: " + fullPath);
 
             if (File.Exists(ravenPath))
             {
-                Console.WriteLine("found file");
 
                 await WriteFile(ravenPath);
                 return;
             }
 
-            Console.WriteLine("file not found");
 
             HttpContext.Response.StatusCode = 404;
             return;
