@@ -8,7 +8,7 @@ using FastTests;
 
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-
+using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Xunit;
 
 namespace SlowTests.Tests.Sorting
@@ -483,13 +483,6 @@ namespace SlowTests.Tests.Sorting
                 this.yearDescending = yearDescending;
             }
 
-            //[SuppressUnmanagedCodeSecurity]
-            private static class SafeNativeMethods
-            {
-                [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
-                public static extern int StrCmpLogicalW(string psz1, string psz2);
-            }
-
             public int Compare(Track track1, Track track2)
             {
                 if (track1.Title == null && track2.Title != null)
@@ -501,8 +494,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Title != null && track2.Title != null)
                 {
                     result = titleDescending == false ?
-                        SafeNativeMethods.StrCmpLogicalW(track1.Title, track2.Title) :
-                        SafeNativeMethods.StrCmpLogicalW(track2.Title, track1.Title);
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Title, track2.Title) :
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Title, track1.Title);
                     if (result != 0)
                         return result;
                 }
@@ -515,8 +508,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Artist != null && track2.Artist != null)
                 {
                     result = artistDescending == false ?
-                        SafeNativeMethods.StrCmpLogicalW(track1.Artist, track2.Artist) :
-                        SafeNativeMethods.StrCmpLogicalW(track2.Artist, track1.Artist);
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Artist, track2.Artist) :
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Artist, track1.Artist);
                     if (result != 0)
                         return result;
                 }
@@ -587,13 +580,6 @@ namespace SlowTests.Tests.Sorting
                 this.yearDescending = yearDescending;
             }
 
-            //[SuppressUnmanagedCodeSecurity]
-            private static class SafeNativeMethods
-            {
-                [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
-                public static extern int StrCmpLogicalW(string psz1, string psz2);
-            }
-
             public int Compare(Track track1, Track track2)
             {
                 var result = yearDescending == false ? track1.Year.CompareTo(track2.Year) : track2.Year.CompareTo(track1.Year); ;
@@ -609,8 +595,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Title != null && track2.Title != null)
                 {
                     result = titleDescending == false ?
-                        SafeNativeMethods.StrCmpLogicalW(track1.Title, track2.Title) :
-                        SafeNativeMethods.StrCmpLogicalW(track2.Title, track1.Title);
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Title, track2.Title) :
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Title, track1.Title);
                     if (result != 0)
                         return result;
                 }
@@ -623,8 +609,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Artist != null && track2.Artist != null)
                 {
                     result = artistDescending == false ?
-                        SafeNativeMethods.StrCmpLogicalW(track1.Artist, track2.Artist) :
-                        SafeNativeMethods.StrCmpLogicalW(track2.Artist, track1.Artist);
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Artist, track2.Artist) :
+                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Artist, track1.Artist);
                     if (result != 0)
                         return result;
                 }
