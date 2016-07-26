@@ -133,16 +133,27 @@ namespace Sparrow
 
         public bool Equals(string other)
         {
+           return Equals(other, StringComparison.Ordinal);
+        }
+
+
+        public bool Equals(string other, StringComparison stringComparison)
+        {
             if (Length != other.Length)
                 return false;
-            return string.Compare(String, Start, other, 0, Length, StringComparison.Ordinal) == 0;
+            return string.Compare(String, Start, other, 0, Length, stringComparison) == 0;
         }
 
         public bool Equals(StringSegment other)
         {
+            return Equals(other, StringComparison.Ordinal);
+        }
+
+        public bool Equals(StringSegment other, StringComparison stringComparison)
+        {
             if (Length != other.Length)
                 return false;
-            return string.Compare(String, Start, other.String, other.Start, Length, StringComparison.Ordinal) == 0;
+            return string.Compare(String, Start, other.String, other.Start, Length, stringComparison) == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
