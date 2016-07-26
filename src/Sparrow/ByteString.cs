@@ -1,5 +1,6 @@
 ﻿using Sparrow.Binary;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -381,27 +382,109 @@ namespace Sparrow
         #endregion
     }
 
-    public unsafe class ByteStringMemoryCache
+    /// <summary>
+    /// This class implements a two tier memory pooling support, first using thread local storage
+    /// and then stealing from other threads 
+    /// </summary>
+    public class ByteStringMemoryCache
     {
-        private static readonly ObjectPool<UnmanagedGlobalSegment, int> GlobalPool = new ObjectPool<UnmanagedGlobalSegment, int>(size => new UnmanagedGlobalSegment(size), 50);
+        private static readonly ConcurrentDictionary<int, WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>>> Global = new ConcurrentDictionary<int, WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>>>();
+
+        [ThreadStatic]
+        private static ConcurrentQueue<UnmanagedGlobalSegment> _threadLocal;
+
+        [ThreadStatic]
+        private static int _lastVictimId;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ConcurrentQueue<UnmanagedGlobalSegment> GetThreadLocalQueue()
+        {
+            if (_threadLocal == null)
+            {
+                _threadLocal = new ConcurrentQueue<UnmanagedGlobalSegment>();
+                Global[Thread.CurrentThread.ManagedThreadId] = new WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>>(_threadLocal);
+            }
+            return _threadLocal;
+        }
 
         public static UnmanagedGlobalSegment Allocate(int size)
         {
-            // We try to allocate from the pool (fast allocate).
-            var memorySegment = GlobalPool.Allocate(size);
-            if (memorySegment.Size < size)
+            var local = GetThreadLocalQueue();
+            UnmanagedGlobalSegment memorySegment;
+            if (local.TryDequeue(out memorySegment))
             {
+                if (memorySegment.Size >= size)
+                {
+                    return memorySegment;
+                }
                 // not big enough, so we'll discard it and create a bigger instance
                 // it will go into the pool afterward and be available for future use
                 memorySegment.Dispose();
-                memorySegment = GlobalPool.AllocateInstance(size);
             }
-            return memorySegment;
+
+            var victimQueue = TryGetVictimQueue();
+
+            if (victimQueue != null && victimQueue.TryDequeue(out memorySegment))
+            {
+                if (memorySegment.Size >= size)
+                {
+                    return memorySegment;
+                }
+                // it is not my memory to dispose of, return it to the thread's usage
+                victimQueue.Enqueue(memorySegment);
+            }
+
+            // have to allocate it directly
+            return new UnmanagedGlobalSegment(size);
+        }
+
+        private static ConcurrentQueue<UnmanagedGlobalSegment> TryGetVictimQueue()
+        {
+            ConcurrentQueue<UnmanagedGlobalSegment> victimQueue = null;
+            WeakReference<ConcurrentQueue<UnmanagedGlobalSegment>> value;
+            if (Global.TryGetValue(_lastVictimId, out value))
+            {
+                if (value.TryGetTarget(out victimQueue) == false)
+                {
+                    if (Global.TryRemove(_lastVictimId, out value) && value.TryGetTarget(out victimQueue))
+                    {
+                        // a thread was reborn? new thread with same id?
+                        // should be very rare
+                        Global[_lastVictimId] = value;
+                    }
+                }
+            }
+            else
+            {
+                var prevVictim = _lastVictimId;
+                foreach (var kvp in Global)
+                {
+                    if (kvp.Key < _lastVictimId)
+                        continue; // we want to scan the list sequentially, so we ignore anything smaller
+                    if (kvp.Value.TryGetTarget(out victimQueue))
+                    {
+                        _lastVictimId = kvp.Key;
+                        break;
+                    }
+                }
+                if (prevVictim == _lastVictimId)
+                    _lastVictimId = 0; // next time, start from scratch
+            }
+            return victimQueue;
         }
 
         public static void Free(UnmanagedGlobalSegment memory)
         {
-            GlobalPool.Free(memory);
+            var local = GetThreadLocalQueue();
+            local.Enqueue(memory);
+            while (local.Count > 64)
+            {
+                // TODO: better policy, maybe look at the last checkout time or something like that?
+                if (local.TryDequeue(out memory))
+                {
+                    memory.Dispose();
+                }
+            }
         }
     }
 
