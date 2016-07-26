@@ -27,12 +27,12 @@ namespace Sparrow
         UserDefined4 = 0x80,
 
         /// <summary>
-        /// Use this value to mask out the user defined bits using the & (Bitwise AND) operator.
+        /// Use this value to mask out the user defined bits using the (Bitwise AND) operator.
         /// </summary>
         ByteStringMask = 0x0F,
 
         /// <summary>
-        /// Use this value to mask out the ByteStringType bits using the & (Bitwise AND) operator.
+        /// Use this value to mask out the ByteStringType bits using the (Bitwise AND) operator.
         /// </summary>
         UserDefinedMask = 0xF0
     }
@@ -332,12 +332,64 @@ namespace Sparrow
         }
     }
 
+    sealed class UnmanagedGlobalSegment : IDisposable
+    {
+        public readonly IntPtr Segment;
+        public readonly int Size;
+
+        public UnmanagedGlobalSegment(int size)
+        {
+            Size = size;
+            Segment = Marshal.AllocHGlobal(size);
+        }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                disposedValue = true;
+
+                if (disposing)
+                {
+
+                }
+
+                if (Segment != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(Segment);                    
+                }
+            }
+        }
+
+        ~UnmanagedGlobalSegment()
+        {            
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(false);
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);            
+        }
+        #endregion
+    }
 
     public unsafe class ByteStringContext : IDisposable
-    {
-        class SegmentInformation
+    {        
+        private static readonly ObjectPool<UnmanagedGlobalSegment, int> _globalPool = new ObjectPool<UnmanagedGlobalSegment, int>(size => new UnmanagedGlobalSegment(size), 50);
+
+        private class SegmentInformation
         {
-            public bool CanDispose; 
+            public bool CanDispose;
+
+            public UnmanagedGlobalSegment Memory;
 
             public byte* Start;
             public byte* Current;
@@ -359,7 +411,8 @@ namespace Sparrow
         public const int MinBlockSizeInBytes = 64 * 1024; // If this is changed, we need to change also LogMinBlockSize.
         private const int LogMinBlockSize = 16;
 
-        public const int DefaultAllocationBlockSizeInBytes = 2 * MinBlockSizeInBytes;
+        public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes; 
+        public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes; 
         public const int MinReusableBlockSizeInBytes = 8;
         
         /// <summary>
@@ -428,8 +481,6 @@ namespace Sparrow
         private ByteString AllocateExternal(byte* valuePtr, int size, ByteStringType type)
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
-
-            int allocationSize = sizeof(ByteStringStorage);
 
             ByteStringStorage* storagePtr;
             if (_externalFastPoolCount > 0)
@@ -552,8 +603,10 @@ namespace Sparrow
                 return byteString;
             }
         }
+
         [ThreadStatic]
         private static char[] _toLowerTempBuffer;
+
         /// <summary>
         /// Mutate the string to lower case
         /// </summary>
@@ -586,6 +639,7 @@ namespace Sparrow
                 str._pointer->Length = Encoding.UTF8.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
             }
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString Create(void* ptr, int length, int size, ByteStringType type = ByteStringType.Immutable)
         {
@@ -605,12 +659,26 @@ namespace Sparrow
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
         {
-            // The allocation is big, therefore we will just allocate the segment and move on.                
-            var segment = AllocateSegment(length + sizeof(ByteStringStorage));
+            SegmentInformation segment;
+            if (length > MaxAllocationBlockSizeInBytes)
+            {
+                // The allocation is big, therefore we will just allocate the segment and move on.   
+                var memory = new UnmanagedGlobalSegment(length);
+                byte* start = (byte*)memory.Segment.ToPointer();
+                byte* end = start + memory.Size;
+                                
+                segment = new SegmentInformation { Memory = memory, Start = start, Current = start, End = end, CanDispose = true };
+                _wholeSegments.Add(segment);
+            }
+            else
+            {                                                     
+                segment = AllocateSegment(length + sizeof(ByteStringStorage));
+                // _wholeSegments.Add(segment); - called in AllocateSegment
+
+            }
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
-            _wholeSegments.Add(segment);
 
             return byteString;
         }
@@ -704,6 +772,7 @@ namespace Sparrow
                     byte* start = (byte*)value._pointer;
                     byte* end = start + value._pointer->Size;
 
+                    // Given that this is put into a reuse queue, we are not providing the Segment because it has no ownership of it.
                     var segment = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false };
                     _internalReadyToUseMemorySegments.Add(segment);
                 }
@@ -725,10 +794,20 @@ namespace Sparrow
 
         private SegmentInformation AllocateSegment(int size)
         {
-            byte* start = (byte*)Marshal.AllocHGlobal(size).ToPointer();
-            byte* end = start + size;
+            // We try to allocate from the pool (fast allocate).
+            var memorySegment = _globalPool.Allocate(size);
+            if (memorySegment.Size < size)
+            {
+                // not big enough, so we'll discard it and create a bigger instance
+                // it will go into the pool afterward and be available for future use
+                memorySegment.Dispose(); 
+                memorySegment = _globalPool.AllocateInstance(size);
+            }            
 
-            var segment = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = true };
+            byte* start = (byte*)memorySegment.Segment.ToPointer();
+            byte* end = start + memorySegment.Size;
+
+            var segment = new SegmentInformation { Memory = memorySegment, Start = start, Current = start, End = end, CanDispose = true };
             _wholeSegments.Add(segment);
 
             return segment;
@@ -737,10 +816,20 @@ namespace Sparrow
 
         private void AllocateExternalSegment(int size)
         {
-            byte* start = (byte*)Marshal.AllocHGlobal(size).ToPointer();
-            byte* end = start + size;
+            // We try to allocate from the pool (fast allocate).
+            var memorySegment = _globalPool.Allocate(size);
+            if (memorySegment.Size < size)
+            {
+                // not big enough, so we'll discard it and create a bigger instance
+                // it will go into the pool afterward and be available for future use
+                memorySegment.Dispose();
+                memorySegment = _globalPool.AllocateInstance(size);
+            }
 
-            _externalCurrent = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = true };
+            byte* start = (byte*)memorySegment.Segment.ToPointer();
+            byte* end = start + memorySegment.Size;
+
+            _externalCurrent = new SegmentInformation { Memory = memorySegment, Start = start, Current = start, End = end, CanDispose = true };
             _externalAlignedSize = (sizeof(ByteStringStorage) + (sizeof(long) - sizeof(ByteStringStorage) % sizeof(long)));
             _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / _externalAlignedSize;
 
@@ -925,7 +1014,7 @@ namespace Sparrow
             // There shouldn't be reuse for the storage, unless we have a different allocation on reused memory.
             // Therefore, monotonically increasing the key we ensure that we can check when we have dangling pointers in our code.
             // We use interlocked in order to avoid validation bugs when validating (we are playing it safe).
-            ((ByteStringStorage*)storage)->Key = (ulong)(((long)this.ContextId << 32) + Interlocked.Increment(ref _allocationCount)); ;
+            ((ByteStringStorage*)storage)->Key = (ulong)(((long)this.ContextId << 32) + Interlocked.Increment(ref _allocationCount));
         }
 
         private void RegisterForValidation(ByteString value)
@@ -1005,33 +1094,45 @@ namespace Sparrow
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects).
-                }
-
 #if VALIDATE
-                foreach ( var item in _immutableTracker.ToArray() )
-                {
-                    var storage = (ByteStringStorage*) item.Value.Item1.ToPointer();
+                    foreach (var item in _immutableTracker.ToArray())
+                    {
+                        var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
 
-                    ValidateAndUnregister(storage);
-                }
+                        ValidateAndUnregister(storage);
+                    }
 #endif
 
-                foreach (var segment in _wholeSegments)
-                {
-                    if ( segment.CanDispose)
-                        Marshal.FreeHGlobal(new IntPtr(segment.Start));
-                }
+                    foreach (var segment in _wholeSegments)
+                    {
+                        if (segment.CanDispose)
+                        {
+                            // Check if we have allocated from the pool or directly.
+                            if (segment.Memory.Size > MaxAllocationBlockSizeInBytes)
+                            {
+                                segment.Memory.Dispose();
+                            }
+                            else
+                            {
+                                // We have allocated from the pool. Then we are releasing it. 
+                                _globalPool.Free(segment.Memory);
+                            }
+                        }
+                    }
 
-                _wholeSegments.Clear();
-                _internalReadyToUseMemorySegments.Clear();
+                    _wholeSegments.Clear();
+                    _internalReadyToUseMemorySegments.Clear();
+                }
 
                 isDisposed = true;
             }
         }
 
         // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-         ~ByteStringContext()
+        ~ByteStringContext()
         {
+
+
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(false);
         }
@@ -1044,7 +1145,7 @@ namespace Sparrow
             GC.SuppressFinalize(this);
         }
 
-        #endregion
+#endregion
     }
 
     public class ByteStringValidationException : Exception

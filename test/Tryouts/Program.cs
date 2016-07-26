@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using AsyncFriendlyStackTrace;
 using Raven.Client.Document;
 using Raven.Client.Smuggler;
@@ -11,16 +13,14 @@ namespace Tryouts
     {
         private static void Main(string[] args)
         {
-            using (var t = new FastTests.Server.OAuth.CanAuthenticate())
+            Console.WriteLine(IntPtr.Size);
+            //for (int i = 0; i < 100; i++)
             {
-                try
+                 
                 {
-                    t.CanStoreAndDeleteApiKeys().Wait();
-                }
-                catch (Exception e)
-                {
-                    //Console.WriteLine(e.Message);
-                    Console.WriteLine(e.ToAsyncString());
+                    Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+                    var t = new FastTests.Sparrow.ByteString();
+                    t.ConstructionInsideWholeSegment();
                 }
             }
         }

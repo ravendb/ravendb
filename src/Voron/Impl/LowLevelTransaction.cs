@@ -24,6 +24,7 @@ namespace Voron.Impl
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
+        private readonly bool _disposeAllocator;
         private readonly PageCache _pageCache;
         private Tree _root;
 
@@ -106,6 +107,7 @@ namespace Voron.Impl
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
             _allocator = context ?? new ByteStringContext();
+            _disposeAllocator = context == null;
             _pageCache = new PageCache(this, 8);
 
             Flags = flags;
@@ -468,6 +470,9 @@ namespace Voron.Impl
             {
                 pagerState.Release();
             }
+
+            if (_disposeAllocator)
+                _allocator.Dispose();
         }
 
         internal void FreePageOnCommit(long pageNumber)
