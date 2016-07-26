@@ -245,10 +245,10 @@ namespace Rhino.Licensing
         /// <summary>
         /// Validates loaded license
         /// </summary>
-        public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false)
+        public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false, bool forceUpdate = false)
         {
             LicenseAttributes.Clear();
-            if (IsLicenseValid(firstTime))
+            if (IsLicenseValid(firstTime,forceUpdate))
             {
                 onValidLicense();
 
@@ -288,7 +288,7 @@ namespace Rhino.Licensing
             throw new LicenseNotFoundException("Could not find a valid license.");
         }
 
-        private bool IsLicenseValid(bool firstTime = false)
+        private bool IsLicenseValid(bool firstTime = false, bool forceUpdate = false)
         {
             try
             {
@@ -307,12 +307,12 @@ namespace Rhino.Licensing
 
                 bool result;
                 if (LicenseType == LicenseType.Subscription)
-                    result = ValidateLicense(firstTime);
+                    result = ValidateLicense(firstTime, forceUpdate);
                 else
                 {
                     result = SystemTime.UtcNow < ExpirationDate;
                     if (result)
-                        result = ValidateLicense(firstTime);
+                        result = ValidateLicense(firstTime, forceUpdate);
                 }
 
                 if (result && IsOemLicense()) 
@@ -336,16 +336,19 @@ namespace Rhino.Licensing
             }
         }
 
-        private bool ValidateLicense(bool firstTime = false)
+        private bool ValidateLicense(bool firstTime = false, bool forceUpdate = false)
         {
-            if ((ExpirationDate - SystemTime.UtcNow).TotalDays > 4)
-                return true;
+            if (forceUpdate == false)
+            {
+                if ((ExpirationDate - SystemTime.UtcNow).TotalDays > 4)
+                    return true;
 
-            if (currentlyValidatingLicense || firstTime)
-                return IsOemLicense() || SystemTime.UtcNow < ExpirationDate;
+                if (currentlyValidatingLicense || firstTime)
+                    return IsOemLicense() || SystemTime.UtcNow < ExpirationDate;
 
-            if (SubscriptionEndpoint == null)
-                throw new InvalidOperationException("Subscription endpoints are not supported for this license validator");
+                if (SubscriptionEndpoint == null)
+                    throw new InvalidOperationException("Subscription endpoints are not supported for this license validator");
+            }
 
             try
             {
