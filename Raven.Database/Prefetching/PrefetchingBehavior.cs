@@ -41,15 +41,6 @@ namespace Raven.Database.Prefetching
 
         private readonly ConcurrentQueue<DiskFetchPerformanceStats> loadTimes = new ConcurrentQueue<DiskFetchPerformanceStats>();
 
-        private class DiskFetchPerformanceStats
-        {
-            public int NumberOfDocuments;
-            public long TotalSize;
-            public long LoadingTimeInMillseconds;
-            public long LargestDocSize;
-            public string LargestDocKey;
-        }
-
         private int numberOfTimesWaitedHadToWaitForIO = 0;
         private int splitPrefetchingCount = 0;
 
@@ -540,6 +531,31 @@ namespace Raven.Database.Prefetching
             };
         }
 
+        public IoDebugSummary DebugIOSummary()
+        {
+            var internalLoadTimes = new List<object>();
+            foreach (var loadTime in loadTimes)
+            {
+                internalLoadTimes.Add(new
+                {
+                    NumberOfDocuments = $"{loadTime.NumberOfDocuments:#,#;;0}",
+                    loadTime.LargestDocKey,
+                    LargestDocSizeInBytes = $"{loadTime.LargestDocSize:#,#;;0}",
+                    LoadingTimeInMillseconds = $"{loadTime.LoadingTimeInMillseconds:#,#;;0}",
+                    TotalSizeInKB = $"{((double)loadTime.TotalSize)/1024:#,#.00;;0}",
+                    FetchingDocumentsPerSecondRate = $"{((double)loadTime.NumberOfDocuments)/loadTime.LoadingTimeInMillseconds*1000:#,#;;0}"
+                });
+            }
+
+            return new IoDebugSummary
+            {
+                LoadTimes = internalLoadTimes,
+                CurrentlySplitting = splitPrefetchingCount > 0,
+                CurrentSplitCount = splitPrefetchingCount,
+                NumberOfIOWaits = numberOfTimesWaitedHadToWaitForIO
+            };
+        }
+
         private TaskStatus? CanLoadDocumentsFromFutureBatches(Etag nextDocEtag)
         {
             if (context.Configuration.DisableDocumentPreFetching)
@@ -567,7 +583,7 @@ namespace Raven.Database.Prefetching
                     case TaskStatus.Running:
                     case TaskStatus.WaitingForChildrenToComplete:
                         if (log.IsDebugEnabled)
-                            log.Info("Future batch is not completed, will wait: {0}", allowWaiting);
+                            log.Debug("Future batch is not completed, will wait: {0}", allowWaiting);
 
                         if (allowWaiting == false)
                             return false;
@@ -1087,23 +1103,23 @@ namespace Raven.Database.Prefetching
                 Timestamp = SystemTime.UtcNow,
                 PrefetchingUser = PrefetchingUser
             };
-            Stopwatch sp = Stopwatch.StartNew();
+            var sp = Stopwatch.StartNew();
             context.AddFutureBatch(futureBatchStat);
 
-            var docsCountRef = new Reference<int?>() { Value = docsCount };
+            var docsCountRef = new Reference<int?> { Value = docsCount };
             var cts = new CancellationTokenSource();
             var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, context.CancellationToken);
             var futureIndexBatch = new FutureIndexBatch
             {
                 StartingEtag = nextEtag,
                 Age = Interlocked.Increment(ref currentIndexingAge),
-                CancellationTokenSource = linkedToken,
+                CancellationTokenSource = cts,
                 Type = batchType,
                 DocsCount = docsCountRef,
-                Task = Task.Factory.StartNew(() =>
+                Task = Task.Run(() =>
                 {
                     List<JsonDocument> jsonDocuments = null;
-                    int localWork = 0;
+                    var localWork = 0;
                     var earlyExit = new Reference<bool>();
                     while (context.RunIndexing)
                     {
@@ -1180,7 +1196,14 @@ namespace Raven.Database.Prefetching
                 }
             });
 
-            return futureIndexBatches.TryAdd(nextEtag, futureIndexBatch);
+            var addFutureBatch = futureIndexBatches.TryAdd(nextEtag, futureIndexBatch);
+            if (addFutureBatch == false)
+            {
+                log.Info($"A future batch starting with {nextEtag} etag is already running");
+                cts.Cancel();
+            }
+
+            return addFutureBatch;
         }
 
         private enum FutureBatchType
@@ -1514,6 +1537,23 @@ namespace Raven.Database.Prefetching
             futureIndexBatches.Clear();
             prefetchingQueue.Clear();
         }
+    }
+
+    public class DiskFetchPerformanceStats
+    {
+        public int NumberOfDocuments;
+        public long TotalSize;
+        public long LoadingTimeInMillseconds;
+        public long LargestDocSize;
+        public string LargestDocKey;
+    }
+
+    public class IoDebugSummary
+    {
+        public List<object> LoadTimes { get; set; }
+        public bool CurrentlySplitting { get; set; }
+        public int CurrentSplitCount { get; set; }
+        public int NumberOfIOWaits { get; set; }
     }
 
     public class PrefetchingSummary

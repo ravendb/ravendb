@@ -480,6 +480,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
             {
                 var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
                 var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
+                var ioSummary = prefetchingBehavior.DebugIOSummary();
 
                 var compareToCollection = new Dictionary<Etag, int>();
 
@@ -511,6 +512,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
                     result.Add(new
                     {
                         Default = prefetchingBehavior.IsDefault,
+                        IOSummary = ioSummary,
                         Indexes = indexesText,
                         LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
                         LastTimeUsed = lastTimeUsed,
@@ -536,6 +538,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
                     result.Add(new
                     {
                         Default = prefetchingBehavior.IsDefault,
+                        IOSummary = ioSummary,
                         Indexes = indexesText,
                         LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
                         LastTimeUsed = lastTimeUsed,
