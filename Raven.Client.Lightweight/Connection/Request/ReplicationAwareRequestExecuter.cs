@@ -65,7 +65,7 @@ namespace Raven.Client.Connection.Request
             return replicationInformer.UpdateReplicationInformationIfNeededAsync(serverClient);
         }
 
-        public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl)
+        public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl, bool withClusterFailoverHeader = false)
         {
             if (serverClient.Url.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
                 return;

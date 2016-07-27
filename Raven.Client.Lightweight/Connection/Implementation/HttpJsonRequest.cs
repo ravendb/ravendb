@@ -611,9 +611,9 @@ namespace Raven.Client.Connection.Implementation
 
         public HttpJsonRequest AddRequestExecuterAndReplicationHeaders(
             AsyncServerClient serverClient,
-            string currentUrl)
+            string currentUrl, bool withClusterFailoverHeader = false)
         {
-            serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl);
+            serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl,withClusterFailoverHeader);
             return this; // not because of failover, no need to do this.
         }
 
