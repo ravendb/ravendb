@@ -26,6 +26,12 @@ namespace Raven.Tests.Linq
             public IEnumerable<Guid> PermittedUsers { get; set; }
         }
 
+        public class User
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
         public class SearchableElement
         {
             public object[] PermittedUsers { get; set; }
@@ -80,6 +86,22 @@ namespace Raven.Tests.Linq
                                     .Where(se => se.PermittedUsers.Any(u => u.In(new object[] { userId })))
                                     .ToString();
                 Assert.Equal(@"@in<PermittedUsers>:(dc89a428\-7eb2\-428c\-bc97\-99763db25f9a)", query2);
+            }
+        }
+
+        private string[] users = {"a-A 1", " -", "- "};
+
+        [Fact]
+        public void CanQueryEvilDashStrings()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User() {Id="users/1" ,Name = "a-A 1" });
+                session.Store(new User() { Id = "users/2", Name = " -" });
+                session.Store(new User() { Id = "users/3", Name = "- " });
+                session.SaveChanges();
+                var res = session.Query<User>().Where(user => user.Name.In(users)).ToList();
+                Assert.Equal(res.Count,3);
             }
         }
 
