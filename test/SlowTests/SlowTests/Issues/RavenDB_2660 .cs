@@ -3,15 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.SlowTests.Issues
+namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_2660 : RavenTest
+    public class RavenDB_2660 : RavenTestBase
     {
         public class UsersByName : AbstractIndexCreationTask<User>
         {
@@ -31,12 +33,10 @@ namespace Raven.SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldCorrectlyIndexGroups()
+        public async Task ShouldCorrectlyIndexGroups()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                store.DatabaseCommands.DeleteIndex(new RavenDocumentsByEntityName().IndexName); // just to make sure that we won't use the precomputed batch optimization
-
                 new PeopleByName().Execute(store);
 
                 using (var session = store.OpenSession())

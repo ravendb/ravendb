@@ -8,7 +8,7 @@ using Raven.Client.Indexing;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.SlowTests.Issues
+namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_2812 : RavenTestBase
     {
@@ -30,7 +30,7 @@ namespace Raven.SlowTests.Issues
             {
                 return new IndexDefinition
                 {
-                    Maps = {@"docs.Users.SelectMany(user => user.Friends, (user, friend) => new {Name = user.Name})"},
+                    Maps = { @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new {Name = user.Name})" },
                     MaxIndexOutputsPerDocument = 16384,
                 };
             }

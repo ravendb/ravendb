@@ -5,43 +5,52 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
-
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.SlowTests.Issues
+namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_2134 : RavenTest
+    public class RavenDB_2134 : RavenTestBase
     {
         [Fact]
-        public void ShouldWork()
+        public async Task ShouldWork()
         {
-            using (var store = NewDocumentStore(requestedStorage: "voron"))
+            using (var store = await GetDocumentStore())
             {
+                RavenQueryStatistics stats;
+                using (var session = store.OpenSession())
+                {
+                    session.Query<User>()
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "John")
+                        .ToList();
+                }
+
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < 20000; i++)
                     {
-                        bulkInsert.Store(new User { Id = i.ToString(), Name = "Name" + i });
+                        await bulkInsert.StoreAsync(new User { Id = i.ToString(), Name = "Name" + i });
                     }
                 }
 
                 WaitForIndexing(store);
                 var queryToDelete = new IndexQuery
-                                    {
-                                        Query = "Tag:Users"
-                                    };
+                {
+                    Query = string.Empty
+                };
 
-                var operation = store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", queryToDelete);
+                var operation = store.DatabaseCommands.DeleteByIndex(stats.IndexName, queryToDelete);
                 operation.WaitForCompletion();
 
                 using (var session = store.OpenSession())
                 {
                     var count = session
-                        .Query<User>("Raven/DocumentsByEntityName")
+                        .Query<User>(stats.IndexName)
                         .Customize(x => x.WaitForNonStaleResults())
                         .Count();
 

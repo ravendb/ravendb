@@ -8,30 +8,20 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Database.Config;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Attributes;
-using Xunit.Extensions;
+using Xunit;
 
-namespace Raven.SlowTests.Issues
+namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_1280_ReOpen : RavenTest
+    public class RavenDB_1280_ReOpen : RavenTestBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-        {
-            configuration.MaxNumberOfItemsToProcessInSingleBatch = 50;
-            configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
-        }
-
-        [Theory]
-        [PropertyData("Storages")]
-        public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task Can_Index_With_Missing_LoadDocument_References()
         {
             const int iterations = 8000;
             var sp = Stopwatch.StartNew();
-            using (var store = NewRemoteDocumentStore(requestedStorage: storageTypeName))
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/Indexing/MaxNumberOfDocumentsToFetchForMap"] = "50"))
             {
                 new EmailIndex().Execute(store);
 
@@ -39,11 +29,11 @@ namespace Raven.SlowTests.Issues
                 {
                     using (var session = store.OpenSession())
                     {
-                        session.Store(new EmailDocument {Id = "Emails/" + i, To = "root@localhost", From = "nobody@localhost", Subject = "Subject" + i});
+                        session.Store(new EmailDocument { Id = "Emails/" + i, To = "root@localhost", From = "nobody@localhost", Subject = "Subject" + i });
                         session.SaveChanges();
                     }
                 });
-                
+
 
                 // Test that the indexing can complete, without being in an infinite indexing run due to touches to documents increasing the etag.
                 WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(sp.Elapsed.TotalSeconds / 2));

@@ -2,37 +2,34 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Attributes;
-
 using Xunit;
 
-namespace Raven.SlowTests.Issues
+namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_1280 : RavenTest
+    public class RavenDB_1280 : RavenTestBase
     {
-        [Fact]
-        public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task Referenced_Docs_Are_Indexed_During_Heavy_Writing()
         {
             const int iterations = 6000;
 
-            using (var documentStore = NewRemoteDocumentStore(requestedStorage:"esent"))
+            using (var documentStore = await GetDocumentStore())
             {
                 Console.WriteLine("Making parallel inserts...");
                 var sp = Stopwatch.StartNew();
                 Parallel.For(0, iterations, i =>
                 {
-// ReSharper disable once AccessToDisposedClosure
+                    // ReSharper disable once AccessToDisposedClosure
                     using (var session = documentStore.OpenSession())
                     {
-                        session.Store(new EmailDocument {Id = "Emails/"+ i,To = "root@localhost", From = "nobody@localhost", Subject = "Subject" + i});
+                        session.Store(new EmailDocument { Id = "Emails/" + i, To = "root@localhost", From = "nobody@localhost", Subject = "Subject" + i });
                         session.SaveChanges();
                     }
 
-// ReSharper disable once AccessToDisposedClosure
+                    // ReSharper disable once AccessToDisposedClosure
                     using (var session = documentStore.OpenSession())
                     {
                         session.Store(new EmailText { Id = "Emails/" + i + "/text", Body = "MessageBody" + i });
@@ -41,7 +38,7 @@ namespace Raven.SlowTests.Issues
                 });
 
                 Console.WriteLine("Finished parallel inserts. Time: {0}.", sp.Elapsed);
-                
+
                 new EmailIndex().Execute(documentStore);
 
                 var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : sp.Elapsed;
@@ -68,17 +65,17 @@ namespace Raven.SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 var indexDefinition = new EmailIndex().CreateIndexDefinition();
 
                 for (int i = 0; i < 4; i++)
                 {
                     store.DatabaseCommands.PutIndex("email" + i, indexDefinition);
-                    
+
                 }
 
                 using (var session = store.OpenSession())
@@ -98,14 +95,14 @@ namespace Raven.SlowTests.Issues
             {
                 Map =
                     emails => from email in emails
-                            let text = LoadDocument<EmailText>(email.Id + "/text") 				
-                            select new
-                                    {
-                                        email.To,
-                                        email.From,
-                                        email.Subject,
-                                        Body = text == null ? null : text.Body
-                                    };
+                              let text = LoadDocument<EmailText>(email.Id + "/text")
+                              select new
+                              {
+                                  email.To,
+                                  email.From,
+                                  email.Subject,
+                                  Body = text == null ? null : text.Body
+                              };
             }
         }
 
@@ -129,7 +126,7 @@ namespace Raven.SlowTests.Issues
             public string To { get; set; }
             public string From { get; set; }
             public string Subject { get; set; }
-            public string Body { get; set; }			
+            public string Body { get; set; }
         }
     }
 }

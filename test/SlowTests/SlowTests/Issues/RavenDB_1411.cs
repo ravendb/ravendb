@@ -5,26 +5,25 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.SlowTests.Issues
+namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_1411 : RavenTest
+    public class RavenDB_1411 : RavenTestBase
     {
         public class Foo
         {
-            public string Id { get; set; } 
-            public string Item { get; set; } 
+            public string Id { get; set; }
+            public string Item { get; set; }
         }
 
         public class Bar
         {
-            public string Id { get; set; } 
-            public string Item { get; set; } 
+            public string Id { get; set; }
+            public string Item { get; set; }
         }
 
         public class Baz
@@ -37,7 +36,7 @@ namespace Raven.SlowTests.Issues
         {
             public SingleMapIndex()
             {
-                Map = foos => from foo in foos select new {foo.Item};
+                Map = foos => from foo in foos select new { foo.Item };
             }
         }
 
@@ -45,27 +44,28 @@ namespace Raven.SlowTests.Issues
         {
             public MultiMapIndex()
             {
-                AddMap<Foo>(foos => from foo in foos select new {foo.Item});
-                AddMap<Bar>(bars => from bar in bars select new {bar.Item});
+                AddMap<Foo>(foos => from foo in foos select new { foo.Item });
+                AddMap<Bar>(bars => from bar in bars select new { bar.Item });
             }
         }
 
         public class FooMapReduceIndex : AbstractIndexCreationTask<Foo, FooMapReduceIndex.Result>
         {
-             public class Result
-             {
-                 public string Item { get; set; }
-                 public int Count { get; set; }
-             }
+            public class Result
+            {
+                public string Item { get; set; }
+                public int Count { get; set; }
+            }
 
             public FooMapReduceIndex()
             {
-                Map = foos => from f in foos select new {f.Item, Count = 1};
+                Map = foos => from f in foos select new { f.Item, Count = 1 };
                 Reduce =
                     results =>
                     from result in results
                     group result by result.Item
-                    into g select new {Item = g.Key, Count = g.Sum(x => x.Count)};
+                    into g
+                    select new { Item = g.Key, Count = g.Sum(x => x.Count) };
             }
         }
 
@@ -75,9 +75,9 @@ namespace Raven.SlowTests.Issues
         }
 
         [Fact]
-        public void OptimizationShouldWork_NewIndexedWillGetPrecomputedDocumentsToIndexToAvoidRetrievingAllDocumentsFromDisk()
+        public async Task OptimizationShouldWork_NewIndexedWillGetPrecomputedDocumentsToIndexToAvoidRetrievingAllDocumentsFromDisk()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -105,13 +105,13 @@ namespace Raven.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store.SystemDatabase);
+                WaitForIndexing(store);
 
                 new SingleMapIndex().Execute(store);
                 new MultiMapIndex().Execute(store);
                 new FooMapReduceIndex().Execute(store);
 
-                WaitForIndexing(store.SystemDatabase);
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -148,9 +148,9 @@ namespace Raven.SlowTests.Issues
         }
 
         [Fact]
-        public void NewIndexesForWhichOptimizationIsNotAppliedShouldBeProcessesCorrectly()
+        public async Task NewIndexesForWhichOptimizationIsNotAppliedShouldBeProcessesCorrectly()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -165,7 +165,7 @@ namespace Raven.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store.SystemDatabase);
+                WaitForIndexing(store);
 
                 new SingleMapIndex().Execute(store);
 
@@ -178,9 +178,9 @@ namespace Raven.SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldGetAllNecessaryDocumentsToIndex()
+        public async Task ShouldGetAllNecessaryDocumentsToIndex()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -203,7 +203,7 @@ namespace Raven.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store.SystemDatabase);
+                WaitForIndexing(store);
 
                 new SingleMapIndex().Execute(store);
 
