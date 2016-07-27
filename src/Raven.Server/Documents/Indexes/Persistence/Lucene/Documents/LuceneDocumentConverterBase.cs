@@ -171,11 +171,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             if (value == null || value is DynamicNullObject) return ValueType.Null;
 
-            if (Equals(value, string.Empty)) return ValueType.EmptyString;
+            var lazyStringValue = value as LazyStringValue;
+            if (lazyStringValue != null)
+                return lazyStringValue.Size == 0 ? ValueType.EmptyString : ValueType.String;
 
-            if (value is LazyStringValue) return ValueType.String;
-
-            if (value is LazyCompressedStringValue) return ValueType.CompressedString;
+            var lazyCompressedStringValue = value as LazyCompressedStringValue;
+            if (lazyCompressedStringValue != null)
+                return lazyCompressedStringValue.UncompressedSize == 0 ? ValueType.EmptyString : ValueType.CompressedString;
 
             if (value is BoostedValue) return ValueType.BoostedValue;
 
