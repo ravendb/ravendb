@@ -383,11 +383,33 @@ namespace Sparrow
         #endregion
     }
 
+    public interface IByteStringAllocator
+    {
+        UnmanagedGlobalSegment Allocate(int size);
+        void Free(UnmanagedGlobalSegment memory);
+    }
+
+    /// <summary>
+    /// This class implements a direct allocator, mostly used for testing.   
+    /// </summary>
+    public struct ByteStringDirectAllocator : IByteStringAllocator
+    {
+        public UnmanagedGlobalSegment Allocate(int size)
+        {
+            return new UnmanagedGlobalSegment(size);
+        }
+
+        public void Free(UnmanagedGlobalSegment memory)
+        {
+            memory.Dispose();
+        }
+    }
+
     /// <summary>
     /// This class implements a two tier memory pooling support, first using thread local storage
     /// and then stealing from other threads 
     /// </summary>
-    public class ByteStringMemoryCache
+    public struct ByteStringMemoryCache : IByteStringAllocator
     {
         private static readonly ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>> Global = new ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>>();
 
@@ -408,7 +430,7 @@ namespace Sparrow
             return _threadLocal;
         }
 
-        public static UnmanagedGlobalSegment Allocate(int size)
+        public UnmanagedGlobalSegment Allocate(int size)
         {
             var local = GetThreadLocalCollection();
             UnmanagedGlobalSegment memorySegment;
@@ -474,7 +496,7 @@ namespace Sparrow
             return victimQueue;
         }
 
-        public static void Free(UnmanagedGlobalSegment memory)
+        public void Free(UnmanagedGlobalSegment memory)
         {
             var local = GetThreadLocalCollection();
             local.Push(memory);
@@ -482,8 +504,20 @@ namespace Sparrow
         }
     }
 
-    public unsafe class ByteStringContext : IDisposable
-    {        
+    public class ByteStringContext : ByteStringContext<ByteStringMemoryCache>
+    {
+        public const int MinBlockSizeInBytes = 64 * 1024; // If this is changed, we need to change also LogMinBlockSize.
+        public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes;
+        public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
+        public const int MinReusableBlockSizeInBytes = 8;
+
+        public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base (allocationBlockSize)
+        { }
+    }
+
+    public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
+    {
+        public static TAllocator _allocator;
 
         private class SegmentInformation
         {
@@ -508,12 +542,7 @@ namespace Sparrow
             }
         }
 
-        public const int MinBlockSizeInBytes = 64 * 1024; // If this is changed, we need to change also LogMinBlockSize.
         private const int LogMinBlockSize = 16;
-
-        public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes; 
-        public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes; 
-        public const int MinReusableBlockSizeInBytes = 8;
         
         /// <summary>
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
@@ -539,10 +568,10 @@ namespace Sparrow
         private readonly Stack<IntPtr> _externalStringPool;
         private SegmentInformation _externalCurrent;
 
-        public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes)
+        public ByteStringContext(int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
         {
-            if (allocationBlockSize < MinBlockSizeInBytes)
-                throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(MinBlockSizeInBytes)} value of {MinBlockSizeInBytes}");
+            if (allocationBlockSize < ByteStringContext.MinBlockSizeInBytes)
+                throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(ByteStringContext.MinBlockSizeInBytes)} value of {ByteStringContext.MinBlockSizeInBytes}");
 
             this._allocationBlockSize = allocationBlockSize;
 
@@ -629,14 +658,14 @@ namespace Sparrow
 
             // The allocation unit is bigger than MinBlockSize (therefore it wont be 2^n aligned).
             // Then we will 64bits align the allocation.
-            if (allocationUnit > MinBlockSizeInBytes)
+            if (allocationUnit > ByteStringContext.MinBlockSizeInBytes)
                 allocationUnit += sizeof(long) - allocationUnit % sizeof(long);
 
             // All allocation units are 32 bits aligned. If not we will have a performance issue.
             Debug.Assert(allocationUnit % sizeof(int) == 0);    
 
             // If we can reuse... we retrieve those.
-            if (allocationSize <= MinBlockSizeInBytes && _internalReusableStringPoolCount[reusablePoolIndex] != 0)
+            if (allocationSize <= ByteStringContext.MinBlockSizeInBytes && _internalReusableStringPoolCount[reusablePoolIndex] != 0)
             {                
                 // This is a stack because hotter memory will be on top. 
                 Stack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
@@ -670,14 +699,14 @@ namespace Sparrow
                     }
 
                     // If the size left is bigger than MinBlockSize, we release current as a reusable segment
-                    if (currentSizeLeft > MinBlockSizeInBytes)
+                    if (currentSizeLeft > ByteStringContext.MinBlockSizeInBytes)
                     {
                         byte* start = _internalCurrent.Current;
                         byte* end = start + currentSizeLeft;
 
                         _internalReadyToUseMemorySegments.Add(new SegmentInformation{ Start = start, Current = start, End = end, CanDispose = false });
                     }
-                    else if ( currentSizeLeft > sizeof(ByteStringType) + MinReusableBlockSizeInBytes)
+                    else if ( currentSizeLeft > sizeof(ByteStringType) + ByteStringContext.MinReusableBlockSizeInBytes)
                     {
                         // The memory chunk left is big enough to make sense to reuse it.
                         reusablePoolIndex = GetPoolIndexForReservation(currentSizeLeft);
@@ -759,23 +788,7 @@ namespace Sparrow
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
         {
-            SegmentInformation segment;
-            if (length > MaxAllocationBlockSizeInBytes)
-            {
-                // The allocation is big, therefore we will just allocate the segment and move on.   
-                var memory = new UnmanagedGlobalSegment(length);
-                byte* start = (byte*)memory.Segment.ToPointer();
-                byte* end = start + memory.Size;
-                                
-                segment = new SegmentInformation { Memory = memory, Start = start, Current = start, End = end, CanDispose = true };
-                _wholeSegments.Add(segment);
-            }
-            else
-            {                                                     
-                segment = AllocateSegment(length + sizeof(ByteStringStorage));
-                // _wholeSegments.Add(segment); - called in AllocateSegment
-
-            }
+            SegmentInformation segment = AllocateSegment(length + sizeof(ByteStringStorage));
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
@@ -855,7 +868,7 @@ namespace Sparrow
             {
                 int reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
 
-                if (value._pointer->Size <= MinBlockSizeInBytes)
+                if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
                 {
                     Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
                     if (pool == null)
@@ -894,7 +907,7 @@ namespace Sparrow
 
         private SegmentInformation AllocateSegment(int size)
         {
-            var memorySegment = ByteStringMemoryCache.Allocate(size);
+            var memorySegment = _allocator.Allocate(size);
 
             byte* start = (byte*)memorySegment.Segment.ToPointer();
             byte* end = start + memorySegment.Size;
@@ -908,7 +921,7 @@ namespace Sparrow
 
         private void AllocateExternalSegment(int size)
         {
-            var memorySegment = ByteStringMemoryCache.Allocate(size);
+            var memorySegment = _allocator.Allocate(size);
 
             byte* start = (byte*)memorySegment.Segment.ToPointer();
             byte* end = start + memorySegment.Size;
@@ -1191,15 +1204,14 @@ namespace Sparrow
                     {
                         if (segment.CanDispose)
                         {
-                            // Check if we have allocated from the pool or directly.
-                            if (segment.Memory.Size > MaxAllocationBlockSizeInBytes)
+                            // Check if we can release this memory segment back to the pool.
+                            if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
                             {
                                 segment.Memory.Dispose();
                             }
                             else
                             {
-                                // We have allocated from the pool. Then we are releasing it. 
-                                ByteStringMemoryCache.Free(segment.Memory);
+                                _allocator.Free(segment.Memory);
                             }
                         }
                     }
