@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (indexWriter.MergeScheduler)
             {
             }
-            indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+            indexWriter.SetMergeScheduler(new SerialMergeScheduler());
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
             indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);

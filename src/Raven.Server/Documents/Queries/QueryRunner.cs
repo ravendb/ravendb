@@ -129,7 +129,11 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (rateGate != null && rateGate.WaitToProceed(0) == false)
                     {
-                        tx?.Commit();
+                        using (tx)
+                        {
+                            tx?.Commit();
+                        }
+
                         tx = null;
 
                         rateGate.WaitToProceed();
@@ -147,12 +151,19 @@ namespace Raven.Server.Documents.Queries
                     if (operations < BatchSize)
                         continue;
 
-                    tx.Commit();
+                    using (tx)
+                    {
+                        tx.Commit();
+                    }
+
                     tx = null;
                 }
             }
 
-            tx?.Commit();
+            using (tx)
+            {
+                tx?.Commit();
+            }
         }
 
         private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)

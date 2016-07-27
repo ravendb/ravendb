@@ -2,31 +2,23 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.SlowTests.Bugs
+namespace SlowTests.SlowTests.Bugs
 {
-    public class ManyDocumentBeingIndexed : RavenTest
+    public class ManyDocumentBeingIndexed : RavenTestBase
     {
         public class TestDocument
         {
             public int Id { get; set; }
         }
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        [Fact]
+        public async Task WouldBeIndexedProperly()
         {
-            configuration.MaxPageSize = 10000;
-        }
-
-        [Theory]
-        [PropertyData("Storages")]
-        public void WouldBeIndexedProperly(string requestedStorage)
-        {
-            using (var store = NewDocumentStore(requestedStorage: requestedStorage))
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/MaxPageSize"] = "10000"))
             {
                 using (var session = store.OpenSession())
                 {
@@ -50,7 +42,7 @@ namespace Raven.SlowTests.Bugs
                         }
                     }
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var items = session.Query<TestDocument>()

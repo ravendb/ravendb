@@ -1,30 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.SlowTests.Bugs
+namespace SlowTests.SlowTests.Bugs
 {
-    public class VeryBigResultSet : RavenTest
+    public class VeryBigResultSet : RavenTestBase
     {
         [Fact]
-        public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou()
+        public async Task CanGetVeryBigResultSetsEvenThoughItIsBadForYou()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/MaxPageSize"] = "20000"))
             {
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 15000; i++)
                     {
-                        session.Store(new User {});
+                        session.Store(new User { });
                     }
                     session.SaveChanges();
                 }
-
-                store.Configuration.MaxPageSize = 20000;
 
                 using (var session = store.OpenSession())
                 {

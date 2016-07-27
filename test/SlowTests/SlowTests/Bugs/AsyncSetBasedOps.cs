@@ -7,14 +7,14 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Data;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.SlowTests.Bugs
+namespace SlowTests.SlowTests.Bugs
 {
-    public class AsyncSetBasedOps : RavenTest
+    public class AsyncSetBasedOps : RavenTestBase
     {
         public class User
         {
@@ -23,19 +23,27 @@ namespace Raven.SlowTests.Bugs
             public string FullName;
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task AwaitAsyncPatchByIndexShouldWork(string storageTypeName)
+        [Fact]
+        public async Task AwaitAsyncPatchByIndexShouldWork()
         {
-            using (var store = NewRemoteDocumentStore(fiddler: true, requestedStorage: storageTypeName, runInMemory: false))
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/RunInMemory"] = "false"))
             {
                 string lastUserId = null;
+
+                RavenQueryStatistics stats;
+                using (var session = store.OpenSession())
+                {
+                    session.Query<User>()
+                        .Statistics(out stats)
+                        .Where(x => x.FirstName == "John")
+                        .ToList();
+                }
 
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < 1000 * 10; i++)
                     {
-                        lastUserId = bulkInsert.Store(
+                        lastUserId = await bulkInsert.StoreAsync(
                             new User
                             {
                                 FirstName = "First #" + i,
@@ -48,9 +56,9 @@ namespace Raven.SlowTests.Bugs
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
 
                 await (await store.AsyncDatabaseCommands.UpdateByIndexAsync(
-                    "Raven/DocumentsByEntityName",
-                    new IndexQuery { Query = "Tag:Users" },
-                    new ScriptedPatchRequest
+                    stats.IndexName,
+                    new IndexQuery { Query = string.Empty },
+                    new PatchRequest
                     {
                         Script = "this.FullName = this.FirstName + ' ' + this.LastName;"
                     }
