@@ -3,28 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.SlowTests.MailingList
+namespace SlowTests.SlowTests.MailingList
 {
-    using System.Collections;
-
-    using Raven.Abstractions.Indexing;
-    using Raven.Client.Linq;
-
-    public class Jalchr : RavenTest
+    public class Jalchr : RavenTestBase
     {
         [Fact]
-        public void CanGetIdWithCorrectCase()
+        public async Task CanGetIdWithCorrectCase()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
@@ -63,9 +60,9 @@ namespace Raven.SlowTests.MailingList
         }
 
         [Fact]
-        public void CanGetIdWithCorrectCaseWithTransforms()
+        public async Task CanGetIdWithCorrectCaseWithTransforms()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
@@ -134,7 +131,7 @@ namespace Raven.SlowTests.MailingList
             {
                 get
                 {
-                    if(_countries == null)
+                    if (_countries == null)
                         return new AgencyCountry[0];
                     return _countries.ToArray();
                 }
@@ -168,18 +165,18 @@ namespace Raven.SlowTests.MailingList
             public Agency_EntityTransformer()
             {
                 TransformResults = agencies => from agency in agencies
-                                                           select new // AgencyDb
-                                                           {
-                                                               agency.Id,
-                                                               agency.Name,
-                                                               agency.Code,
-                                                               Countries = from com in agency.Countries
-                                                                           select new // AgencyCountry
-                                                                           {
-                                                                               com.Country,
-                                                                               Agency = agency
-                                                                           }
-                                                           };
+                                               select new // AgencyDb
+                                               {
+                                                   agency.Id,
+                                                   agency.Name,
+                                                   agency.Code,
+                                                   Countries = from com in agency.Countries
+                                                               select new // AgencyCountry
+                                                               {
+                                                                   com.Country,
+                                                                   Agency = agency
+                                                               }
+                                               };
             }
         }
 
@@ -208,7 +205,7 @@ namespace Raven.SlowTests.MailingList
                                                    agency.Code,
                                                    Countries = from com in agency.Countries
                                                                select new // AgencyCountry
-                                                                           { com.Country, Agency = agency }
+                                                               { com.Country, Agency = agency }
                                                };
             }
         }

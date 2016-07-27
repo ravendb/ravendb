@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
@@ -8,11 +10,14 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using Raven.Server.Documents.Includes;
 using Sparrow.Json;
+using System.Reflection;
 
 namespace Raven.Server.Documents.Transformers
 {
     public class TransformationScope : IDisposable
     {
+        private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
+
         private readonly IndexingFunc _transformer;
         private readonly DocumentsOperationContext _context;
 
@@ -47,7 +52,7 @@ namespace Raven.Server.Documents.Transformers
                     foreach (var transformedResult in transformedResults)
                     {
                         if (accessor == null)
-                            accessor = PropertyAccessor.Create(transformedResult.GetType());
+                            accessor = GetPropertyAccessor(transformedResult);
 
                         var value = new DynamicJsonValue();
                         foreach (var property in accessor.Properties)
@@ -92,7 +97,31 @@ namespace Raven.Server.Documents.Transformers
             if (transformerParameter != null)
                 return transformerParameter.OriginalValue;
 
-            return value;
+            if (value is string)
+                return value;
+
+            if (value is LazyStringValue || value is LazyCompressedStringValue)
+                return value;
+
+            if (value is DateTime)
+                return value;
+
+            var inner = new DynamicJsonValue();
+            var accessor = GetPropertyAccessor(value);
+
+            foreach (var property in accessor.Properties)
+            {
+                var propertyValue = property.Value(value);
+                inner[property.Key] = ConvertType(propertyValue);
+            }
+
+            return inner;
+        }
+
+        private static PropertyAccessor GetPropertyAccessor(object value)
+        {
+            var type = value.GetType();
+            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
         }
     }
 }
