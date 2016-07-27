@@ -1,27 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Sparrow
 {
-    public class SparrowDisposableAction : IDisposable // ADIADI :: good name and place plz
-    {
-        private readonly Action _action;
-        public SparrowDisposableAction(Action action)
-        {
-            _action = action;
-        }
-
-        public void Dispose()
-        {
-            _action();
-        }
-    }
-
     public class IoMetrics
     {
         private struct MeterItem
@@ -29,6 +14,8 @@ namespace Sparrow
             public long Size;
             public long Start;
             public long End;
+
+            public bool IsOverrun;
         }
 
         private struct SummerizedItem
@@ -38,13 +25,10 @@ namespace Sparrow
 
             public long TotalTimeStart; // bruto
             public long TotalTimeEnd;
+
+            public long Count;
         }
 
-        /// <summary>
-        /// I/O Meter
-        /// </summary>
-        /// <param name="currentBufferSize">Current buffer size of each point messured</param>
-        /// <param name="summaryDurationPerItem">How many seconds (bruto) to summerize in each summerized item</param>
         public IoMetrics(int currentBufferSize, int summaryDurationPerItem, int summaryBufferSize)
         {
             _buffSize = currentBufferSize;
@@ -61,7 +45,7 @@ namespace Sparrow
         private int _summerizedPos;
         private readonly int _buffSize;
         private readonly int _summaryBuffSize;
-        private readonly long _summaryDurationPerItem; // in ticks
+        private readonly long _summaryDurationPerItem;
         private int _currentlyIncSumPtr;
 
         public IEnumerable<DynamicJsonValue> CreateSummerizedMeterData()
@@ -72,26 +56,66 @@ namespace Sparrow
                 ["CurrentPosition"] = _summerizedPos,
                 ["Now"] = _sp.ElapsedMilliseconds,
                 ["DurationPerItem"] = _summaryDurationPerItem,
-                ["_currentlyIncSumPtr"] = _currentlyIncSumPtr
+                ["_currentlyIncSumPtr"] = _currentlyIncSumPtr,
+                ["NumberOfTicksPerSecond"] = Stopwatch.Frequency
             };
 
-            for (int i = _summerizedPos; i < _summerizedPos + _summaryBuffSize; i++)
+            var absolutePos = _summerizedPos % _summaryBuffSize;
+            for (int i = absolutePos; i < absolutePos + _summaryBuffSize; i++)
             {
-                var pos = i%_summaryBuffSize;
-                double rate = 0;
-                if (_summerizedBuffer[pos].BusyTime != 0) // dev by zero chk
-                    rate = (_summerizedBuffer[pos].Size/ _summerizedBuffer[pos].BusyTime); // bytes per tick
-                double rateMBs = (rate * Stopwatch.Frequency) / (1024D * 1024); // Mbytes per sec
-                var rateStr = $"{rateMBs:#,#.##}MB/Sec";
+                int pos = GetPositionInBuffer(absolutePos, i, _summaryBuffSize);
+
                 yield return new DynamicJsonValue
                 {
+                    ["No."] = $"{pos}",
                     ["Size"] = $"{_summerizedBuffer[pos].Size:#,#}",
                     ["BusyTime"] = $"{_summerizedBuffer[pos].BusyTime:#,#}",
                     ["TotalTime"] = $"{_summerizedBuffer[pos].TotalTimeEnd - _summerizedBuffer[pos].TotalTimeStart:#,#}",
                     ["When"] = $"{_summerizedBuffer[pos].TotalTimeEnd:#,#}",
-                    ["Rate"] = rateStr,
+                    ["NetoRate"] = CalculateRate(_summerizedBuffer[pos].BusyTime, _summerizedBuffer[pos].Size),
+                    ["BrutoRate"] = CalculateRate(_summerizedBuffer[pos].TotalTimeEnd - _summerizedBuffer[pos].TotalTimeStart,
+                                                  _summerizedBuffer[pos].Size),
+                    ["NumberOfHits"] = $"{_summerizedBuffer[pos].Count}"
                 };
             }
+        }
+
+        public IEnumerable<DynamicJsonValue> CreateCurrentMeterData()
+        {
+            var absolutePos = _bufferPos % _buffSize;
+            for (int i = absolutePos; i < absolutePos + _buffSize; i++)
+            {
+                var pos = GetPositionInBuffer(absolutePos, i, _buffSize);
+
+                yield return new DynamicJsonValue
+                {
+                    ["No."] = $"{pos}",
+                    ["Size"] = $"{_buffer[pos].Size:0,0}",
+                    ["TotalTime"] = $"{_buffer[pos].End - _buffer[pos].Start:0,0}",
+                    ["When"] = $"{_buffer[pos].End:0,0}",
+                    ["Rate"] = CalculateRate(_buffer[pos].End - _buffer[pos].Start, _buffer[pos].Size),
+                    ["IsOverrun"] = $"{_buffer[pos].IsOverrun}"
+                };
+            }
+        }
+
+        private static int GetPositionInBuffer(int absolutePos, int i, int bufSize)
+        {
+            var pos = absolutePos + (absolutePos - i);
+            if (pos < 0)
+                pos = bufSize - pos;
+            return pos;
+        }
+
+        private static string CalculateRate(long timeInTicks, long sizeInBytes)
+        {
+            double rate = 0;
+            if (timeInTicks != 0) // dev by zero chk
+                rate = (sizeInBytes / timeInTicks); // bytes per tick
+            else
+                return "N/A";
+            double rateMBs = (rate * Stopwatch.Frequency) / (1024D * 1024); // Mbytes per sec
+            return $"{rateMBs:#,#.##}MB/Sec";
         }
 
         private MeterItem AddItem(MeterItem meterObj)
@@ -100,7 +124,11 @@ namespace Sparrow
             var adjustedTail = pos % _buffSize;
             var forSumItem = _buffer[adjustedTail];
             _buffer[adjustedTail] = meterObj;
-            // if (Tail > pos + _bufferSize) - we might face overrun in such case (too many concurent calls to AddItem before above swap)
+
+            //  we might face overrun in such case (too many concurent calls to AddItem before above swap)
+            // a good idea will be to increase _buffSize
+            if (_bufferPos > pos + _buffSize)
+                _buffer[adjustedTail].IsOverrun = true;
 
             return forSumItem;
         }
@@ -113,7 +141,7 @@ namespace Sparrow
                 Start = _sp.ElapsedTicks
             };
 
-            return new SparrowDisposableAction(() =>
+            return new DisposableAction(() =>
             {
                 meterObj.End = _sp.ElapsedTicks;
                 EndMeter(meterObj);
@@ -124,24 +152,22 @@ namespace Sparrow
         {
             var toSummerizeItem = AddItem(meterObj);
 
-            if (Interlocked.CompareExchange(ref _currentlyIncSumPtr, 1, 0) != -1)
+            var interlockTaken = Interlocked.CompareExchange(ref _currentlyIncSumPtr, 1, 0) == 0;
+            if (interlockTaken)
             {
                 try
                 {
                     if (_summerizedBuffer[_summerizedPos].TotalTimeEnd -
                         _summerizedBuffer[_summerizedPos].TotalTimeStart > _summaryDurationPerItem)
                     {
-                        Interlocked.Increment(ref _summerizedPos);
+                        _summerizedPos++;
                     }
                 }
-                catch (Exception e)
+                finally
                 {
-                    Console.WriteLine("ADIADI" + e);
+                    Interlocked.Exchange(ref _currentlyIncSumPtr, 0);
                 }
             }
-
-            // TODO :: ADIADI we do not need to do that: if lock wasn't taken by us.  but we need to free this if exception occured
-            Interlocked.Exchange(ref _currentlyIncSumPtr, 0);
 
             var pos = _summerizedPos % _summaryBuffSize;
 
@@ -151,6 +177,7 @@ namespace Sparrow
             _summerizedBuffer[pos].TotalTimeEnd = toSummerizeItem.End;
             _summerizedBuffer[pos].BusyTime += toSummerizeItem.End - toSummerizeItem.Start;
             _summerizedBuffer[pos].Size += toSummerizeItem.Size;
+            _summerizedBuffer[pos].Count++;
         }
     }
 }
