@@ -1,5 +1,6 @@
 ﻿using System;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Json
 {
@@ -10,6 +11,23 @@ namespace Raven.Server.Json
             if (value is long || value is int)
             {
                 longResult = Convert.ToInt64(value);
+                doubleResult = double.MinValue;
+
+                return NumberParseResult.Long;
+            }
+
+            if (value is decimal)
+            {
+                var d = (decimal)value;
+                if (DecimalHelper.Instance.IsDouble(ref d))
+                {
+                    doubleResult = (double)d;
+                    longResult = long.MinValue;
+
+                    return NumberParseResult.Double;
+                }
+
+                longResult = (long)d;
                 doubleResult = double.MinValue;
 
                 return NumberParseResult.Long;
