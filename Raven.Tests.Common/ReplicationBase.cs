@@ -430,7 +430,7 @@ namespace Raven.Tests.Common
             return document;
         }
 
-        protected Attachment WaitForAttachment(IDocumentStore store2, string expectedId)
+        protected Attachment WaitForAttachment(IDocumentStore store2, string expectedId, Etag changedSince = null)
         {
             Attachment attachment = null;
 
@@ -438,7 +438,14 @@ namespace Raven.Tests.Common
             {
                 attachment = store2.DatabaseCommands.GetAttachment(expectedId);
                 if (attachment != null)
-                    break;
+                {
+                    if (changedSince != null)
+                    {
+                        if (attachment.Etag != changedSince)
+                            break;
+                    }
+                    else break;
+                }
                 Thread.Sleep(100);
             }
             try
