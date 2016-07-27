@@ -1,15 +1,15 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Client.Linq.Indexing;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq.Indexing;
 using Xunit;
 
-namespace Raven.Tests.Indexes
+namespace SlowTests.Tests.Indexes
 {
-    public class BoostingDuringIndexing : RavenTest
+    public class BoostingDuringIndexing : RavenTestBase
     {
         public class User
         {
@@ -29,8 +29,8 @@ namespace Raven.Tests.Indexes
                 Map = users => from user in users
                                select new
                                {
-                                FirstName = user.FirstName.Boost(3),
-                                user.LastName
+                                   FirstName = user.FirstName.Boost(3),
+                                   user.LastName
                                };
             }
         }
@@ -46,19 +46,19 @@ namespace Raven.Tests.Indexes
             {
                 AddMap<User>(users =>
                              from user in users
-                             select new {Name = user.FirstName}
+                             select new { Name = user.FirstName }
                     );
                 AddMap<Account>(accounts =>
                                 from account in accounts
-                                select new {account.Name}.Boost(3)
+                                select new { account.Name }.Boost(3)
                     );
             }
         }
 
         [Fact]
-        public void CanBoostFullDocument()
+        public async Task CanBoostFullDocument()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new UsersAndAccounts().Execute(store);
 
@@ -92,13 +92,13 @@ namespace Raven.Tests.Indexes
         }
 
         [Fact]
-        public void CanGetBoostedValues()
+        public async Task CanGetBoostedValues()
         {
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new UsersByName().Execute(store);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User
                     {
@@ -116,9 +116,9 @@ namespace Raven.Tests.Indexes
 
                 using (var session = store.OpenSession())
                 {
-                    var users = session.Query<User,UsersByName>()
-                        .Customize(x=>x.WaitForNonStaleResults())
-                        .Where(x=>x.FirstName == "Ayende" || x.LastName == "Eini")
+                    var users = session.Query<User, UsersByName>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.FirstName == "Ayende" || x.LastName == "Eini")
                         .ToList();
 
                     Assert.Equal("Ayende", users[0].FirstName);

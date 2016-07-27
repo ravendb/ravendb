@@ -4,7 +4,7 @@ using FastTests;
 
 using Raven.Abstractions.Connection;
 using Raven.Client.Data;
-
+using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.Core.ScriptedPatching
@@ -34,8 +34,8 @@ namespace SlowTests.Core.ScriptedPatching
         {
             using (var store = await GetDocumentStore(modifyDatabaseDocument: document =>
             {
-                document.Settings["Raven/MaxStepsForScript"] = "5000";
-                document.Settings["Raven/Patching/AllowScriptsToAdjustNumberOfSteps"] = "true";
+                document.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "5000";
+                document.Settings[RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";
             }))
             {
                 var foo = new Foo
@@ -76,8 +76,8 @@ namespace SlowTests.Core.ScriptedPatching
         {
             using (var store = await GetDocumentStore(modifyDatabaseDocument: document =>
             {
-                document.Settings["Raven/MaxStepsForScript"] = "5000";
-                document.Settings["Raven/Patching/AllowScriptsToAdjustNumberOfSteps"] = "true";
+                document.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "5000";
+                document.Settings[RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";
             }))
             {
                 var foo = new Foo

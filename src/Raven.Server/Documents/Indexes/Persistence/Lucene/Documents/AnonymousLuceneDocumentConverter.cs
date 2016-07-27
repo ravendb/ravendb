@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Lucene.Net.Documents;
+using Raven.Client.Data;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 
@@ -23,10 +24,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (key != null)
                 yield return GetOrCreateKeyField(key);
 
-            var accessor = GetPropertyAccessor(document);
+            var boostedValue = document as BoostedValue;
+            var documentToProcess = boostedValue == null ? document : boostedValue.Value;
+
+            var accessor = GetPropertyAccessor(documentToProcess);
             foreach (var property in accessor.Properties)
             {
-                var value = property.Value(document);
+                var value = property.Value(documentToProcess);
 
                 IndexField field;
 
@@ -44,7 +48,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 foreach (var luceneField in GetRegularFields(field, value))
+                {
+                    if (boostedValue != null)
+                    {
+                        luceneField.Boost = boostedValue.Boost;
+                        luceneField.OmitNorms = false;
+                    }
+
                     yield return luceneField;
+                }
+                    
             }
         }
 

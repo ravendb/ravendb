@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
@@ -12,7 +13,7 @@ namespace SlowTests.SlowTests.Bugs
         [Fact]
         public async Task CanGetVeryBigResultSetsEvenThoughItIsBadForYou()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/MaxPageSize"] = "20000"))
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.MaxPageSize)] = "20000"))
             {
                 using (var session = store.OpenSession())
                 {

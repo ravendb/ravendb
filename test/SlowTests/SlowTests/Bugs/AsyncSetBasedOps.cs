@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Data;
+using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
@@ -26,7 +27,7 @@ namespace SlowTests.SlowTests.Bugs
         [Fact]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/RunInMemory"] = "false"))
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
             {
                 string lastUserId = null;
 

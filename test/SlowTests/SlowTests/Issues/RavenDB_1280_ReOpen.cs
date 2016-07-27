@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Indexes;
+using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
@@ -21,7 +22,7 @@ namespace SlowTests.SlowTests.Issues
         {
             const int iterations = 8000;
             var sp = Stopwatch.StartNew();
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings["Raven/Indexing/MaxNumberOfDocumentsToFetchForMap"] = "50"))
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "50"))
             {
                 new EmailIndex().Execute(store);
 
