@@ -309,7 +309,8 @@ namespace Raven.Server.Web.Authentication
                 }
                 catch (Exception ex)
                 {
-                    Log.ErrorException("Failed to send json response to the client", ex);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Failed to send json response to the client", ex);
                 }
             }
         }

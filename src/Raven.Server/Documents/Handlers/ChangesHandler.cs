@@ -35,7 +35,8 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (Exception ex)
                     {
-                        Log.ErrorException("Error encountered in changes handler", ex);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Error encountered in changes handler", ex);
 
                         try
                         {
@@ -56,7 +57,8 @@ namespace Raven.Server.Documents.Handlers
                         }
                         catch (Exception)
                         {
-                            Log.ErrorException("Failed to send the error in changes handler to the client", ex);
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Failed to send the error in changes handler to the client", ex);
                         }
                     }
                 }
@@ -148,7 +150,8 @@ namespace Raven.Server.Documents.Handlers
             catch (IOException ex)
             {
                 /* Client was disconnected, write to log */
-                Log.DebugException("Client was disconnected", ex);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Client was disconnected", ex);
             }
             finally
             {

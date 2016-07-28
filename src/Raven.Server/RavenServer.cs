@@ -27,7 +27,7 @@ namespace Raven.Server
 {
     public class RavenServer : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(RavenServer));
+        private static Logger _logger;
 
         public readonly RavenConfiguration Configuration;
 
@@ -56,7 +56,7 @@ namespace Raven.Server
             ServerStore = new ServerStore(Configuration, LoggerSetup);
             Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
             Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-
+            _logger = LoggerSetup.GetLogger<RavenServer>("Raven/Server");
             _tcpLogger = LoggerSetup.GetLogger<RavenServer>("<TcpServer>");
         }
 
@@ -91,14 +91,14 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                Log.FatalException("Could not open the server store", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not open the server store", e);
                 throw;
             }
 
-            if (Log.IsDebugEnabled)
-            {
-                Log.Debug("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds);
-            }
+            if (_logger.IsInfoEnabled)
+                _logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
+
             sp.Restart();
 
             Router = new RequestRouter(RouteScanner.Scan(), this);
@@ -113,19 +113,18 @@ namespace Raven.Server
                     .ConfigureServices(services => services.AddSingleton(Router))
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
-
-                Log.Info("Initialized Server...");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Initialized Server...");
             }
             catch (Exception e)
             {
-                Log.FatalException("Could not configure server", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not configure server", e);
                 throw;
             }
 
-            if (Log.IsDebugEnabled)
-            {
-                Log.Debug("Configuring HTTP server took {0:#,#;;0} ms", sp.ElapsedMilliseconds);
-            }
+            if (_logger.IsInfoEnabled)
+                _logger.Info(string.Format("Configuring HTTP server took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
 
             try
             {
@@ -134,7 +133,8 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                Log.FatalException("Could not start server", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not start server", e);
                 throw;
             }
         }
@@ -148,10 +148,8 @@ namespace Raven.Server
                 var port = uri.IsDefaultPort ? 9090 : uri.Port;
                 foreach (var ipAddress in await GetTcpListenAddresses(uri))
                 {
-                    if (Log.IsDebugEnabled)
-                    {
-                        Log.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
-                    }
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
 
                     var listener = new TcpListener(ipAddress, port);
                     listeners.Add(listener);
