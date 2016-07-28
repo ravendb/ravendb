@@ -83,9 +83,9 @@ namespace Raven.Tests.Linq
 
                     var result = session.Query<Foo>("Foos/TestDynamicQueries")
                         .Where(x =>
-                            x.Bar.SomeDictionary.Any(y => y.Key == "KeyOne" && y.Value == "ValueOne") ||
-                                x.Bar.SomeOtherDictionary.Any(y => y.Key == "KeyFour" && y.Value == "ValueFour") ||
-                                    x.Bar == null)
+                             x.Bar == null ||
+                                x.Bar.SomeDictionary.Any(y => y.Key == "KeyOne" && y.Value == "ValueOne") ||
+                                    x.Bar.SomeOtherDictionary.Any(y => y.Key == "KeyFour" && y.Value == "ValueFour"))
                                         .Customize(x => x.WaitForNonStaleResults())
                                             .Statistics(out stats).ToList();
 
