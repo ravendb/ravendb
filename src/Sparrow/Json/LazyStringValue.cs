@@ -14,8 +14,9 @@ namespace Sparrow.Json
         public UnmanagedBuffersPool.AllocatedMemoryData AllocatedMemoryData;
         public int? LastFoundAt;
 
-
         public byte this[int index] => Buffer[index];
+
+        public int Length => Size;
 
         public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)
         {
@@ -115,6 +116,250 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return (string)this; // invoke the implicit string conversion
+        }
+
+        public bool Contains(string value)
+        {
+            return ToString().Contains(value);
+        }
+
+        public bool EndsWith(string value)
+        {
+            return ToString().EndsWith(value);
+        }
+
+        public bool EndsWith(string value, StringComparison comparisonType)
+        {
+            return ToString().EndsWith(value, comparisonType);
+        }
+
+        public int IndexOf(char value)
+        {
+            return ToString().IndexOf(value);
+        }
+
+        public int IndexOf(char value, int startIndex)
+        {
+            return ToString().IndexOf(value, startIndex);
+        }
+
+        public int IndexOf(char value, int startIndex, int count)
+        {
+            return ToString().IndexOf(value, startIndex, count);
+        }
+
+        public int IndexOf(string value)
+        {
+            return ToString().IndexOf(value);
+        }
+
+        public int IndexOf(string value, StringComparison comparisonType)
+        {
+            return ToString().IndexOf(value, comparisonType);
+        }
+
+        public int IndexOfAny(char[] anyOf)
+        {
+            return ToString().IndexOfAny(anyOf);
+        }
+
+        public int IndexOfAny(char[] anyOf, int startIndex)
+        {
+            return ToString().IndexOfAny(anyOf, startIndex);
+        }
+
+        public int IndexOfAny(char[] anyOf, int startIndex, int count)
+        {
+            return ToString().IndexOfAny(anyOf, startIndex, count);
+        }
+
+        public string Insert(int startIndex, string value)
+        {
+            return ToString().Insert(startIndex, value);
+        }
+
+        public int LastIndexOf(char value)
+        {
+            return ToString().LastIndexOf(value);
+        }
+
+        public int LastIndexOf(char value, int startIndex)
+        {
+            return ToString().LastIndexOf(value, startIndex);
+        }
+
+        public int LastIndexOf(char value, int startIndex, int count)
+        {
+            return ToString().LastIndexOf(value, startIndex, count);
+        }
+
+        public int LastIndexOf(string value)
+        {
+            return ToString().LastIndexOf(value);
+        }
+
+        public int LastIndexOf(string value, StringComparison comparisonType)
+        {
+            return ToString().LastIndexOf(value, comparisonType);
+        }
+
+        public int LastIndexOfAny(char[] anyOf)
+        {
+            return ToString().LastIndexOfAny(anyOf);
+        }
+
+        public int LastIndexOfAny(char[] anyOf, int startIndex)
+        {
+            return ToString().LastIndexOfAny(anyOf, startIndex);
+        }
+
+        public int LastIndexOfAny(char[] anyOf, int startIndex, int count)
+        {
+            return ToString().LastIndexOfAny(anyOf, startIndex, count);
+        }
+
+        public string PadLeft(int totalWidth)
+        {
+            return ToString().PadLeft(totalWidth);
+        }
+
+        public string PadLeft(int totalWidth, char paddingChar)
+        {
+            return ToString().PadLeft(totalWidth, paddingChar);
+        }
+
+        public string PadRight(int totalWidth)
+        {
+            return ToString().PadRight(totalWidth);
+        }
+
+        public string PadRight(int totalWidth, char paddingChar)
+        {
+            return ToString().PadRight(totalWidth, paddingChar);
+        }
+
+        public string Remove(int startIndex)
+        {
+            return ToString().Remove(startIndex);
+        }
+
+        public string Remove(int startIndex, int count)
+        {
+            return ToString().Remove(startIndex, count);
+        }
+
+        public string Replace(char oldChar, char newChar)
+        {
+            return ToString().Replace(oldChar, newChar);
+        }
+
+        public string Replace(string oldValue, string newValue)
+        {
+            return ToString().Replace(oldValue, newValue);
+        }
+
+        public string Substring(int startIndex)
+        {
+            return ToString().Substring(startIndex);
+        }
+
+        public string Substring(int startIndex, int length)
+        {
+            return ToString().Substring(startIndex, length);
+        }
+        public string[] Split(params char[] separator)
+        {
+            return ToString().Split(separator);
+        }
+
+        public string[] Split(char[] separator, StringSplitOptions options)
+        {
+            return ToString().Split(separator, options);
+        }
+
+        public string[] Split(char[] separator, int count)
+        {
+            return ToString().Split(separator, count);
+        }
+
+        public string[] Split(char[] separator, int count, StringSplitOptions options)
+        {
+            return ToString().Split(separator, count, options);
+        }
+
+        public string[] Split(string[] separator, StringSplitOptions options)
+        {
+            return ToString().Split(separator, options);
+        }
+
+        public bool StartsWith(string value)
+        {
+            return ToString().StartsWith(value);
+        }
+
+        public bool StartsWith(string value, StringComparison comparisonType)
+        {
+            return ToString().StartsWith(value, comparisonType);
+        }
+
+        public char[] ToCharArray()
+        {
+            return ToString().ToCharArray();
+        }
+
+        public char[] ToCharArray(int startIndex, int length)
+        {
+            return ToString().ToCharArray(startIndex, length);
+        }
+
+        public string ToLower()
+        {
+            return ToString().ToLower();
+        }
+
+        public string ToLowerInvariant()
+        {
+            return ToString().ToLowerInvariant();
+        }
+
+        public string ToUpper()
+        {
+            return ToString().ToUpper();
+        }
+
+        public string ToUpperInvariant()
+        {
+            return ToString().ToUpperInvariant();
+        }
+
+        public string Trim()
+        {
+            return ToString().Trim();
+        }
+
+        public string Trim(params char[] trimChars)
+        {
+            return ToString().Trim(trimChars);
+        }
+
+        public string TrimEnd()
+        {
+            return ToString().TrimEnd();
+        }
+
+        public string TrimEnd(params char[] trimChars)
+        {
+            return ToString().TrimEnd(trimChars);
+        }
+
+        public string TrimStart()
+        {
+            return ToString().TrimStart();
+        }
+
+        public string TrimStart(params char[] trimChars)
+        {
+            return ToString().TrimStart(trimChars);
         }
     }
 }

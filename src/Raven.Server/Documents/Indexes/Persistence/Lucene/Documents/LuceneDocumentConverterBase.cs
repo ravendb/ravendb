@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var valueType = GetValueType(value);
 
-            var defaultIndexing = valueType == ValueType.CompressedString || valueType == ValueType.String
+            var defaultIndexing = valueType == ValueType.LazyCompressedString || valueType == ValueType.LazyString || valueType == ValueType.String
                                       ? Field.Index.ANALYZED
                                       : Field.Index.ANALYZED_NO_NORMS;
 
@@ -97,10 +97,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
-            if (valueType == ValueType.String || valueType == ValueType.CompressedString)
+            if (valueType == ValueType.String)
+            {
+                yield return GetOrCreateField(path, (string)value, null, storage, indexing, termVector);
+                yield break;
+            }
+
+            if (valueType == ValueType.LazyString || valueType == ValueType.LazyCompressedString)
             {
                 LazyStringValue lazyStringValue;
-                if (valueType == ValueType.CompressedString)
+                if (valueType == ValueType.LazyCompressedString)
                     lazyStringValue = ((LazyCompressedStringValue)value).ToLazyStringValue();
                 else
                     lazyStringValue = (LazyStringValue)value;
@@ -173,11 +179,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var lazyStringValue = value as LazyStringValue;
             if (lazyStringValue != null)
-                return lazyStringValue.Size == 0 ? ValueType.EmptyString : ValueType.String;
+                return lazyStringValue.Size == 0 ? ValueType.EmptyString : ValueType.LazyString;
 
             var lazyCompressedStringValue = value as LazyCompressedStringValue;
             if (lazyCompressedStringValue != null)
-                return lazyCompressedStringValue.UncompressedSize == 0 ? ValueType.EmptyString : ValueType.CompressedString;
+                return lazyCompressedStringValue.UncompressedSize == 0 ? ValueType.EmptyString : ValueType.LazyCompressedString;
+
+            var valueString = value as string;
+            if (valueString != null)
+                return valueString.Length == 0 ? ValueType.EmptyString : ValueType.String;
 
             if (value is BoostedValue) return ValueType.BoostedValue;
 
@@ -319,7 +329,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             String,
 
-            CompressedString,
+            LazyString,
+
+            LazyCompressedString,
 
             Enumerable,
 
