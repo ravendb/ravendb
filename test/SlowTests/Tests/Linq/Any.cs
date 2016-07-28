@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class Any : RavenTest
+    public class Any : RavenTestBase
     {
         private class TestDoc
         {
@@ -18,20 +18,20 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanQueryArrayWithAny()
+        public async Task CanQueryArrayWithAny()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    var doc = new TestDoc {StringArray = new [] {"test", "doc", "foo"}};
+                    var doc = new TestDoc { StringArray = new[] { "test", "doc", "foo" } };
                     session.Store(doc);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var otherDoc = new TestDoc {SomeProperty = "foo"};
+                    var otherDoc = new TestDoc { SomeProperty = "foo" };
                     var doc = (from ar in session.Query<TestDoc>()
                                where ar.StringArray.Any(ac => ac == otherDoc.SomeProperty)
                                select ar).FirstOrDefault();
@@ -41,15 +41,15 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanCountWithAny()
+        public async Task CanCountWithAny()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new TestDoc {StringArray = new[] {"one", "two"}});
-                    session.Store(new TestDoc {StringArray = new string[0]});
-                    session.Store(new TestDoc {StringArray = new string[0]});
+                    session.Store(new TestDoc { StringArray = new[] { "one", "two" } });
+                    session.Store(new TestDoc { StringArray = new string[0] });
+                    session.Store(new TestDoc { StringArray = new string[0] });
                     session.SaveChanges();
                 }
 
@@ -61,9 +61,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanCountWithLengthGreaterThenZero()
+        public async Task CanCountWithLengthGreaterThenZero()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -84,9 +84,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanCountWithCountGreaterThenZero()
+        public async Task CanCountWithCountGreaterThenZero()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -101,15 +101,18 @@ namespace Raven.Tests.Linq
                     var count = session.Query<TestDoc>()
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(p => p.StringList.Count > 0 && p.SomeProperty == "Value");
+
+                    var errors = store.DatabaseCommands.GetIndexErrors();
+
                     Assert.Equal(1, count);
                 }
             }
         }
 
         [Fact]
-        public void EmptyArraysShouldBeCountedProperlyWhenUsingAny()
+        public async Task EmptyArraysShouldBeCountedProperlyWhenUsingAny()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -127,15 +130,15 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanCountNullArraysWithAnyIfHaveAnotherPropertyStoredInTheIndex()
+        public async Task CanCountNullArraysWithAnyIfHaveAnotherPropertyStoredInTheIndex()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new TestDoc {SomeProperty = "Test", StringArray = new[] {"one", "two"}});
-                    session.Store(new TestDoc {SomeProperty = "Test", StringArray = new string[0]});
-                    session.Store(new TestDoc {SomeProperty = "Test", StringArray = new string[0]});
+                    session.Store(new TestDoc { SomeProperty = "Test", StringArray = new[] { "one", "two" } });
+                    session.Store(new TestDoc { SomeProperty = "Test", StringArray = new string[0] });
+                    session.Store(new TestDoc { SomeProperty = "Test", StringArray = new string[0] });
                     session.SaveChanges();
                 }
                 WaitForUserToContinueTheTest(store);
@@ -152,9 +155,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void NullRefWhenQuerying()
+        public async Task NullRefWhenQuerying()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

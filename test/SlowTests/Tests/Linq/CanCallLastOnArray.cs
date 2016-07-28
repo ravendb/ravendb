@@ -1,13 +1,13 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class CanCallLastOnArray : RavenTest
+    public class CanCallLastOnArray : RavenTestBase
     {
         private class Student
         {
@@ -44,13 +44,13 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void WillSupportLast()
+        public async Task WillSupportLast()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Student {Email = "fitzchak@hibernatingrhinos.com"});
+                    session.Store(new Student { Email = "fitzchak@hibernatingrhinos.com" });
                     session.SaveChanges();
                 }
 
@@ -62,7 +62,8 @@ namespace Raven.Tests.Linq
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .ToList();
 
-                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    var errors = store.DatabaseCommands.GetIndexErrors(new Students_ByEmailDomain().IndexName);
+                    Assert.Empty(errors.Errors);
                     Assert.Equal(1, results.Count);
                 }
             }
@@ -71,28 +72,28 @@ namespace Raven.Tests.Linq
         [Fact]
         public void AssertMapDefinition()
         {
-            var indexDefinition = new Students_ByEmailDomain {Conventions = new DocumentConvention{PrettifyGeneratedLinqExpressions = false}}.CreateIndexDefinition();
+            var indexDefinition = new Students_ByEmailDomain { Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false } }.CreateIndexDefinition();
 
             Assert.Equal(@"docs.Students.Select(student => new {
     EmailDomain = DynamicEnumerable.LastOrDefault(student.Email.Split(new char[] {
         '@'
     })),
     Count = 1
-})", indexDefinition.Map);
+})", indexDefinition.Maps.First());
 
             Assert.NotEqual(@"docs.Students.Select(student => new {
     EmailDomain = student.Email.Split(new char[] {
         '@'
     }).LastOrDefault(),
     Count = 1
-})", indexDefinition.Map);
+})", indexDefinition.Maps.First());
 
             Assert.NotEqual(@"docs.Students.Select(student => new {
     EmailDomain = Enumerable.LastOrDefault(student.Email.Split(new char[] {
         '@'
     })),
     Count = 1
-})", indexDefinition.Map);
+})", indexDefinition.Maps.First());
 
         }
     }
