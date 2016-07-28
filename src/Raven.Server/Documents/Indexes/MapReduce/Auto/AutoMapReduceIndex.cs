@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
     public class AutoMapReduceIndex : MapReduceIndexBase<AutoMapReduceIndexDefinition>
     {
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
+        private ReduceKeyProcessor _reduceKeyProcessor;
         
         private readonly MapResult[] _singleOutputList = new MapResult[1]
         {
@@ -51,6 +52,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return instance;
         }
 
+        protected override void InitializeInternal()
+        {
+            _reduceKeyProcessor = new ReduceKeyProcessor(Definition.GroupByFields.Count, _unmanagedBuffersPool);
+        }
+
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
             return new IIndexingWork[]
@@ -72,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             Debug.Assert(key == document.Key);
 
             var mappedResult = new DynamicJsonValue();
-            var reduceKey = new DynamicJsonValue();
+
             foreach (var indexField in Definition.MapFields.Values)
             {
                 switch (indexField.MapReduceOperation)
@@ -129,20 +135,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 }
             }
 
+            _reduceKeyProcessor.Init();
+
             foreach (var groupByFieldName in Definition.GroupByFields.Keys)
             {
                 object result;
                 _blittableTraverser.TryRead(document.Data, groupByFieldName, out result);
                 // explicitly adding this even if the value isn't there, as a null
                 mappedResult[groupByFieldName] = result;
-                reduceKey[groupByFieldName] = result;
+
+                _reduceKeyProcessor.Process(result);
             }
 
-            ulong reduceHashKey;
-            using (var reduceKeyObject = indexContext.ReadObject(reduceKey, document.Key))
-            {
-                reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer, reduceKeyObject.Size);
-            }
+            var reduceHashKey = _reduceKeyProcessor.Hash;
 
             var state = GetReduceKeyState(reduceHashKey, indexContext, create: true);
 

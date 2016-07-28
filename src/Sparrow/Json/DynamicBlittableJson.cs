@@ -71,7 +71,7 @@ namespace Sparrow.Json
 
             public IEnumerable<object> Select(Func<object, object> func)
             {
-                return new DynamicArray(_inner.Select(func));
+                return new DynamicArray(Enumerable.Select(this, func));
             }
 
             public IEnumerable<object> Select(Func<IGrouping<object, object>, object> func)

@@ -142,8 +142,8 @@ namespace Raven.Server.Documents.SqlReplication
                     writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, Configuration.ParameterizeDeletesDisabled, documentsKeys);
                 }
                 writer.Commit();
-                if (_log.IsDebugEnabled)
-                    _log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", documentsKeys), Configuration.Name);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Replicated deletes of " + string.Join(", ", documentsKeys)  + " for config " + Configuration.Name);
             }
             return true;
         }
@@ -170,14 +170,14 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     if (writer.ExecuteScript(scriptResult))
                     {
-                        if (_log.IsDebugEnabled)
-                            _log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Replicated changes of " + string.Join(", ", documents.Select(d => d.Key)) + " for replication " +  Configuration.Name);
                         Statistics.CompleteSuccess(countOfReplicatedItems);
                     }
                     else
                     {
-                        if (_log.IsDebugEnabled)
-                            _log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Replicated changes (with some errors) of " + string.Join(", ", documents.Select(d => d.Key))  + " for replication " + Configuration.Name);
                         Statistics.Success(countOfReplicatedItems);
                     }
                 }
@@ -185,7 +185,8 @@ namespace Raven.Server.Documents.SqlReplication
             }
             catch (Exception e)
             {
-                _log.WarnException("Failure to replicate changes to relational database for: " + Configuration.Name, e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failure to replicate changes to relational database for: " + Configuration.Name, e);
                 DateTime newTime;
                 if (Statistics.LastErrorTime == null)
                 {
@@ -213,10 +214,8 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     var scope = patcher.Apply(context, replicatedDoc, new PatchRequest { Script = Configuration.Script });
 
-                    if (_log.IsDebugEnabled && scope.DebugInfo.Count > 0)
-                    {
-                        _log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, Configuration.Name, string.Join("\r\n", scope.DebugInfo.Items));
-                    }
+                    if (_logger.IsInfoEnabled && scope.DebugInfo.Count > 0)
+                        _logger.Info(string.Format("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, Configuration.Name, string.Join("\r\n", scope.DebugInfo.Items)));
 
                     Statistics.ScriptSuccess();
                 }
@@ -224,14 +223,16 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     Statistics.MarkScriptAsInvalid(_database, Configuration.Script);
 
-                    _log.WarnException("Could not parse SQL Replication script for " + Configuration.Name, e);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Could not parse SQL Replication script for " + Configuration.Name, e);
 
                     return result;
                 }
                 catch (Exception diffExceptionName)
                 {
                     Statistics.RecordScriptError(_database, diffExceptionName);
-                    _log.WarnException("Could not process SQL Replication script for " + Configuration.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Could not process SQL Replication script for " + Configuration.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
                 }
             }
             return result;
@@ -252,9 +253,9 @@ namespace Raven.Server.Documents.SqlReplication
                 }
 
                 if (writeToLog)
-                    _log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-                        Configuration.ConnectionStringName,
-                        Configuration.Name);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Could not find connection string named '" + Configuration.ConnectionStringName
+                            + "' for sql replication config: " + Configuration.Name + ", ignoring sql replication setting.");
                 Statistics.LastAlert = new Alert
                 {
                     IsError = true,
@@ -266,9 +267,8 @@ namespace Raven.Server.Documents.SqlReplication
             }
 
             if (writeToLog)
-                _log.Warn("Connection string name cannot be empty for sql replication config: {1}, ignoring sql replication setting.",
-                    Configuration.ConnectionStringName,
-                    Configuration.Name);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Connection string name cannot be empty for sql replication config: " + Configuration.ConnectionStringName +", ignoring sql replication setting.");
             Statistics.LastAlert = new Alert
             {
                 IsError = true,
@@ -284,7 +284,8 @@ namespace Raven.Server.Documents.SqlReplication
             if (string.IsNullOrWhiteSpace(Configuration.Name) == false)
                 return true;
 
-            _log.Warn($"Could not find name for sql replication document {Configuration.Name}, ignoring");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Could not find name for sql replication document {Configuration.Name}, ignoring");
             Statistics.LastAlert = new Alert
             {
                 IsError = true,

@@ -5,12 +5,13 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
     public class BundleLoader : IDisposable
     {
-        private readonly ILog _log = LogManager.GetLogger(typeof(BundleLoader));
+        private readonly Logger _logger;
 
         private readonly DocumentDatabase _database;
         public VersioningStorage VersioningStorage;
@@ -21,6 +22,7 @@ namespace Raven.Server.Documents
         {
             _database = database;
             _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
+            _logger = _database.LoggerSetup.GetLogger<BundleLoader>(_database.Name);
         }
 
         public void HandleSystemDocumentChange(DocumentChangeNotification notification)
@@ -30,24 +32,24 @@ namespace Raven.Server.Documents
             {
                 VersioningStorage = VersioningStorage.LoadConfigurations(_database);
 
-                if (_log.IsDebugEnabled)
-                    _log.Debug($"Versioning configuration was {(VersioningStorage  != null ? "disabled" : "enabled")}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Versioning configuration was {(VersioningStorage  != null ? "disabled" : "enabled")}");
             }
             else if(key.Equals(Constants.Expiration.ConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
             {
                 ExpiredDocumentsCleaner?.Dispose();
                 ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
 
-                if (_log.IsDebugEnabled)
-                    _log.Debug($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
             }
             else if (key.Equals(Constants.PeriodicExport.ConfigurationDocumentKey, StringComparison.OrdinalIgnoreCase))
             {
                 PeriodicExportRunner?.Dispose();
                 PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database);
 
-                if (_log.IsDebugEnabled)
-                    _log.Debug($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
             }
         }
 
@@ -55,7 +57,7 @@ namespace Raven.Server.Documents
         {
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
 
-            var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(BundleLoader)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(BundleLoader)}");
             exceptionAggregator.Execute(() =>
             {
                 ExpiredDocumentsCleaner?.Dispose();

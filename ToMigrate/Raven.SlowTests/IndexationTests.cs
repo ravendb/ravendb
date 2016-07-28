@@ -6,7 +6,8 @@
 using System;
 using System.Linq;
 using System.Threading;
-
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 
@@ -55,7 +56,6 @@ namespace Raven.SlowTests
 
             // master / master
             TellFirstInstanceToReplicateToSecondInstance();
-
             Thread.Sleep(2000);
 
             for (int i = 0; i < 10; i++)
@@ -71,7 +71,8 @@ namespace Raven.SlowTests
                 }
             }
 
-            WaitForReplication(two, id);
+            Console.WriteLine("Replication set-up, waiting for replication");
+            WaitForReplicationWithDynamicTimeout(two,id,TimeSpan.FromSeconds(15));
 
             using (var s2 = two.OpenSession())
             {
@@ -81,6 +82,32 @@ namespace Raven.SlowTests
                     .Count(x => x.Tag == "Items");
 
                 Assert.Equal(10000, count);
+            }
+        }
+    
+
+    private static void WaitForReplicationWithDynamicTimeout(DocumentStore store, string id, TimeSpan timeout)
+        {
+            var lastId = string.Empty;
+            var lastEtag = Etag.Empty;
+            var start = DateTime.UtcNow;
+
+            while (DateTime.UtcNow - start <= timeout &&
+                   !lastId.Equals(id))
+            {
+                var docs = store.DatabaseCommands.GetDocuments(lastEtag, 1024);
+                var lastDoc = docs.Where(x => !x.Key.StartsWith("Raven/")).OrderBy(x => x.Etag).LastOrDefault();
+
+                if (lastDoc != null)
+                {
+                    lastEtag = lastDoc.Etag;
+                    if (!lastDoc.Key.Equals(lastId))
+                        timeout = timeout.Add(TimeSpan.FromSeconds(5));
+
+                    lastId = lastDoc.Key;
+                }
+
+                Thread.Sleep(50);
             }
         }
     }

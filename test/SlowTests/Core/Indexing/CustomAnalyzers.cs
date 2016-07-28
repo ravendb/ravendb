@@ -21,7 +21,7 @@ namespace SlowTests.Core.Indexing
 {
     public class CustomAnalyzers : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Collation")]
+        [Fact]
         public async Task CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
         {
             using (var store = await GetDocumentStore())

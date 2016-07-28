@@ -66,7 +66,7 @@ namespace Raven.SlowTests.Bundles.Replication.Async
             }
             foreach (var ravenDbServer in servers)
             {
-                Assert.True(2 == ravenDbServer.Server.NumberOfRequests, string.Format("Server at port: {0}. Requests: #{1}", ravenDbServer.SystemDatabase.Configuration.Core.Port, ravenDbServer.Server.NumberOfRequests));
+                Assert.True(2 == ravenDbServer.Server.NumberOfRequests, string.Format("Server at port: {0}. Requests: #{1}", ravenDbServer.SystemDatabase.Configuration.Port, ravenDbServer.Server.NumberOfRequests));
             }
         }
 

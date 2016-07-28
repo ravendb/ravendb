@@ -15,7 +15,7 @@ namespace Raven.Server.Documents
     public abstract class AbstractLandlord<TResource> : IDisposable 
         where TResource : IDisposable
     {
-        protected static readonly ILog Log = LogManager.GetLogger(typeof(AbstractLandlord<TResource>).FullName);
+        protected static Logger _logger;
 
         protected readonly ServerStore ServerStore;
         protected readonly LoggerSetup LoggerSetup;
@@ -38,6 +38,7 @@ namespace Raven.Server.Documents
             LoggerSetup = loggerSetup;
             ResourceSemaphore = new SemaphoreSlim(ServerStore.Configuration.Databases.MaxConcurrentResourceLoads);
             ConcurrentResourceLoadTimeout = ServerStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
+            _logger = loggerSetup.GetLogger<AbstractLandlord<TResource>>("Raven/Server");
         }
 
         public abstract Task<TResource> TryGetOrCreateResourceStore(StringSegment resourceName);
@@ -46,7 +47,7 @@ namespace Raven.Server.Documents
         {
             Locks.TryAdd(DisposingLock);
 
-            var exceptionAggregator = new ExceptionAggregator(Log, "Failure to dispose landlord");
+            var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
 
             // shut down all databases in parallel, avoid having to wait for each one
             Parallel.ForEach(ResourcesStoresCache.Values, new ParallelOptions
@@ -70,7 +71,8 @@ namespace Raven.Server.Documents
                         }
                         catch (Exception e)
                         {
-                            Log.WarnException("Failure in deferred disposal of a database", e);
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Failure in deferred disposal of a database", e);
                         }
                     });
                 }
@@ -88,7 +90,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                Log.WarnException("Failed to dispose resource semaphore", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failed to dispose resource semaphore", e);
             }
         }
 
@@ -120,7 +123,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                Log.ErrorException("Could not dispose database: " + resourceName, e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not dispose database: " + resourceName, e);
             }
 
             LastRecentlyUsed.TryRemove(resourceName, out time);

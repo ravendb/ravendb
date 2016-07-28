@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Data.Indexes;
@@ -9,7 +8,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -124,10 +122,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private IEnumerable _items;
             private TransactionOperationContext _indexContext;
             private PropertyAccessor _propertyAccessor;
+            private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
             public AnonymusObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index)
             {
                 _index = index;
+                _reduceKeyProcessor = new ReduceKeyProcessor(_index.Definition.GroupByFields.Count, _index._unmanagedBuffersPool);
             }
 
             public void InitializeForEnumeration(IEnumerable items, TransactionOperationContext indexContext)
@@ -147,17 +147,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
 
 
-            private unsafe class Enumerator : IEnumerator<MapResult>
+            private class Enumerator : IEnumerator<MapResult>
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymusObjectToBlittableMapResultsEnumerableWrapper _parent;
                 private readonly HashSet<string> _groupByFields;
+                private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
                 public Enumerator(IEnumerator enumerator, AnonymusObjectToBlittableMapResultsEnumerableWrapper parent)
                 {
                     _enumerator = enumerator;
                     _parent = parent;
                     _groupByFields = _parent._index.Definition.GroupByFields;
+                    _reduceKeyProcessor = _parent._reduceKeyProcessor;
                 }
 
                 public bool MoveNext()
@@ -172,9 +174,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     var accessor = _parent._propertyAccessor ?? (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
 
                     var mapResult = new DynamicJsonValue();
-                    ulong reduceHashKey;
 
-                    var hash64Context = Hashing.Streamed.XXHash64.BeginProcess();
+                    _reduceKeyProcessor.Init();
 
                     foreach (var property in accessor.Properties)
                     {
@@ -184,63 +185,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         
                         if (_groupByFields.Contains(property.Key))
                         {
-                            AddValueToReduceHash(value, hash64Context);
+                            _reduceKeyProcessor.Process(value);
                         }
                     }
 
-                    reduceHashKey = Hashing.Streamed.XXHash64.EndProcess(hash64Context);
+                    var reduceHashKey = _reduceKeyProcessor.Hash;
 
                     Current.Data = _parent._indexContext.ReadObject(mapResult, "map-result");
                     Current.ReduceKeyHash = reduceHashKey;
                     Current.State = _parent._index.GetReduceKeyState(reduceHashKey, _parent._indexContext, create: true);
 
                     return true;
-                }
-
-                private static void AddValueToReduceHash(object value, Hashing.Streamed.XXHash64Context hash64Context)
-                {
-                    var lsv = value as LazyStringValue;
-                    if (lsv != null)
-                    {
-                        var size = lsv.Size & ~0xF; // we need 16 bytes alignment TODO arek
-
-                        Hashing.Streamed.XXHash64.Process(hash64Context, lsv.Buffer, size);
-                        return;
-                    }
-
-                    var s = value as string;
-                    if (s != null)
-                    {
-                        fixed (char* p = s)
-                        {
-                            Hashing.Streamed.XXHash64.Process(hash64Context, (byte*)p,
-                                s.Length * sizeof(char));
-                        }
-                        return;
-                    }
-
-                    var lcsv = value as LazyCompressedStringValue;
-                    if (lcsv != null)
-                    {
-                        Hashing.Streamed.XXHash64.Process(hash64Context, lcsv.Buffer, lcsv.CompressedSize);
-                        return;
-                    }
-
-                    if (value is long)
-                    {
-                        var l = (long)value;
-                        Hashing.Streamed.XXHash64.Process(hash64Context, (byte*)&l, sizeof(long));
-                        return;
-                    }
-
-                    if (value is decimal)
-                    {
-                        var l = (decimal)value;
-                        Hashing.Streamed.XXHash64.Process(hash64Context, (byte*)&l, sizeof(decimal));
-                        return;
-                    }
-
-                    throw new NotSupportedException($"Unhandled type: {value.GetType()}");
                 }
 
                 public void Reset()

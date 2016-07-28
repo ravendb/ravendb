@@ -20,13 +20,14 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes
 {
     public class IndexStore : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(IndexStore));
 
+        private static Logger _logger;
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
@@ -43,6 +44,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
+            _logger = _documentDatabase.LoggerSetup.GetLogger<IndexStore>(_documentDatabase.Name);
         }
 
         public Task InitializeAsync()
@@ -322,7 +324,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    Log.ErrorException($"Could not dispose index '{index.Name}' ({id}).", e);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
 
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
@@ -412,7 +415,7 @@ namespace Raven.Server.Documents.Indexes
             //FlushMapIndexes();
             //FlushReduceIndexes();
 
-            var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(IndexStore)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(IndexStore)}");
 
             foreach (var index in _indexes)
             {
@@ -469,7 +472,8 @@ namespace Raven.Server.Documents.Indexes
                         // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
                         var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory));
 
-                        Log.ErrorException($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
                         // TODO arek: add alert
 
                         _indexes.Add(fakeIndex);
@@ -551,7 +555,8 @@ namespace Raven.Server.Documents.Indexes
                         if (lastQuery >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                         {
                             item.Index.SetPriority(IndexingPriority.Idle);
-                            Log.Warn($"Changed index '{item.Index.Name} ({item.Index.IndexId})' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Changed index '{item.Index.Name} ({item.Index.IndexId})' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
                         }
                     }
 
@@ -563,7 +568,8 @@ namespace Raven.Server.Documents.Indexes
                     if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
                         DeleteIndex(item.Index.IndexId);
-                        Log.Warn($"Deleted index '{item.Index.Name} ({item.Index.IndexId})' due to idleness. Age: {age}. Last query: {lastQuery}.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Deleted index '{item.Index.Name} ({item.Index.IndexId})' due to idleness. Age: {age}. Last query: {lastQuery}.");
                     }
                 }
             }

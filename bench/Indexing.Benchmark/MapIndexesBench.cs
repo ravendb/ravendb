@@ -107,5 +107,60 @@ select new { order.Employee,  order.Company, Total = order.Lines.Sum(l =>l.Price
                     };
             }
         }
+
+        public class Employees_ByNameAndAddress : AbstractIndexCreationTask<Employee>
+        {
+            private readonly int _number;
+
+            public Employees_ByNameAndAddress(int number)
+            {
+                _number = number;
+
+                Map = employees => from e in employees
+                    select new
+                    {
+                        e.FirstName,
+                        e.LastName,
+                        e.Address
+                    };
+            }
+
+            public override string IndexName
+            {
+                get
+                {
+                    var name = base.IndexName;
+
+                    return $"{name}-{_number}";
+                }
+            }
+        }
+
+        public class Companies_ByNameAndEmail : AbstractIndexCreationTask<Company>
+        {
+            private readonly int _number;
+
+            public Companies_ByNameAndEmail(int number)
+            {
+                _number = number;
+
+                Map = companies => from c in companies
+                                   select new
+                                   {
+                                       c.Name,
+                                       c.Email
+                                   };
+            }
+
+            public override string IndexName
+            {
+                get
+                {
+                    var name = base.IndexName;
+
+                    return $"{name}-{_number}";
+                }
+            }
+        }
     }
 }

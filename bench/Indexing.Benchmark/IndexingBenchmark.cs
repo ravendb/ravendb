@@ -32,9 +32,7 @@ namespace Indexing.Benchmark
             {
                 test.Index.Execute(_store);
                 
-                Console.WriteLine($"{Environment.NewLine}{test.Index.IndexName} index created");
-
-                Console.WriteLine("waiting for non-stale results ...");
+                Console.WriteLine($"{Environment.NewLine}{test.Index.IndexName} index created. Waiting for non-stale results ...");
 
                 var sw = Stopwatch.StartNew();
 
@@ -82,7 +80,7 @@ namespace Indexing.Benchmark
 
                 sw.Stop();
 
-                Console.WriteLine($"It took {sw.Elapsed} to return a non stale result. {(double)test.NumberOfRelevantDocs / sw.Elapsed.Seconds:#,#} docs / sec indexed");
+                Console.WriteLine($"It took {sw.Elapsed} to return a non stale result. {test.NumberOfRelevantDocs / sw.Elapsed.TotalSeconds:#,#} docs / sec indexed");
             }
         }
     }

@@ -9,16 +9,15 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Raven.SlowTests.Migration.Orders;
 using Raven.Tests.Common;
 
 using Xunit;
-using Raven.Database.Config;
-using Raven.Tests.Helpers.Util;
 
 namespace Raven.SlowTests.Migration
 {
@@ -27,6 +26,13 @@ namespace Raven.SlowTests.Migration
         private Dictionary<string, OrdersByCompany.Result> ordersByCompanyResults;
 
         private Dictionary<string, ProductSales.Result> productSalesResults;
+
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 15;
+
+            base.ModifyConfiguration(configuration);
+        }
 
         public MigrationTests()
         {
@@ -80,14 +86,6 @@ namespace Raven.SlowTests.Migration
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
-        {
-            configuration.Modify(x => x.Storage.AllowIncrementalBackups, true); //for now all tests run under Voron - so this is needed
-            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
-            configuration.Modify(x => x.Core.RunInMemory, false);
-        }
-
-
         [Fact]
         public void BasicMigration()
         {
@@ -95,7 +93,7 @@ namespace Raven.SlowTests.Migration
             {
                 Console.WriteLine("Processing: " + file.Name);
 
-                using (var store = NewRemoteDocumentStore())
+                using (var store = NewRemoteDocumentStore(runInMemory: false, requestedStorage: file.Name.Contains("esent") ? "esent" : "voron"))
                 {
                     store.DefaultDatabase = "Northwind";
 
@@ -114,6 +112,25 @@ namespace Raven.SlowTests.Migration
                     operation.WaitForCompletion();
 
                     ValidateBackup(store);
+
+                    // modify docs to force update of indexes on existing data internal data - like mapped results, internal indexes etc, see RavenDB-4677
+                    using (var session = store.OpenSession())
+                    {
+                        var orders = session.Query<Order>().Take(1024).ToList();
+
+                        foreach (var order in orders)
+                        {
+                            order.OrderedAt = SystemTime.UtcNow;
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    ValidateBackup(store);
+
+                    var stats = store.DatabaseCommands.GetStatistics();
+
+                    Assert.True(stats.Errors.Length == 0, $"Indexing errors after migration of : {file.Name}, number of errors: {stats.Errors.Length}");
                 }
             }
         }
@@ -193,6 +210,7 @@ namespace Raven.SlowTests.Migration
             using (var session = store.OpenSession())
             {
                 var statistics = store.DatabaseCommands.GetStatistics();
+                Assert.Equal(0, statistics.CountOfAttachments);
                 Assert.Equal(4, statistics.Indexes.Length);
 
                 Assert.Equal(8, session.Query<Category>().Count());

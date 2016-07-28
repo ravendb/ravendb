@@ -5,16 +5,13 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Server;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Files;
-using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -31,15 +28,12 @@ namespace Raven.SlowTests.Issues
             path = NewDataPath();
             pathsToDelete.Add("~/Databases");
             Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-            var config = new Raven.Database.Config.AppSettingsBasedConfiguration
+            var config = new Raven.Database.Config.RavenConfiguration
                             {
+                                Port = 8079,
                                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                                Core =
-                                {
-                                    DataDirectory = path,
-                                    Port = 8079,
-                                    _ActiveBundlesString = "PeriodicBackup"
-                                 },
+                                DataDirectory = path,
+                                Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
                             };
             config.PostInit();
             ravenDbServer = new RavenDbServer(config)
@@ -69,9 +63,9 @@ namespace Raven.SlowTests.Issues
             public string Data { get; set; }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "PeriodicBackup");
+            configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
         }
 
         [Fact, Trait("Category", "Smuggler")]
@@ -118,17 +112,8 @@ namespace Raven.SlowTests.Issues
             }
 
             var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"};
-
-            var smuggler = new DatabaseSmuggler(
-                new DatabaseSmugglerOptions(),
-                new DatabaseSmugglerFileSource(backupFolder.FullName),
-                new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                {
-                    Url = documentStore.Url,
-                    Database = "DestDB"
-                }));
-
-            await smuggler.ExecuteAsync();
+            var smugglerApi = new SmugglerDatabaseApi { Options = { Incremental = true } };
+            await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupFolder.FullName, To = connection });
 
             using (var session = documentStore.OpenSession())
             {
