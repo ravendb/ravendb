@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public abstract class LuceneDocumentConverterBase : IDisposable
     {
-        private const string IsArrayFieldSuffix = "_IsArray";
+        internal const string IsArrayFieldSuffix = "_IsArray";
 
         internal const string ConvertToJsonSuffix = "_ConvertToJson";
 

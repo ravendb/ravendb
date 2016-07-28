@@ -392,6 +392,37 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 
+
+        [Fact]
+        public void Conversion_of_array_value()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new IndexField
+                {
+                    Name = "Friends",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                },
+            });
+
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Friends"] = new DynamicJsonArray()
+                {
+                    "Dave", "James"
+                }
+            }, "users/1");
+
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+
+            Assert.Equal(4, result.GetFields().Count);
+            Assert.Equal("Dave", result.GetFields("Friends")[0].ReaderValue.ReadToEnd());
+            Assert.Equal("James", result.GetFields("Friends")[1].ReaderValue.ReadToEnd());
+            Assert.Equal("true", result.GetField("Friends" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
         public Document create_doc(DynamicJsonValue document, string id)
         {
             var data = _ctx.ReadObject(document, id);
