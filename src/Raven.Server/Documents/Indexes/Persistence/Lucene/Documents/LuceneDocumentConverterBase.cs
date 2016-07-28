@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.String)
             {
-                yield return GetOrCreateField(path, (string)value, null, storage, indexing, termVector);
+                yield return GetOrCreateField(path, (string)value, null, null, storage, indexing, termVector);
                 yield break;
             }
 
