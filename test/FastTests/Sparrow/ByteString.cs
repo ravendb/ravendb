@@ -9,10 +9,10 @@ namespace FastTests.Sparrow
 {
     public unsafe class ByteString
     {
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
+
         public void Lifecycle()
         {
-            using (var context = new ByteStringContext())
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>())
             {
                 var byteString = context.Allocate(512);
 
@@ -36,10 +36,9 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void ConstructionInsideWholeSegment()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var byteStringInFirstSegment = context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage));
                 var byteStringWholeSegment = context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage));
@@ -51,18 +50,17 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void ConstructionInsideWholeSegmentWithHistory()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 for (int i = 0; i < 10; i++)
                 {
                     context.Allocate(ByteStringContext.MinBlockSizeInBytes * 2);
                 }
             }
-            using (new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var byteStringInFirstSegment = context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage));
                 var byteStringWholeSegment = context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage));
@@ -74,10 +72,9 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void ConstructionReleaseForReuseTheLeftOver()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var byteStringInFirstSegment = context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage));
                 var byteStringInNewSegment = context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage) + 1);
@@ -89,10 +86,9 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void AllocateAndReleaseShouldReuse()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var byteStringInFirst = context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage));
                 var byteStringInSecond = context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage));
@@ -112,11 +108,10 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void AllocateAndReleaseShouldReuseAsSegment()
         {
             int allocationBlockSize = 2 * ByteStringContext.MinBlockSizeInBytes + 128 + sizeof(ByteStringStorage);
-            using (var context = new ByteStringContext(allocationBlockSize))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(allocationBlockSize))
             {
                 // Will be only 128 bytes left for the allocation unit.
                 var byteStringInFirst = context.Allocate(2 * ByteStringContext.MinBlockSizeInBytes - sizeof(ByteStringStorage));
@@ -140,10 +135,9 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void AllocateAndReleaseShouldReuseRepeatedly()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage));
                 long ptrLocation = (long)first._pointer;
@@ -159,10 +153,9 @@ namespace FastTests.Sparrow
         }
 
 #if VALIDATE
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void ValidationKeyAfterAllocateAndReleaseReuseShouldBeDifferent()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage));
                 context.Release(ref first);
@@ -174,21 +167,19 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void FailValidationTryingToReleaseInAnotherContext()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
-            using (var otherContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (var otherContext = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(1);
                 Assert.Throws<ByteStringValidationException>(() => otherContext.Release(ref first));
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void FailValidationReleasingAnAliasAfterReleasingOriginal()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(1);
                 var firstAlias = first;
@@ -198,11 +189,9 @@ namespace FastTests.Sparrow
             }
         }
 
-
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void DetectImmutableChangeOnValidation()
         {
-            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
                 var value = context.From("string", ByteStringType.Immutable);
                 value.Ptr[2] = (byte)'t';
@@ -211,12 +200,11 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact(Skip = "Assumes known sizes for segments, which isn't the case when running full test suite")]
         public void DetectImmutableChangeOnContextDispose()
         {
             Assert.Throws<ByteStringValidationException>(() =>
             {
-                using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+                using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
                 {
                     var value = context.From("string", ByteStringType.Immutable);
                     value.Ptr[2] = (byte)'t';
