@@ -18,6 +18,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents
         private readonly TableSchema _docsSchema = new TableSchema();
         private readonly TableSchema _tombstonesSchema = new TableSchema();
 
-        private readonly ILog _log;
+        private readonly Logger _logger;
         private readonly string _name;
 
         private static readonly Slice AllDocsEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable);
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents
         {
             _documentDatabase = documentDatabase;
             _name = _documentDatabase.Name;
-            _log = LogManager.GetLogger(typeof(DocumentsStorage).FullName + "." + _name);
+            _logger = documentDatabase.LoggerSetup.GetLogger<DocumentsStorage>(documentDatabase.Name);
 
             // The documents schema is as follows
             // 4 fields (lowered key, etag, lazy string key, document)
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(DocumentsStorage)}");
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentsStorage)}");
 
             exceptionAggregator.Execute(() =>
             {
@@ -123,10 +124,11 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            if (_log.IsDebugEnabled)
-            {
-                _log.Debug("Starting to open document storage for {0}", _documentDatabase.Configuration.Core.RunInMemory ? "<memory>" : _documentDatabase.Configuration.Core.DataDirectory);
-            }
+            if (_logger.IsInfoEnabled)
+                _logger.Info
+                    ("Starting to open document storage for " +  (_documentDatabase.Configuration.Core.RunInMemory ?
+                    "<memory>" : _documentDatabase.Configuration.Core.DataDirectory));
+
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
@@ -165,10 +167,9 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                if (_log.IsWarnEnabled)
-                {
-                    _log.FatalException("Could not open server store for " + _name, e);
-                }
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Could not open server store for " + _name, e);
+
                 options.Dispose();
                 Dispose();
                 throw;
@@ -970,8 +971,8 @@ namespace Raven.Server.Documents
                 // TODO [ppekrol] how to handle missing collection?
                 return;
             }
-            if (_log.IsDebugEnabled)
-                _log.Debug($"Deleting tombstones earlier than {etag} in {collection}");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Deleting tombstones earlier than {etag} in {collection}");
             table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
         }
 

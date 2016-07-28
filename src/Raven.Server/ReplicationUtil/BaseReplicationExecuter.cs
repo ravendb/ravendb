@@ -5,13 +5,14 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Server.Documents;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.ReplicationUtil
 {
     public abstract class BaseReplicationExecuter : IDisposable
     {
-        protected readonly ILog _log;
 
+        protected readonly Logger _logger;
         protected readonly DocumentDatabase _database;
         protected Thread _replicationThread;
         protected bool _disposed;
@@ -24,7 +25,7 @@ namespace Raven.Server.ReplicationUtil
 
         protected BaseReplicationExecuter(DocumentDatabase database)
         {
-            _log = LogManager.GetLogger(GetType());
+            _logger = database.LoggerSetup.GetLogger<BaseReplicationExecuter>(database.Name);
             _database = database;
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             WaitForChanges = new AsyncManualResetEvent(_cancellationTokenSource.Token);
@@ -57,8 +58,8 @@ namespace Raven.Server.ReplicationUtil
         {
             while (_cancellationTokenSource.IsCancellationRequested == false)
             {
-                if (_log.IsDebugEnabled)
-                    _log.Debug($"Starting replication for '{ReplicationUniqueName}'.");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Starting replication for '{ReplicationUniqueName}'.");
 
                 WaitForChanges.Reset();
 
@@ -68,12 +69,13 @@ namespace Raven.Server.ReplicationUtil
 
                     await ExecuteReplicationOnce();
 
-                    if (_log.IsDebugEnabled)
-                        _log.Debug($"Finished replication for '{ReplicationUniqueName}'.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Finished replication for '{ReplicationUniqueName}'.");
                 }
                 catch (OutOfMemoryException oome)
                 {
-                    _log.WarnException($"Out of memory occured for '{ReplicationUniqueName}'.", oome);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Out of memory occured for '{ReplicationUniqueName}'.", oome);
                     // TODO [ppekrol] GC?
                 }
                 catch (OperationCanceledException)
@@ -82,7 +84,8 @@ namespace Raven.Server.ReplicationUtil
                 }
                 catch (Exception e)
                 {
-                    _log.WarnException($"Exception occured for '{ReplicationUniqueName}'.", e);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Exception occured for '{ReplicationUniqueName}'.", e);
                 }
 
                 if (HasMoreDocumentsToSend())
@@ -111,11 +114,13 @@ namespace Raven.Server.ReplicationUtil
             catch (ObjectDisposedException)
             {
                 //precaution, should not happen
-                _log.Warn("ObjectDisposedException thrown during replication executer disposal, should not happen. Something is wrong here.");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("ObjectDisposedException thrown during replication executer disposal, should not happen. Something is wrong here.");
             }
             catch (AggregateException e)
             {
-                _log.Error("Error during replication executer disposal, most likely it is a bug.",e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error during replication executer disposal, most likely it is a bug.",e);
             }
             finally
             {

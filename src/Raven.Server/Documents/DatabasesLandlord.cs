@@ -96,10 +96,8 @@ namespace Raven.Server.Documents
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, LoggerSetup);
                 documentDatabase.Initialize();
 
-                if (Log.IsInfoEnabled)
-                {
-                    Log.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
-                }
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
                 OnDatabaseLoaded(config.DatabaseName);
 
@@ -109,8 +107,8 @@ namespace Raven.Server.Documents
             }
             catch(Exception e)
             {
-                if (Log.IsWarnEnabled)
-                    Log.WarnException($"Failed to start database {config.DatabaseName}", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to start database {config.DatabaseName}", e);
                 throw;
             }
         }
@@ -175,7 +173,8 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e)
                 {
-                    Log.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
                     databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
                 }
             }

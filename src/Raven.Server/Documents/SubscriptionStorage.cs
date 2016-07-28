@@ -19,6 +19,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Json.Parsing;
 using static Raven.Server.Utils.MetricsExtentions;
 
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _db;
         private readonly MetricsScheduler _metricsScheduler;
         private readonly StorageEnvironment _environment;
-        private Logger _log; //todo: add logging
+        private Sparrow.Logging.Logger _logger; //todo: add logging
 
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents
             _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");
 
             var databaseName = db.Name;
-            _log = LogManager.GetLogger($"{typeof(SubscriptionStorage).FullName}.{databaseName}");
+            _logger = db.LoggerSetup.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
