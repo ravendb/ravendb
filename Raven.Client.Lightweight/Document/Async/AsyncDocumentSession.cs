@@ -919,7 +919,7 @@ namespace Raven.Client.Document.Async
 
                 IncrementRequestCount();
 
-                var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray(), token).ConfigureAwait(false);
+                var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray(), data.WaitForWriteAssurance, token).ConfigureAwait(false);
                 UpdateBatchResults(result, data);
             }
         }

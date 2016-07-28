@@ -72,8 +72,6 @@ namespace Raven.Bundles.Replication.Tasks
 
         public ConcurrentDictionary<string, DestinationStats> DestinationStats => destinationStats;
 
-        public event Action ReplicationExecuted;
-
         public ConcurrentDictionary<string, DateTime> Heartbeats => heartbeatDictionary;
 
         private int replicationAttempts;
@@ -306,7 +304,7 @@ namespace Raven.Bundles.Replication.Tasks
 
                 var startedTasks = new List<Task>();
 
-                var lastReplicatedDocumentEtags = new ConcurrentDictionary<string,Etag>();
+                var lastReplicatedDocumentEtags = new ConcurrentDictionary<string, Etag>();
                 var lastReplicatedAttachmentEtags = new ConcurrentDictionary<string, Etag>();
                 foreach (var dest in destinationForReplication)
                 {
@@ -338,7 +336,7 @@ namespace Raven.Bundles.Replication.Tasks
                     var replicationTask = Task.Factory.StartNew(
                         state =>
                         {
-                            ReplicationStrategy destination = (ReplicationStrategy)state;
+                            ReplicationStrategy destination = (ReplicationStrategy) state;
 
                             using (LogContext.WithResource(docDb.Name))
                             using (CultureHelper.EnsureInvariantCulture())
@@ -361,7 +359,6 @@ namespace Raven.Bundles.Replication.Tasks
                                 }
                                 return false;
                             }
-
                         }, dest);
 
                     startedTasks.Add(replicationTask);
@@ -386,10 +383,10 @@ namespace Raven.Bundles.Replication.Tasks
                             }
                         });
                 }
-                if (lastReplicatedDocumentEtags.Count > 0 || lastReplicatedAttachmentEtags.Count > 0)
-                {
-                    Task.WhenAll(startedTasks)
-                        .ContinueWith(t =>
+                Task.WhenAll(startedTasks)
+                    .ContinueWith(t =>
+                    {
+                        if (lastReplicatedDocumentEtags.Count > 0 || lastReplicatedAttachmentEtags.Count > 0)
                         {
                             if (!startedTasks.Any(st => st.IsFaulted))
                             {
@@ -408,8 +405,8 @@ namespace Raven.Bundles.Replication.Tasks
                                     log.ErrorException($"Task id={faultedTasks[i].Id} exception",
                                         faultedTasks[i].Exception.SimplifyException());
                             }
-                        });
-                }
+                        }
+                    });
                 if (!startedTasks.Any()) return completedTask;
                 return Task.WhenAny(startedTasks.ToArray()).AssertNotFailed();
             }
@@ -966,6 +963,7 @@ namespace Raven.Bundles.Replication.Tasks
                     stats.LastReplicatedEtag = lastReplicatedEtag;
                 else
                     stats.LastReplicatedAttachmentEtag = lastReplicatedEtag;
+
             }
 
             if (lastReplicatedLastModified.HasValue)
@@ -978,6 +976,15 @@ namespace Raven.Bundles.Replication.Tasks
                 stats.LastError = lastError;
 
             docDb.Documents.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null, null);
+
+            foreach (var state in _waitForReplicationTasks)
+            {
+                if (ReplicatedPast(state.Etag) < state.Replicas)
+                    continue;
+
+                _waitForReplicationTasks.TryRemove(state);
+                state.Task.TrySetResult(null);
+            }
         }
 
         private bool IsFirstFailure(string url)
@@ -1044,6 +1051,52 @@ namespace Raven.Bundles.Replication.Tasks
                 errorMessage = e.Message;
                 return false;
             }
+        }
+
+        private class WaitForReplicationState
+        {
+            public TaskCompletionSource<object> Task;
+            public Etag Etag;
+            public int Replicas;
+        }
+
+        private readonly ConcurrentSet<WaitForReplicationState> _waitForReplicationTasks = new ConcurrentSet<WaitForReplicationState>();
+
+        public async Task WaitForReplicationAsync(Etag etag, TimeSpan timeout, int replicas)
+        {
+            if (ReplicatedPast(etag) >= replicas)
+                return;
+
+            var state = new WaitForReplicationState
+            {
+                Etag = etag,
+                Replicas = replicas,
+                Task = new TaskCompletionSource<object>()
+            };
+            _waitForReplicationTasks.Add(state);
+
+            var hadReplicated = state.Task.Task;
+            if (await Task.WhenAny(hadReplicated, Task.Delay(timeout)).ConfigureAwait(false) == hadReplicated)
+                return;
+            var replicatedPast = ReplicatedPast(etag);
+            if (replicatedPast >= replicas)
+                return;
+
+            throw new TimeoutException("Could not verify that etag " + etag + " was replicated to " + replicas + " servers in " + timeout+ "." +
+                                       " So far, it only replicated to " + replicatedPast);
+        }
+
+        private int ReplicatedPast(Etag etag)
+        {
+            int replicated = 0;
+            foreach (var dest in destinationStats.Values)
+            {
+                if (dest.LastReplicatedEtag.CompareTo(etag) >= 0)
+                {
+                    replicated++;
+                }
+            }
+            return replicated;
         }
 
         internal bool GetRequestBuffering(ReplicationStrategy destination)
@@ -1707,13 +1760,6 @@ namespace Raven.Bundles.Replication.Tasks
             metadata[Constants.RavenReplicationVersion] = 0;
             metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(database.TransactionalStorage.Id);
         }
-
-        protected void OnReplicationExecuted()
-        {
-            var replicationExecuted = ReplicationExecuted;
-            if (replicationExecuted != null) replicationExecuted();
-        }
-
     }
 
     internal class ReplicationStatisticsRecorder : IDisposable

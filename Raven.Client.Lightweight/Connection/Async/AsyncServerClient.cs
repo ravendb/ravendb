@@ -496,7 +496,7 @@ namespace Raven.Client.Connection.Async
                                 Key = key,
                                 Patches = patches,
                             }
-                    }, token).ConfigureAwait(false);
+                    }, null, token).ConfigureAwait(false);
             if (!ignoreMissing && batchResults[0].PatchResult != null &&
                 batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
                 throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
@@ -518,7 +518,7 @@ namespace Raven.Client.Connection.Async
                                 Patches = patches,
                                 Etag = etag,
                             }
-                    }, token).ConfigureAwait(false);
+                    }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -534,7 +534,7 @@ namespace Raven.Client.Connection.Async
                                 PatchesIfMissing = patchesToDefault,
                                 Metadata = defaultMetadata
                             }
-                    }, token).ConfigureAwait(false);
+                    }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -547,7 +547,7 @@ namespace Raven.Client.Connection.Async
                     Key = key,
                     Patch = patch,
                 }
-            }, token).ConfigureAwait(false);
+            }, null, token).ConfigureAwait(false);
             if (!ignoreMissing && batchResults[0].PatchResult != null &&
                 batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
                 throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
@@ -564,7 +564,7 @@ namespace Raven.Client.Connection.Async
                     Patch = patch,
                     Etag = etag
                 }
-            }, token).ConfigureAwait(false);
+            }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -580,7 +580,7 @@ namespace Raven.Client.Connection.Async
                     PatchIfMissing = patchDefault,
                     Metadata = defaultMetadata
                 }
-            }, token).ConfigureAwait(false);
+            }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -1557,7 +1557,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default(CancellationToken))
+        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, string writeAssurance = null, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async (operationMetadata, requestTimeMetric) =>
             {
@@ -1567,6 +1567,9 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post, metadata, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
+
+                    if (string.IsNullOrEmpty(writeAssurance) == false)
+                        request.AddHeader("Raven-Write-Assurance", writeAssurance);
 
                     var serializedData = commandDatas.Select(x => x.ToJson()).ToList();
                     var jArray = new RavenJArray(serializedData);

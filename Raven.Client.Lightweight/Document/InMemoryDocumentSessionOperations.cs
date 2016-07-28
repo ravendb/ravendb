@@ -44,7 +44,7 @@ namespace Raven.Client.Document
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
         protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
         private static int counter;
-
+        private string waitForWriteAssurance;
         private readonly int hash = Interlocked.Increment(ref counter);
 
         protected bool GenerateDocumentKeysOnStore = true;
@@ -971,7 +971,8 @@ more responsive application.
             {
                 Entities = new List<object>(),
                 Commands = new List<ICommandData>(deferedCommands),
-                DeferredCommandsCount = deferedCommands.Count
+                DeferredCommandsCount = deferedCommands.Count,
+                WaitForWriteAssurance = waitForWriteAssurance
             };
             deferedCommands.Clear();
 
@@ -995,6 +996,12 @@ more responsive application.
                 GetAllEntitiesChanges(changes);
                 return changes;
             }
+        }
+
+        public void OnSaveChangesWaitForReplication(int replicas = 1, TimeSpan? timeout = null)
+        {
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            waitForWriteAssurance = replicas + ";" + realTimeout;
         }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
@@ -1342,6 +1349,8 @@ more responsive application.
             /// </summary>
             /// <value>The commands.</value>
             public List<ICommandData> Commands { get; set; }
+
+            public string WaitForWriteAssurance { get; set; }
 
             public int DeferredCommandsCount { get; set; }
 
