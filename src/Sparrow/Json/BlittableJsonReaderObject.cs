@@ -27,10 +27,16 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
+            return GetJsonReader().ReadToEnd();
+        }
+
+        public TextReader GetJsonReader()
+        {
             var memoryStream = new MemoryStream();
             _context.Write(memoryStream, this);
             memoryStream.Position = 0;
-            return new StreamReader(memoryStream).ReadToEnd();
+
+            return new StreamReader(memoryStream);
         }
 
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,

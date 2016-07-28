@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -360,6 +361,35 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal("true", result.GetField("Companies_Products_Name_IsArray").StringValue);
 
             Assert.Equal("companies/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
+        [Fact]
+        public void Conversion_of_complex_value()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new IndexField
+                {
+                    Name = "Address",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                },
+            });
+
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Address"] = new DynamicJsonValue
+                {
+                    ["City"] = "NYC"
+                }
+            }, "users/1");
+
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+
+            Assert.Equal(3, result.GetFields().Count);
+            Assert.Equal(@"{""City"":""NYC""}", result.GetField("Address").ReaderValue.ReadToEnd());
+            Assert.Equal("true", result.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 
         public Document create_doc(DynamicJsonValue document, string id)

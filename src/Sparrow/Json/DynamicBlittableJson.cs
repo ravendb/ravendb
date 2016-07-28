@@ -3,13 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Dynamic;
-using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
     public class DynamicBlittableJson : DynamicObject
     {
-        protected BlittableJsonReaderObject BlittableJsonReaderObject;
+        public BlittableJsonReaderObject BlittableJson { get; private set; }
 
         public class DynamicArray : DynamicObject, IEnumerable<object>
         {
@@ -136,19 +135,19 @@ namespace Sparrow.Json
             }
         }
 
-        public DynamicBlittableJson(BlittableJsonReaderObject blittableJsonReaderObject)
+        public DynamicBlittableJson(BlittableJsonReaderObject blittableJson)
         {
-            BlittableJsonReaderObject = blittableJsonReaderObject;
+            BlittableJson = blittableJson;
         }
 
-        public void Set(BlittableJsonReaderObject blittableJsonReaderObject)
+        public void Set(BlittableJsonReaderObject blittableJson)
         {
-            BlittableJsonReaderObject = blittableJsonReaderObject;
+            BlittableJson = blittableJson;
         }
 
         public string[] GetPropertyNames()
         {
-            return BlittableJsonReaderObject.GetPropertyNames();
+            return BlittableJson.GetPropertyNames();
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
@@ -158,7 +157,7 @@ namespace Sparrow.Json
 
         public bool TryGetByName(string name, out object result)
         {
-            if (!BlittableJsonReaderObject.TryGetMember(name, out result))
+            if (!BlittableJson.TryGetMember(name, out result))
                 return false;
 
             if (result is BlittableJsonReaderObject)
@@ -180,7 +179,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            return BlittableJsonReaderObject.ToString();
+            return BlittableJson.ToString();
         }
     }
 }
