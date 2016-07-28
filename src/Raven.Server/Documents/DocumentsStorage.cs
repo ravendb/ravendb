@@ -131,7 +131,7 @@ namespace Raven.Server.Documents
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
 
-            options.IoMetrics = new IoMetrics(32, 10, 12); // ADIADI :: what are the numbers ? should despose (sp, interlocked things) ?
+            options.IoMetrics = _documentDatabase.IoMetrics;
 
             try
             {

@@ -10,6 +10,7 @@ using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using System.Collections.Generic;
+using Sparrow;
 
 namespace Voron.Platform.Posix
 {
@@ -84,7 +85,12 @@ namespace Voron.Platform.Posix
             if (numberOfPages == 0)
                 return; // nothing to do
 
-            var result = Syscall.pwrite(_fd, p, (ulong)numberOfPages * (ulong)_options.PageSize, position);
+            var nNumberOfBytesToWrite = (ulong)numberOfPages*(ulong)_options.PageSize;
+            long result;
+            using (_options.IoMetrics.MeterIoRate(IoMetrics.MeterType.WriteJournalFile, (long)nNumberOfBytesToWrite))
+            {
+                result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite, position);
+            }
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Voron.Impl;
 
 namespace Voron.Platform.Posix
@@ -153,16 +154,25 @@ namespace Voron.Platform.Posix
             return newPager;
         }
 
-        public override void Sync()
+        public override void Sync(IoMetrics ioMetrics)
         {
-            //TODO: Is it worth it to change to just one call for msync for the entire file?
-            foreach (var alloc in PagerState.AllocationInfos)
+            long totalSize = 0;
+            foreach (var allocationInfo in PagerState.AllocationInfos)
             {
-                var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (ulong)alloc.Size, MsyncFlags.MS_SYNC);
-                if (result == -1)
+                totalSize += allocationInfo.Size;
+            }
+
+            //TODO: Is it worth it to change to just one call for msync for the entire file?
+            using (ioMetrics.MeterIoRate(IoMetrics.MeterType.FlushDataFile, totalSize))
+            {
+                foreach (var alloc in PagerState.AllocationInfos)
                 {
-                    var err = Marshal.GetLastWin32Error();
-                    PosixHelper.ThrowLastError(err);
+                    var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (ulong)alloc.Size, MsyncFlags.MS_SYNC);
+                    if (result == -1)
+                    {
+                        var err = Marshal.GetLastWin32Error();
+                        PosixHelper.ThrowLastError(err);
+                    }
                 }
             }
         }

@@ -42,6 +42,7 @@ namespace Raven.Server.ServerWide
         public readonly RavenConfiguration Configuration;
         private readonly LoggerSetup _loggerSetup;
         public readonly MetricsScheduler MetricsScheduler;
+        public readonly IoMetrics IoMetrics;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
@@ -49,6 +50,7 @@ namespace Raven.Server.ServerWide
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             MetricsScheduler = new MetricsScheduler();
+            IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
             _loggerSetup = loggerSetup;
 
@@ -81,6 +83,8 @@ namespace Raven.Server.ServerWide
             var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
+
+            options.IoMetrics = IoMetrics;
 
             options.SchemaVersion = 1;
 

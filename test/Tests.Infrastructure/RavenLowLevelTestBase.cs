@@ -12,7 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
-
+using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -50,7 +50,7 @@ namespace FastTests
 
             modifyConfiguration?.Invoke(configuration);
 
-            var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler, new LoggerSetup(Path.GetTempFileName(), LogMode.None));
+            var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler, new IoMetrics(256, 256), new LoggerSetup(Path.GetTempFileName(), LogMode.None));
             documentDatabase.Initialize();
 
             return documentDatabase;

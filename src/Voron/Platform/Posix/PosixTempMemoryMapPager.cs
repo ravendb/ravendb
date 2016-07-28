@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Voron.Impl;
 
 namespace Voron.Platform.Posix
@@ -134,7 +135,7 @@ namespace Voron.Platform.Posix
             return newPager;
         }
 
-        public override void Sync()
+        public override void Sync(IoMetrics ioMetrics)
         {
             //nothing to do here
         }

@@ -310,7 +310,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                 context.Environment.ForceLogFlushToDataFile(null, true);
                             }
                         }
-                        // TODO : Measure IO times (RavenDB-4659) - ForceFlush on a retry
                     }
                     catch (TimeoutException)
                     {

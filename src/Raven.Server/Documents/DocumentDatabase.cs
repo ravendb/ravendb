@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
         private Task _transformerStoreTask;
         public TransactionOperationsMerger TxMerger;
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler,
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler, IoMetrics ioMetrics,
             LoggerSetup loggerSetup)
         {
             Name = name;
@@ -57,8 +57,9 @@ namespace Raven.Server.Documents
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler);
+            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler, ioMetrics);
             Metrics = new MetricsCountersManager(metricsScheduler);
+            IoMetrics = ioMetrics;
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments, 
@@ -90,6 +91,8 @@ namespace Raven.Server.Documents
         public HugeDocuments HugeDocuments { get; }
 
         public MetricsCountersManager Metrics { get; }
+
+        public IoMetrics IoMetrics { get;  }
 
         public IndexStore IndexStore { get; private set; }
 

@@ -23,8 +23,8 @@ namespace Raven.Server.Documents
     public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
         public event Action<string> OnDatabaseLoaded = delegate { };
-		private readonly HttpJsonRequestFactory _httpJsonRequestFactory = new HttpJsonRequestFactory(64);
-		private readonly DocumentConvention _convention = new DocumentConvention();
+        private readonly HttpJsonRequestFactory _httpJsonRequestFactory = new HttpJsonRequestFactory(64);
+        private readonly DocumentConvention _convention = new DocumentConvention();
 
         public override Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName)
         {
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, LoggerSetup);
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, ServerStore.IoMetrics, LoggerSetup);
                 documentDatabase.Initialize();
 
                 if (Log.IsInfoEnabled)
