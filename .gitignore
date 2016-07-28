@@ -90,8 +90,11 @@ src/Raven.Studio/typings/**/*.d.ts
 
 /src/Raven.Studio/wwwroot/Content/**/*.css.map
 /src/Raven.Studio/wwwroot/Content/**/*.css
+/src/Raven.Studio/wwwroot/Content_old/awesome-bootstrap-checkbox.css
 /src/Raven.Studio/wwwroot/lib
 test/FastTests/Databases/
 /test/Tryouts/Logs
 /test/FastTests/Logs
 /test/SlowTests/test-timings.xml
+
+/src/Raven.Server/**/Logs
