@@ -62,7 +62,7 @@ namespace Raven.Database.Linq
                         continue;
                     foreach (var instruction in methodInfo.GetInstructions())
                     {
-                        if (instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Call &&
+                        if (instruction.OpCode != OpCodes.Call &&
                             instruction.OpCode != OpCodes.Callvirt && instruction.OpCode != OpCodes.Newobj)
                             continue;
 

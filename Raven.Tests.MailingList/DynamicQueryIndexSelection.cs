@@ -89,9 +89,9 @@ namespace Raven.Tests.MailingList
 
                     var result = session.Query<Foo>()
                         .Where(x =>
+                               x.Bar == null ||
                                x.Bar.SomeDictionary.Any(y => y.Key == "KeyOne" && y.Value == "ValueOne") ||
-                               x.Bar.SomeOtherDictionary.Any(y => y.Key == "KeyFour" && y.Value == "ValueFour") ||
-                               x.Bar == null)
+                               x.Bar.SomeOtherDictionary.Any(y => y.Key == "KeyFour" && y.Value == "ValueFour"))
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats).ToList();
 
