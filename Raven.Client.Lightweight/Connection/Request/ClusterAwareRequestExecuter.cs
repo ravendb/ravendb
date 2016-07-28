@@ -200,7 +200,7 @@ namespace Raven.Client.Connection.Request
 
             if (numberOfRetries <= 0)
             {
-                throw new InvalidOperationException(operationResult.Error?.Message ?? "Cluster is not reachable. Out of retries, aborting.", operationResult.Error );
+                throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.", operationResult.Error );
             }
 
             return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1, withClusterFailoverHeader).ConfigureAwait(false);
