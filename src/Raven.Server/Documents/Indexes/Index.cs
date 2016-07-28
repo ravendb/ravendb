@@ -36,6 +36,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Indexes
 
         private const long WriteErrorsLimit = 10;
 
-        protected readonly ILog Log = LogManager.GetLogger(typeof(Index));
+        protected Logger _logger;
 
         internal readonly LuceneIndexPersistence IndexPersistence;
 
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             IndexPersistence = new LuceneIndexPersistence(this);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
-        }
+       }
 
         public static Index Open(int indexId, DocumentDatabase documentDatabase)
         {
@@ -159,6 +160,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
+            _logger = documentDatabase.LoggerSetup.GetLogger<Index>(documentDatabase.Name);
             lock (_locker)
             {
                 if (_initialized)
@@ -200,7 +202,7 @@ namespace Raven.Server.Documents.Indexes
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-
+                    _logger = documentDatabase.LoggerSetup.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
@@ -303,7 +305,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Notifications.OnIndexChange -= HandleIndexChange;
 
-                var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(Index)} '{Name}'");
+                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
 
                 exceptionAggregator.Execute(() =>
                 {
@@ -422,8 +424,8 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug($"Starting indexing for '{Name} ({IndexId})'.");
+                        if (_logger.IsInfoEnabled)
+                           _logger.Info($"Starting indexing for '{Name} ({IndexId})'.");
 
                         _mre.Reset();
 
@@ -444,11 +446,13 @@ namespace Raven.Server.Documents.Indexes
                                 if (didWork)
                                     ResetWriteErrors();
 
-                                if (Log.IsDebugEnabled) Log.Debug($"Finished indexing for '{Name} ({IndexId})'.'");
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
                             }
                             catch (OutOfMemoryException oome)
                             {
-                                Log.WarnException($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
                                 // TODO [ppekrol] GC?
                             }
                             catch (IndexWriteException iwe)
@@ -465,7 +469,8 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (Exception e)
                             {
-                                Log.WarnException($"Exception occurred for '{Name} ({IndexId})'.", e);
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Exception occurred for '{Name} ({IndexId})'.", e);
                             }
 
                             try
@@ -474,7 +479,8 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (Exception e)
                             {
-                                Log.ErrorException($"Could not update stats for '{Name} ({IndexId})'.", e);
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Could not update stats for '{Name} ({IndexId})'.", e);
                             }
                         }
 
@@ -622,8 +628,8 @@ namespace Raven.Server.Documents.Indexes
                 if (Priority == priority)
                     return;
 
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
 
                 _indexStorage.WritePriority(priority);
 
@@ -662,8 +668,8 @@ namespace Raven.Server.Documents.Indexes
                 if (Definition.LockMode == mode)
                     return;
 
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Changing lock mode for '{Name} ({IndexId})' from '{Definition.LockMode}' to '{mode}'.");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Changing lock mode for '{Name} ({IndexId})' from '{Definition.LockMode}' to '{mode}'.");
 
                 _indexStorage.WriteLock(mode);
             }
