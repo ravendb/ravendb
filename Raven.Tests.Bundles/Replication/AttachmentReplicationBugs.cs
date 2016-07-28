@@ -53,7 +53,7 @@ namespace Raven.Tests.Bundles.Replication
 
 
             store1.DatabaseCommands.PutAttachment("static", null, new MemoryStream(new[] { (byte)1 }), new RavenJObject());
-            store2.DatabaseCommands.PutAttachment("static", null, new MemoryStream(new[] { (byte)1 }), new RavenJObject());
+            store2.DatabaseCommands.PutAttachment("static", null, new MemoryStream(new[] { (byte)2 }), new RavenJObject());
 
             TellFirstInstanceToReplicateToSecondInstance();
 

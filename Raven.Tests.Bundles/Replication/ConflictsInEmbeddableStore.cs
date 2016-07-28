@@ -136,7 +136,7 @@ namespace Raven.Tests.Bundles.Replication
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new Company());
+                    session.Store(new Company {Name = "Company2"});
                     session.SaveChanges();
                 }
 
@@ -204,7 +204,7 @@ namespace Raven.Tests.Bundles.Replication
             using (var store2 = CreateEmbeddableStore())
             {
                 store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
-                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
+                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream {Capacity = 2}, new RavenJObject());
 
                 store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(), new RavenJObject());
 
@@ -229,7 +229,7 @@ namespace Raven.Tests.Bundles.Replication
             using (var store2 = CreateEmbeddableStore())
             {
                 store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
-                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
+                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream {Capacity = 2}, new RavenJObject());
 
                 store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(), new RavenJObject());
 
