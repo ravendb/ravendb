@@ -247,6 +247,14 @@ namespace Sparrow.Json.Parsing
 
                 }
 
+                var dbj = current as DynamicBlittableJson;
+
+                if (dbj != null)
+                {
+                    current = dbj.BlittableJson;
+                    continue;
+                }
+
                 var lsv = current as LazyStringValue;
                 if (lsv != null)
                 {
@@ -339,6 +347,7 @@ namespace Sparrow.Json.Parsing
 
                     continue;
                 }
+
                 if (current == null)
                 {
                     _state.CurrentTokenType = JsonParserToken.Null;

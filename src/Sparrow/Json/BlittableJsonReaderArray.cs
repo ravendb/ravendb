@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using Sparrow.Json.Parsing;
 
@@ -110,6 +111,41 @@ namespace Sparrow.Json
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+
+            if (ReferenceEquals(this, obj))
+                return true;
+
+            var array = obj as BlittableJsonReaderArray;
+
+            if (array != null)
+                return Equals(array);
+
+            return false;
+        }
+
+        protected bool Equals(BlittableJsonReaderArray other)
+        {
+            if (_count != other._count)
+                return false;
+
+            for (int i = 0; i < _count; i++)
+            {
+                if (this[i].Equals(other[i]) == false)
+                    return false;
+            }
+            
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return _count;
         }
     }
 }

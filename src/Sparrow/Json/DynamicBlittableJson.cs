@@ -181,5 +181,24 @@ namespace Sparrow.Json
         {
             return BlittableJson.ToString();
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+
+            return Equals((DynamicBlittableJson)obj);
+        }
+
+        protected bool Equals(DynamicBlittableJson other)
+        {
+            return Equals(BlittableJson, other.BlittableJson);
+        }
+
+        public override int GetHashCode()
+        {
+            return (BlittableJson != null ? BlittableJson.GetHashCode() : 0);
+        }
     }
 }

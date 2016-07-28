@@ -137,6 +137,58 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
+            if (value is int)
+            {
+                var i = (int)value;
+
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&i, sizeof(int));
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer((byte*)&i, sizeof(int));
+                        break;
+                }
+
+                return;
+            }
+
+            if (value is double)
+            {
+                var d = (double)value;
+
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&d, sizeof(double));
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer((byte*)&d, sizeof(double));
+                        break;
+                }
+
+                return;
+            }
+
+            var dynamicJson = value as DynamicBlittableJson;
+
+            if (dynamicJson != null)
+            {
+                var obj = dynamicJson.BlittableJson;
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = Hashing.XXHash64.Calculate(obj.BasePointer, obj.Size);
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer(obj.BasePointer, obj.Size);
+                        break;
+                } 
+
+                return;
+            }
+
             throw new NotSupportedException($"Unhandled type: {value.GetType()}"); // TODO arek
         }
 
