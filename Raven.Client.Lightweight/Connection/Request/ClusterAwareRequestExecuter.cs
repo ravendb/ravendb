@@ -135,10 +135,7 @@ namespace Raven.Client.Connection.Request
         private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 2, bool withClusterFailoverHeader = false)
         {
             token.ThrowIfCancellationRequested();
-
-            if (numberOfRetries < 0)
-                throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.");
-
+            
             var node = LeaderNode;
             if (node == null)
             {
@@ -201,6 +198,11 @@ namespace Raven.Client.Connection.Request
                 withClusterFailoverHeader = true;
             }
 
+            if (numberOfRetries <= 0)
+            {
+                throw new InvalidOperationException(operationResult.Error?.Message ?? "Cluster is not reachable. Out of retries, aborting.", operationResult.Error );
+            }
+
             return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1, withClusterFailoverHeader).ConfigureAwait(false);
         }
 
@@ -244,7 +246,7 @@ namespace Raven.Client.Connection.Request
 
                 FailureCounters.IncrementFailureCount(n.Url);
             }
-
+ 
             throw new InvalidOperationException("Cluster is not reachable. Executing operation on any of the nodes failed, aborting.");
         }
 
@@ -293,6 +295,9 @@ namespace Raven.Client.Connection.Request
 
                 if (shouldRetry == false && avoidThrowing == false)
                     throw;
+
+                operationResult.Error = e;
+
             }
 
             if (operationResult.Success)
