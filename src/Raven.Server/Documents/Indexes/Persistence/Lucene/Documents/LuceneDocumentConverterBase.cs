@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var dynamicJson = (DynamicBlittableJson)value;
 
-                foreach (var complexObjectField in GetComplexObjectFields(path, storage, dynamicJson.BlittableJsonReaderObject, indexing, termVector))
+                foreach (var complexObjectField in GetComplexObjectFields(path, storage, dynamicJson.BlittableJson, indexing, termVector))
                     yield return complexObjectField;
 
                 yield break;
