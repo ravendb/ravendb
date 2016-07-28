@@ -3,25 +3,29 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Json;
-using Raven.Database.Linq;
-using Raven.Tests.Common;
-
+using Raven.Client.Indexing;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
+using Sparrow.Json;
 using Xunit;
 
-namespace Raven.Tests.Indexes
+namespace SlowTests.Tests.Indexes
 {
-    public class LinqIndexesFromClient : NoDisposalNeeded
+    public class LinqIndexesFromClient : RavenTestBase
     {
         [Fact]
         public void Convert_select_many_will_keep_doc_id()
@@ -31,39 +35,55 @@ namespace Raven.Tests.Indexes
                 Map = orders => from order in orders
                                 from line in order.OrderLines
                                 select new { line.ProductId }
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
-            var generator = new DynamicViewCompiler("test", indexDefinition,  ".")
-                .GenerateInstance();
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
 
+            indexDefinition.Name = "Index1";
+            var index = IndexAndTransformerCompiler.Compile(indexDefinition);
+            var map = index.Maps.Values.First();
 
-            var results = generator.MapDefinitions[0](new[]
+            using (var context = new JsonOperationContext(new UnmanagedBuffersPool(string.Empty)))
             {
+                var results = map(new[]
+                {
                 GetDocumentFromString(
                 @"
                 {
                     '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 1},
                     'OrderLines': [{'ProductId': 2}, {'ProductId': 3}]
-                }"),
+                }", context),
                   GetDocumentFromString(
                 @"
                 {
                     '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 2},
                     'OrderLines': [{'ProductId': 5}, {'ProductId': 4}]
-                }")
+                }", context)
             }).Cast<object>().ToArray();
 
-            foreach (var result in results)
-            {
-                Assert.NotNull(TypeDescriptor.GetProperties(result).Find("__document_id", true));
+                var fields = index.OutputFields
+                    .Select(x => IndexField.Create(x, new IndexFieldOptions(), null))
+                    .ToList();
+
+                var converter = new AnonymousLuceneDocumentConverter(fields);
+                foreach (var result in results)
+                {
+                    var doc = converter.ConvertToCachedDocument(context.GetLazyString("docs/1"), result);
+                    Assert.Equal("docs/1", doc.Get("__document_id"));
+                }
             }
         }
 
-        public static dynamic GetDocumentFromString(string json)
+        public static dynamic GetDocumentFromString(string json, JsonOperationContext context)
         {
-            return JsonToExpando.Convert(RavenJObject.Parse(json));
+            var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            var reader = context.ReadForMemory(ms, "doc");
+
+            return new DynamicDocumentObject(new Document
+            {
+                Data = reader
+            });
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void CanCompileComplexQuery()
         {
             var indexDefinition = new IndexDefinitionBuilder<Person>()
@@ -72,10 +92,10 @@ namespace Raven.Tests.Indexes
                                 from role in person.Roles
                                 where role == "Student"
                                 select new { role }
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
 
-            new DynamicViewCompiler("test", indexDefinition,  ".")
-                .GenerateInstance();
+            indexDefinition.Name = "Index1";
+            IndexAndTransformerCompiler.Compile(indexDefinition);
         }
 
         public class Person
@@ -93,16 +113,20 @@ namespace Raven.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { user.Name },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+
             var original = new IndexDefinition
             {
-                Stores = { { "Name", FieldStorage.Yes } },
-                Map = @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
+                Fields =
+                {
+                    { "Name", new IndexFieldOptions {Storage = FieldStorage.Yes} }
+                },
+                Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
     Name = user.Name
-})"
+})" }
             };
 
-            Assert.Equal(original.Map, generated.Map);
+            Assert.True(original.Maps.SetEquals(generated.Maps));
         }
 
         [Fact]
@@ -114,16 +138,19 @@ namespace Raven.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { Age = user.Age - (20 - user.Age) },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
-                Stores = { { "Name", FieldStorage.Yes } },
-                Map = @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
+                Fields =
+                {
+                    { "Name", new IndexFieldOptions {Storage = FieldStorage.Yes} }
+                },
+                Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
     Age = user.Age - (20 - user.Age)
-})"
+})" }
             };
 
-            Assert.Equal(original.Map, generated.Map);
+            Assert.True(original.Maps.SetEquals(generated.Maps));
         }
 
         [Fact]
@@ -135,17 +162,20 @@ namespace Raven.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { user.Name, user.Id },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
-                Stores = { { "Name", FieldStorage.Yes } },
-                Map = @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
+                Fields =
+                {
+                    {"Name", new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                },
+                Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
     Name = user.Name,
     Id = user.__document_id
-})"
+})" }
             };
 
-            Assert.Equal(original.Map, generated.Map);
+            Assert.True(original.Maps.SetEquals(generated.Maps));
             Assert.Equal(original, generated);
         }
 
@@ -156,33 +186,38 @@ namespace Raven.Tests.Indexes
             {
                 Map = users => from user in users
                                where !(user.Location == "Te(l) (A)viv")
-                               select new {user.Name},
-                Stores = {{user => user.Name, FieldStorage.Yes}}
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+                               select new { user.Name },
+                Stores = { { user => user.Name, FieldStorage.Yes } }
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
-                Stores = {{"Name", FieldStorage.Yes}},
-                Map = @"docs.Users.Where(user => !(user.Location == ""Te(l) (A)viv"")).Select(user => new {
+                Fields =
+                {
+                    {"Name", new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                },
+                Maps = { @"docs.Users.Where(user => !(user.Location == ""Te(l) (A)viv"")).Select(user => new {
     Name = user.Name
-})"
+})" }
             };
 
-            Assert.Equal(original.Map, generated.Map);
+            Assert.True(original.Maps.SetEquals(generated.Maps));
             Assert.Equal(original, generated);
         }
 
         [Fact]
         public void Convert_simple_query_with_char_literal()
         {
-            IndexDefinition generated = new IndexDefinitionBuilder<User> {
+            IndexDefinition generated = new IndexDefinitionBuilder<User>
+            {
                 Map = users => from user in users
                                where user.Name.Contains('C')
                                select user
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
-            var original = new IndexDefinition {
-                Map = "docs.Users.Where(user => Enumerable.Contains(user.Name, 'C'))"
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            var original = new IndexDefinition
+            {
+                Maps = { "docs.Users.Where(user => Enumerable.Contains(user.Name, 'C'))" }
             };
-            Assert.Equal(original.Map, generated.Map);
+            Assert.True(original.Maps.SetEquals(generated.Maps));
         }
 
         [Fact]
@@ -195,21 +230,21 @@ namespace Raven.Tests.Indexes
                 Reduce = counts => from agg in counts
                                    group agg by agg.Location
                                        into g
-                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+                                   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
-                Map = @"docs.Users.Select(user => new {
+                Maps = { @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = 1
-})",
+})" },
                 Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
     Count = Enumerable.Sum(g, x => ((int) x.Count))
 })"
             };
 
-            Assert.Equal(original.Map, generated.Map);
+            Assert.True(original.Maps.SetEquals(generated.Maps));
             Assert.Equal(original.Reduce, generated.Reduce);
         }
 
@@ -221,18 +256,18 @@ namespace Raven.Tests.Indexes
                 Reduce = counts => from agg in counts
                                    group agg by agg.Location
                                        into g
-                                       select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+                                   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
+            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
-                Map = expectedIndexString,
+                Maps = { expectedIndexString },
                 Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
     Count = Enumerable.Sum(g, x => ((int) x.Count))
 })"
             };
 
-            Assert.Equal(expectedIndexString, generated.Map);
+            Assert.Equal(expectedIndexString, generated.Maps.First());
             Assert.Equal(original.Reduce, generated.Reduce);
         }
 
@@ -265,7 +300,7 @@ users => from user in users
         {
             Convert_map_reduce_query_with_map_(
 users => from user in users
-        select new { Location = user.Location, Count = user.Gender == Gender.Female ? 1 : 0},
+         select new { Location = user.Location, Count = user.Gender == Gender.Female ? 1 : 0 },
 @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = user.Gender == ""Female"" ? 1 : 0

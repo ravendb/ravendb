@@ -1,14 +1,13 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Indexes
+namespace SlowTests.Tests.Indexes
 {
-    public class IndexWithSubProperty : RavenTest
+    public class IndexWithSubProperty : RavenTestBase
     {
         [Fact]
         public void IndexWithSubPropertyReturnAs_Property_SubProperty()
@@ -19,12 +18,19 @@ namespace Raven.Tests.Indexes
             };
             var indexDefinition = index.CreateIndexDefinition();
 
-            Assert.True(indexDefinition.Stores.ContainsKey("PrimaryEmail_Email"));
-            Assert.True(indexDefinition.Indexes.ContainsKey("PrimaryEmail_Email"));
-            Assert.True(indexDefinition.Analyzers.ContainsKey("PrimaryEmail_Email"));
-            Assert.True(indexDefinition.Stores.ContainsKey("String_Store"));
-            Assert.True(indexDefinition.Indexes.ContainsKey("String_Index"));
-            Assert.True(indexDefinition.Analyzers.ContainsKey("String_Analyzer"));
+            Assert.True(indexDefinition.Fields.ContainsKey("PrimaryEmail_Email"));
+            Assert.Equal(FieldStorage.Yes, indexDefinition.Fields["PrimaryEmail_Email"].Storage.Value);
+            Assert.Equal(FieldIndexing.Analyzed, indexDefinition.Fields["PrimaryEmail_Email"].Indexing.Value);
+            Assert.Equal("SimpleAnalyzer", indexDefinition.Fields["PrimaryEmail_Email"].Analyzer);
+
+            Assert.True(indexDefinition.Fields.ContainsKey("String_Store"));
+            Assert.Equal(FieldStorage.Yes, indexDefinition.Fields["String_Store"].Storage.Value);
+
+            Assert.True(indexDefinition.Fields.ContainsKey("String_Index"));
+            Assert.Equal(FieldIndexing.Analyzed, indexDefinition.Fields["String_Index"].Indexing.Value);
+
+            Assert.True(indexDefinition.Fields.ContainsKey("String_Analyzer"));
+            Assert.Equal("SnowballAnalyzer", indexDefinition.Fields["String_Analyzer"].Analyzer);
         }
 
         public class ContactIndex : AbstractIndexCreationTask<Contact>

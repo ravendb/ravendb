@@ -1,19 +1,19 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Indexes
+namespace SlowTests.Tests.Indexes
 {
-    public class IndexLocking : RavenTest
+    public class IndexLocking : RavenTestBase
     {
         [Fact]
-        public void LockingIndexesInMemoryWillNotFail()
+        public async Task LockingIndexesInMemoryWillNotFail()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 var index = new IndexSample
                 {
@@ -21,12 +21,13 @@ namespace Raven.Tests.Indexes
                 };
                 index.Execute(store);
 
-                var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
+                var indexDefinition = store.DatabaseCommands.GetIndex("IndexSample");
+                Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
 
-                indexDefinition.LockMode = IndexLockMode.LockedIgnore;
-                store.SystemDatabase.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.IndexStore.GetIndex("IndexSample").SetLock(IndexLockMode.LockedIgnore);
 
-                indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
+                indexDefinition = store.DatabaseCommands.GetIndex("IndexSample");
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);
             }
         }

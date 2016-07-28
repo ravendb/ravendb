@@ -3,28 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Threading;
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Bugs;
-using Raven.Tests.Common;
 
-using Xunit;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Indexing;
+using Raven.Server.Config;
+using Raven.Tests.Core.Utils.Entities;
+using Xunit;
 
-namespace Raven.Tests.Indexes
+namespace SlowTests.Tests.Indexes
 {
-    public class OldIndexRunWhileNewIndexesAreRunning : RavenTest
+    public class OldIndexRunWhileNewIndexesAreRunning : RavenTestBase
     {
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-        {
-            configuration.MaxNumberOfItemsToProcessInSingleBatch = 128;
-            configuration.InitialNumberOfItemsToProcessInSingleBatch = 128;
-        }
-
         [Fact]
-        public void OneBigSave()
+        public async Task OneBigSave()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
             {
                 using (var session = store.OpenSession())
                 {
@@ -45,9 +41,9 @@ namespace Raven.Tests.Indexes
         }
 
         [Fact]
-        public void ShouldWork()
+        public async Task ShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
             {
                 using (var session = store.OpenSession())
                 {
@@ -67,7 +63,7 @@ namespace Raven.Tests.Indexes
 
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = "from user in docs.Users select new { user.Name }"
+                    Maps = { "from user in docs.Users select new { user.Name }" }
                 });
 
                 using (var session = store.OpenSession())
