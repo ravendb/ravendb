@@ -14,6 +14,7 @@ using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Sparrow.Json;
+using DynamicBlittableJson = Raven.Server.Documents.Indexes.Static.DynamicBlittableJson;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -211,13 +212,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is BoostedValue) return ValueType.BoostedValue;
 
+            if (value is DynamicBlittableJson) return ValueType.DynamicJsonObject;
+
             if (value is IEnumerable) return ValueType.Enumerable;
 
             if (value is LazyDoubleValue) return ValueType.Double;
 
             if (value is IConvertible) return ValueType.Convertible;
-
-            if (value is DynamicBlittableJson) return ValueType.DynamicJsonObject;
 
             if (value is BlittableJsonReaderObject) return ValueType.BlittableJsonObject;
 

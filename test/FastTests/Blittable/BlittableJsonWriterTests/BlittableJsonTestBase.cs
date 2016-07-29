@@ -4,6 +4,7 @@ using Raven.Abstractions.Linq;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

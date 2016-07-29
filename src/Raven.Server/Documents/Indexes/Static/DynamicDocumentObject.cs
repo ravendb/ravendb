@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
-using System.Globalization;
-using System.Reflection;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
-using Raven.Json.Linq;
+using Raven.Client.Linq;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -76,10 +73,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var getResult = _dynamicJson.TryGetMember(binder, out result);
 
-            if (name == "HasValue" && result == null)
+            if (result == null)
             {
-                result = false;
-                return true;
+                if (name == "HasValue")
+                {
+                    result = false;
+                    return true;
+                }
+
+                if (getResult == false)
+                    throw new InvalidOperationException("Should not happen");
             }
 
             if (result is LazyDoubleValue)
@@ -104,6 +107,9 @@ namespace Raven.Server.Documents.Indexes.Static
             //    we should be able to recognize that base on definition of static index
             //    result = result.ToString(); 
             //}
+
+            Debug.Assert(getResult);
+            Debug.Assert(result != null);
 
             return getResult;
         }
@@ -133,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 list.Add(func(new KeyValuePair<string, object>(property, result)));
             }
 
-            return new DynamicBlittableJson.DynamicArray(list);
+            return new DynamicArray(list);
         }
 
         public static implicit operator BlittableJsonReaderObject(DynamicDocumentObject self)

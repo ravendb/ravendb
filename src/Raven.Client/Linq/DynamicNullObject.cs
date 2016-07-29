@@ -9,6 +9,10 @@ namespace Raven.Client.Linq
 {
     public class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
     {
+        public static DynamicNullObject Null = new DynamicNullObject();
+
+        public static DynamicNullObject ExplicitNull = new DynamicNullObject { IsExplicitNull = true };
+
         public override string ToString()
         {
             return string.Empty;
@@ -74,7 +78,7 @@ namespace Raven.Client.Linq
             switch (binder.Name)
             {
                 case "GetValueOrDefault":
-                    result = new DynamicNullObject {IsExplicitNull = true};
+                    result = new DynamicNullObject { IsExplicitNull = true };
                     return true;
                 case "Count":
                     result = 0;
@@ -138,20 +142,20 @@ namespace Raven.Client.Linq
         }
 
         public static implicit operator double(DynamicNullObject o) { return double.NaN; }
-        public static implicit operator double?(DynamicNullObject o) { return null; }
+        public static implicit operator double? (DynamicNullObject o) { return null; }
 
         public static implicit operator int(DynamicNullObject o) { return 0; }
-        public static implicit operator int?(DynamicNullObject o) { return null; }
+        public static implicit operator int? (DynamicNullObject o) { return null; }
 
         public static implicit operator long(DynamicNullObject o) { return 0; }
-        public static implicit operator long?(DynamicNullObject o) { return null; }
+        public static implicit operator long? (DynamicNullObject o) { return null; }
 
         public static implicit operator decimal(DynamicNullObject o) { return 0; }
-        public static implicit operator decimal?(DynamicNullObject o) { return null; }
+        public static implicit operator decimal? (DynamicNullObject o) { return null; }
 
         public static implicit operator float(DynamicNullObject o) { return float.NaN; }
-        public static implicit operator float?(DynamicNullObject o) { return null; }
-    
+        public static implicit operator float? (DynamicNullObject o) { return null; }
+
         public override bool Equals(object obj)
         {
             return obj is DynamicNullObject;
