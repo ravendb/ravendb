@@ -764,7 +764,11 @@ namespace Sparrow.Json
 
             foreach (var propertyName in GetPropertyNames())
             {
-                if (this[propertyName].Equals(other[propertyName]) == false)
+                object result;
+                if (other.TryGetMember(propertyName, out result) == false)
+                    return false;
+
+                if (this[propertyName].Equals(result) == false)
                     return false;
             }
 

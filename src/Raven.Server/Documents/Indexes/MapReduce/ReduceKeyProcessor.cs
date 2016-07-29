@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public unsafe class ReduceKeyProcessor
     {
         private readonly UnmanagedBuffersPool _buffersPool;
-        private readonly Mode _mode;
+        private Mode _mode;
         private UnmanagedBuffersPool.AllocatedMemoryData _buffer;
         private int _bufferPos;
         private ulong _singleValueHash;
@@ -214,7 +214,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            throw new NotSupportedException($"Unhandled type: {value.GetType()}"); // TODO arek
+            var dynamicArray = value as DynamicArray;
+
+            if (dynamicArray != null)
+            {
+                if (_buffer == null)
+                    _buffer = _buffersPool.Allocate(16);
+
+                _mode = Mode.MultipleValues;
+
+                foreach (var item in dynamicArray)
+                {
+                    Process(item);
+                }
+
+                return;
+            }
+
+            throw new NotSupportedException($"Unhandled type: {value.GetType()}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

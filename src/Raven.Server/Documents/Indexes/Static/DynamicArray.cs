@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -105,6 +106,27 @@ namespace Raven.Server.Documents.Indexes.Static
             public void Dispose()
             {
             }
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+
+            if (ReferenceEquals(this, obj))
+                return true;
+
+            var array = obj as DynamicArray;
+
+            if (array != null)
+                return Equals(_inner, array._inner);
+
+            return Equals(_inner, obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return _inner?.GetHashCode() ?? 0;
         }
     }
 }
