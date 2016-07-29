@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Json.Parsing;
@@ -14,6 +13,7 @@ namespace Sparrow.Json
         private readonly BlittableJsonDocumentBuilder _builder;
         private readonly CachedProperties _cachedProperties;
         private readonly byte* _metadataPtr;
+        private readonly int _size;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
@@ -27,10 +27,16 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
+            return GetJsonReader().ReadToEnd();
+        }
+
+        public TextReader GetJsonReader()
+        {
             var memoryStream = new MemoryStream();
             _context.Write(memoryStream, this);
             memoryStream.Position = 0;
-            return new StreamReader(memoryStream).ReadToEnd();
+
+            return new StreamReader(memoryStream);
         }
 
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
@@ -730,6 +736,44 @@ namespace Sparrow.Json
                 }
             }
             return current;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+
+            if (ReferenceEquals(this, obj))
+                return true;
+
+            var blittableJson = obj as BlittableJsonReaderObject;
+
+            if (blittableJson != null)
+                return Equals(blittableJson);
+
+            return false;
+        }
+
+        protected bool Equals(BlittableJsonReaderObject other)
+        {
+            if (_size != other.Size)
+                return false;
+
+            if (_propCount != other._propCount)
+                return false;
+
+            foreach (var propertyName in GetPropertyNames())
+            {
+                if (this[propertyName].Equals(other[propertyName]) == false)
+                    return false;
+            }
+
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return _size ^ _propCount;
         }
     }
 }

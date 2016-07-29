@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (item == null)
                 return false;
 
-            if (item is DynamicDocumentObject)
+            if (item is DynamicBlittableJson)
                 return false;
 
             if (item is string || item is LazyStringValue)

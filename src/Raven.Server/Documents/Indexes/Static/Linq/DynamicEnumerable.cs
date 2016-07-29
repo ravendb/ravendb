@@ -25,22 +25,22 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static dynamic FirstOrDefault<TSource>(IEnumerable<TSource> source)
         {
-            if (source == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
 
             var result = source.FirstOrDefault();
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
         public static dynamic FirstOrDefault<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
         {
-            if (source == null) return new DynamicNullObject();
-            if (predicate == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
+            if (predicate == null) return DynamicNullObject.Null;
 
             var result = source.FirstOrDefault(predicate);
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
@@ -57,22 +57,22 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static dynamic LastOrDefault<TSource>(IEnumerable<TSource> source)
         {
-            if (source == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
 
             var result = source.LastOrDefault();
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
         public static dynamic LastOrDefault<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
         {
-            if (source == null) return new DynamicNullObject();
-            if (predicate == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
+            if (predicate == null) return DynamicNullObject.Null;
 
             var result = source.LastOrDefault(predicate);
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
@@ -88,22 +88,22 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static dynamic SingleOrDefault<TSource>(IEnumerable<TSource> source)
         {
-            if (source == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
 
             var result = source.SingleOrDefault();
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
         public static dynamic SingleOrDefault<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
         {
-            if (source == null) return new DynamicNullObject();
-            if (predicate == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
+            if (predicate == null) return DynamicNullObject.Null;
 
             var result = source.SingleOrDefault(predicate);
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
@@ -115,12 +115,12 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static dynamic ElementAtOrDefault<TSource>(IEnumerable<TSource> source, int index)
         {
-            if (source == null) return new DynamicNullObject();
-            if (index < 0) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
+            if (index < 0) return DynamicNullObject.Null;
 
             var result = source.ElementAtOrDefault(index);
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
@@ -135,15 +135,15 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static dynamic Min<TSource>(IEnumerable<TSource> source)
         {
-            if (source == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
 
             var enumerator = source.GetEnumerator();
             if (enumerator.MoveNext() == false)
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
 
             var result = Yield(enumerator).Min();
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 
@@ -154,15 +154,15 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static dynamic Max<TSource>(IEnumerable<TSource> source)
         {
-            if (source == null) return new DynamicNullObject();
+            if (source == null) return DynamicNullObject.Null;
 
             var enumerator = source.GetEnumerator();
             if (enumerator.MoveNext() == false)
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
 
             var result = Yield(enumerator).Max();
             if (ReferenceEquals(result, null))
-                return new DynamicNullObject();
+                return DynamicNullObject.Null;
             return result;
         }
 

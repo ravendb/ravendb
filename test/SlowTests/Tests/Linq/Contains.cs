@@ -1,15 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-
-using Raven.Tests.Common;
-
-using Xunit;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class Contains : RavenTest
+    public class Contains : RavenTestBase
     {
         private class TestDoc
         {
@@ -18,20 +16,20 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanQueryArrayWithContains()
+        public async Task CanQueryArrayWithContains()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    var doc = new TestDoc {StringArray = new[] {"test", "doc", "foo"}};
+                    var doc = new TestDoc { StringArray = new[] { "test", "doc", "foo" } };
                     session.Store(doc);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var otherDoc = new TestDoc {SomeProperty = "foo"};
+                    var otherDoc = new TestDoc { SomeProperty = "foo" };
                     var doc = session.Query<TestDoc>()
                         .FirstOrDefault(ar => ar.StringArray.Contains(otherDoc.SomeProperty));
                     Assert.NotNull(doc);
@@ -40,9 +38,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanQueryListWithContainsAny()
+        public async Task CanQueryListWithContainsAny()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -54,7 +52,7 @@ namespace Raven.Tests.Linq
 
                     var items = new[] { "a", "b", "c" };
                     var test = session.Query<TestDoc>()
-                                .Where(ar => ar.StringArray.ContainsAny(items) && 
+                                .Where(ar => ar.StringArray.ContainsAny(items) &&
                                              ar.SomeProperty == "somethingElse")
                                 .ToString();
                     Assert.Equal("(StringArray:a OR StringArray:b OR StringArray:c) AND SomeProperty:somethingElse", test);
@@ -73,9 +71,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanQueryListWithContainsAll()
+        public async Task CanQueryListWithContainsAll()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -87,7 +85,7 @@ namespace Raven.Tests.Linq
 
                     var items = new[] { "a", "b", "c" };
                     var test = session.Query<TestDoc>()
-                                .Where(ar => ar.StringArray.ContainsAll(items) && 
+                                .Where(ar => ar.StringArray.ContainsAll(items) &&
                                              ar.SomeProperty == "somethingElse")
                                 .ToString();
                     Assert.Equal("(StringArray:a AND StringArray:b AND StringArray:c) AND SomeProperty:somethingElse", test);
@@ -106,20 +104,20 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void DoesNotSupportStrings()
+        public async Task DoesNotSupportStrings()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    var doc = new TestDoc {SomeProperty = "Ensure that Contains on IEnumerable<Char> is not supported."};
+                    var doc = new TestDoc { SomeProperty = "Ensure that Contains on IEnumerable<Char> is not supported." };
                     session.Store(doc);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var otherDoc = new TestDoc {SomeProperty = "Contains"};
+                    var otherDoc = new TestDoc { SomeProperty = "Contains" };
                     var exception = Assert.Throws<NotSupportedException>(() =>
                     {
                         session.Query<TestDoc>().FirstOrDefault(ar => ar.SomeProperty.Contains(otherDoc.SomeProperty));

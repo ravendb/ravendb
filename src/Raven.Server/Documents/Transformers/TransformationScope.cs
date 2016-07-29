@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
@@ -10,7 +9,6 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using Raven.Server.Documents.Includes;
 using Sparrow.Json;
-using System.Reflection;
 
 namespace Raven.Server.Documents.Transformers
 {
@@ -89,9 +87,9 @@ namespace Raven.Server.Documents.Transformers
             if (value == null)
                 return null;
 
-            var dynamicDocument = value as DynamicDocumentObject;
+            var dynamicDocument = value as DynamicBlittableJson;
             if (dynamicDocument != null)
-                return (BlittableJsonReaderObject)dynamicDocument;
+                return dynamicDocument.BlittableJson;
 
             var transformerParameter = value as TransformerParameter;
             if (transformerParameter != null)

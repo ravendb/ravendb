@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Static
             Transformer
         }
 
-        private class DynamicIteratonOfCurrentDocumentWrapper : IEnumerable<DynamicDocumentObject>
+        private class DynamicIteratonOfCurrentDocumentWrapper : IEnumerable<DynamicBlittableJson>
         {
             private readonly StaticIndexDocsEnumerator _indexingEnumerator;
             private Enumerator _enumerator;
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 _indexingEnumerator = indexingEnumerator;
             }
 
-            public IEnumerator<DynamicDocumentObject> GetEnumerator()
+            public IEnumerator<DynamicBlittableJson> GetEnumerator()
             {
                 return _enumerator ?? (_enumerator = new Enumerator(_indexingEnumerator));
             }
@@ -78,9 +78,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 return GetEnumerator();
             }
 
-            private class Enumerator : IEnumerator<DynamicDocumentObject>
+            private class Enumerator : IEnumerator<DynamicBlittableJson>
             {
-                private readonly DynamicDocumentObject _dynamicDocument = new DynamicDocumentObject();
+                private DynamicBlittableJson _dynamicDocument;
                 private readonly StaticIndexDocsEnumerator _inner;
                 private Document _seen;
 
@@ -95,7 +95,11 @@ namespace Raven.Server.Documents.Indexes.Static
                         return false;
 
                     _seen = _inner.Current;
-                    _dynamicDocument.Set(_seen);
+
+                    if (_dynamicDocument == null)
+                        _dynamicDocument = new DynamicBlittableJson(_seen);
+                    else
+                        _dynamicDocument.Set(_seen);
 
                     Current = _dynamicDocument;
 
@@ -117,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     throw new System.NotImplementedException();
                 }
 
-                public DynamicDocumentObject Current { get; private set; }
+                public DynamicBlittableJson Current { get; private set; }
 
                 object IEnumerator.Current => Current;
 

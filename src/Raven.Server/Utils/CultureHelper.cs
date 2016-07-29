@@ -29,5 +29,22 @@ namespace Raven.Server.Utils
                 CultureInfo.CurrentUICulture = oldCurrentUiCulture;
             });
         }
+
+        internal static IDisposable EnsureCulture(CultureInfo culture)
+        {
+            if (CultureInfo.CurrentCulture.Equals(culture))
+                return null;
+
+            var oldCurrentCulture = CultureInfo.CurrentCulture;
+            var oldCurrentUiCulture = CultureInfo.CurrentUICulture;
+
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+            return new DisposableAction(() =>
+            {
+                CultureInfo.CurrentCulture = oldCurrentCulture;
+                CultureInfo.CurrentUICulture = oldCurrentUiCulture;
+            });
+        }
     }
 }

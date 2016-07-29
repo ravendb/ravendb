@@ -60,22 +60,40 @@ namespace Sparrow.Json
                         return TryRead(subObject, pathSegment, out result);
                     }
 
-                    if (pathSegment == "Length")
+                    BlittableJsonReaderArray array;
+                    switch (pathSegment)
                     {
-                        var lazyStringValue = reader as LazyStringValue;
-                        if (lazyStringValue == null)
-                        {
-                            var lazyCompressedStringValue = reader as LazyCompressedStringValue;
-                            if (lazyCompressedStringValue != null)
-                                lazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
-                        }
+                        case "Length":
+                            var lazyStringValue = reader as LazyStringValue;
+                            if (lazyStringValue == null)
+                            {
+                                var lazyCompressedStringValue = reader as LazyCompressedStringValue;
+                                if (lazyCompressedStringValue != null)
+                                    lazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
+                            }
 
-                        if (lazyStringValue != null)
-                        {
-                            var value = lazyStringValue.ToString();
-                            result = value.Length;
-                            return true;
-                        }
+                            if (lazyStringValue != null)
+                            {
+                                var value = lazyStringValue.ToString();
+                                result = value.Length;
+                                return true;
+                            }
+
+                            array = reader as BlittableJsonReaderArray;
+                            if (array != null)
+                            {
+                                result = array.Length;
+                                return true;
+                            }
+                            break;
+                        case "Count":
+                            array = reader as BlittableJsonReaderArray;
+                            if (array != null)
+                            {
+                                result = array.Length;
+                                return true;
+                            }
+                            break;
                     }
 
                     throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader?.GetType()?.FullName ?? "null"} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}.");

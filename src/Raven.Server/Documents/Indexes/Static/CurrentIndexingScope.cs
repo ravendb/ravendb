@@ -13,9 +13,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _documentsContext;
 
-        private DynamicDocumentObject _document;
-
-        private DynamicNullObject _null;
+        private DynamicBlittableJson _document;
 
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
@@ -39,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)
         {
             if (keyLazy == null && keyString == null)
-                return Null();
+                return DynamicNullObject.Null;
 
             var source = Source;
             if (source == null)
@@ -76,15 +74,19 @@ namespace Raven.Server.Documents.Indexes.Static
             if (document == null)
             {
                 MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, 0);
-                return Null();
+                return DynamicNullObject.Null;
             }
 
             MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, document.Etag);
 
             if (_document == null)
-                _document = new DynamicDocumentObject();
-
-            _document.Set(document);
+            {
+                _document = new DynamicBlittableJson(document);
+            }
+            else
+            {
+                _document.Set(document);
+            }
 
             return _document;
         }
@@ -92,11 +94,6 @@ namespace Raven.Server.Documents.Indexes.Static
         public void Dispose()
         {
             Current = null;
-        }
-
-        private DynamicNullObject Null()
-        {
-            return _null ?? (_null = new DynamicNullObject());
         }
 
         private static void MaybeUpdateReferenceEtags(Dictionary<Slice, long> referenceEtags, Slice collection, long etag)

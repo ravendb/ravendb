@@ -9,12 +9,20 @@ namespace Raven.Client.Linq
 {
     public class DynamicNullObject : DynamicObject, IEnumerable<object>, IComparable
     {
+        public static DynamicNullObject Null = new DynamicNullObject();
+
+        public static DynamicNullObject ExplicitNull = new DynamicNullObject { IsExplicitNull = true };
+
+        private DynamicNullObject()
+        {
+        }
+
         public override string ToString()
         {
             return string.Empty;
         }
 
-        public bool IsExplicitNull { get; set; }
+        public bool IsExplicitNull { get; private set; }
 
         public override bool TryConvert(ConvertBinder binder, out object result)
         {
@@ -35,7 +43,7 @@ namespace Raven.Client.Linq
                     result = arg != null && arg is DynamicNullObject == false;
                     break;
                 default:
-                    result = new DynamicNullObject();
+                    result = Null;
                     break;
             }
             return true;
@@ -43,10 +51,7 @@ namespace Raven.Client.Linq
 
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
         {
-            result = new DynamicNullObject
-            {
-                IsExplicitNull = false
-            };
+            result = Null;
             return true;
         }
 
@@ -57,10 +62,7 @@ namespace Raven.Client.Linq
                 result = false;
                 return true;
             }
-            result = new DynamicNullObject
-            {
-                IsExplicitNull = false
-            };
+            result = Null;
             return true;
         }
 
@@ -74,7 +76,7 @@ namespace Raven.Client.Linq
             switch (binder.Name)
             {
                 case "GetValueOrDefault":
-                    result = new DynamicNullObject {IsExplicitNull = true};
+                    result = ExplicitNull;
                     return true;
                 case "Count":
                     result = 0;
@@ -82,10 +84,7 @@ namespace Raven.Client.Linq
                 case "DefaultIfEmpty":
                     result = new[]
                     {
-                        new DynamicNullObject
-                        {
-                            IsExplicitNull = false
-                        }
+                        Null
                     };
                     return true;
                 default:
@@ -95,10 +94,7 @@ namespace Raven.Client.Linq
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
         {
-            result = new DynamicNullObject
-            {
-                IsExplicitNull = false
-            };
+            result = Null;
             return true;
         }
 
@@ -138,20 +134,20 @@ namespace Raven.Client.Linq
         }
 
         public static implicit operator double(DynamicNullObject o) { return double.NaN; }
-        public static implicit operator double?(DynamicNullObject o) { return null; }
+        public static implicit operator double? (DynamicNullObject o) { return null; }
 
         public static implicit operator int(DynamicNullObject o) { return 0; }
-        public static implicit operator int?(DynamicNullObject o) { return null; }
+        public static implicit operator int? (DynamicNullObject o) { return null; }
 
         public static implicit operator long(DynamicNullObject o) { return 0; }
-        public static implicit operator long?(DynamicNullObject o) { return null; }
+        public static implicit operator long? (DynamicNullObject o) { return null; }
 
         public static implicit operator decimal(DynamicNullObject o) { return 0; }
-        public static implicit operator decimal?(DynamicNullObject o) { return null; }
+        public static implicit operator decimal? (DynamicNullObject o) { return null; }
 
         public static implicit operator float(DynamicNullObject o) { return float.NaN; }
-        public static implicit operator float?(DynamicNullObject o) { return null; }
-    
+        public static implicit operator float? (DynamicNullObject o) { return null; }
+
         public override bool Equals(object obj)
         {
             return obj is DynamicNullObject;

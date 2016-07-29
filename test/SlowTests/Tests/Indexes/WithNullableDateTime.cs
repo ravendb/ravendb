@@ -3,38 +3,42 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Indexes {
-    public class WithNullableDateTime : RavenTest 
+namespace SlowTests.Tests.Indexes
+{
+    public class WithNullableDateTime : RavenTestBase
     {
-        [Fact]
-        public void CanCreate() 
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task CanCreate()
         {
-            using (var documentStore = this.NewDocumentStore()) {
+            using (var documentStore = await GetDocumentStore())
+            {
                 new FooIndex().Execute(documentStore);
-                
-                using (var session = documentStore.OpenSession()) {
-                    session.Store(new Foo {NullableDateTime = new DateTime(1989, 3, 15, 7, 28, 1, 1)});
+
+                using (var session = documentStore.OpenSession())
+                {
+                    session.Store(new Foo { NullableDateTime = new DateTime(1989, 3, 15, 7, 28, 1, 1) });
                     session.SaveChanges();
-                    
-                    Assert.NotNull(
-                        session.Query<Foo, FooIndex>()
+
+                    Assert.NotNull(session.Query<Foo, FooIndex>()
                                .Customize(c => c.WaitForNonStaleResults())
                                .FirstOrDefault());
                 }
             }
         }
 
-        public class FooIndex : AbstractIndexCreationTask<Foo>  
+        public class FooIndex : AbstractIndexCreationTask<Foo>
         {
-            public FooIndex() {
-                this.Map =
+            public FooIndex()
+            {
+                Map =
                     docs => from doc in docs
                             where doc.NullableDateTime != null
                             select new
@@ -44,7 +48,7 @@ namespace Raven.Tests.Indexes {
             }
         }
 
-        public class Foo 
+        public class Foo
         {
             public DateTime? NullableDateTime { get; set; }
         }

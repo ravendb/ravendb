@@ -32,5 +32,43 @@ namespace Sparrow.Json
             self._decimalVal = val;
             return val;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+
+            if (ReferenceEquals(this, obj))
+                return true;
+
+            var lazyDouble = obj as LazyDoubleValue;
+
+            if (lazyDouble != null)
+                return Equals(lazyDouble);
+
+            if (obj is double)
+                return ((double)this).Equals(obj);
+
+            if (obj is decimal)
+                return ((decimal)this).Equals(obj);
+
+            return false;
+        }
+
+        protected bool Equals(LazyDoubleValue other)
+        {
+            if (_val != null && other._val != null)
+                return Equals(_val, other._val);
+
+            if (_decimalVal != null && other._decimalVal != null)
+                return Equals(_decimalVal, other._decimalVal);
+
+            return Equals(Inner, other.Inner);
+        }
+
+        public override int GetHashCode()
+        {
+            return _val?.GetHashCode() ?? _decimalVal?.GetHashCode() ?? Inner.GetHashCode();
+        }
     }
 }

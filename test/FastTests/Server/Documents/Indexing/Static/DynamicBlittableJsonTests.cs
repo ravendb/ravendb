@@ -5,19 +5,20 @@ using Raven.Abstractions.Data;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Linq;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
-    public class DynamicDocumentObjectTests
+    public class DynamicBlittableJsonTests
     {
         private readonly UnmanagedBuffersPool _pool;
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
 
-        public DynamicDocumentObjectTests()
+        public DynamicBlittableJsonTests()
         {
             _pool = new UnmanagedBuffersPool("foo");
             _ctx = new JsonOperationContext(_pool);
@@ -56,12 +57,12 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
             }, "users/1");
 
-            dynamic user = new DynamicDocumentObject(doc);
+            dynamic user = new DynamicBlittableJson(doc);
 
             Assert.Equal("Arek", user.Name);
             Assert.Equal("NYC", user.Address.City);
             Assert.Equal("users/1", user.Id);
-            Assert.Equal(null, user.NullField);
+            Assert.Equal(DynamicNullObject.Null, user.NullField);
             Assert.Equal(22.0, user.Age);
             Assert.Equal("Arek", user.LazyName);
             Assert.Equal(2, user.Friends.Length);

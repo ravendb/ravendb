@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -133,6 +134,58 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         CopyToBuffer((byte*)&l, sizeof(decimal));
                         break;
                 }
+
+                return;
+            }
+
+            if (value is int)
+            {
+                var i = (int)value;
+
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&i, sizeof(int));
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer((byte*)&i, sizeof(int));
+                        break;
+                }
+
+                return;
+            }
+
+            if (value is double)
+            {
+                var d = (double)value;
+
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&d, sizeof(double));
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer((byte*)&d, sizeof(double));
+                        break;
+                }
+
+                return;
+            }
+
+            var dynamicJson = value as DynamicBlittableJson;
+
+            if (dynamicJson != null)
+            {
+                var obj = dynamicJson.BlittableJson;
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = Hashing.XXHash64.Calculate(obj.BasePointer, obj.Size);
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer(obj.BasePointer, obj.Size);
+                        break;
+                } 
 
                 return;
             }
