@@ -326,11 +326,11 @@ class ctor {
                 window.cancelAnimationFrame(existingHandleToCancel);
             }
             result = window.requestAnimationFrame(action);
-        } else if (window.msRequestAnimationFrame) {
-            if (window.msCancelRequestAnimationFrame) {
-                window.msCancelRequestAnimationFrame(existingHandleToCancel);
+        } else if ((<any>window).msRequestAnimationFrame) {
+            if ((<any>window).msCancelRequestAnimationFrame) {
+                (<any>window).msCancelRequestAnimationFrame(existingHandleToCancel);
             }
-            result = window.msRequestAnimationFrame(action);
+            result = (<any>window).msRequestAnimationFrame(action);
         } else {
             if (existingHandleToCancel) {
                 window.clearTimeout(existingHandleToCancel);

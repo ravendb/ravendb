@@ -321,11 +321,11 @@ class extensions {
             return results ? results.length : 0;
         }
 
-        String.prototype.startsWith = String.prototype.startsWith || function (str) {
+        String.prototype.startsWith = String.prototype.startsWith || function (str:string) {
             return this.indexOf(str) == 0;
         };
 
-        String.prototype.contains = String.prototype.contains || function (str) {
+        String.prototype.contains = String.prototype.contains || function (str: string) {
             return this.indexOf(str) > -1;
         }
 

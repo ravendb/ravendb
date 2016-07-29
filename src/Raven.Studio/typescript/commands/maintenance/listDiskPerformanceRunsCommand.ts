@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import document = require("models/database/documents/document");
 
 class listDiskPerformanceRunsCommand extends commandBase {
     private db: database = appUrl.getDatabase();
@@ -11,7 +10,7 @@ class listDiskPerformanceRunsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<performanceRunItemDto[]> {
-        var args = {
+        var args: { fetch: string } = {
             fetch: "DisplayName"
         };
 
@@ -19,10 +18,10 @@ class listDiskPerformanceRunsCommand extends commandBase {
             return {
                 displayName: x.DisplayName,
                 documentId: x["__document_id"]
-            }
-        }
+            };
+        };
 
-        return this.query("/indexes/dynamic/DiskIoPerformanceRuns", args, this.db, r => r.Results.map(mapper));
+        return this.query("/indexes/dynamic/DiskIoPerformanceRuns", args, this.db, (r: any) => r.Results.map(mapper));
     }
 }
 

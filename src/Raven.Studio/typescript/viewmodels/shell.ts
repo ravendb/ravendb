@@ -129,7 +129,7 @@ class shell extends viewModelBase {
         return canDb || canFs || canCs || canTs;
     });
 
-    static resources = ko.computed(() => {
+    static resources = ko.computed<resource[]>(() => {
         var databases: resource[] = shell.databases();
         var fileSystems: resource[] = shell.fileSystems();
         var counterStorages: resource[] = shell.counterStorages();

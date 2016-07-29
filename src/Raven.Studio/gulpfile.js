@@ -1,4 +1,4 @@
-﻿/// <binding BeforeBuild='parse-handlers' AfterBuild='compile' ProjectOpened='tsd, bower' />
+﻿/// <binding BeforeBuild='parse-handlers, generate-typings' AfterBuild='compile' ProjectOpened='tsd, bower' />
 var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
@@ -9,6 +9,7 @@ var gulp = require('gulp'),
     fs = require('fs'),
     path = require('path'),
     runSequence = require('run-sequence'),
+    exec = require('child_process').exec,
     parseHandlers = require('./gulp/parseHandlers');
 
 var gutil = require('gulp-util');
@@ -81,7 +82,9 @@ var paths = {
     ]
 };
 
-var tsCompilerConfig = plugins.typescript.createProject('tsconfig.json');
+var tsCompilerConfig = plugins.typescript.createProject('tsconfig.json', {
+    typescript: require("typescript")
+});
 
 gulp.task('clean', function () {
     del.sync(paths.releaseTarget);
@@ -140,7 +143,15 @@ gulp.task('less', function() {
         .pipe(gulp.dest(paths.lessTarget));
 });
 
-gulp.task('ts-compile', function () {
+gulp.task('generate-typings', function(cb) {
+    exec('dotnet ../../tools/TypingsGenerator/bin/Debug/netcoreapp1.0/TypingsGenerator.dll', function (err, stdout, stderr) {
+        console.log(stdout);
+        console.log(stderr);
+        cb(err);
+    });
+});
+
+gulp.task('ts-compile', ['parse-handlers', 'generate-typings'], function () {
     return gulp.src([paths.tsSource])
         .pipe(plugins.changed(paths.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())

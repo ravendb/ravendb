@@ -28,6 +28,6 @@
     "gulp-util": "^3.0.7",
     "jshint": "^2.9.1",
     "run-sequence": "^1.1.5",
-    "typescript": "^1.7.5"
+    "typescript": "^2.0.0"
   }
 }
