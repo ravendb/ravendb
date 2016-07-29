@@ -768,7 +768,12 @@ namespace Sparrow.Json
                 if (other.TryGetMember(propertyName, out result) == false)
                     return false;
 
-                if (this[propertyName].Equals(result) == false)
+                var current = this[propertyName];
+
+                if (current == null && result == null)
+                    continue;
+
+                if (current?.Equals(result) == false)
                     return false;
             }
 
