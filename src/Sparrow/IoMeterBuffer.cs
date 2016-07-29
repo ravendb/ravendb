@@ -12,7 +12,7 @@ namespace Sparrow
             public long Size;
             public long Start;
             public long End;
-
+            public IoMetrics.MeterType Type;
             public long Duration => End - Start;
         }
 
@@ -25,6 +25,7 @@ namespace Sparrow
             public long TotalTimeStart;
             public long TotalTimeEnd;
             public long Count;
+            public IoMetrics.MeterType Type;
         }
 
         public IoMeterBuffer(int metricsBufferSize, int summaryBufferSize)
@@ -63,28 +64,31 @@ namespace Sparrow
         public struct DurationMeasurement : IDisposable
         {
             private readonly IoMeterBuffer _parent;
+            private readonly IoMetrics.MeterType _type;
             private readonly long _size;
             private readonly long _start;
 
-            public DurationMeasurement(IoMeterBuffer parent, long size)
+            public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size)
             {
                 _parent = parent;
+                _type = type;
                 _size = size;
                 _start = Stopwatch.GetTimestamp();
             }
 
             public void Dispose()
             {
-                _parent.Mark(_size, _start);
+                _parent.Mark(_size, _start, _type);
             }
         }
 
-        private void Mark(long size, long start)
+        private void Mark(long size, long start, IoMetrics.MeterType type)
         {
             var meterItem = new MeterItem
             {
                 Start = start,
                 Size = size,
+                Type = type,
                 End = Stopwatch.GetTimestamp()
             };
 
@@ -103,6 +107,7 @@ namespace Sparrow
                 MinTime = meterItem.Duration,
                 TotalTime = meterItem.Duration,
                 TotalSize = size,
+                Type = type
             };
             for (int i = 0; i < _buffer.Length; i++)
             {

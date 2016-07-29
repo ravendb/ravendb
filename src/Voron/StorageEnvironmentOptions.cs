@@ -132,6 +132,8 @@ namespace Voron
 
             OwnsPagers = true;
             IncrementalBackupEnabled = false;
+
+            IoMetrics = new IoMetrics(256, 256);
         }
 
         public int ScratchBufferOverflowTimeout { get; set; }

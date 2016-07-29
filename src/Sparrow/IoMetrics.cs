@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace Sparrow
@@ -26,22 +27,7 @@ namespace Sparrow
         public int BufferSize { get; }
         public int SummaryBufferSize { get; }
 
-
-        //public IEnumerable<IoMeterBuffer.SummerizedItem> GetAllSummerizedItems()
-        //{
-        //    foreach (IoMeterBuffer buff in _buffers)
-        //        if (buff != null)
-        //            foreach (var item in buff.GetSummerizedItems())
-        //                yield return item;
-        //}
-
-        //public IEnumerable<IoMeterBuffer.MeterItem> GetAllCurrentItems()
-        //{
-        //    foreach (IoMeterBuffer buff in _buffers)
-        //        if (buff != null)
-        //            foreach (var item in buff.GetCurrentItems())
-        //                yield return item;
-        //}
+        public IEnumerable<FileIoMetrics> Files => _fileMetrics.Values;
 
         public void FileClosed(string filename)
         {
@@ -74,7 +60,7 @@ namespace Sparrow
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-            return new IoMeterBuffer.DurationMeasurement(buffer, size);
+            return new IoMeterBuffer.DurationMeasurement(buffer, type, size);
         }
 
         public class FileIoMetrics
@@ -91,6 +77,29 @@ namespace Sparrow
                 Write = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
 
                 Sync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+            }
+
+
+            public List<IoMeterBuffer.MeterItem> GetRecentMetrics()
+            {
+                var list = new List<IoMeterBuffer.MeterItem>();
+                list.AddRange(Sync.GetCurrentItems());
+                list.AddRange(Write.GetCurrentItems());
+
+                list.Sort((x, y) => x.Start.CompareTo(y.Start));
+
+                return list;
+            }
+
+            public List<IoMeterBuffer.SummerizedItem> GetSummaryMetrics()
+            {
+                var list = new List<IoMeterBuffer.SummerizedItem>();
+                list.AddRange(Sync.GetSummerizedItems());
+                list.AddRange(Write.GetSummerizedItems());
+
+                list.Sort((x, y) => x.TotalTimeStart.CompareTo(y.TotalTimeStart));
+
+                return list;
             }
         }
     }
