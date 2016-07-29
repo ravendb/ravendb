@@ -3,18 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Embedded;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
+using Raven.Client;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class FlagsEnum : RavenTest
+    public class FlagsEnum : RavenTestBase
     {
         [Flags]
         public enum CustomEnum
@@ -48,23 +48,21 @@ namespace Raven.Tests.Linq
             }
         }
 
-        protected override void ModifyStore(EmbeddableDocumentStore documentStore)
-        {
-            documentStore.Conventions.SaveEnumsAsIntegers = true;
-        }
-
         [Fact]
-        public void CanQueryUsingEnum()
+        public async Task CanQueryUsingEnum()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
+                store.Conventions.SaveEnumsAsIntegers = true;
+
                 new MyIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
                     var entity = new Entity
                     {
-                        Name = "birsey", Status = new[]
+                        Name = "birsey",
+                        Status = new[]
                         {
                             CustomEnum.One, CustomEnum.Two
                         },
@@ -83,7 +81,9 @@ namespace Raven.Tests.Linq
                                          .As<Entity>()
                                          .ToList();
 
-                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                    var errors = store.DatabaseCommands.GetIndexErrors().SelectMany(x => x.Errors);
+
+                    Assert.Empty(errors);
                     Assert.NotEmpty(results);
                 }
             }

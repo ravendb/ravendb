@@ -185,7 +185,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     case Mode.MultipleValues:
                         CopyToBuffer(obj.BasePointer, obj.Size);
                         break;
-                } 
+                }
+
+                return;
+            }
+
+            long? ticks = null;
+            if (value is DateTime)
+                ticks = ((DateTime)value).Ticks;
+            if (value is DateTimeOffset)
+                ticks = ((DateTimeOffset)value).Ticks;
+            if (value is TimeSpan)
+                ticks = ((TimeSpan)value).Ticks;
+
+            if (ticks.HasValue)
+            {
+                var t = ticks.Value;
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&t, sizeof(long));
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer((byte*)&t, sizeof(long));
+                        break;
+                }
 
                 return;
             }

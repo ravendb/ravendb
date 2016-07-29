@@ -3,20 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
+using Raven.Json.Linq;
+using Raven.Server.Documents.Indexes.Static.Linq;
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    using Xunit.Extensions;
-
-    public class GroupByAndDocumentId : RavenTest
+    public class GroupByAndDocumentId : RavenTestBase
     {
         public class Client
         {
@@ -40,42 +42,38 @@ namespace Raven.Tests.Linq
             NoReport
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void Test1(string requestedStorage)
+        [Fact]
+        public async Task Test1()
         {
-            DoTest<Client_ImportSummaryByDate_1>(requestedStorage);
+            await DoTest<Client_ImportSummaryByDate_1>();
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void Test2(string requestedStorage)
+        [Fact]
+        public async Task Test2()
         {
-            DoTest<Client_ImportSummaryByDate_2>(requestedStorage);
+            await DoTest<Client_ImportSummaryByDate_2>();
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void Test3(string requestedStorage)
+        [Fact]
+        public async Task Test3()
         {
-            DoTest<Client_ImportSummaryByDate_3>(requestedStorage);
+            await DoTest<Client_ImportSummaryByDate_3>();
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void Test4(string requestedStorage)
+        [Fact]
+        public async Task Test4()
         {
-            DoTest<Client_ImportSummaryByDate_4>(requestedStorage);
+            await DoTest<Client_ImportSummaryByDate_4>();
         }
 
-        private void DoTest<TIndex>(string requestedStorage)
+        private async Task DoTest<TIndex>()
             where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
+            using (var store = await GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new TIndex());
+                store.ExecuteIndex(new TIndex());
 
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Client
                     {
@@ -156,14 +154,13 @@ namespace Raven.Tests.Linq
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore);
+                WaitForIndexing(store);
 
-                AssertNoIndexErrors(documentStore);
+                AssertNoIndexErrors(store);
 
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    var results = session.Query<ImportSummary, TIndex>()
-                        .OrderBy(summary => summary.Date)
+                    var results = Queryable.OrderBy(session.Query<ImportSummary, TIndex>(), summary => summary.Date)
                         .ToArray();
 
                     Assert.Equal(2, results.Length);
@@ -179,13 +176,18 @@ namespace Raven.Tests.Linq
             }
         }
 
+        private void AssertNoIndexErrors(DocumentStore store)
+        {
+            Assert.Empty(store.DatabaseCommands.GetIndexErrors().SelectMany(x => x.Errors));
+        }
+
         // Pass
         public class Client_ImportSummaryByDate_1 : AbstractIndexCreationTask<Client, ImportSummary>
         {
             public Client_ImportSummaryByDate_1()
             {
-                Map = clients => clients.SelectMany(x => x.ImportStatuses, (x, y) => new {x.Id, y.Status, y.TimeStamp})
-                                        .GroupBy(x => new {x.Id, x.TimeStamp.Date})
+                Map = clients => clients.SelectMany(x => x.ImportStatuses, (x, y) => new { x.Id, y.Status, y.TimeStamp })
+                                        .GroupBy(x => new { x.Id, x.TimeStamp.Date })
                                         .Select(g => g.OrderBy(x => x.TimeStamp).Last())
                                         .Select(x => new
                                         {
@@ -195,7 +197,7 @@ namespace Raven.Tests.Linq
                                         });
 
                 Reduce = results => from result in results
-                                    group result by new {result.Status, result.Date}
+                                    group result by new { result.Status, result.Date }
                                     into g
                                     select new
                                     {
@@ -211,8 +213,8 @@ namespace Raven.Tests.Linq
         {
             public Client_ImportSummaryByDate_2()
             {
-                Map = clients => clients.SelectMany(x => x.ImportStatuses, (x, y) => new {x.Id, y.Status, y.TimeStamp})
-                                        .GroupBy(x => new {x.Id, x.TimeStamp.Date})
+                Map = clients => clients.SelectMany(x => x.ImportStatuses, (x, y) => new { x.Id, y.Status, y.TimeStamp })
+                                        .GroupBy(x => new { x.Id, x.TimeStamp.Date })
                                         .Select(g => new
                                         {
                                             g.OrderBy(x => x.TimeStamp).Last().Status,
@@ -221,7 +223,7 @@ namespace Raven.Tests.Linq
                                         });
 
                 Reduce = results => from result in results
-                                    group result by new {result.Status, result.Date}
+                                    group result by new { result.Status, result.Date }
                                     into g
                                     select new
                                     {
@@ -240,7 +242,7 @@ namespace Raven.Tests.Linq
             {
                 Map = clients => from client in clients
                                  from status in client.ImportStatuses
-                                 group status by new {client.Id, status.TimeStamp.Date}
+                                 group status by new { client.Id, status.TimeStamp.Date }
                                  into g
                                  let z = g.OrderBy(x => x.TimeStamp).Last()
                                  select new
@@ -251,7 +253,7 @@ namespace Raven.Tests.Linq
                                  };
 
                 Reduce = results => from result in results
-                                    group result by new {result.Status, result.Date}
+                                    group result by new { result.Status, result.Date }
                                     into g
                                     select new
                                     {
@@ -270,7 +272,7 @@ namespace Raven.Tests.Linq
             {
                 Map = clients => from client in clients
                                  from status in client.ImportStatuses
-                                 group status by new {client.Id, status.TimeStamp.Date}
+                                 group status by new { client.Id, status.TimeStamp.Date }
                                  into g
                                  select new
                                  {
@@ -280,7 +282,7 @@ namespace Raven.Tests.Linq
                                  };
 
                 Reduce = results => from result in results
-                                    group result by new {result.Status, result.Date}
+                                    group result by new { result.Status, result.Date }
                                     into g
                                     select new
                                     {
@@ -297,11 +299,6 @@ namespace Raven.Tests.Linq
             public ImportStatus Status { get; set; }
             public DateTime Date { get; set; }
             public int Count { get; set; }
-        }
-
-        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-        {
-            // No need to create the default index here
         }
     }
 }
