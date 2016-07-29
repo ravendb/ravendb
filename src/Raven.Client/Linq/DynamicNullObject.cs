@@ -150,7 +150,7 @@ namespace Raven.Client.Linq
 
         public override bool Equals(object obj)
         {
-            return obj is DynamicNullObject;
+            return obj == null || obj is DynamicNullObject;
         }
 
         public override int GetHashCode()
