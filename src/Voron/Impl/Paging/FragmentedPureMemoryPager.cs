@@ -17,6 +17,7 @@ namespace Voron.Impl.Paging
         {
             _buffers = buffers;
             NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);
+            FileName = ":memory:";
         }
 
         protected override string GetSourceName()

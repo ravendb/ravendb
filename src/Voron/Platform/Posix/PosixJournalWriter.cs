@@ -55,6 +55,7 @@ namespace Voron.Platform.Posix
         {
             Disposed = true;
             GC.SuppressFinalize(this);
+            _options.IoMetrics.FileClosed(_filename);
             if (_fdReads != -1)
             {
                 Syscall.close(_fdReads);

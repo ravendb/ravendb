@@ -154,6 +154,8 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 return;
 
+            _options.IoMetrics.FileClosed(FileName);
+
             if (PagerState != null)
             {
                 PagerState.Release();

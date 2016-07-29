@@ -15,6 +15,8 @@ namespace Sparrow
         private readonly ConcurrentDictionary<string, FileIoMetrics> _fileMetrics =
             new ConcurrentDictionary<string, FileIoMetrics>();
 
+        private readonly ConcurrentQueue<string> _closedFiles = new ConcurrentQueue<string>();
+
         public IoMetrics(int currentBufferSize, int summaryBufferSize)
         {
             BufferSize = currentBufferSize;
@@ -41,6 +43,21 @@ namespace Sparrow
         //                yield return item;
         //}
 
+        public void FileClosed(string filename)
+        {
+            FileIoMetrics value;
+            if (!_fileMetrics.TryGetValue(filename, out value))
+                return;
+            value.Closed = true;
+            _closedFiles.Enqueue(filename);
+            while (_closedFiles.Count > 16)
+            {
+                if (_closedFiles.TryDequeue(out filename) == false)
+                    return;
+                _fileMetrics.TryRemove(filename, out value);
+            }
+        }
+
         public IoMeterBuffer.DurationMeasurement MeterIoRate(string filename, MeterType type, long size)
         {
             var fileIoMetrics = _fileMetrics.GetOrAdd(filename,
@@ -65,6 +82,7 @@ namespace Sparrow
             public string FileName;
             public IoMeterBuffer Sync;
             public IoMeterBuffer Write;
+            public bool Closed;
 
             public FileIoMetrics(string filename, int metricsBufferSize, int summaryBufferSize)
             {

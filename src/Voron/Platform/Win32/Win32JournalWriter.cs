@@ -139,7 +139,9 @@ namespace Voron.Platform.Win32
                 return;
 
             _disposed = true;
+
             GC.SuppressFinalize(this);
+            _options.IoMetrics.FileClosed(_filename);
             _readHandle?.Dispose();
             _readHandle = null;
             _handle?.Dispose();
