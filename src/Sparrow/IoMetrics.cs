@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using Sparrow.Json.Parsing;
-using Sparrow.Utils;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Sparrow
 {
@@ -11,51 +8,72 @@ namespace Sparrow
     {
         public enum MeterType
         {
-            None = 0,
-            WriteJournalFile = 1,
-            FlushJournalFile =2,
-            WriteDataFile = 3,
-            FlushDataFile = 4
+            Write,
+            Sync
         }
+
+        private readonly ConcurrentDictionary<string, FileIoMetrics> _fileMetrics =
+            new ConcurrentDictionary<string, FileIoMetrics>();
 
         public IoMetrics(int currentBufferSize, int summaryBufferSize)
         {
-            BuffSize = currentBufferSize;
-            SummaryBuffSize = summaryBufferSize;
-            _buffers = new[]
+            BufferSize = currentBufferSize;
+            SummaryBufferSize = summaryBufferSize;
+        }
+
+        public int BufferSize { get; }
+        public int SummaryBufferSize { get; }
+
+
+        //public IEnumerable<IoMeterBuffer.SummerizedItem> GetAllSummerizedItems()
+        //{
+        //    foreach (IoMeterBuffer buff in _buffers)
+        //        if (buff != null)
+        //            foreach (var item in buff.GetSummerizedItems())
+        //                yield return item;
+        //}
+
+        //public IEnumerable<IoMeterBuffer.MeterItem> GetAllCurrentItems()
+        //{
+        //    foreach (IoMeterBuffer buff in _buffers)
+        //        if (buff != null)
+        //            foreach (var item in buff.GetCurrentItems())
+        //                yield return item;
+        //}
+
+        public IoMeterBuffer.DurationMeasurement MeterIoRate(string filename, MeterType type, long size)
+        {
+            var fileIoMetrics = _fileMetrics.GetOrAdd(filename,
+                name => new FileIoMetrics(name, BufferSize, SummaryBufferSize));
+            IoMeterBuffer buffer;
+            switch (type)
             {
-                new IoMeterBuffer(this),
-                new IoMeterBuffer(this),
-                new IoMeterBuffer(this),
-                new IoMeterBuffer(this),
-                new IoMeterBuffer(this),
-            };
+                case MeterType.Write:
+                    buffer = fileIoMetrics.Write;
+                    break;
+                case MeterType.Sync:
+                    buffer = fileIoMetrics.Sync;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
+            return new IoMeterBuffer.DurationMeasurement(buffer, size);
         }
 
-        public int BuffSize { get; }
-        public int SummaryBuffSize { get; }
-
-        private readonly IoMeterBuffer[] _buffers;
-
-        public IEnumerable<IoMeterBuffer.SummerizedItem> GetAllSummerizedItems()
+        public class FileIoMetrics
         {
-            foreach (IoMeterBuffer buff in _buffers)
-                if (buff != null)
-                    foreach (var item in buff.GetSummerizedItems())
-                        yield return item;
-        }
+            public string FileName;
+            public IoMeterBuffer Sync;
+            public IoMeterBuffer Write;
 
-        public IoMeterBuffer.DurationMeasurement MeterIoRate(MeterType type, long size)
-        {
-            return new IoMeterBuffer.DurationMeasurement(_buffers[(int)type], size);
-        }
+            public FileIoMetrics(string filename, int metricsBufferSize, int summaryBufferSize)
+            {
+                FileName = filename;
 
-        public IEnumerable<IoMeterBuffer.MeterItem> GetAllCurrentItems()
-        {
-            foreach (IoMeterBuffer buff in _buffers)
-                if (buff != null)
-                    foreach (var item in buff.GetCurrentItems())
-                        yield return item;
+                Write = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+
+                Sync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+            }
         }
     }
 }

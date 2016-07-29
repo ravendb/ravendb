@@ -8,18 +8,17 @@ namespace Voron.Platform.Posix
 {
     public unsafe class PosixMemoryMapPager : PosixAbstractPager
     {
-        private readonly string _file;
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         private readonly bool _isSyncDirAllowed;
         
-        public PosixMemoryMapPager(int pageSize,string file, long? initialFileSize = null):base(pageSize)
+        public PosixMemoryMapPager(StorageEnvironmentOptions options,string file, long? initialFileSize = null):base(options)
         {
-            _file = file;
-            _isSyncDirAllowed = PosixHelper.CheckSyncDirectoryAllowed(_file);
+            FileName = file;
+            _isSyncDirAllowed = PosixHelper.CheckSyncDirectoryAllowed(FileName);
 
-            PosixHelper.EnsurePathExists(_file);
+            PosixHelper.EnsurePathExists(FileName);
 
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
@@ -71,14 +70,14 @@ namespace Voron.Platform.Posix
 
         private long GetFileSize()
         {            
-            FileInfo fi = new FileInfo(_file);
+            FileInfo fi = new FileInfo(FileName);
             return fi.Length;
             
         }
 
         protected override string GetSourceName()
         {
-            return "mmap: " + _fd + " " + _file;
+            return "mmap: " + _fd + " " + FileName;
         }
 
         protected override PagerState AllocateMorePages(long newLength)
@@ -94,7 +93,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize));
 
-            if (_isSyncDirAllowed && PosixHelper.SyncDirectory(_file) == -1)
+            if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
@@ -154,7 +153,7 @@ namespace Voron.Platform.Posix
             return newPager;
         }
 
-        public override void Sync(IoMetrics ioMetrics)
+        public override void Sync()
         {
             long totalSize = 0;
             foreach (var allocationInfo in PagerState.AllocationInfos)
@@ -163,7 +162,7 @@ namespace Voron.Platform.Posix
             }
 
             //TODO: Is it worth it to change to just one call for msync for the entire file?
-            using (ioMetrics.MeterIoRate(IoMetrics.MeterType.FlushDataFile, totalSize))
+            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.Sync, totalSize))
             {
                 foreach (var alloc in PagerState.AllocationInfos)
                 {
@@ -180,7 +179,7 @@ namespace Voron.Platform.Posix
 
         public override string ToString()
         {
-            return _file;
+            return FileName;
         }
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)

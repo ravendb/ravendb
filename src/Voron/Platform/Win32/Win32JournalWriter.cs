@@ -68,7 +68,7 @@ namespace Voron.Platform.Win32
 
             bool writeSuccess;
             var nNumberOfBytesToWrite = numberOfPages * _options.PageSize;
-            using (_options.IoMetrics.MeterIoRate(IoMetrics.MeterType.WriteJournalFile, nNumberOfBytesToWrite))
+            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.Write, nNumberOfBytesToWrite))
             {
                 int written;
                 writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, nNumberOfBytesToWrite,
@@ -86,7 +86,7 @@ namespace Voron.Platform.Win32
 
         public AbstractPager CreatePager()
         {
-            return new Win32MemoryMapPager(_options.PageSize,_filename);
+            return new Win32MemoryMapPager(_options,_filename);
         }
 
         public bool Read(long pageNumber, byte* buffer, int count)

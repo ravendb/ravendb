@@ -8,9 +8,6 @@ namespace Voron.Platform.Posix
 {
     public abstract class PosixAbstractPager : AbstractPager
     {
-        protected PosixAbstractPager(int pageSize) : base(pageSize)
-        {
-        }
 
         private unsafe void PrefetchRanges(List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY> ranges)
         {
@@ -107,6 +104,10 @@ namespace Voron.Platform.Posix
                 baseAddress = null;
             }
             PrefetchRanges(range);
+        }
+
+        public PosixAbstractPager(StorageEnvironmentOptions options) : base(options)
+        {
         }
     }
 }

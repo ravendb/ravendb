@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Voron.Util;
@@ -13,8 +12,8 @@ namespace Voron.Impl.Paging
         private readonly ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> _buffers;
 
 
-        internal FragmentedPureMemoryPager(int pageSize, ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> buffers)
-            : base(pageSize)
+        internal FragmentedPureMemoryPager(StorageEnvironmentOptions options, ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> buffers)
+            : base(options)
         {
             _buffers = buffers;
             NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);
@@ -43,7 +42,7 @@ namespace Voron.Impl.Paging
             throw new NotSupportedException();
         }
 
-        public override void Sync(IoMetrics ioMetrics)
+        public override void Sync()
         {
             throw new NotSupportedException();
         }

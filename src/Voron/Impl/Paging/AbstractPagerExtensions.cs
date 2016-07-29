@@ -32,13 +32,13 @@ namespace Voron.Impl.Paging
 
 
 
-        public static int WritePage(this AbstractPager pager, Page page, IoMetrics ioMetrics, long? pageNumber = null)
+        public static int WritePage(this AbstractPager pager, Page page, long? pageNumber = null)
         {
             var startPage = pageNumber ?? page.PageNumber;
 
             var toWrite = page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-            using (ioMetrics.MeterIoRate(IoMetrics.MeterType.WriteDataFile, toWrite * pager.PageSize))
+            using (pager.Options.IoMetrics.MeterIoRate(pager.FileName ?? "memory", IoMetrics.MeterType.Write, toWrite * pager.PageSize))
             {
                 return pager.WriteDirect(page.Pointer, startPage, toWrite);
             }

@@ -27,22 +27,20 @@ namespace Sparrow
             public long Count;
         }
 
-        public IoMeterBuffer(IoMetrics ioMetrics)
+        public IoMeterBuffer(int metricsBufferSize, int summaryBufferSize)
         {
-            _buffer = new MeterItem[ioMetrics.BuffSize];
-            _summerizedBuffer = new SummerizedItem[ioMetrics.SummaryBuffSize];
-            _ioMetrics = ioMetrics;
+            _buffer = new MeterItem[metricsBufferSize];
+            _summerizedBuffer = new SummerizedItem[summaryBufferSize];
         }
 
         private readonly MeterItem[] _buffer;
         private readonly SummerizedItem[] _summerizedBuffer;
         private int _bufferPos;
         private int _summerizedPos;
-        private readonly IoMetrics _ioMetrics;
 
         public IEnumerable<SummerizedItem> GetSummerizedItems()
         {
-            for (int pos = 0; pos < _ioMetrics.SummaryBuffSize; pos++)
+            for (int pos = 0; pos < _summerizedBuffer.Length; pos++)
             {
                 var summerizedItem = _summerizedBuffer[pos];
                 if (summerizedItem == null)
@@ -53,7 +51,7 @@ namespace Sparrow
 
         public IEnumerable<MeterItem> GetCurrentItems()
         {
-            for (int pos = 0; pos < _ioMetrics.BuffSize; pos++)
+            for (int pos = 0; pos < _buffer.Length; pos++)
             {
                 var item = _buffer[pos];
                 if (item  == null)
@@ -83,14 +81,16 @@ namespace Sparrow
 
         private void Mark(long size, long start)
         {
-            var pos = Interlocked.Increment(ref _bufferPos);
-            var adjustedTail = pos%_ioMetrics.BuffSize;
             var meterItem = new MeterItem
             {
                 Start = start,
                 Size = size,
                 End = Stopwatch.GetTimestamp()
             };
+
+            var pos = Interlocked.Increment(ref _bufferPos);
+            var adjustedTail = pos%_buffer.Length;
+            
             if (Interlocked.CompareExchange(ref _buffer[adjustedTail], meterItem, null) == null)
                 return;
 

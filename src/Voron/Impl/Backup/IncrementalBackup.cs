@@ -322,7 +322,7 @@ namespace Voron.Impl.Backup
                                 env.Options.DataPager.Write(page);
                             }
 
-                            env.Options.DataPager.Sync(env.Options.IoMetrics);
+                            env.Options.DataPager.Sync();
 
                             var root = Tree.Open(txw, null, &lastTxHeader->Root);
                             root.Name = Constants.RootTreeName;

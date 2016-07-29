@@ -623,7 +623,7 @@ namespace Voron.Impl.Journal
 
             internal void SyncDataFile(long oldestActiveTransaction)
             {
-                _waj._dataPager.Sync(_waj._env.Options.IoMetrics);
+                _waj._dataPager.Sync();
 
                 UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
 
@@ -677,7 +677,7 @@ namespace Voron.Impl.Journal
                     long written = 0;
                     foreach (var page in sortedPages)
                     {
-                        written += _waj._dataPager.WritePage(page, _waj._env.Options.IoMetrics);
+                        written += _waj._dataPager.WritePage(page);
                     }
 
                     _totalWrittenButUnsyncedBytes += written;

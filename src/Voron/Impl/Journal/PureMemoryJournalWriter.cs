@@ -41,7 +41,7 @@ namespace Voron.Impl.Journal
             _locker.EnterReadLock();
             try
             {
-                return new FragmentedPureMemoryPager(_options.PageSize, _buffers);
+                return new FragmentedPureMemoryPager(_options, _buffers);
             }
             finally
             {

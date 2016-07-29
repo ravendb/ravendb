@@ -39,16 +39,16 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
-        public Win32MemoryMapPager(int pageSize,string file,
+        public Win32MemoryMapPager(StorageEnvironmentOptions options,string file,
             long? initialFileSize = null,
-                                   Win32NativeFileAttributes options = Win32NativeFileAttributes.Normal,
+                                   Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
-            :base(pageSize)
+            :base(options)
         {
            
             Win32NativeMethods.SYSTEM_INFO systemInfo;
             Win32NativeMethods.GetSystemInfo(out systemInfo);
-
+            FileName = file;
             AllocationGranularity = systemInfo.allocationGranularity;
 
             _access = access;
@@ -58,7 +58,7 @@ namespace Voron.Platform.Win32
 
             _handle = Win32NativeFileMethods.CreateFile(file, access,
                                                         Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
-                                                        Win32NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
+                                                        Win32NativeFileCreationDisposition.OpenAlways, fileAttributes, IntPtr.Zero);
             if (_handle.IsInvalid)
             {
                 int lastWin32ErrorCode = Marshal.GetLastWin32Error();
@@ -247,19 +247,17 @@ namespace Voron.Platform.Win32
             return "MemMap: " + _fileInfo.FullName;
         }
 
-        public override void Sync(IoMetrics ioMetrics)
+        public override void Sync()
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();
-
-            Debug.Assert(ioMetrics != null);
 
             long totalSize = 0;
             foreach (var allocationInfo in PagerState.AllocationInfos)
             {
                 totalSize += allocationInfo.Size;
             }
-            using (ioMetrics.MeterIoRate(IoMetrics.MeterType.FlushDataFile, totalSize))
+            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.Sync, totalSize))
             {
                 foreach (var allocationInfo in PagerState.AllocationInfos)
                 {
