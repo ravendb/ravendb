@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 
 namespace Sparrow.Json
 {
@@ -47,10 +48,10 @@ namespace Sparrow.Json
                 return Equals(lazyDouble);
 
             if (obj is double)
-                return ((double)this).Equals(obj);
+                return Math.Abs(this - (double)obj) < double.Epsilon;
 
             if (obj is decimal)
-                return ((decimal)this).Equals(obj);
+                return ((decimal)this).Equals((decimal)obj);
 
             return false;
         }
@@ -58,12 +59,12 @@ namespace Sparrow.Json
         protected bool Equals(LazyDoubleValue other)
         {
             if (_val != null && other._val != null)
-                return Equals(_val, other._val);
+                return Math.Abs(_val.Value - other._val.Value) < double.Epsilon;
 
             if (_decimalVal != null && other._decimalVal != null)
-                return Equals(_decimalVal, other._decimalVal);
+                return _decimalVal.Value.Equals(other._decimalVal.Value);
 
-            return Equals(Inner, other.Inner);
+            return Inner.Equals(other.Inner);
         }
 
         public override int GetHashCode()
