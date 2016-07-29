@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Security.Cryptography;
 using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Voron;
 using Raven.Server.Documents.Includes;
@@ -30,14 +28,12 @@ namespace Raven.Server.Documents.Transformers
 
         public dynamic Source;
 
-        private DynamicDocumentObject _document;
-
-        private DynamicNullObject _null;
+        private DynamicBlittableJson _document;
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString)
         {
             if (keyLazy == null && keyString == null)
-                return Null();
+                return DynamicNullObject.Null;
 
             var source = Source;
             if (source == null)
@@ -63,14 +59,18 @@ namespace Raven.Server.Documents.Transformers
             // it in case insensitive manner
             _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
 
-            var document = _documentsStorage.Get(_documentsContext, keySlice); 
+            var document = _documentsStorage.Get(_documentsContext, keySlice);
             if (document == null)
-                return Null();
+                return DynamicNullObject.Null;
 
             if (_document == null)
-                _document = new DynamicDocumentObject();
-
-            _document.Set(document);
+            {
+                _document = new DynamicBlittableJson(document);
+            }
+            else
+            {
+                _document.Set(document);
+            }
 
             return _document;
         }
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Transformers
         public dynamic Include(object key)
         {
             if (key == null || key is DynamicNullObject)
-                return Null();
+                return DynamicNullObject.Null;
 
             var keyString = key as string;
             if (keyString != null)
@@ -132,11 +132,6 @@ namespace Raven.Server.Documents.Transformers
 
             parameter = new TransformerParameter(value);
             return true;
-        }
-
-        private DynamicNullObject Null()
-        {
-            return _null ?? (_null = new DynamicNullObject());
         }
     }
 }

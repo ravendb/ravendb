@@ -12,13 +12,13 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
-    public class DynamicDocumentObjectTests
+    public class DynamicBlittableJsonTests
     {
         private readonly UnmanagedBuffersPool _pool;
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
 
-        public DynamicDocumentObjectTests()
+        public DynamicBlittableJsonTests()
         {
             _pool = new UnmanagedBuffersPool("foo");
             _ctx = new JsonOperationContext(_pool);
@@ -57,7 +57,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
             }, "users/1");
 
-            dynamic user = new DynamicDocumentObject(doc);
+            dynamic user = new DynamicBlittableJson(doc);
 
             Assert.Equal("Arek", user.Name);
             Assert.Equal("NYC", user.Address.City);

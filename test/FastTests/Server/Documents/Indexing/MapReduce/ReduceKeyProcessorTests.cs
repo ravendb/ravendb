@@ -1,4 +1,5 @@
 ﻿using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

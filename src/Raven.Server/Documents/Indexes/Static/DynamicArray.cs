@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using Sparrow.Json;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -40,18 +40,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var i = (int)indexes[0];
             var resultObject = _inner.ElementAt(i);
 
-            if (resultObject is BlittableJsonReaderObject)
-            {
-                result = new DynamicBlittableJson((BlittableJsonReaderObject)resultObject);
-            }
-            else if (resultObject is BlittableJsonReaderArray)
-            {
-                result = new DynamicArray((BlittableJsonReaderArray)resultObject);
-            }
-            else
-            {
-                result = resultObject;
-            }
+            result = TypeConverter.DynamicConvert(resultObject);
             return true;
         }
 
@@ -99,21 +88,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (_inner.MoveNext() == false)
                     return false;
 
-                var @object = _inner.Current as BlittableJsonReaderObject;
-                if (@object != null)
-                {
-                    Current = new DynamicBlittableJson(@object);
-                    return true;
-                }
 
-                var array = _inner.Current as BlittableJsonReaderArray;
-                if (array != null)
-                {
-                    Current = new DynamicArray(array);
-                    return true;
-                }
-
-                Current = _inner.Current;
+                Current = TypeConverter.DynamicConvert(_inner.Current);
                 return true;
             }
 

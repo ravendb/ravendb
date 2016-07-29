@@ -247,7 +247,7 @@ namespace Sparrow.Json.Parsing
 
                 }
 
-                var dbj = current as DynamicBlittableJson;
+                var dbj = current as IBlittableJsonContainer;
 
                 if (dbj != null)
                 {

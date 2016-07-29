@@ -3,13 +3,31 @@ using System.Globalization;
 using System.Reflection;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
+using Raven.Client.Linq;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils
 {
-    public class TypeConverter
+    internal class TypeConverter
     {
-        internal static T Convert<T>(object value, bool cast)
+        public static dynamic DynamicConvert(object value)
+        {
+            if (value == null)
+                return DynamicNullObject.Null;
+
+            var jsonObject = value as BlittableJsonReaderObject;
+            if (jsonObject != null)
+                return new DynamicBlittableJson(jsonObject);
+
+            var jsonArray = value as BlittableJsonReaderArray;
+            if (jsonArray != null)
+                return new DynamicArray(jsonArray);
+
+            return value;
+        }
+
+        public static T Convert<T>(object value, bool cast)
         {
             if (cast)
             {

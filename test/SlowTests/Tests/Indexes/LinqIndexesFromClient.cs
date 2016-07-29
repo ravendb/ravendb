@@ -77,7 +77,7 @@ namespace SlowTests.Tests.Indexes
             var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
             var reader = context.ReadForMemory(ms, "doc");
 
-            return new DynamicDocumentObject(new Document
+            return new DynamicBlittableJson(new Document
             {
                 Data = reader
             });

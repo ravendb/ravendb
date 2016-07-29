@@ -165,7 +165,7 @@ namespace Raven.Client.Linq
                 result = GetValue(token.Value<string>());
                 return true;
             }
-            if(indexes[0] is string == false)
+            if (indexes[0] is string == false)
                 throw new InvalidOperationException("Cannot index using " + indexes[0] + " because only strings are supported and it is a " + indexes[0].GetType());
             result = GetValue((string)indexes[0]);
             return true;
@@ -197,7 +197,7 @@ namespace Raven.Client.Linq
                     var ravenJValue = ((RavenJValue)jToken);
                     return ravenJValue.Value;
                 case JTokenType.Null:
-                    return new DynamicNullObject { IsExplicitNull = true };
+                    return DynamicNullObject.ExplicitNull;
                 default:
                     var value = jToken.Value<object>();
                     if (value is long)
@@ -245,7 +245,7 @@ namespace Raven.Client.Linq
                         }
 
                     }
-                    return value ?? new DynamicNullObject { IsExplicitNull = true };
+                    return value ?? DynamicNullObject.ExplicitNull;
             }
         }
 
@@ -322,7 +322,7 @@ namespace Raven.Client.Linq
 
         public dynamic FirstOrDefault(Func<object, bool> func)
         {
-            return Enumerable.FirstOrDefault(this, func) ?? new DynamicNullObject();
+            return Enumerable.FirstOrDefault(this, func) ?? DynamicNullObject.Null;
         }
 
         public dynamic First(Func<object, bool> func)
@@ -332,7 +332,7 @@ namespace Raven.Client.Linq
 
         public dynamic LastOrDefault(Func<object, bool> func)
         {
-            return Enumerable.LastOrDefault(this, func) ?? new DynamicNullObject();
+            return Enumerable.LastOrDefault(this, func) ?? DynamicNullObject.Null;
         }
 
         public dynamic Last(Func<object, bool> func)
@@ -385,7 +385,7 @@ namespace Raven.Client.Linq
             {
                 return inner.Count;
             }
-            return new DynamicNullObject();
+            return DynamicNullObject.Null;
         }
 
         /// <summary>
@@ -398,9 +398,9 @@ namespace Raven.Client.Linq
             if (metadata != null && string.IsNullOrEmpty(metadata.Value<string>("@id")) == false)
             {
                 var id = metadata.Value<string>("@id");
-                return string.IsNullOrEmpty(id) ? (object)new DynamicNullObject() : id;
+                return string.IsNullOrEmpty(id) ? (object)DynamicNullObject.Null : id;
             }
-            return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)new DynamicNullObject();
+            return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)DynamicNullObject.Null;
         }
 
 

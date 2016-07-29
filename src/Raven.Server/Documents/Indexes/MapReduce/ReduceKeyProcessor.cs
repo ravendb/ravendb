@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;

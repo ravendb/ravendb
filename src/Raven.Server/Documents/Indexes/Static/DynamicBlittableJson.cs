@@ -1,47 +1,45 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using Raven.Abstractions.Data;
 using Raven.Client.Linq;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicBlittableJson : DynamicObject, IEnumerable<object>
+    public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IBlittableJsonContainer
     {
-        protected BlittableJsonReaderObject BlittableJsonReaderObject;
+        public BlittableJsonReaderObject BlittableJson { get; private set; }
 
-        private static readonly DynamicNullObject Null = new DynamicNullObject { IsExplicitNull = true };
+        private LazyStringValue _key;
 
-        public DynamicBlittableJson(BlittableJsonReaderObject blittableJsonReaderObject)
+        public DynamicBlittableJson(Document document)
         {
-            BlittableJsonReaderObject = blittableJsonReaderObject;
+            Set(document);
         }
 
-        public void Set(BlittableJsonReaderObject blittableJsonReaderObject)
+        public DynamicBlittableJson(BlittableJsonReaderObject blittableJson)
         {
-            BlittableJsonReaderObject = blittableJsonReaderObject;
+            BlittableJson = blittableJson;
+        }
+
+        public void Set(Document document)
+        {
+            _key = document.Key;
+            BlittableJson = document.Data;
         }
 
         public string[] GetPropertyNames()
         {
-            return BlittableJsonReaderObject.GetPropertyNames();
+            return BlittableJson.GetPropertyNames();
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
-            return TryGetByName(binder.Name, out result);
-        }
-
-        public bool TryGetByName(string name, out object result)
-        {
-            if (BlittableJsonReaderObject.TryGetMember(name, out result) == false)
-            {
-                result = Null;
-                return true;
-            }
-
-            result = TransformValue(result);
-            return true;
+            var name = binder.Name;
+            return TryGetByName(name, out result);
         }
 
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
@@ -49,17 +47,75 @@ namespace Raven.Server.Documents.Indexes.Static
             return TryGetByName((string)indexes[0], out result);
         }
 
+        private bool TryGetByName(string name, out object result)
+        {
+            if (name == Constants.DocumentIdFieldName || name == "Id")
+            {
+                if (_key == null)
+                {
+                    result = DynamicNullObject.Null;
+                    return false;
+                }
+
+                result = _key;
+                return true;
+            }
+
+            var getResult = BlittableJson.TryGetMember(name, out result);
+
+            if (result == null && name == "HasValue")
+            {
+                result = getResult;
+                return true;
+            }
+
+            if (getResult && result == null)
+            {
+                result = DynamicNullObject.ExplicitNull;
+                return true;
+            }
+
+            if (getResult == false)
+            {
+                result = DynamicNullObject.Null;
+                return true;
+            }
+
+            result = TypeConverter.DynamicConvert(result);
+            return true;
+        }
+
+        public object this[string key]
+        {
+            get
+            {
+                if (Constants.Headers.LastModified.Equals(key, StringComparison.OrdinalIgnoreCase)) // TODO - avoid two headers for last doc modification
+                    key = Constants.Headers.RavenLastModified;
+
+                object result;
+                if (TryGetByName(key, out result) == false)
+                    throw new InvalidOperationException($"Could not get '{key}' value of dynamic object");
+
+                return result;
+            }
+        }
+
+        public T Value<T>(string key)
+        {
+            return TypeConverter.Convert<T>(this[key], false);
+        }
+
         public IEnumerator<object> GetEnumerator()
         {
-            foreach (var propertyName in BlittableJsonReaderObject.GetPropertyNames())
+            foreach (var propertyName in BlittableJson.GetPropertyNames())
             {
-                yield return new KeyValuePair<object, object>(propertyName, TransformValue(BlittableJsonReaderObject[propertyName]));
+                yield return new KeyValuePair<object, object>(propertyName, TypeConverter.DynamicConvert(BlittableJson[propertyName]));
             }
         }
 
         public override string ToString()
         {
-            return BlittableJsonReaderObject.ToString();
+            return BlittableJson.ToString();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -67,20 +123,23 @@ namespace Raven.Server.Documents.Indexes.Static
             return GetEnumerator();
         }
 
-        private static object TransformValue(object value)
+        public override bool Equals(object obj)
         {
-            if (value == null)
-                return Null;
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
 
-            var jsonObject = value as BlittableJsonReaderObject;
-            if (jsonObject != null)
-                return new DynamicBlittableJson(jsonObject);
+            return Equals((DynamicBlittableJson)obj);
+        }
 
-            var jsonArray = value as BlittableJsonReaderArray;
-            if (jsonArray != null)
-                return new DynamicArray(jsonArray);
+        protected bool Equals(DynamicBlittableJson other)
+        {
+            return Equals(BlittableJson, other.BlittableJson);
+        }
 
-            return value;
+        public override int GetHashCode()
+        {
+            return BlittableJson?.GetHashCode() ?? 0;
         }
     }
 }
