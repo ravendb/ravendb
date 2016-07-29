@@ -105,6 +105,8 @@ namespace Voron
         private long _initialLogFileSize;
         private long _maxLogFileSize;
         private int _pageSize;
+        public IoMetrics IoMetrics { get; set; }
+
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 

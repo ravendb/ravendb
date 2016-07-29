@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -246,20 +247,31 @@ namespace Voron.Platform.Win32
             return "MemMap: " + _fileInfo.FullName;
         }
 
-        public override void Sync()
+        public override void Sync(IoMetrics ioMetrics)
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
+            Debug.Assert(ioMetrics != null);
+
+            long totalSize = 0;
             foreach (var allocationInfo in PagerState.AllocationInfos)
             {
-                if (Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false)
+                totalSize += allocationInfo.Size;
+            }
+            using (ioMetrics.MeterIoRate(IoMetrics.MeterType.FlushDataFile, totalSize))
+            {
+                foreach (var allocationInfo in PagerState.AllocationInfos)
+                {
+                    if (
+                        Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress,
+                            new IntPtr(allocationInfo.Size)) == false)
+                        throw new Win32Exception();
+                }
+
+                if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
                     throw new Win32Exception();
             }
-
-            if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
-                throw new Win32Exception();
-            // TODO : Measure IO times (RavenDB-4659) - Flushed & sync {sizeToWrite/1024:#,#} kb in {sp.ElapsedMilliseconds:#,#} ms
         }
 
 
