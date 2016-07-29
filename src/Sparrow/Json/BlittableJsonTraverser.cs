@@ -65,17 +65,16 @@ namespace Sparrow.Json
                     {
                         case "Length":
                             var lazyStringValue = reader as LazyStringValue;
-                            if (lazyStringValue == null)
-                            {
-                                var lazyCompressedStringValue = reader as LazyCompressedStringValue;
-                                if (lazyCompressedStringValue != null)
-                                    lazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
-                            }
-
                             if (lazyStringValue != null)
                             {
-                                var value = lazyStringValue.ToString();
-                                result = value.Length;
+                                result = lazyStringValue.Size;
+                                return true;
+                            }
+
+                            var lazyCompressedStringValue = reader as LazyCompressedStringValue;
+                            if (lazyCompressedStringValue != null)
+                            {
+                                result = lazyCompressedStringValue.UncompressedSize;
                                 return true;
                             }
 
