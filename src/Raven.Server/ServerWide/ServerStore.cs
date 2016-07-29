@@ -84,8 +84,6 @@ namespace Raven.Server.ServerWide
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
 
-            options.IoMetrics = IoMetrics;
-
             options.SchemaVersion = 1;
 
             try

@@ -133,8 +133,6 @@ namespace Raven.Server.Documents
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
 
-            options.IoMetrics = _documentDatabase.IoMetrics;
-
             try
             {
                 Initialize(options);

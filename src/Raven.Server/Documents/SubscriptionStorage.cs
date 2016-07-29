@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
 
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
-        public SubscriptionStorage(DocumentDatabase db, MetricsScheduler metricsScheduler, IoMetrics ioMetrics)
+        public SubscriptionStorage(DocumentDatabase db, MetricsScheduler metricsScheduler)
         {
             _db = db;
             _metricsScheduler = metricsScheduler;
@@ -50,8 +50,6 @@ namespace Raven.Server.Documents
             var options = _db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"));
-
-            options.IoMetrics = ioMetrics;
 
             _environment = new StorageEnvironment(options, db.LoggerSetup);
             _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");

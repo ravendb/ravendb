@@ -104,11 +104,6 @@ namespace Voron
         {
             try
             {
-                if (options.IoMetrics == null)
-                {
-                    options.IoMetrics = new IoMetrics(256, 256); // TODO - this is for tests. We need a way to verify that
-                }
-
                 _log = loggerSetup.GetLogger<StorageEnvironment>(options.BasePath);
                 _options = options;
                 _dataPager = options.DataPager;

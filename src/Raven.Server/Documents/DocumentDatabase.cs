@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Jint.Parser.Ast;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -58,7 +57,7 @@ namespace Raven.Server.Documents
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler, ioMetrics);
+            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler);
             Metrics = new MetricsCountersManager(metricsScheduler);
             IoMetrics = ioMetrics;
             Patch = new PatchDocument(this);
