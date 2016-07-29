@@ -111,7 +111,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&l, sizeof(long));
+                        unchecked
+                        {
+                            _singleValueHash = (ulong)l;
+                        }
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&l, sizeof(long));
@@ -123,15 +126,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             if (value is decimal)
             {
-                var l = (decimal)value;
+                var d = (decimal)value;
 
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&l, sizeof(decimal));
+                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&d, sizeof(decimal));
                         break;
                     case Mode.MultipleValues:
-                        CopyToBuffer((byte*)&l, sizeof(decimal));
+                        CopyToBuffer((byte*)&d, sizeof(decimal));
                         break;
                 }
 
@@ -145,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&i, sizeof(int));
+                        _singleValueHash = (ulong)i;
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&i, sizeof(int));
@@ -162,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&d, sizeof(double));
+                        _singleValueHash = (ulong)d;
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&d, sizeof(double));
