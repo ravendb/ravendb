@@ -136,7 +136,13 @@ namespace Sparrow.Json
 
             for (int i = 0; i < _count; i++)
             {
-                if (this[i].Equals(other[i]) == false)
+                var x = this[i];
+                var y = other[i];
+
+                if (x == null && y == null)
+                    continue;
+
+                if (x?.Equals(y) == false)
                     return false;
             }
             

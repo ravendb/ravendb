@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Sparrow.Binary;
@@ -10,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public unsafe class ReduceKeyProcessor
     {
         private readonly UnmanagedBuffersPool _buffersPool;
-        private readonly Mode _mode;
+        private Mode _mode;
         private UnmanagedBuffersPool.AllocatedMemoryData _buffer;
         private int _bufferPos;
         private ulong _singleValueHash;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public void Init()
+        public void Reset()
         {
             _bufferPos = 0;
         }
@@ -53,6 +54,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Process(object value)
         {
+            if (value == null || value is DynamicNullObject)
+                return;
+
             var lsv = value as LazyStringValue;
             if (lsv != null)
             {
@@ -111,7 +115,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&l, sizeof(long));
+                        unchecked
+                        {
+                            _singleValueHash = (ulong)l;
+                        }
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&l, sizeof(long));
@@ -123,15 +130,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             if (value is decimal)
             {
-                var l = (decimal)value;
+                var d = (decimal)value;
 
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&l, sizeof(decimal));
+                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&d, sizeof(decimal));
                         break;
                     case Mode.MultipleValues:
-                        CopyToBuffer((byte*)&l, sizeof(decimal));
+                        CopyToBuffer((byte*)&d, sizeof(decimal));
                         break;
                 }
 
@@ -145,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&i, sizeof(int));
+                        _singleValueHash = (ulong)i;
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&i, sizeof(int));
@@ -162,10 +169,34 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&d, sizeof(double));
+                        _singleValueHash = (ulong)d;
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&d, sizeof(double));
+                        break;
+                }
+
+                return;
+            }
+
+            long? ticks = null;
+            if (value is DateTime)
+                ticks = ((DateTime)value).Ticks;
+            if (value is DateTimeOffset)
+                ticks = ((DateTimeOffset)value).Ticks;
+            if (value is TimeSpan)
+                ticks = ((TimeSpan)value).Ticks;
+
+            if (ticks.HasValue)
+            {
+                var t = ticks.Value;
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = (ulong)t;
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer((byte*)&t, sizeof(long));
                         break;
                 }
 
@@ -177,20 +208,41 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (dynamicJson != null)
             {
                 var obj = dynamicJson.BlittableJson;
-                switch (_mode)
+
+                _mode = Mode.MultipleValues;
+
+                if (_buffer == null)
+                    _buffer = _buffersPool.Allocate(16);
+                
+                for (int i = 0; i < obj.Count; i++)
                 {
-                    case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate(obj.BasePointer, obj.Size);
-                        break;
-                    case Mode.MultipleValues:
-                        CopyToBuffer(obj.BasePointer, obj.Size);
-                        break;
-                } 
+                    // this call ensures properties to be returned in the same order, regardless their storing order
+                    var property = obj.GetPropertyByIndex(i); 
+                    
+                    Process(property.Item2);
+                }
+                
+                return;
+            }
+
+            var dynamicArray = value as DynamicArray;
+
+            if (dynamicArray != null)
+            {
+                _mode = Mode.MultipleValues;
+
+                if (_buffer == null)
+                    _buffer = _buffersPool.Allocate(16);
+                
+                foreach (var item in dynamicArray)
+                {
+                    Process(item);
+                }
 
                 return;
             }
 
-            throw new NotSupportedException($"Unhandled type: {value.GetType()}"); // TODO arek
+            throw new NotSupportedException($"Unhandled type: {value.GetType()}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

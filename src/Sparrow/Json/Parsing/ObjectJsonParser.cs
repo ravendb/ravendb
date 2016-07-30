@@ -255,6 +255,14 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
+                var enumerable = current as IEnumerable<object>;
+
+                if (enumerable != null)
+                {
+                    current = new DynamicJsonArray(enumerable);
+                    continue;
+                }
+
                 var lsv = current as LazyStringValue;
                 if (lsv != null)
                 {

@@ -1,13 +1,12 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class FirstOrDefault : RavenTest
+    public class FirstOrDefault : RavenTestBase
     {
         private class User
         {
@@ -47,7 +46,7 @@ namespace Raven.Tests.Linq
         [Fact]
         public void WillReplaceFirstWithFirstOrDefault()
         {
-            var indexDefinition = new IndexWithLetInReduceFunction {Conventions = new DocumentConvention()}.CreateIndexDefinition();
+            var indexDefinition = new IndexWithLetInReduceFunction { Conventions = new DocumentConvention() }.CreateIndexDefinition();
             Assert.Contains("FirstOrDefault", indexDefinition.Reduce);
         }
     }

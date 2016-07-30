@@ -46,13 +46,35 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             switch (method)
             {
                 case "Select":
-                    return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic>)({node})");
+                    return ModifyLambdaForSelect(node, invocation);
                 case "Sum":
                 case "Average":
                     return ModifyLambdaForNumerics(node);
             }
 
             return base.VisitSimpleLambdaExpression(node);
+        }
+
+        private static SyntaxNode ModifyLambdaForSelect(SimpleLambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
+        {
+            var parentMethod = GetParentMethod(currentInvocation);
+            switch (parentMethod)
+            {
+                case "GroupBy":
+                    return SyntaxFactory.ParseExpression($"(Func<IGrouping<dynamic, dynamic>, dynamic>)({node})");
+                default:
+                    return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic>)({node})");
+            }
+        }
+
+        private static string GetParentMethod(InvocationExpressionSyntax currentInvocation)
+        {
+            var invocation = currentInvocation.Expression
+                .DescendantNodes(descendIntoChildren: syntaxNode => true)
+                .FirstOrDefault(x => x.IsKind(SyntaxKind.InvocationExpression)) as InvocationExpressionSyntax;
+
+            var member = invocation?.Expression as MemberAccessExpressionSyntax;
+            return member?.Name.Identifier.Text;
         }
 
         private static SyntaxNode ModifyLambdaForNumerics(SimpleLambdaExpressionSyntax node)

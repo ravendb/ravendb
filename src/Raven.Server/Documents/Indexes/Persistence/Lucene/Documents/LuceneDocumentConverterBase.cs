@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-
+using System.Text;
 using Lucene.Net.Documents;
 
 using Raven.Abstractions.Data;
@@ -31,6 +31,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<Field>> _fieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<Field>>(Comparer);
 
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<NumericField>>(Comparer);
+
+        private readonly Dictionary<string, StreamReader> _complexInMemoryObjects = new Dictionary<string, StreamReader>();
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
 
@@ -191,7 +193,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private IEnumerable<AbstractField> GetComplexObjectFields(string path, Field.Store storage, BlittableJsonReaderObject val, Field.Index indexing, Field.TermVector termVector)
         {
             yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-            yield return GetOrCreateField(path, null, null, val.GetJsonReader(), storage, indexing, termVector);
+
+            StreamReader inMemoryComplexObject;
+            if (_complexInMemoryObjects.TryGetValue(path, out inMemoryComplexObject) == false)
+            {
+                _complexInMemoryObjects[path] = inMemoryComplexObject = new StreamReader(new MemoryStream(), Encoding.UTF8, true, 1024, leaveOpen: true);  
+            }
+
+            var ms = inMemoryComplexObject.BaseStream;
+
+            ms.Position = 0;
+            val.WriteJsonTo(ms);
+            ms.SetLength(ms.Position);
+            ms.Position = 0;            
+
+            yield return GetOrCreateField(path, null, null, inMemoryComplexObject, storage, indexing, termVector);
         }
 
         private static ValueType GetValueType(object value)

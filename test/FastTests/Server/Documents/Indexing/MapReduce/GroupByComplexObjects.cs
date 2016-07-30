@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries;
@@ -18,7 +19,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
     public class GroupByComplexObjects : RavenLowLevelTestBase
     {
         [Fact]
-        public async Task Single_complex_object()
+        public async Task By_single_complex_object()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -44,56 +45,15 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
-                            {
-                                ["Location"] = new DynamicJsonValue()
-                                {
-                                    ["Country"] = "Poland"
-                                },
-                                [Constants.Metadata] = new DynamicJsonValue
-                                {
-                                    [Constants.Headers.RavenEntityName] = "Users"
-                                }
-                            }))
-                            {
-                                database.DocumentsStorage.Put(context, "users/1", null, doc);
-                            }
-
-                            using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
-                            {
-                                ["Location"] = new DynamicJsonValue()
-                                {
-                                    ["Country"] = "Poland"
-                                },
-                                [Constants.Metadata] = new DynamicJsonValue
-                                {
-                                    [Constants.Headers.RavenEntityName] = "Users"
-                                }
-                            }))
-                            {
-                                database.DocumentsStorage.Put(context, "users/2", null, doc);
-                            }
-
-                            tx.Commit();
-                        }
+                        put_docs(context, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        Assert.Equal(2, batchStats.MapAttempts);
-                        Assert.Equal(2, batchStats.MapSuccesses);
-                        Assert.Equal(0, batchStats.MapErrors);
-
-                        Assert.Equal(2, batchStats.ReduceAttempts);
-                        Assert.Equal(2, batchStats.ReduceSuccesses);
-                        Assert.Equal(0, batchStats.ReduceErrors);
-
                         var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
-                        Assert.Equal(1, queryResult.Results.Count);
+                        Assert.Equal(2, queryResult.Results.Count);
 
                         context.Reset();
 
@@ -104,12 +64,271 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal(1, results.Count);
 
                         Assert.Equal(1, queryResult.Results.Count);
-                        Assert.Equal(@"{""Country"":""Poland""}", results[0].Data["Location"].ToString());
+                        Assert.Equal(@"{""Country"":""Poland"",""State"":""Pomerania""}", results[0].Data["Location"].ToString());
                         Assert.Equal(2L, results[0].Data["Count"]);
                     }
                 }
             }
         }
 
+        [Fact]
+        public async Task By_single_array_object()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                {
+                    Name = "Users_GroupByHobbies",
+                    Maps = { @"from user in docs.Users select new { 
+                                user.Hobbies,
+                                Count = 1
+                            }" },
+                    Reduce = @"from result in results group result by result.Hobbies into g select new { 
+                                Hobbies = g.Key, 
+                                Count = g.Sum(x => x.Count)
+                            }",
+                    Fields = new Dictionary<string, IndexFieldOptions>()
+                    {
+                        { "Hobbies", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        }
+                    }
+                }, database))
+                {
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                    {
+                        put_docs(context, database);
+
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+
+                        Assert.Equal(2, queryResult.Results.Count);
+
+                        context.Reset();
+
+                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
+
+                        var results = queryResult.Results;
+
+                        Assert.Equal(1, results.Count);
+
+                        Assert.Equal(1, queryResult.Results.Count);
+                        Assert.Equal("music", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[0].ToString());
+                        Assert.Equal("sport", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[1].ToString());
+                        Assert.Equal(2L, results[0].Data["Count"]);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task By_multiple_complex_objects()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                {
+                    Name = "Users_GroupByLocationAndResidenceAddress",
+                    Maps = { @"from user in docs.Users select new { 
+                                user.Location,
+                                user.ResidenceAddress,
+                                Count = 1
+                            }" },
+                    Reduce = @"from result in results group result by new { result.Location, result.ResidenceAddress } into g select new { 
+                                g.Key.Location, 
+                                g.Key.ResidenceAddress,
+                                Count = g.Sum(x => x.Count)
+                            }",
+                    Fields = new Dictionary<string, IndexFieldOptions>()
+                    {
+                        { "Location", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        },
+                        { "ResidenceAddress", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        }
+                    }
+                }, database))
+                {
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                    {
+                        put_docs(context, database);
+
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+
+                        Assert.Equal(2, queryResult.Results.Count);
+
+                        context.Reset();
+
+                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
+
+                        var results = queryResult.Results;
+
+                        Assert.Equal(1, results.Count);
+
+                        Assert.Equal(1, queryResult.Results.Count);
+                        Assert.Equal(@"{""Country"":""Poland"",""State"":""Pomerania""}", results[0].Data["Location"].ToString());
+                        Assert.Equal(@"{""Country"":""UK""}", results[0].Data["ResidenceAddress"].ToString());
+                        Assert.Equal(2L, results[0].Data["Count"]);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task By__complex_object_and_array()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                {
+                    Name = "Users_GroupByLocationAndResidenceAddress",
+                    Maps = { @"from user in docs.Users select new { 
+                                user.Hobbies,
+                                user.ResidenceAddress,
+                                Count = 1
+                            }" },
+                    Reduce = @"from result in results group result by new { result.Hobbies, result.ResidenceAddress } into g select new { 
+                                g.Key.Hobbies, 
+                                g.Key.ResidenceAddress,
+                                Count = g.Sum(x => x.Count)
+                            }",
+                    Fields = new Dictionary<string, IndexFieldOptions>()
+                    {
+                        { "Hobbies", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        },
+                        { "ResidenceAddress", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        }
+                    }
+                }, database))
+                {
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                    {
+                        put_docs(context, database);
+
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+
+                        Assert.Equal(2, queryResult.Results.Count);
+
+                        context.Reset();
+
+                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
+
+                        var results = queryResult.Results;
+
+                        Assert.Equal(1, results.Count);
+
+                        Assert.Equal(1, queryResult.Results.Count);
+                        Assert.Equal("music", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[0].ToString());
+                        Assert.Equal("sport", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[1].ToString());
+                        Assert.Equal(@"{""Country"":""UK""}", results[0].Data["ResidenceAddress"].ToString());
+                        Assert.Equal(2L, results[0].Data["Count"]);
+                    }
+                }
+            }
+        }
+
+        private static void put_docs(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            using (var tx = context.OpenWriteTransaction())
+            {
+                using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+                {
+                    ["Location"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "USA",
+                        ["State"] = "Texas"
+                    },
+                    ["ResidenceAddress"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "UK"
+                    },
+                    ["Hobbies"] = new DynamicJsonArray
+                    {
+                        "sport", "books"
+                    },
+                    [Constants.Metadata] = new DynamicJsonValue
+                    {
+                        [Constants.Headers.RavenEntityName] = "Users"
+                    }
+                }))
+                {
+                    database.DocumentsStorage.Put(context, "users/1", null, doc);
+                }
+
+                using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
+                {
+                    ["Location"] = new DynamicJsonValue()
+                    {
+                        ["Country"] = "Poland",
+                        ["State"] = "Pomerania"
+                    },
+                    ["ResidenceAddress"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "UK"
+                    },
+                    ["Hobbies"] = new DynamicJsonArray()
+                    {
+                        "music", "sport"
+                    },
+                    [Constants.Metadata] = new DynamicJsonValue
+                    {
+                        [Constants.Headers.RavenEntityName] = "Users"
+                    }
+                }))
+                {
+                    database.DocumentsStorage.Put(context, "users/2", null, doc);
+                }
+
+                using (var doc = CreateDocument(context, "users/3", new DynamicJsonValue
+                {
+                    ["Hobbies"] = new DynamicJsonArray()
+                    {
+                        "music", "sport"
+                    },
+                    ["Location"] = new DynamicJsonValue()
+                    {
+                        ["State"] = "Pomerania",
+                        ["Country"] = "Poland"
+                    },
+                    ["ResidenceAddress"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "UK"
+                    },
+                    [Constants.Metadata] = new DynamicJsonValue
+                    {
+                        [Constants.Headers.RavenEntityName] = "Users"
+                    }
+                }))
+                {
+                    database.DocumentsStorage.Put(context, "users/3", null, doc);
+                }
+
+                tx.Commit();
+            }
+        }
     }
 }
