@@ -158,10 +158,12 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
+        private static int _counter;
+
         protected virtual async Task<DocumentStore> GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null,
            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
         {
-            var name = caller ?? Guid.NewGuid().ToString("N");
+            var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
             if (dbSuffixIdentifier != null)
                 name = $"{name}_{dbSuffixIdentifier}";
