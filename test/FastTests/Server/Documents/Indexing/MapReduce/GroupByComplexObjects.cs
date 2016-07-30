@@ -126,6 +126,131 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
+        [Fact]
+        public async Task By_multiple_complex_objects()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                {
+                    Name = "Users_GroupByLocationAndResidenceAddress",
+                    Maps = { @"from user in docs.Users select new { 
+                                user.Location,
+                                user.ResidenceAddress,
+                                Count = 1
+                            }" },
+                    Reduce = @"from result in results group result by new { result.Location, result.ResidenceAddress } into g select new { 
+                                g.Key.Location, 
+                                g.Key.ResidenceAddress,
+                                Count = g.Sum(x => x.Count)
+                            }",
+                    Fields = new Dictionary<string, IndexFieldOptions>()
+                    {
+                        { "Location", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        },
+                        { "ResidenceAddress", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        }
+                    }
+                }, database))
+                {
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                    {
+                        put_docs(context, database);
+
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+
+                        Assert.Equal(2, queryResult.Results.Count);
+
+                        context.Reset();
+
+                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
+
+                        var results = queryResult.Results;
+
+                        Assert.Equal(1, results.Count);
+
+                        Assert.Equal(1, queryResult.Results.Count);
+                        Assert.Equal(@"{""Country"":""Poland"",""State"":""Pomerania""}", results[0].Data["Location"].ToString());
+                        Assert.Equal(@"{""Country"":""UK""}", results[0].Data["ResidenceAddress"].ToString());
+                        Assert.Equal(2L, results[0].Data["Count"]);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task By__complex_object_and_array()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                {
+                    Name = "Users_GroupByLocationAndResidenceAddress",
+                    Maps = { @"from user in docs.Users select new { 
+                                user.Hobbies,
+                                user.ResidenceAddress,
+                                Count = 1
+                            }" },
+                    Reduce = @"from result in results group result by new { result.Hobbies, result.ResidenceAddress } into g select new { 
+                                g.Key.Hobbies, 
+                                g.Key.ResidenceAddress,
+                                Count = g.Sum(x => x.Count)
+                            }",
+                    Fields = new Dictionary<string, IndexFieldOptions>()
+                    {
+                        { "Hobbies", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        },
+                        { "ResidenceAddress", new IndexFieldOptions()
+                            {
+                                Indexing = FieldIndexing.Analyzed,
+                            }
+                        }
+                    }
+                }, database))
+                {
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                    {
+                        put_docs(context, database);
+
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+
+                        Assert.Equal(2, queryResult.Results.Count);
+
+                        context.Reset();
+
+                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
+
+                        var results = queryResult.Results;
+
+                        Assert.Equal(1, results.Count);
+
+                        Assert.Equal(1, queryResult.Results.Count);
+                        Assert.Equal("music", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[0].ToString());
+                        Assert.Equal("sport", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[1].ToString());
+                        Assert.Equal(@"{""Country"":""UK""}", results[0].Data["ResidenceAddress"].ToString());
+                        Assert.Equal(2L, results[0].Data["Count"]);
+                    }
+                }
+            }
+        }
+
         private static void put_docs(DocumentsOperationContext context, DocumentDatabase database)
         {
             using (var tx = context.OpenWriteTransaction())
