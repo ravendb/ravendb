@@ -374,22 +374,55 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                     Highlighted = false,
                     Storage = FieldStorage.No
                 },
+                new IndexField
+                {
+                    Name = "ResidenceAddress",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                },
             });
 
             var doc = create_doc(new DynamicJsonValue
             {
                 ["Address"] = new DynamicJsonValue
                 {
-                    ["City"] = "NYC"
+                    ["City"] = "New York City"
+                },
+                ["ResidenceAddress"] = new DynamicJsonValue
+                {
+                    ["City"] = "San Francisco"
                 }
             }, "users/1");
 
             var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
-            Assert.Equal(3, result.GetFields().Count);
+            Assert.Equal(5, result.GetFields().Count);
+            Assert.Equal(@"{""City"":""New York City""}", result.GetField("Address").ReaderValue.ReadToEnd());
+            Assert.Equal("true", result.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
+            Assert.Equal(@"{""City"":""San Francisco""}", result.GetField("ResidenceAddress").ReaderValue.ReadToEnd());
+            Assert.Equal("true", result.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+
+            doc = create_doc(new DynamicJsonValue
+            {
+                ["Address"] = new DynamicJsonValue
+                {
+                    ["City"] = "NYC"
+                },
+                ["ResidenceAddress"] = new DynamicJsonValue
+                {
+                    ["City"] = "Washington"
+                }
+            }, "users/2");
+
+            result = _sut.ConvertToCachedDocument(doc.Key, doc);
+
+            Assert.Equal(5, result.GetFields().Count);
             Assert.Equal(@"{""City"":""NYC""}", result.GetField("Address").ReaderValue.ReadToEnd());
             Assert.Equal("true", result.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal(@"{""City"":""Washington""}", result.GetField("ResidenceAddress").ReaderValue.ReadToEnd());
+            Assert.Equal("true", result.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
+            Assert.Equal("users/2", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 
 
