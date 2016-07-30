@@ -775,7 +775,7 @@ namespace Sparrow.Json
                 if (current == null && result == null)
                     continue;
 
-                if (current?.Equals(result) == false)
+                if ((current?.Equals(result) ?? false) == false)
                     return false;
             }
 
