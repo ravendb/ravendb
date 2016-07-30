@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Sparrow.Binary;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public void Init()
+        public void Reset()
         {
             _bufferPos = 0;
         }
@@ -53,6 +54,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Process(object value)
         {
+            if (value == null || value is DynamicNullObject)
+                return;
+
             var lsv = value as LazyStringValue;
             if (lsv != null)
             {

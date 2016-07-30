@@ -18,7 +18,7 @@ namespace FastTests.Blittable
                     ["Pie"] = 3.147,
                     ["Numbers"] = new DynamicJsonArray()
                     {
-                        1, 2, 3
+                        1, 2, null, 3
                     },
                     ["Address"] = new DynamicJsonValue()
                     {
@@ -33,6 +33,7 @@ namespace FastTests.Blittable
                             ["ZipCode"] = 999
                         }
                     },
+                    ["Tags"] = null
                 };
 
                 var json2 = new DynamicJsonValue()
@@ -46,8 +47,9 @@ namespace FastTests.Blittable
                     },
                     ["Numbers"] = new DynamicJsonArray()
                     {
-                        1, 2, 3
+                        1, 2, null, 3
                     },
+                    ["Tags"] = null,
                     ["Friends"] = new DynamicJsonArray()
                     {
                         new DynamicJsonValue()

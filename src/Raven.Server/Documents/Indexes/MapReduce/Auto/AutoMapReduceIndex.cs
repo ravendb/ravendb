@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 }
             }
 
-            _reduceKeyProcessor.Init();
+            _reduceKeyProcessor.Reset();
 
             foreach (var groupByFieldName in Definition.GroupByFields.Keys)
             {

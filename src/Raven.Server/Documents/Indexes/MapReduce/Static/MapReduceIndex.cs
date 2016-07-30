@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     var mapResult = new DynamicJsonValue();
 
-                    _reduceKeyProcessor.Init();
+                    _reduceKeyProcessor.Reset();
 
                     foreach (var field in _fields)
                     {

@@ -1,4 +1,5 @@
-﻿using Raven.Server.Documents.Indexes.MapReduce;
+﻿using Raven.Abstractions;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -16,7 +17,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 var sut = new ReduceKeyProcessor(10, bufferPool);
 
-                sut.Init();
+                sut.Reset();
 
                 sut.Process(1);
                 sut.Process((long)1);
@@ -26,8 +27,19 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 sut.Process(context.GetLazyString("abc"));
                 sut.Process(new DynamicBlittableJson(context.ReadObject(new DynamicJsonValue()
                 {
-                    ["Name"] = "Arek"
+                    ["Name"] = "Arek",
+                    ["Age"] = null
                 }, "foo")));
+
+                sut.Process(new DynamicArray(new DynamicJsonArray()
+                {
+                    1,
+                    2,
+                    null,
+                    3
+                }));
+
+                sut.Process(SystemTime.UtcNow);
 
                 Assert.NotEqual((ulong)0, sut.Hash);
             }
