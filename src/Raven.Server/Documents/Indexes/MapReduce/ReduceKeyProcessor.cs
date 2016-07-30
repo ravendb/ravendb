@@ -175,24 +175,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            var dynamicJson = value as DynamicBlittableJson;
-
-            if (dynamicJson != null)
-            {
-                var obj = dynamicJson.BlittableJson;
-                switch (_mode)
-                {
-                    case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate(obj.BasePointer, obj.Size);
-                        break;
-                    case Mode.MultipleValues:
-                        CopyToBuffer(obj.BasePointer, obj.Size);
-                        break;
-                }
-
-                return;
-            }
-
             long? ticks = null;
             if (value is DateTime)
                 ticks = ((DateTime)value).Ticks;
@@ -207,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate((byte*)&t, sizeof(long));
+                        _singleValueHash = (ulong)t;
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&t, sizeof(long));
@@ -217,15 +199,37 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
+            var dynamicJson = value as DynamicBlittableJson;
+
+            if (dynamicJson != null)
+            {
+                var obj = dynamicJson.BlittableJson;
+
+                _mode = Mode.MultipleValues;
+
+                if (_buffer == null)
+                    _buffer = _buffersPool.Allocate(16);
+                
+                for (int i = 0; i < obj.Count; i++)
+                {
+                    // this call ensures properties to be returned in the same order, regardless their storing order
+                    var property = obj.GetPropertyByIndex(i); 
+                    
+                    Process(property.Item2);
+                }
+                
+                return;
+            }
+
             var dynamicArray = value as DynamicArray;
 
             if (dynamicArray != null)
             {
-                if (_buffer == null)
-                    _buffer = _buffersPool.Allocate(16);
-
                 _mode = Mode.MultipleValues;
 
+                if (_buffer == null)
+                    _buffer = _buffersPool.Allocate(16);
+                
                 foreach (var item in dynamicArray)
                 {
                     Process(item);

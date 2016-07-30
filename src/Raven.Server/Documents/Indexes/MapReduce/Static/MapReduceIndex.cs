@@ -123,10 +123,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private TransactionOperationContext _indexContext;
             private PropertyAccessor _propertyAccessor;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
+            private readonly HashSet<string> _fields;
+            private readonly HashSet<string> _groupByFields;
 
             public AnonymusObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index)
             {
                 _index = index;
+                _fields = new HashSet<string>(_index.Definition.MapFields.Keys);
+                _groupByFields = _index.Definition.GroupByFields;
                 _reduceKeyProcessor = new ReduceKeyProcessor(_index.Definition.GroupByFields.Count, _index._unmanagedBuffersPool);
             }
 
@@ -151,6 +155,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymusObjectToBlittableMapResultsEnumerableWrapper _parent;
+                private readonly HashSet<string> _fields;
                 private readonly HashSet<string> _groupByFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
@@ -158,7 +163,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 {
                     _enumerator = enumerator;
                     _parent = parent;
-                    _groupByFields = _parent._index.Definition.GroupByFields;
+                    _groupByFields = _parent._groupByFields;
+                    _fields = _parent._fields;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
                 }
 
@@ -177,13 +183,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     _reduceKeyProcessor.Init();
 
-                    foreach (var property in accessor.Properties)
+                    foreach (var field in _fields)
                     {
-                        var value = property.Value(document);
+                        var value = accessor.Properties[field](document);
+                        mapResult[field] = value;
 
-                        mapResult[property.Key] = value;
-                        
-                        if (_groupByFields.Contains(property.Key))
+                        if (_groupByFields.Contains(field))
                         {
                             _reduceKeyProcessor.Process(value);
                         }

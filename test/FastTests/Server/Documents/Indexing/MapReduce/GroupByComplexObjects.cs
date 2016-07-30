@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries;
@@ -44,40 +45,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
-                            {
-                                ["Location"] = new DynamicJsonValue()
-                                {
-                                    ["Country"] = "Poland"
-                                },
-                                [Constants.Metadata] = new DynamicJsonValue
-                                {
-                                    [Constants.Headers.RavenEntityName] = "Users"
-                                }
-                            }))
-                            {
-                                database.DocumentsStorage.Put(context, "users/1", null, doc);
-                            }
-
-                            using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
-                            {
-                                ["Location"] = new DynamicJsonValue()
-                                {
-                                    ["Country"] = "Poland"
-                                },
-                                [Constants.Metadata] = new DynamicJsonValue
-                                {
-                                    [Constants.Headers.RavenEntityName] = "Users"
-                                }
-                            }))
-                            {
-                                database.DocumentsStorage.Put(context, "users/2", null, doc);
-                            }
-
-                            tx.Commit();
-                        }
+                        put_docs(context, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -85,7 +53,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                         var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
-                        Assert.Equal(1, queryResult.Results.Count);
+                        Assert.Equal(2, queryResult.Results.Count);
 
                         context.Reset();
 
@@ -96,7 +64,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal(1, results.Count);
 
                         Assert.Equal(1, queryResult.Results.Count);
-                        Assert.Equal(@"{""Country"":""Poland""}", results[0].Data["Location"].ToString());
+                        Assert.Equal(@"{""Country"":""Poland"",""State"":""Pomerania""}", results[0].Data["Location"].ToString());
                         Assert.Equal(2L, results[0].Data["Count"]);
                     }
                 }
@@ -131,55 +99,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
-                            {
-                                ["Hobbies"] = new DynamicJsonArray()
-                                {
-                                    "sport", "books"
-                                },
-                                [Constants.Metadata] = new DynamicJsonValue
-                                {
-                                    [Constants.Headers.RavenEntityName] = "Users"
-                                }
-                            }))
-                            {
-                                database.DocumentsStorage.Put(context, "users/1", null, doc);
-                            }
-
-                            using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
-                            {
-                                ["Hobbies"] = new DynamicJsonArray()
-                                {
-                                    "music", "sport"
-                                },
-                                [Constants.Metadata] = new DynamicJsonValue
-                                {
-                                    [Constants.Headers.RavenEntityName] = "Users"
-                                }
-                            }))
-                            {
-                                database.DocumentsStorage.Put(context, "users/2", null, doc);
-                            }
-
-                            using (var doc = CreateDocument(context, "users/3", new DynamicJsonValue
-                            {
-                                ["Hobbies"] = new DynamicJsonArray()
-                                {
-                                    "music", "sport"
-                                },
-                                [Constants.Metadata] = new DynamicJsonValue
-                                {
-                                    [Constants.Headers.RavenEntityName] = "Users"
-                                }
-                            }))
-                            {
-                                database.DocumentsStorage.Put(context, "users/3", null, doc);
-                            }
-
-                            tx.Commit();
-                        }
+                        put_docs(context, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -203,6 +123,86 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal(2L, results[0].Data["Count"]);
                     }
                 }
+            }
+        }
+
+        private static void put_docs(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            using (var tx = context.OpenWriteTransaction())
+            {
+                using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+                {
+                    ["Location"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "USA",
+                        ["State"] = "Texas"
+                    },
+                    ["ResidenceAddress"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "UK"
+                    },
+                    ["Hobbies"] = new DynamicJsonArray
+                    {
+                        "sport", "books"
+                    },
+                    [Constants.Metadata] = new DynamicJsonValue
+                    {
+                        [Constants.Headers.RavenEntityName] = "Users"
+                    }
+                }))
+                {
+                    database.DocumentsStorage.Put(context, "users/1", null, doc);
+                }
+
+                using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
+                {
+                    ["Location"] = new DynamicJsonValue()
+                    {
+                        ["Country"] = "Poland",
+                        ["State"] = "Pomerania"
+                    },
+                    ["ResidenceAddress"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "UK"
+                    },
+                    ["Hobbies"] = new DynamicJsonArray()
+                    {
+                        "music", "sport"
+                    },
+                    [Constants.Metadata] = new DynamicJsonValue
+                    {
+                        [Constants.Headers.RavenEntityName] = "Users"
+                    }
+                }))
+                {
+                    database.DocumentsStorage.Put(context, "users/2", null, doc);
+                }
+
+                using (var doc = CreateDocument(context, "users/3", new DynamicJsonValue
+                {
+                    ["Hobbies"] = new DynamicJsonArray()
+                    {
+                        "music", "sport"
+                    },
+                    ["Location"] = new DynamicJsonValue()
+                    {
+                        ["State"] = "Pomerania",
+                        ["Country"] = "Poland"
+                    },
+                    ["ResidenceAddress"] = new DynamicJsonValue
+                    {
+                        ["Country"] = "UK"
+                    },
+                    [Constants.Metadata] = new DynamicJsonValue
+                    {
+                        [Constants.Headers.RavenEntityName] = "Users"
+                    }
+                }))
+                {
+                    database.DocumentsStorage.Put(context, "users/3", null, doc);
+                }
+
+                tx.Commit();
             }
         }
     }
