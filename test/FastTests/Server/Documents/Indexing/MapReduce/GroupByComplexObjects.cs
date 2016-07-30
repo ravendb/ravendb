@@ -45,7 +45,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        put_docs(context, database);
+                        Put_docs(context, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -99,7 +99,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        put_docs(context, database);
+                        Put_docs(context, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -161,7 +161,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        put_docs(context, database);
+                        Put_docs(context, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -189,7 +189,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         }
 
         [Fact]
-        public async Task By__complex_object_and_array()
+        public async Task By_complex_object_and_array()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -223,7 +223,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        put_docs(context, database);
+                        Put_docs(context, database);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -251,7 +251,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        private static void put_docs(DocumentsOperationContext context, DocumentDatabase database)
+        private static void Put_docs(DocumentsOperationContext context, DocumentDatabase database)
         {
             using (var tx = context.OpenWriteTransaction())
             {

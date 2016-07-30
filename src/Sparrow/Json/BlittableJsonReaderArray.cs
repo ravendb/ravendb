@@ -142,7 +142,7 @@ namespace Sparrow.Json
                 if (x == null && y == null)
                     continue;
 
-                if (x?.Equals(y) == false)
+                if ((x?.Equals(y) ?? false) == false)
                     return false;
             }
             
