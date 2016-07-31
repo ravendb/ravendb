@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -143,6 +144,7 @@ namespace Raven.Database.Server.Controllers
                     indexes.Add(index);
             }
 
+            var sp = Stopwatch.StartNew();
             var needToWait = true;
             var tasks = new Task[indexes.Count +1];
             do
@@ -166,19 +168,30 @@ namespace Raven.Database.Server.Controllers
                     {
                         tasks[i] = indexes[i].NextIndexingRound;
                     }
-                    tasks[indexes.Count] = Task.Delay(timeout);
+                    var timeSpan = timeout - sp.Elapsed;
+                    if (timeout < TimeSpan.Zero)
+                    {
+                        if (throwOnTimeout)
+                        {
+                            throw new TimeoutException("After waiting for " + sp.Elapsed + ", could not verify that " +
+                                                       indexes.Count + " indexes has caught up with the chanages as of etag: "
+                                                       + lastEtag);
+                        }
+                        break;
+                    }
+                    tasks[indexes.Count] = Task.Delay(timeSpan);
 
                     var result = await Task.WhenAny(tasks).ConfigureAwait(false);
 
                     if (result == tasks[indexes.Count])
                     {
-                        needToWait = false;
                         if (throwOnTimeout)
                         {
-                            throw new TimeoutException("After waiting for " + timeout + ", could not verify that " +
+                            throw new TimeoutException("After waiting for " + sp.Elapsed + ", could not verify that " +
                                                        indexes.Count + " indexes has caught up with the chanages as of etag: "
                                                        + lastEtag);
                         }
+                        break;
                     }
                 }
             } while (needToWait);
