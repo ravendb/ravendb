@@ -12,7 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -70,6 +70,7 @@ namespace Raven.Database.Indexing
         private int maxActualIndexOutput = 1;
 
         public IndexingPriority Priority { get; set; }
+
         /// <summary>
         /// Note, this might be written to be multiple threads at the same time
         /// We don't actually care for exact timing, it is more about general feeling
@@ -99,6 +100,20 @@ namespace Raven.Database.Indexing
         private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
         private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
         private bool forceWriteToDisk;
+
+        public AbstractViewGenerator ViewGenerator => viewGenerator;
+
+        private bool indexIsBeingWatched;
+        private TaskCompletionSource<object> indexindDone = new TaskCompletionSource<object>();
+
+        public Task NextIndexingRound
+        {
+            get
+            {
+                indexIsBeingWatched = true;
+                return indexindDone.Task;
+            }
+        } 
 
         [CLSCompliant(false)]
         protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -524,7 +539,7 @@ namespace Raven.Database.Indexing
                 bool shouldRecreateSearcher;
                 var toDispose = new List<Action>();
                 Analyzer searchAnalyzer = null;
-                var itemsInfo = new IndexedItemsInfo(null);
+                IndexedItemsInfo itemsInfo;
                 bool flushed = false;
 
                 try
@@ -645,6 +660,13 @@ namespace Raven.Database.Indexing
                         RecreateSearcher();
                     }
                 }
+            }
+
+            if (indexIsBeingWatched)
+            {
+                var old = indexindDone;
+                Interlocked.Exchange(ref indexindDone, new TaskCompletionSource<object>());
+                Task.Factory.StartNew(() => old.TrySetResult(null));
             }
 
             if (writePerformanceStats != null)

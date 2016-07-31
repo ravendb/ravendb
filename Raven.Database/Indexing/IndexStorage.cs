@@ -1643,6 +1643,11 @@ namespace Raven.Database.Indexing
             return TryIndexByName(indexName);
         }
 
+        public IEnumerable<Index> GetAllIndexes()
+        {
+            return indexes.Values;
+        }
+
         public Index GetIndexInstance(int indexId)
         {
             Index value;

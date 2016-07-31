@@ -1007,6 +1007,16 @@ more responsive application.
             saveChangesOptions.WaitForReplicasTimout = realTimeout;
         }
 
+        public void OnSaveChangesWaitForIndexes(TimeSpan? timeout = null, bool throwOnTimeout = false)
+        {
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            if (saveChangesOptions == null)
+                saveChangesOptions = new BatchOptions();
+            saveChangesOptions.WaitForIndexes = true;
+            saveChangesOptions.WaitForIndexesTimeout = realTimeout;
+            saveChangesOptions.ThrowOnTimeoutInWaitForIndexes = throwOnTimeout;
+        }
+
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
             foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToArray())

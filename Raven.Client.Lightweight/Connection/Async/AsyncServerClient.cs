@@ -1571,6 +1571,10 @@ namespace Raven.Client.Connection.Async
                     if (options?.WaitForReplicas == true)
                         request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout);
 
+                    if(options?.WaitForIndexes == true)
+                        request.AddHeader("Raven-Wait-Indexes", options.ThrowOnTimeoutInWaitForIndexes+ ";" + options.WaitForIndexesTimeout);
+
+
                     var serializedData = commandDatas.Select(x => x.ToJson()).ToList();
                     var jArray = new RavenJArray(serializedData);
 

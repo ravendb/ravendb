@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -17,6 +18,7 @@ using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Indexing;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
@@ -62,26 +64,30 @@ namespace Raven.Database.Server.Controllers
 
                 var transactionInformation = GetRequestTransaction();
                 var commands =
-                    (from RavenJObject jsonCommand in jsonCommandArray select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation)).ToArray();
+                    (from RavenJObject jsonCommand in jsonCommandArray
+                     select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
+                     .ToArray();
 
                 if (Log.IsDebugEnabled)
+                {
                     Log.Debug(
-                    () =>
-                    {
-                        if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+                        () =>
                         {
-                            return "\tExecuted "
-                                   + string.Join(
-                                       ", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
-                        }
+                            if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+                            {
+                                return "\tExecuted "
+                                       + string.Join(
+                                           ", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
+                            }
 
-                        var sb = new StringBuilder();
-                        foreach (var commandData in commands)
-                        {
-                            sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
-                        }
-                        return sb.ToString();
-                    });
+                            var sb = new StringBuilder();
+                            foreach (var commandData in commands)
+                            {
+                                sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
+                            }
+                            return sb.ToString();
+                        });
+                }
 
                 var batchResult = Database.Batch(commands, cts.Token);
 
@@ -91,8 +97,91 @@ namespace Raven.Database.Server.Controllers
                     await WaitForReplicationAsync(writeAssurance, batchResult.LastOrDefault(x => x.Etag != null)).ConfigureAwait(false);
                 }
 
+                var waitIndexes = GetHeader("Raven-Wait-Indexes");
+                if (waitIndexes != null)
+                {
+                    await WaitForIndexesAsync(waitIndexes, batchResult).ConfigureAwait(false);
+                }
+
                 return GetMessageWithObject(batchResult);
             }
+        }
+
+        private async Task WaitForIndexesAsync(string waitIndexes, BatchResult[] results)
+        {
+            var parts = waitIndexes.Split(';');
+            var throwOnTimeout = bool.Parse(parts[0]);
+            var timeout = TimeSpan.Parse(parts[1]);
+
+            Etag lastEtag = null;
+            var allIndexes = false;
+            var modifiedCollections = new HashSet<string>();
+            foreach (var batchResult in results)
+            {
+                if (batchResult.Etag == null || batchResult.Metadata == null)
+                    continue;
+
+                lastEtag = batchResult.Etag;
+                var collection = batchResult.Metadata.Value<string>(Constants.RavenEntityName);
+                if (string.IsNullOrEmpty(collection))
+                {
+                    allIndexes = true;
+                    continue;
+                }
+                modifiedCollections.Add(collection);
+            }
+
+            if (lastEtag == null)
+                return;
+
+            var indexes = new List<Index>();
+            foreach (var index in Database.IndexStorage.GetAllIndexes())
+            {
+                if(allIndexes)
+                    indexes.Add(index);
+                else if (index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
+                    indexes.Add(index);
+            }
+
+            var needToWait = true;
+            var tasks = new Task[indexes.Count +1];
+            do
+            {
+                needToWait = false;
+                Database.TransactionalStorage.Batch(actions =>
+                {
+                    foreach (var index in indexes)
+                    {
+                        if (actions.Staleness.IsIndexStale(index.IndexId, null, lastEtag))
+                        {
+                            needToWait = true;
+                            break;
+                        }
+                    }
+                });
+
+                if (needToWait)
+                {
+                    for (int i = 0; i < indexes.Count; i++)
+                    {
+                        tasks[i] = indexes[i].NextIndexingRound;
+                    }
+                    tasks[indexes.Count] = Task.Delay(timeout);
+
+                    var result = await Task.WhenAny(tasks).ConfigureAwait(false);
+
+                    if (result == tasks[indexes.Count])
+                    {
+                        needToWait = false;
+                        if (throwOnTimeout)
+                        {
+                            throw new TimeoutException("After waiting for " + timeout + ", could not verify that " +
+                                                       indexes.Count + " indexes has caught up with the chanages as of etag: "
+                                                       + lastEtag);
+                        }
+                    }
+                }
+            } while (needToWait);
         }
 
         private async Task WaitForReplicationAsync(string writeAssurance, BatchResult lastResultWithEtag)
