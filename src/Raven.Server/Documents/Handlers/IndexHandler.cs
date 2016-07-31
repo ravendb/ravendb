@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), name);
-                var indexDefinition = JsonDeserialization.IndexDefinition(json);
+                var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
                 indexDefinition.Name = name;
 
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);

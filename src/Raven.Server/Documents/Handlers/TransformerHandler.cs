@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), name);
-                var transformerDefinition = JsonDeserialization.TransformerDefinition(json);
+                var transformerDefinition = JsonDeserializationServer.TransformerDefinition(json);
                 transformerDefinition.Name = name;
 
                 var transformerId = Database.TransformerStore.CreateTransformer(transformerDefinition);

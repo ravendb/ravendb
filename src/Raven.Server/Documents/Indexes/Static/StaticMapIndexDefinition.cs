@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (reader.TryGet(nameof(IndexDefinition), out jsonObject) == false || jsonObject == null)
                 throw new InvalidOperationException("No persisted definition");
 
-            return JsonDeserialization.IndexDefinition(jsonObject);
+            return JsonDeserializationServer.IndexDefinition(jsonObject);
         }
     }
 }

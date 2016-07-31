@@ -10,9 +10,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Threading;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -58,7 +56,7 @@ namespace Raven.Server.Documents.Expiration
 
                 try
                 {
-                    var expirationConfiguration = JsonDeserialization.ExpirationConfiguration(configuration.Data);
+                    var expirationConfiguration = JsonDeserializationServer.ExpirationConfiguration(configuration.Data);
                     if (expirationConfiguration.Active == false)
                         return null;
 

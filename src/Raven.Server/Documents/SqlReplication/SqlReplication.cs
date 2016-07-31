@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.SqlReplication
             }
             else
             {
-                var replicationStatus = JsonDeserialization.SqlReplicationStatus(sqlReplicationStatus.Data);
+                var replicationStatus = JsonDeserializationServer.SqlReplicationStatus(sqlReplicationStatus.Data);
                 Statistics.LastReplicatedEtag = replicationStatus.LastReplicatedEtag;
                 Statistics.LastTombstonesEtag = replicationStatus.LastTombstonesEtag;
             }
@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.SqlReplication
                 object connection;
                 if (connections.TryGetMember(Configuration.ConnectionStringName, out connection))
                 {
-                    _predefinedSqlConnection = JsonDeserialization.PredefinedSqlConnection(connection as BlittableJsonReaderObject);
+                    _predefinedSqlConnection = JsonDeserializationServer.PredefinedSqlConnection(connection as BlittableJsonReaderObject);
                     if (_predefinedSqlConnection != null)
                     {
                         return true;

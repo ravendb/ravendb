@@ -483,7 +483,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
                 try
                 {
-                    var periodicExportConfiguration = JsonDeserialization.PeriodicExportConfiguration(configuration.Data);
+                    var periodicExportConfiguration = JsonDeserializationServer.PeriodicExportConfiguration(configuration.Data);
                     if (periodicExportConfiguration.Active == false)
                     {
                         if (_logger.IsInfoEnabled)
@@ -497,7 +497,7 @@ namespace Raven.Server.Documents.PeriodicExport
                     {
                         try
                         {
-                            periodicExportStatus = JsonDeserialization.PeriodicExportStatus(status.Data);
+                            periodicExportStatus = JsonDeserializationServer.PeriodicExportStatus(status.Data);
                         }
                         catch (Exception e)
                         {

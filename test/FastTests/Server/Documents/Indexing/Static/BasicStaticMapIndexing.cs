@@ -8,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Server.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
@@ -215,7 +216,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 var builder = indexDefinition.ToJson();
                 using (var json = context.ReadObject(builder, nameof(IndexDefinition)))
                 {
-                    var newIndexDefinition = JsonDeserialization.IndexDefinition(json);
+                    var newIndexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
                     Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexIds: true, ignoreFormatting: false, ignoreMaxIndexOutput: false));
                 }

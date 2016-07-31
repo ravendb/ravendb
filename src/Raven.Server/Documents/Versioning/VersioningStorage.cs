@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Versioning
 
                 try
                 {
-                    var versioningConfiguration = JsonDeserialization.VersioningConfiguration(configuration.Data);
+                    var versioningConfiguration = JsonDeserializationServer.VersioningConfiguration(configuration.Data);
                     return new VersioningStorage(database, versioningConfiguration);
                 }
                 catch (Exception e)

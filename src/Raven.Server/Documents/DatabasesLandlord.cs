@@ -10,6 +10,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Json;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;

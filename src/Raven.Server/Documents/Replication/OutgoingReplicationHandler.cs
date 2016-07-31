@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Replication
 
                         using (var lastEtagMessage = parser.ParseToMemory($"Last etag from server {FromToString}"))
                         {
-                            var replicationEtagReply = JsonDeserialization.ReplicationEtagReply(lastEtagMessage);
+                            var replicationEtagReply = JsonDeserializationServer.ReplicationEtagReply(lastEtagMessage);
                             _lastSentEtag = replicationEtagReply.LastSentEtag;
                         }
 
@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Replication
 
             using (var replicationBatchReplyMessage = parser.ParseToMemory("replication acknowledge message"))
             {
-                var replicationBatchReply = JsonDeserialization.ReplicationBatchReply(replicationBatchReplyMessage);
+                var replicationBatchReply = JsonDeserializationServer.ReplicationBatchReply(replicationBatchReplyMessage);
 
                 if (replicationBatchReply.Type == ReplicationBatchReply.ReplyType.Ok)
                     OnDocumentsSent();

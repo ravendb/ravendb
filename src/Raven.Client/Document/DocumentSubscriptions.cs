@@ -6,7 +6,6 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document

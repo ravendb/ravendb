@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.SqlReplication
                 context.OpenReadTransaction();
 
                 var dbDoc = context.ReadForMemory(RequestBodyStream(), "SimulateSqlReplicationResult");
-                var simulateSqlReplication = JsonDeserialization.SimulateSqlReplication(dbDoc);
+                var simulateSqlReplication = JsonDeserializationServer.SimulateSqlReplication(dbDoc);
                 var result = Database.SqlReplicationLoader.SimulateSqlReplicationSqlQueries(simulateSqlReplication, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

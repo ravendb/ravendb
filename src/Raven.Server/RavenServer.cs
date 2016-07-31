@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
+using Raven.Client.Json;
 using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
