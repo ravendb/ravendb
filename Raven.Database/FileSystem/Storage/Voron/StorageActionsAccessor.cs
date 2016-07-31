@@ -436,7 +436,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var totalSize = file.Value<long?>("total_size") ?? 0;
             var uploadedSize = file.Value<long?>("uploaded_size") ?? 0;
 
-            if (uploadedSize < totalSize )
+            if (uploadedSize < totalSize)
                 file["total_size"] = Math.Abs(uploadedSize);
             else
                 file["total_size"] = Math.Abs(totalSize);            

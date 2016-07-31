@@ -1531,6 +1531,7 @@ namespace Raven.Database.Config
             {
                 workingDirectory = configuration.WorkingDirectory;
                 defaultSystemStorageTypeName = configuration.DefaultStorageTypeName;
+                runInMemory = configuration.RunInMemory;
             }
 
             private string fileSystemDataDirectory;
@@ -1542,6 +1543,8 @@ namespace Raven.Database.Config
             private string workingDirectory;
 
             private string defaultSystemStorageTypeName;
+
+            private bool runInMemory;
 
             public TimeSpan MaximumSynchronizationInterval { get; set; }
 
@@ -1579,6 +1582,14 @@ namespace Raven.Database.Config
 
             public string SelectFileSystemStorageEngineAndFetchTypeName()
             {
+                if (runInMemory)
+                {
+                    if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
+                        DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
+                        return EsentTypeName;
+                    return VoronTypeName;
+                }
+
                 if (string.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
                 {
                     if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))

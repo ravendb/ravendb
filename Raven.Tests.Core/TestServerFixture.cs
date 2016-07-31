@@ -6,7 +6,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
-
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -53,4 +52,5 @@ namespace Raven.Tests.Core
         }
     }
 }
+
 #endif

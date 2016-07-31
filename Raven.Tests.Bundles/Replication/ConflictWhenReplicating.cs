@@ -28,7 +28,7 @@ namespace Raven.Tests.Bundles.Replication
 
             using (var session = store2.OpenSession())
             {
-                session.Store(new Company());
+                session.Store(new Company {Name = "Company2"});
                 session.SaveChanges();
             }
 
@@ -62,7 +62,7 @@ namespace Raven.Tests.Bundles.Replication
 
             using (var session = store2.OpenSession())
             {
-                session.Store(new Company());
+                session.Store(new Company {Name="Second"});
                 session.SaveChanges();
             }
 
@@ -102,7 +102,7 @@ namespace Raven.Tests.Bundles.Replication
 
             using (var session = store2.OpenSession())
             {
-                session.Store(new Company());
+                session.Store(new Company { Name = "Company2" });
                 session.SaveChanges();
             }
 

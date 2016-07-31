@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -45,7 +46,7 @@ namespace Raven.Database.Server.Controllers
                     {
                         Message = "Could not understand json, please check its validity."
                     }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-                    
+
                 }
                 catch (InvalidDataException e)
                 {
@@ -83,6 +84,29 @@ namespace Raven.Database.Server.Controllers
                     });
 
                 var batchResult = Database.Batch(commands, cts.Token);
+
+                var writeAssurance = GetHeader("Raven-Write-Assurance");
+                if (writeAssurance != null)
+                {
+                    var parts = writeAssurance.Split(';');
+                    var replicas = int.Parse(parts[0]);
+                    var timeout = TimeSpan.Parse(parts[1]);
+
+                    var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+                    if (replicationTask == null)
+                    {
+                        Log.Info("Was asked to get write assurance on a database without replication, ignoring the request");
+                    }
+                    else
+                    {
+                        var lastResultWithEtag = batchResult.LastOrDefault(x => x.Etag != null);
+                        if (lastResultWithEtag != null)
+                        {
+                            await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas).ConfigureAwait(false);
+                        }
+                    }
+                }
+
                 return GetMessageWithObject(batchResult);
             }
         }
@@ -161,7 +185,7 @@ namespace Raven.Database.Server.Controllers
             catch (InvalidOperationException e)
             {
                 if (Log.IsDebugEnabled)
-                    Log.DebugException("Failed to deserialize document batch request." , e);
+                    Log.DebugException("Failed to deserialize document batch request.", e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -171,7 +195,7 @@ namespace Raven.Database.Server.Controllers
             catch (InvalidDataException e)
             {
                 if (Log.IsDebugEnabled)
-                    Log.DebugException("Failed to deserialize document batch request." , e);
+                    Log.DebugException("Failed to deserialize document batch request.", e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -215,7 +239,7 @@ namespace Raven.Database.Server.Controllers
                         status.MarkProgress(x);
                     });
                 }
-                
+
             }).ContinueWith(t =>
             {
                 if (timeout != null)
@@ -233,11 +257,11 @@ namespace Raven.Database.Server.Controllers
             });
 
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
-                                                 {
-                                                     StartTime = SystemTime.UtcNow,
-                                                     TaskType = TaskActions.PendingTaskType.IndexBulkOperation,
-                                                     Description = index
-                                                 }, out id, timeout.CancellationTokenSource);
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.IndexBulkOperation,
+                Description = index
+            }, out id, timeout.CancellationTokenSource);
 
             return GetMessageWithObject(new { OperationId = id }, HttpStatusCode.Accepted);
         }

@@ -248,7 +248,7 @@ namespace Raven.Tests.Core.ChangesApi
             using (var destination = GetDocumentStore())
             {
                 source.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
-                destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
+                destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value2" } }, new RavenJObject());
 
                 var eTag = source.DatabaseCommands.Get("docs/1").Etag;
 

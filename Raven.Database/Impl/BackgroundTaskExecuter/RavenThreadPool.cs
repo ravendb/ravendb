@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Sparrow.Collections;
 
 namespace Raven.Database.Impl.BackgroundTaskExecuter
 {
@@ -403,7 +404,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 batchesCountdown.Reset(numOfBatches);
 
             var localTasks = new List<ThreadTask>();
-            var exceptions = new List<Exception>();
+            var exceptions = new ConcurrentSet<Exception>();
             
             for (var i = 0; i < src.Count; i += pageSize)
             {
@@ -558,7 +559,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             else
                 lastEvent.Reset(src.Count);
 
-            var exceptions = new List<Exception>();
+            var exceptions = new ConcurrentSet<Exception>();
             
             for (; itemsCount < src.Count && _ct.IsCancellationRequested == false; itemsCount++)
             {

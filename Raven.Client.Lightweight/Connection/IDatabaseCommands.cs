@@ -62,7 +62,8 @@ namespace Raven.Client.Connection
         ///     to share same transaction
         /// </summary>
         /// <param name="commandDatas">Commands to process</param>
-        BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
+        /// <param name="writeAssurance">Configuration string for server side write assurance</param>
+        BatchResult[] Batch(IEnumerable<ICommandData> commandDatas, string writeAssurance = null);
 
 #if !DNXCORE50
         /// <summary>

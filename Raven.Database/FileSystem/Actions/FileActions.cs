@@ -150,10 +150,15 @@ namespace Raven.Database.FileSystem.Actions
 
                     metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
+                    long totalSizeRead = readFileToDatabase.TotalSizeRead;
+
+                    if (!metadata.ContainsKey(Constants.FileSystem.RavenFsSize))
+                    {
+                        metadata[Constants.FileSystem.RavenFsSize] = totalSizeRead;
+                    }
+
                     FileUpdateResult updateMetadata = null;
                     Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
-
-                    long totalSizeRead = readFileToDatabase.TotalSizeRead;
                     metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
                     Search.Index(name, metadata, updateMetadata.Etag);

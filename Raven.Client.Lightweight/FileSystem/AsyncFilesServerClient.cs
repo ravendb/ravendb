@@ -636,8 +636,12 @@ namespace Raven.Client.FileSystem
             bool streamConsumed = false;
             long start = -1;
 
+            long? size = null;
             if (source.CanSeek)
+            {
+                size = source.Length;
                 start = source.Position;
+            }
 
             return UploadAsync(filename, source.CopyTo, () =>
             {
@@ -652,10 +656,10 @@ namespace Raven.Client.FileSystem
                 }
 
                 streamConsumed = true;
-            }, source.Length, metadata, etag);
+            }, size, metadata, etag);
         }
 
-        public Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, Etag etag = null)
+        public Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long? size, RavenJObject metadata = null, Etag etag = null)
         {
             if (metadata == null)
                 metadata = new RavenJObject();
@@ -666,13 +670,13 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null)
+        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long? size, Etag etag = null)
         {
             var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
             return UploadAsyncImpl(operationMetadata, filename, source.CopyTo, () => { }, metadata, true, size, etag);
         }
 
-        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Action<Stream> source, Action prepareStream, RavenJObject metadata, bool preserveTimestamps, long size, Etag etag)
+        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Action<Stream> source, Action prepareStream, RavenJObject metadata, bool preserveTimestamps, long? size, Etag etag)
         {
             var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename);
             if (preserveTimestamps)
@@ -686,7 +690,8 @@ namespace Raven.Client.FileSystem
             using (var request = RequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).AddOperationHeaders(OperationsHeaders))
             using (ConnectionOptions.Expect100Continue(request.Url))
             {
-                metadata[Constants.FileSystem.RavenFsSize] = new RavenJValue(size);
+                if (size.HasValue)
+                    metadata[Constants.FileSystem.RavenFsSize] = new RavenJValue(size);
 
                 AddHeaders(metadata, request);
                 AsyncFilesServerClientExtension.AddEtagHeader(request, etag);

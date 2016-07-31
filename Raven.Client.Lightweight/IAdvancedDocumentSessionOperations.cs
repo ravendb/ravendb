@@ -170,5 +170,10 @@ namespace Raven.Client
         /// Returns all changes for each entity stored within session. Including name of the field/property that changed, its old and new value and change type.
         /// </summary>
         IDictionary<string, DocumentsChanges[]> WhatChanged();
+
+        /// <summary>
+        /// SaveChanges will wait for the changes made to be replicates to `replicas` nodes
+        /// </summary>
+        void OnSaveChangesWaitForReplication(int replicas = 1, TimeSpan? timeout = null);
     }
 }

@@ -695,7 +695,7 @@ namespace Raven.Client.Shard
                             string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
                     var localCopy = shardAndObjects.Value;
-                    saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray());
+                    saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray(), data.WaitForWriteAssurance);
                     saveChanges.Add(localCopy);
                 }
                 await Task.WhenAll(saveTasks).ConfigureAwait(false);

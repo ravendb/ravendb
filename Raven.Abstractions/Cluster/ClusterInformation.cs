@@ -13,19 +13,24 @@ namespace Raven.Abstractions.Cluster
         {
         }
 
-        public ClusterInformation(bool isInCluster, bool isLeader)
+        public ClusterInformation(bool isInCluster, bool isLeader, bool withClusterFailoverHeader = false)
         {
             IsInCluster = isInCluster;
             IsLeader = isInCluster && isLeader;
+            WithClusterFailoverHeader = withClusterFailoverHeader;
         }
 
         public bool IsInCluster { get; set; }
 
         public bool IsLeader { get; set; }
 
+        public bool WithClusterFailoverHeader { get; set; }
+
         protected bool Equals(ClusterInformation other)
         {
-            return IsInCluster.Equals(other.IsInCluster) && IsLeader.Equals(other.IsLeader);
+            return IsInCluster.Equals(other.IsInCluster) 
+                && IsLeader.Equals(other.IsLeader) 
+                && WithClusterFailoverHeader.Equals(other.WithClusterFailoverHeader);
         }
 
         public override bool Equals(object obj)
@@ -49,7 +54,7 @@ namespace Raven.Abstractions.Cluster
         {
             unchecked
             {
-                return (IsInCluster.GetHashCode() * 397) ^ IsLeader.GetHashCode();
+                return (IsInCluster.GetHashCode() * 397) ^ IsLeader.GetHashCode() ^ WithClusterFailoverHeader.GetHashCode();
             }
         }
     }

@@ -323,9 +323,9 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(ids, includes, transformer, transformerParameters, metadataOnly));
         }
 
-        public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
+        public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas,string writeAssurance = null)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas.ToArray()));
+            return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas, writeAssurance));
         }
 
 #if !DNXCORE50
