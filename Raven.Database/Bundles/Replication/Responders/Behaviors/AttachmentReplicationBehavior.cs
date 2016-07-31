@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Mono.CSharp;
+using NetTopologySuite.Operation.Buffer;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Responders.Behaviors;
 using Raven.Database.Impl;
 using Raven.Json.Linq;
+using Sparrow;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -148,16 +151,20 @@ namespace Raven.Bundles.Replication.Responders
             if (CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(existing.Metadata, metadata, out resolvedMetadataToSave) == false)
                 return false;
             var data = existing.Data();
-            for (var i = 0; i < document.Length; i++)
-            {
-                var readByte = data.ReadByte();
-                if (readByte == -1 || document[i] != readByte)
-                    return false;
-            }
-            if (data.ReadByte() != -1)
+            //It would have been better to check the length of the stream before reading it,
+            // but the stream type is sometimes MemoryStream and sometimes BufferedStream
+            // and we will end up reading the whole stream just to get its legnth anyway.
+            var dataAsArray = data.ReadData();
+            if (dataAsArray.Length != document.Length)
                 return false;
-            //if we got here the data is equal and the metadata was also equal enough.
-            return true;
+            unsafe
+            {
+                fixed (byte* right = dataAsArray)
+                fixed( byte* left = document)
+                {
+                    return Memory.Compare(right, left, document.Length) == 0;
+                }
+            }
         }
     }
 }

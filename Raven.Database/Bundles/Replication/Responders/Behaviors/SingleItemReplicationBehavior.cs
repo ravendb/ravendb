@@ -108,8 +108,7 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             //this is expensive but worth trying if we can avoid conflicts
             if (TryResolveConflictByCheckingIfIdentical(metadata, incoming, existingItem, out resolvedMetadataToSave))
             {
-                //this may seem silly to save an item that is identical but it actually has a diffrent metadata
-                //and it needs to get a new etag
+                //The metadata here is merged (changed), it needs to be pushed.
                 AddWithoutConflict(id,null, resolvedMetadataToSave,incoming);
                 return;
             }
