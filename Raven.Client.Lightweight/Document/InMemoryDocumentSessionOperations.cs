@@ -44,7 +44,6 @@ namespace Raven.Client.Document
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
         protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
         private static int counter;
-        private string waitForWriteAssurance;
         private readonly int hash = Interlocked.Increment(ref counter);
 
         protected bool GenerateDocumentKeysOnStore = true;
@@ -972,7 +971,7 @@ more responsive application.
                 Entities = new List<object>(),
                 Commands = new List<ICommandData>(deferedCommands),
                 DeferredCommandsCount = deferedCommands.Count,
-                WaitForWriteAssurance = waitForWriteAssurance
+                Options = saveChangesOptions
             };
             deferedCommands.Clear();
 
@@ -1001,7 +1000,11 @@ more responsive application.
         public void OnSaveChangesWaitForReplication(int replicas = 1, TimeSpan? timeout = null)
         {
             var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
-            waitForWriteAssurance = replicas + ";" + realTimeout;
+            if (saveChangesOptions == null)
+                saveChangesOptions = new BatchOptions();
+            saveChangesOptions.WaitForReplicas = true;
+            saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
+            saveChangesOptions.WaitForReplicasTimout = realTimeout;
         }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
@@ -1238,6 +1241,7 @@ more responsive application.
 
         private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
         protected string _databaseName;
+        private BatchOptions saveChangesOptions;
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
         public EntityToJson EntityToJson { get; private set; }
 
@@ -1350,7 +1354,7 @@ more responsive application.
             /// <value>The commands.</value>
             public List<ICommandData> Commands { get; set; }
 
-            public string WaitForWriteAssurance { get; set; }
+            public BatchOptions Options { get; set; }
 
             public int DeferredCommandsCount { get; set; }
 

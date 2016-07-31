@@ -66,9 +66,9 @@ namespace Raven.Client.Connection.Async
         ///     to share same transaction
         /// </summary>
         /// <param name="commandDatas">Commands to process</param>
-        /// <param name="writeAssurance">Configuration string for write assurance</param>
+        /// <param name="options">Options to send to the server</param>
         /// <param name="token">The cancellation token.</param>
-        Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, string writeAssurance = null, CancellationToken token = default (CancellationToken));
+        Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas,  BatchOptions options = null, CancellationToken token = default (CancellationToken));
 
 #if !DNXCORE50
         /// <summary>

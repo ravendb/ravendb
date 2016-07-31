@@ -88,26 +88,31 @@ namespace Raven.Database.Server.Controllers
                 var writeAssurance = GetHeader("Raven-Write-Assurance");
                 if (writeAssurance != null)
                 {
-                    var parts = writeAssurance.Split(';');
-                    var replicas = int.Parse(parts[0]);
-                    var timeout = TimeSpan.Parse(parts[1]);
-
-                    var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
-                    if (replicationTask == null)
-                    {
-                        Log.Info("Was asked to get write assurance on a database without replication, ignoring the request");
-                    }
-                    else
-                    {
-                        var lastResultWithEtag = batchResult.LastOrDefault(x => x.Etag != null);
-                        if (lastResultWithEtag != null)
-                        {
-                            await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas).ConfigureAwait(false);
-                        }
-                    }
+                    await WaitForReplicationAsync(writeAssurance, batchResult.LastOrDefault(x => x.Etag != null)).ConfigureAwait(false);
                 }
 
                 return GetMessageWithObject(batchResult);
+            }
+        }
+
+        private async Task WaitForReplicationAsync(string writeAssurance, BatchResult lastResultWithEtag)
+        {
+            var parts = writeAssurance.Split(';');
+            var replicas = int.Parse(parts[0]);
+            var timeout = TimeSpan.Parse(parts[1]);
+
+            var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+            if (replicationTask == null)
+            {
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug("Was asked to get write assurance on a database without replication, ignoring the request");
+                }
+                return;
+            }
+            if (lastResultWithEtag != null)
+            {
+                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas).ConfigureAwait(false);
             }
         }
 

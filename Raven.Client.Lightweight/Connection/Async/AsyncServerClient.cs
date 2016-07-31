@@ -1557,7 +1557,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, string writeAssurance = null, CancellationToken token = default(CancellationToken))
+        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, BatchOptions options = null, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async (operationMetadata, requestTimeMetric) =>
             {
@@ -1568,8 +1568,8 @@ namespace Raven.Client.Connection.Async
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
-                    if (string.IsNullOrEmpty(writeAssurance) == false)
-                        request.AddHeader("Raven-Write-Assurance", writeAssurance);
+                    if (options?.WaitForReplicas == true)
+                        request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout);
 
                     var serializedData = commandDatas.Select(x => x.ToJson()).ToList();
                     var jArray = new RavenJArray(serializedData);
