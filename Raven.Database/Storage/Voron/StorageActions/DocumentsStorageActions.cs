@@ -511,7 +511,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                           .Delete(writeBatch.Value, deletedETag);
 
             documentCacher.RemoveCachedDocument(normalizedKey, existingEtag);
-            if (logger.IsDebugEnabled)
+
             if (logger.IsDebugEnabled) { logger.Debug("Deleted document with key = '{0}'", key); }
 
             return true;
@@ -528,7 +528,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             DateTime savedAt;
             var normalizedKey = CreateKey(key);
             var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
-            if (logger.IsDebugEnabled)
+
             if (logger.IsDebugEnabled) { logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key); }
 
             if (existingEtag != null)
@@ -606,7 +606,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             documentCacher.RemoveCachedDocument(normalizedKey, preTouchEtag);
             etagTouches.Add(preTouchEtag, afterTouchEtag);
-            if (logger.IsDebugEnabled)
+
             if (logger.IsDebugEnabled) { logger.Debug("TouchDocument() - document with key = '{0}'", key); }
         }
 

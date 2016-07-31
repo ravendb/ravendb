@@ -486,11 +486,10 @@ namespace Rachis.Behaviors
             if (req.Entries.Length > 0)
             {
                 if (_log.IsDebugEnabled)
+                {
                     _log.Debug("Appending log (persistant state), entries count: {0} (node state = {1})", req.Entries.Length,
                     Engine.State);
 
-                if (_log.IsDebugEnabled)
-                {
                     foreach (var logEntry in req.Entries)
                     {
                         _log.Debug("Entry {0} (term {1})", logEntry.Index, logEntry.Term);
