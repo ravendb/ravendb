@@ -29,17 +29,20 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             var now = SystemTime.UtcNow;
 
-            var doc = create_doc(new DynamicJsonValue
+            using (var lazyStringValue = _ctx.GetLazyString("22.0"))
             {
-                ["Name"] = "Arek",
-                ["Address"] = new DynamicJsonValue
+
+                var doc = create_doc(new DynamicJsonValue
                 {
-                    ["City"] = "NYC"
-                },
-                ["NullField"] = null,
-                ["Age"] = new LazyDoubleValue(_ctx.GetLazyString("22.0")),
-                ["LazyName"] = _ctx.GetLazyString("Arek"),
-                ["Friends"] = new DynamicJsonArray
+                    ["Name"] = "Arek",
+                    ["Address"] = new DynamicJsonValue
+                    {
+                        ["City"] = "NYC"
+                    },
+                    ["NullField"] = null,
+                    ["Age"] = new LazyDoubleValue(lazyStringValue),
+                    ["LazyName"] = _ctx.GetLazyString("Arek"),
+                    ["Friends"] = new DynamicJsonArray
                 {
                     new DynamicJsonValue
                     {
@@ -50,24 +53,25 @@ namespace FastTests.Server.Documents.Indexing.Static
                         ["Name"] = "John"
                     }
                 },
-                [Constants.Metadata] = new DynamicJsonValue
-                {
-                    [Constants.Headers.RavenEntityName] = "Users",
-                    [Constants.Headers.RavenLastModified] = now.GetDefaultRavenFormat(true)
-                }
-            }, "users/1");
+                    [Constants.Metadata] = new DynamicJsonValue
+                    {
+                        [Constants.Headers.RavenEntityName] = "Users",
+                        [Constants.Headers.RavenLastModified] = now.GetDefaultRavenFormat(true)
+                    }
+                }, "users/1");
 
-            dynamic user = new DynamicBlittableJson(doc);
+                dynamic user = new DynamicBlittableJson(doc);
 
-            Assert.Equal("Arek", user.Name);
-            Assert.Equal("NYC", user.Address.City);
-            Assert.Equal("users/1", user.Id);
-            Assert.Equal(DynamicNullObject.Null, user.NullField);
-            Assert.Equal(22.0, user.Age);
-            Assert.Equal("Arek", user.LazyName);
-            Assert.Equal(2, user.Friends.Length);
-            Assert.Equal("Users", user[Constants.Metadata][Constants.Headers.RavenEntityName]);
-            Assert.Equal(now, user[Constants.Metadata].Value<DateTime>(Constants.Headers.RavenLastModified));
+                Assert.Equal("Arek", user.Name);
+                Assert.Equal("NYC", user.Address.City);
+                Assert.Equal("users/1", user.Id);
+                Assert.Equal(DynamicNullObject.Null, user.NullField);
+                Assert.Equal(22.0, user.Age);
+                Assert.Equal("Arek", user.LazyName);
+                Assert.Equal(2, user.Friends.Length);
+                Assert.Equal("Users", user[Constants.Metadata][Constants.Headers.RavenEntityName]);
+                Assert.Equal(now, user[Constants.Metadata].Value<DateTime>(Constants.Headers.RavenLastModified));
+            }
         }
 
         public Document create_doc(DynamicJsonValue document, string id)

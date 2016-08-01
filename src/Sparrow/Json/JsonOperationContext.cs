@@ -157,11 +157,11 @@ namespace Sparrow.Json
 
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
-            return GetLazyStringFor(new StringSegment(field, 0, field.Length));
+            return GetLazyStringForFieldWithCaching(new StringSegment(field, 0, field.Length));
         }
 
 
-        public unsafe LazyStringValue GetLazyStringFor(StringSegment field)
+        public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment field)
         {
             LazyStringValue value;
             if (_fieldNames == null)

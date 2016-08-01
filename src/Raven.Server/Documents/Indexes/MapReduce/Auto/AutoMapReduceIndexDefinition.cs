@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         protected void PersistGroupByFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
-            writer.WritePropertyName(context.GetLazyString(nameof(GroupByFields)));
+            writer.WritePropertyName((nameof(GroupByFields)));
             writer.WriteStartArray();
             var first = true;
             foreach (var field in GroupByFields.Values)
@@ -70,15 +70,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(field.Name)));
-                writer.WriteString(context.GetLazyString(field.Name));
+                writer.WritePropertyName((nameof(field.Name)));
+                writer.WriteString((field.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(field.Highlighted)));
+                writer.WritePropertyName((nameof(field.Highlighted)));
                 writer.WriteBool(field.Highlighted);
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(field.SortOption)));
+                writer.WritePropertyName((nameof(field.SortOption)));
                 writer.WriteInteger((int)(field.SortOption ?? SortOptions.None));
 
                 writer.WriteEndObject();

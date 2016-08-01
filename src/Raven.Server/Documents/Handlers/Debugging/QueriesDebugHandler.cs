@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.WriteStartObject();
                 foreach (var index in indexes)
                 {
-                    writer.WritePropertyName(context.GetLazyString(index.Name));
+                    writer.WritePropertyName(index.Name);
                     writer.WriteStartArray();
 
                     var isFirstInternal = true;
@@ -40,19 +40,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         writer.WriteStartObject();
 
-                        writer.WritePropertyName(context.GetLazyString(nameof(query.Duration)));
-                        writer.WriteString(context.GetLazyString(query.Duration.ToString()));
+                        writer.WritePropertyName((nameof(query.Duration)));
+                        writer.WriteString(query.Duration.ToString());
                         writer.WriteComma();
 
-                        writer.WritePropertyName(context.GetLazyString(nameof(query.QueryId)));
+                        writer.WritePropertyName((nameof(query.QueryId)));
                         writer.WriteInteger(query.QueryId);
                         writer.WriteComma();
 
-                        writer.WritePropertyName(context.GetLazyString(nameof(query.StartTime)));
-                        writer.WriteString(context.GetLazyString(query.StartTime.GetDefaultRavenFormat()));
+                        writer.WritePropertyName((nameof(query.StartTime)));
+                        writer.WriteString(query.StartTime.GetDefaultRavenFormat());
                         writer.WriteComma();
 
-                        writer.WritePropertyName(context.GetLazyString(nameof(query.QueryInfo)));
+                        writer.WritePropertyName((nameof(query.QueryInfo)));
                         writer.WriteIndexQuery(context, query.QueryInfo);
 
                         writer.WriteEndObject();

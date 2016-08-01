@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(context.GetLazyString("OperationId"));
+                writer.WritePropertyName("OperationId");
                 writer.WriteInteger(-1); // TODO [ppekrol]
 
                 writer.WriteEndObject();

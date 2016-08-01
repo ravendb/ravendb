@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var builder = IndexDefinition.ToJson();
             using (var json = context.ReadObject(builder, nameof(IndexDefinition), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
-                writer.WritePropertyName(context.GetLazyString(nameof(IndexDefinition)));
+                writer.WritePropertyName(nameof(IndexDefinition));
                 writer.WriteObject(json);
             }
         }

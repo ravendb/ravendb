@@ -29,18 +29,18 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(context.GetLazyString("Id"));
-                    writer.WriteString(context.GetLazyString(pair.Key.Item1));
+                    writer.WritePropertyName(("Id"));
+                    writer.WriteString((pair.Key.Item1));
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("Size"));
+                    writer.WritePropertyName(("Size"));
                     writer.WriteInteger(pair.Value);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("Last Access"));
-                    writer.WriteString(context.GetLazyString(pair.Key.Item2.ToString(CultureInfo.InvariantCulture)));
+                    writer.WritePropertyName(("Last Access"));
+                    writer.WriteString(pair.Key.Item2.ToString("o", CultureInfo.InvariantCulture));
 
                     writer.WriteEndObject();
 

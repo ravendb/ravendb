@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Sparrow.Json
 {
     public class BlittableJsonTextWriter : IDisposable
     {
+        private readonly JsonOperationContext _context;
         private readonly Stream _stream;
         private const byte StartObject = (byte)'{';
         private const byte EndObject = (byte)'}';
@@ -23,6 +25,7 @@ namespace Sparrow.Json
 
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
+            _context = context;
             _stream = stream;
             _buffer = context.GetManagedBuffer();
         }
@@ -124,7 +127,13 @@ namespace Sparrow.Json
             }
         }
 
-
+        public void WriteString(string str)
+        {
+            using (var lazyStr = _context.GetLazyString(str))
+            {
+                WriteString(lazyStr);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteString(LazyStringValue str)
@@ -159,24 +168,24 @@ namespace Sparrow.Json
         {
             switch (b)
             {
-                case (byte) '\b':
-                     return (byte) 'b';
-                case (byte) '\t':
-                    return (byte) 't';
-                case (byte) '\n':
-                    return (byte) 'n';
-                case (byte) '\f':
-                    return (byte) 'f';
-                case (byte) '\r':
-                    return (byte) 'r';
-                case (byte) '\\':
-                    return (byte) '\\';
+                case (byte)'\b':
+                    return (byte)'b';
+                case (byte)'\t':
+                    return (byte)'t';
+                case (byte)'\n':
+                    return (byte)'n';
+                case (byte)'\f':
+                    return (byte)'f';
+                case (byte)'\r':
+                    return (byte)'r';
+                case (byte)'\\':
+                    return (byte)'\\';
                 case (byte)'/':
                     return (byte)'/';
-                case (byte) '"':
-                    return (byte) '"';
+                case (byte)'"':
+                    return (byte)'"';
                 default:
-                    throw new InvalidOperationException("Invalid escape char '"+(char)b +"' numeric value is: " + b);
+                    throw new InvalidOperationException("Invalid escape char '" + (char)b + "' numeric value is: " + b);
             }
         }
 
@@ -221,7 +230,7 @@ namespace Sparrow.Json
                 _pos += size;
                 return;
             }
-            
+
             // need to do this in pieces
             var posInStr = 0;
             fixed (byte* p = _buffer)
@@ -324,16 +333,25 @@ namespace Sparrow.Json
             _buffer[_pos++] = Colon;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WritePropertyName(string prop)
+        {
+            var lazyProp = _context.GetLazyStringForFieldWithCaching(prop);
+            WriteString(lazyProp);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Colon;
+        }
+
         public void WriteInteger(long val)
         {
-            if (val == 0) 
+            if (val == 0)
             {
                 EnsureBuffer(1);
                 _buffer[_pos++] = (byte)'0';
                 return;
             }
             int len = 1;
-           
+
             for (var i = val / 10; i != 0; i /= 10)
             {
                 len++;
@@ -341,7 +359,7 @@ namespace Sparrow.Json
             if (val < 0)
             {
                 EnsureBuffer(len + 1);
-                _buffer[_pos++] = (byte) '-';
+                _buffer[_pos++] = (byte)'-';
             }
             else
             {
@@ -358,7 +376,7 @@ namespace Sparrow.Json
         public unsafe void WriteDouble(LazyDoubleValue val)
         {
             var lazyStringValue = val.Inner;
-            WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
+            WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
         public void Dispose()
@@ -369,8 +387,8 @@ namespace Sparrow.Json
         public void WriteNewLine()
         {
             EnsureBuffer(2);
-            _buffer[_pos++] = (byte) '\r';
-            _buffer[_pos++] = (byte) '\n';
+            _buffer[_pos++] = (byte)'\r';
+            _buffer[_pos++] = (byte)'\n';
         }
     }
 }

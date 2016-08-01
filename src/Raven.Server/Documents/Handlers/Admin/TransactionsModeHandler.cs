@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName(context.GetLazyStringFor("Environments"));
+                writer.WritePropertyName(("Environments"));
                 writer.WriteStartArray();
                 bool first = true;
                 foreach (var storageEnvironment in Database.GetAllStoragesEnvironment())

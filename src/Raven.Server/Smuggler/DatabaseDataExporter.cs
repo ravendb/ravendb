@@ -45,13 +45,13 @@ namespace Raven.Server.Smuggler
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(context.GetLazyString("BuildVersion"));
+                writer.WritePropertyName(("BuildVersion"));
                 writer.WriteInteger(40000);
 
                 if (OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(context.GetLazyString("Docs"));
+                    writer.WritePropertyName(("Docs"));
                     var documents = DocumentsLimit.HasValue
                         ? _database.DocumentsStorage.GetDocumentsAfter(context, StartDocsEtag ?? 0, 0, DocumentsLimit.Value)
                         : _database.DocumentsStorage.GetDocumentsAfter(context, StartDocsEtag ?? 0);
@@ -82,7 +82,7 @@ namespace Raven.Server.Smuggler
                     if (versioningStorage != null)
                     {
                         writer.WriteComma();
-                        writer.WritePropertyName(context.GetLazyString("RevisionDocuments"));
+                        writer.WritePropertyName("RevisionDocuments");
                         writer.WriteStartArray();
                         var first = true;
                         var revisionDocuments = RevisionDocumentsLimit.HasValue
@@ -111,7 +111,7 @@ namespace Raven.Server.Smuggler
                 if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(context.GetLazyString("Indexes"));
+                    writer.WritePropertyName(("Indexes"));
                     writer.WriteStartArray();
                     foreach (var index in _database.IndexStore.GetIndexes())
                     {
@@ -135,7 +135,7 @@ namespace Raven.Server.Smuggler
                 if (OperateOnTypes.HasFlag(DatabaseItemType.Transformers))
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(context.GetLazyString("Transformers"));
+                    writer.WritePropertyName(("Transformers"));
                     writer.WriteStartArray();
                     foreach (var transformer in _database.TransformerStore.GetTransformers())
                     {
@@ -147,7 +147,7 @@ namespace Raven.Server.Smuggler
                 if (OperateOnTypes.HasFlag(DatabaseItemType.Identities))
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(context.GetLazyString("Identities"));
+                    writer.WritePropertyName(("Identities"));
                     writer.WriteStartArray();
                     var identities = _database.DocumentsStorage.GetIdentities(context);
                     var first = true;
@@ -158,11 +158,11 @@ namespace Raven.Server.Smuggler
                         first = false;
 
                         writer.WriteStartObject();
-                        writer.WritePropertyName(context.GetLazyString("Key"));
-                        writer.WriteString(context.GetLazyString(identity.Key));
+                        writer.WritePropertyName(("Key"));
+                        writer.WriteString((identity.Key));
                         writer.WriteComma();
-                        writer.WritePropertyName(context.GetLazyString("Value"));
-                        writer.WriteString(context.GetLazyString(identity.Value.ToString()));
+                        writer.WritePropertyName(("Value"));
+                        writer.WriteString((identity.Value.ToString()));
                         writer.WriteEndObject();
                     }
                     writer.WriteEndArray();

@@ -29,11 +29,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(context.GetLazyString("Transformer"));
-                    writer.WriteString(context.GetLazyString(name));
+                    writer.WritePropertyName(("Transformer"));
+                    writer.WriteString(name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("TransformerId"));
+                    writer.WritePropertyName(("TransformerId"));
                     writer.WriteInteger(transformerId);
 
                     writer.WriteEndObject();

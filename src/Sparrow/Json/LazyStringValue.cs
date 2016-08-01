@@ -4,7 +4,7 @@ using System.Text;
 namespace Sparrow.Json
 {
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
-        IComparable<LazyStringValue>, IEquatable<LazyStringValue>
+        IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable
     {
         public readonly JsonOperationContext Context;
         public readonly byte* Buffer;
@@ -116,6 +116,15 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return (string)this; // invoke the implicit string conversion
+        }
+
+        public void Dispose()
+        {
+            if (AllocatedMemoryData == null)
+                return;
+
+            Context.ReturnMemory(AllocatedMemoryData);
+            AllocatedMemoryData = null;
         }
 
         public bool Contains(string value)

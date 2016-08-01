@@ -24,7 +24,10 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 sut.Process(1.0);
                 sut.Process((decimal)1.0);
                 sut.Process("abc");
-                sut.Process(context.GetLazyString("abc"));
+                using (var lazyStringValue = context.GetLazyString("abc"))
+                {
+                    sut.Process(lazyStringValue);
+                }
                 sut.Process(new DynamicBlittableJson(context.ReadObject(new DynamicJsonValue()
                 {
                     ["Name"] = "Arek",

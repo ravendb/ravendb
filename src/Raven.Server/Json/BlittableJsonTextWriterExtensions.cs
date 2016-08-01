@@ -34,12 +34,12 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(entry.Etag)));
+            writer.WritePropertyName((nameof(entry.Etag)));
             writer.WriteInteger(entry.Etag);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(entry.DbId)));
-            writer.WriteString(context.GetLazyString(entry.DbId.ToString()));
+            writer.WritePropertyName((nameof(entry.DbId)));
+            writer.WriteString(entry.DbId.ToString());
 
             writer.WriteEndObject();
         }
@@ -49,12 +49,12 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(explanation.Index)));
-            writer.WriteString(context.GetLazyString(explanation.Index));
+            writer.WritePropertyName((nameof(explanation.Index)));
+            writer.WriteString((explanation.Index));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(explanation.Reason)));
-            writer.WriteString(context.GetLazyString(explanation.Reason));
+            writer.WritePropertyName((nameof(explanation.Reason)));
+            writer.WriteString((explanation.Reason));
 
             writer.WriteEndObject();
         }
@@ -63,11 +63,11 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(result.TotalResults)));
+            writer.WritePropertyName((nameof(result.TotalResults)));
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(result.SkippedResults)));
+            writer.WritePropertyName((nameof(result.SkippedResults)));
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
 
@@ -81,31 +81,31 @@ namespace Raven.Server.Json
             if (partial == false)
                 writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(result.IndexName)));
-            writer.WriteString(context.GetLazyString(result.IndexName));
+            writer.WritePropertyName((nameof(result.IndexName)));
+            writer.WriteString((result.IndexName));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Results)));
+            writer.WritePropertyName((nameof(result.Results)));
             writer.WriteDocuments(context, result.Results, metadataOnly);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Includes)));
+            writer.WritePropertyName(nameof(result.Includes));
             writer.WriteDocuments(context, result.Includes, metadataOnly);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(result.IndexTimestamp)));
-            writer.WriteString(context.GetLazyString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
+            writer.WritePropertyName((nameof(result.IndexTimestamp)));
+            writer.WriteString((result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(result.LastQueryTime)));
-            writer.WriteString(context.GetLazyString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite)));
+            writer.WritePropertyName((nameof(result.LastQueryTime)));
+            writer.WriteString((result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite)));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(result.IsStale)));
+            writer.WritePropertyName((nameof(result.IsStale)));
             writer.WriteBool(result.IsStale);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(result.ResultEtag)));
+            writer.WritePropertyName((nameof(result.ResultEtag)));
             writer.WriteInteger(result.ResultEtag);
 
             if (partial == false)
@@ -116,19 +116,20 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.Completed)));
-            writer.WriteString(context.GetLazyString(stats.Completed.GetDefaultRavenFormat(isUtc: true)));
+            writer.WritePropertyName((nameof(stats.Completed)));
+            writer.WriteString((stats.Completed.GetDefaultRavenFormat(isUtc: true)));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.Started)));
-            writer.WriteString(context.GetLazyString(stats.Started.GetDefaultRavenFormat(isUtc: true)));
+            writer.WritePropertyName((nameof(stats.Started)));
+            writer.WriteString((stats.Started.GetDefaultRavenFormat(isUtc: true)));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.DurationInMilliseconds)));
-            writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(stats.DurationInMilliseconds.ToInvariantString())));
+            writer.WritePropertyName((nameof(stats.DurationInMilliseconds)));
+            using (var lazyStringValue = context.GetLazyString(stats.DurationInMilliseconds.ToInvariantString()))
+                writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.Details)));
+            writer.WritePropertyName((nameof(stats.Details)));
             writer.WriteIndexingPerformanceOperation(context, stats.Details);
 
             writer.WriteEndObject();
@@ -138,15 +139,16 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(operation.DurationInMilliseconds)));
-            writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(operation.DurationInMilliseconds.ToInvariantString())));
+            writer.WritePropertyName((nameof(operation.DurationInMilliseconds)));
+            using (var lazyStringValue = context.GetLazyString(operation.DurationInMilliseconds.ToInvariantString()))
+                writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(operation.Name)));
-            writer.WriteString(context.GetLazyString(operation.Name));
+            writer.WritePropertyName((nameof(operation.Name)));
+            writer.WriteString((operation.Name));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(operation.Operations)));
+            writer.WritePropertyName((nameof(operation.Operations)));
             writer.WriteStartArray();
             if (operation.Operations != null)
             {
@@ -170,103 +172,103 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)));
+            writer.WritePropertyName((nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)));
             writer.WriteBool(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.CutoffEtag)));
+            writer.WritePropertyName((nameof(query.CutoffEtag)));
             if (query.CutoffEtag.HasValue)
                 writer.WriteInteger(query.CutoffEtag.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.DebugOptionGetIndexEntries)));
+            writer.WritePropertyName((nameof(query.DebugOptionGetIndexEntries)));
             writer.WriteBool(query.DebugOptionGetIndexEntries);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.DefaultField)));
+            writer.WritePropertyName((nameof(query.DefaultField)));
             if (query.DefaultField != null)
-                writer.WriteString(context.GetLazyString(query.DefaultField));
+                writer.WriteString((query.DefaultField));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.DefaultOperator)));
-            writer.WriteString(context.GetLazyString(query.DefaultOperator.ToString()));
+            writer.WritePropertyName((nameof(query.DefaultOperator)));
+            writer.WriteString((query.DefaultOperator.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.DisableCaching)));
+            writer.WritePropertyName((nameof(query.DisableCaching)));
             writer.WriteBool(query.DisableCaching);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.ExplainScores)));
+            writer.WritePropertyName((nameof(query.ExplainScores)));
             writer.WriteBool(query.ExplainScores);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlighterKeyName)));
+            writer.WritePropertyName((nameof(query.HighlighterKeyName)));
             if (query.HighlighterKeyName != null)
-                writer.WriteString(context.GetLazyString(query.HighlighterKeyName));
+                writer.WriteString((query.HighlighterKeyName));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.IsDistinct)));
+            writer.WritePropertyName((nameof(query.IsDistinct)));
             writer.WriteBool(query.IsDistinct);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.PageSize)));
+            writer.WritePropertyName((nameof(query.PageSize)));
             writer.WriteInteger(query.PageSize);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.PageSizeSet)));
+            writer.WritePropertyName((nameof(query.PageSizeSet)));
             writer.WriteBool(query.PageSizeSet);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.Query)));
+            writer.WritePropertyName((nameof(query.Query)));
             if (query.Query != null)
-                writer.WriteString(context.GetLazyString(query.Query));
+                writer.WriteString((query.Query));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.Transformer)));
+            writer.WritePropertyName((nameof(query.Transformer)));
             if (query.Transformer != null)
-                writer.WriteString(context.GetLazyString(query.Transformer));
+                writer.WriteString((query.Transformer));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.ShowTimings)));
+            writer.WritePropertyName((nameof(query.ShowTimings)));
             writer.WriteBool(query.ShowTimings);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.SkipDuplicateChecking)));
+            writer.WritePropertyName((nameof(query.SkipDuplicateChecking)));
             writer.WriteBool(query.SkipDuplicateChecking);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.Start)));
+            writer.WritePropertyName((nameof(query.Start)));
             writer.WriteInteger(query.Start);
             writer.WriteComma();
 
-            //writer.WritePropertyName(context.GetLazyString(nameof(query.TotalSize)));
+            //writer.WritePropertyName((nameof(query.TotalSize)));
             //writer.WriteInteger(query.TotalSize.Value);
             //writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.WaitForNonStaleResults)));
+            writer.WritePropertyName((nameof(query.WaitForNonStaleResults)));
             writer.WriteBool(query.WaitForNonStaleResults);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.WaitForNonStaleResultsAsOfNow)));
+            writer.WritePropertyName((nameof(query.WaitForNonStaleResultsAsOfNow)));
             writer.WriteBool(query.WaitForNonStaleResultsAsOfNow);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.WaitForNonStaleResultsTimeout)));
+            writer.WritePropertyName((nameof(query.WaitForNonStaleResultsTimeout)));
             if (query.WaitForNonStaleResultsTimeout.HasValue)
-                writer.WriteString(context.GetLazyString(query.WaitForNonStaleResultsTimeout.Value.ToString()));
+                writer.WriteString((query.WaitForNonStaleResultsTimeout.Value.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.DynamicMapReduceFields)));
+            writer.WritePropertyName((nameof(query.DynamicMapReduceFields)));
             writer.WriteStartArray();
             var isFirstInternal = true;
             foreach (var field in query.DynamicMapReduceFields)
@@ -278,16 +280,16 @@ namespace Raven.Server.Json
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(field.Name)));
-                writer.WriteString(context.GetLazyString(field.Name));
+                writer.WritePropertyName((nameof(field.Name)));
+                writer.WriteString((field.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(field.IsGroupBy)));
+                writer.WritePropertyName((nameof(field.IsGroupBy)));
                 writer.WriteBool(field.IsGroupBy);
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(field.OperationType)));
-                writer.WriteString(context.GetLazyString(field.OperationType.ToString()));
+                writer.WritePropertyName((nameof(field.OperationType)));
+                writer.WriteString((field.OperationType.ToString()));
                 writer.WriteComma();
 
                 writer.WriteEndObject();
@@ -295,7 +297,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.FieldsToFetch)));
+            writer.WritePropertyName((nameof(query.FieldsToFetch)));
             if (query.FieldsToFetch != null)
             {
                 writer.WriteStartArray();
@@ -307,7 +309,7 @@ namespace Raven.Server.Json
 
                     isFirstInternal = false;
 
-                    writer.WriteString(context.GetLazyString(field));
+                    writer.WriteString((field));
                 }
 
                 writer.WriteEndArray();
@@ -316,7 +318,7 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlightedFields)));
+            writer.WritePropertyName((nameof(query.HighlightedFields)));
             writer.WriteStartArray();
             if (query.HighlightedFields != null)
             {
@@ -330,20 +332,20 @@ namespace Raven.Server.Json
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.Field)));
-                    writer.WriteString(context.GetLazyString(field.Field));
+                    writer.WritePropertyName((nameof(field.Field)));
+                    writer.WriteString((field.Field));
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.FragmentCount)));
+                    writer.WritePropertyName((nameof(field.FragmentCount)));
                     writer.WriteInteger(field.FragmentCount);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.FragmentLength)));
+                    writer.WritePropertyName((nameof(field.FragmentLength)));
                     writer.WriteInteger(field.FragmentLength);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.FragmentsField)));
-                    writer.WriteString(context.GetLazyString(field.FragmentsField));
+                    writer.WritePropertyName((nameof(field.FragmentsField)));
+                    writer.WriteString((field.FragmentsField));
 
                     writer.WriteEndObject();
                 }
@@ -351,7 +353,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlighterPostTags)));
+            writer.WritePropertyName((nameof(query.HighlighterPostTags)));
             writer.WriteStartArray();
             if (query.HighlighterPostTags != null)
             {
@@ -363,13 +365,13 @@ namespace Raven.Server.Json
 
                     isFirstInternal = false;
 
-                    writer.WriteString(context.GetLazyString(tag));
+                    writer.WriteString((tag));
                 }
             }
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlighterPreTags)));
+            writer.WritePropertyName((nameof(query.HighlighterPreTags)));
             writer.WriteStartArray();
             if (query.HighlighterPreTags != null)
             {
@@ -381,13 +383,13 @@ namespace Raven.Server.Json
 
                     isFirstInternal = false;
 
-                    writer.WriteString(context.GetLazyString(tag));
+                    writer.WriteString((tag));
                 }
             }
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.SortedFields)));
+            writer.WritePropertyName((nameof(query.SortedFields)));
             writer.WriteStartArray();
             if (query.SortedFields != null)
             {
@@ -401,11 +403,11 @@ namespace Raven.Server.Json
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.Field)));
-                    writer.WriteString(context.GetLazyString(field.Field));
+                    writer.WritePropertyName((nameof(field.Field)));
+                    writer.WriteString((field.Field));
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.Descending)));
+                    writer.WritePropertyName((nameof(field.Descending)));
                     writer.WriteBool(field.Descending);
                     writer.WriteComma();
 
@@ -415,7 +417,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.TransformerParameters)));
+            writer.WritePropertyName((nameof(query.TransformerParameters)));
             writer.WriteStartObject();
             if (query.TransformerParameters != null)
                 writer.WriteObject(query.TransformerParameters);
@@ -428,57 +430,57 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfIndexes)));
+            writer.WritePropertyName((nameof(statistics.CountOfIndexes)));
             writer.WriteInteger(statistics.CountOfIndexes);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.ApproximateTaskCount)));
+            writer.WritePropertyName((nameof(statistics.ApproximateTaskCount)));
             writer.WriteInteger(statistics.ApproximateTaskCount);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfDocuments)));
+            writer.WritePropertyName((nameof(statistics.CountOfDocuments)));
             writer.WriteInteger(statistics.CountOfDocuments);
             writer.WriteComma();
 
             if (statistics.CountOfRevisionDocuments.HasValue)
             {
-                writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfRevisionDocuments)));
+                writer.WritePropertyName((nameof(statistics.CountOfRevisionDocuments)));
                 writer.WriteInteger(statistics.CountOfRevisionDocuments.Value);
                 writer.WriteComma();
             }
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfTransformers)));
+            writer.WritePropertyName((nameof(statistics.CountOfTransformers)));
             writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CurrentNumberOfItemsToIndexInSingleBatch)));
+            writer.WritePropertyName((nameof(statistics.CurrentNumberOfItemsToIndexInSingleBatch)));
             writer.WriteInteger(statistics.CurrentNumberOfItemsToIndexInSingleBatch);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CurrentNumberOfItemsToReduceInSingleBatch)));
+            writer.WritePropertyName((nameof(statistics.CurrentNumberOfItemsToReduceInSingleBatch)));
             writer.WriteInteger(statistics.CurrentNumberOfItemsToReduceInSingleBatch);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CurrentNumberOfParallelTasks)));
+            writer.WritePropertyName((nameof(statistics.CurrentNumberOfParallelTasks)));
             writer.WriteInteger(statistics.CurrentNumberOfParallelTasks);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.DatabaseId)));
-            writer.WriteString(context.GetLazyString(statistics.DatabaseId.ToString()));
+            writer.WritePropertyName((nameof(statistics.DatabaseId)));
+            writer.WriteString((statistics.DatabaseId.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.Is64Bit)));
+            writer.WritePropertyName((nameof(statistics.Is64Bit)));
             writer.WriteBool(statistics.Is64Bit);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.LastDocEtag)));
+            writer.WritePropertyName((nameof(statistics.LastDocEtag)));
             if (statistics.LastDocEtag.HasValue)
                 writer.WriteInteger(statistics.LastDocEtag.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(statistics.Indexes)));
+            writer.WritePropertyName((nameof(statistics.Indexes)));
             writer.WriteStartArray();
             var isFirstInternal = true;
             foreach (var index in statistics.Indexes)
@@ -490,24 +492,24 @@ namespace Raven.Server.Json
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(index.IsStale)));
+                writer.WritePropertyName((nameof(index.IsStale)));
                 writer.WriteBool(index.IsStale);
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(index.Name)));
-                writer.WriteString(context.GetLazyString(index.Name));
+                writer.WritePropertyName((nameof(index.Name)));
+                writer.WriteString((index.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(index.IndexId)));
+                writer.WritePropertyName((nameof(index.IndexId)));
                 writer.WriteInteger(index.IndexId);
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(index.LockMode)));
-                writer.WriteString(context.GetLazyString(index.LockMode.ToString()));
+                writer.WritePropertyName((nameof(index.LockMode)));
+                writer.WriteString((index.LockMode.ToString()));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(index.Priority)));
-                writer.WriteString(context.GetLazyString(index.Priority.ToString()));
+                writer.WritePropertyName((nameof(index.Priority)));
+                writer.WriteString((index.Priority.ToString()));
 
                 writer.WriteEndObject();
             }
@@ -520,23 +522,23 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.Name)));
-            writer.WriteString(context.GetLazyString(transformerDefinition.Name));
+            writer.WritePropertyName((nameof(transformerDefinition.Name)));
+            writer.WriteString((transformerDefinition.Name));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.TransformResults)));
-            writer.WriteString(context.GetLazyString(transformerDefinition.TransformResults));
+            writer.WritePropertyName((nameof(transformerDefinition.TransformResults)));
+            writer.WriteString((transformerDefinition.TransformResults));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.LockMode)));
-            writer.WriteString(context.GetLazyString(transformerDefinition.LockMode.ToString()));
+            writer.WritePropertyName((nameof(transformerDefinition.LockMode)));
+            writer.WriteString((transformerDefinition.LockMode.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.Temporary)));
+            writer.WritePropertyName((nameof(transformerDefinition.Temporary)));
             writer.WriteBool(transformerDefinition.Temporary);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(transformerDefinition.TransfomerId)));
+            writer.WritePropertyName((nameof(transformerDefinition.TransfomerId)));
             writer.WriteInteger(transformerDefinition.TransfomerId);
             writer.WriteComma();
 
@@ -547,56 +549,56 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.Name)));
-            writer.WriteString(context.GetLazyString(indexDefinition.Name));
+            writer.WritePropertyName((nameof(indexDefinition.Name)));
+            writer.WriteString((indexDefinition.Name));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.IndexId)));
+            writer.WritePropertyName((nameof(indexDefinition.IndexId)));
             writer.WriteInteger(indexDefinition.IndexId);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.Type)));
-            writer.WriteString(context.GetLazyString(indexDefinition.Type.ToString()));
+            writer.WritePropertyName((nameof(indexDefinition.Type)));
+            writer.WriteString((indexDefinition.Type.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.IsTestIndex)));
+            writer.WritePropertyName((nameof(indexDefinition.IsTestIndex)));
             writer.WriteBool(indexDefinition.IsTestIndex);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.LockMode)));
-            writer.WriteString(context.GetLazyString(indexDefinition.LockMode.ToString()));
+            writer.WritePropertyName((nameof(indexDefinition.LockMode)));
+            writer.WriteString((indexDefinition.LockMode.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.MaxIndexOutputsPerDocument)));
+            writer.WritePropertyName((nameof(indexDefinition.MaxIndexOutputsPerDocument)));
             if (indexDefinition.MaxIndexOutputsPerDocument.HasValue)
                 writer.WriteInteger(indexDefinition.MaxIndexOutputsPerDocument.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.IndexVersion)));
+            writer.WritePropertyName((nameof(indexDefinition.IndexVersion)));
             if (indexDefinition.IndexVersion.HasValue)
                 writer.WriteInteger(indexDefinition.IndexVersion.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.IsSideBySideIndex)));
+            writer.WritePropertyName((nameof(indexDefinition.IsSideBySideIndex)));
             writer.WriteBool(indexDefinition.IsSideBySideIndex);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.IsTestIndex)));
+            writer.WritePropertyName((nameof(indexDefinition.IsTestIndex)));
             writer.WriteBool(indexDefinition.IsTestIndex);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.Reduce)));
+            writer.WritePropertyName((nameof(indexDefinition.Reduce)));
             if (string.IsNullOrWhiteSpace(indexDefinition.Reduce) == false)
-                writer.WriteString(context.GetLazyString(indexDefinition.Reduce));
+                writer.WriteString((indexDefinition.Reduce));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.Maps)));
+            writer.WritePropertyName((nameof(indexDefinition.Maps)));
             writer.WriteStartArray();
             var isFirstInternal = true;
             foreach (var map in indexDefinition.Maps)
@@ -605,12 +607,12 @@ namespace Raven.Server.Json
                     writer.WriteComma();
 
                 isFirstInternal = false;
-                writer.WriteString(context.GetLazyString(map));
+                writer.WriteString((map));
             }
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(indexDefinition.Fields)));
+            writer.WritePropertyName((nameof(indexDefinition.Fields)));
             writer.WriteStartObject();
             isFirstInternal = true;
             foreach (var kvp in indexDefinition.Fields)
@@ -619,7 +621,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
 
                 isFirstInternal = false;
-                writer.WritePropertyName(context.GetLazyString(kvp.Key));
+                writer.WritePropertyName((kvp.Key));
                 if (kvp.Value != null)
                     writer.WriteIndexFieldOptions(context, kvp.Value);
                 else
@@ -634,7 +636,7 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.ForCollections)));
+            writer.WritePropertyName((nameof(stats.ForCollections)));
             writer.WriteStartArray();
             var isFirst = true;
             foreach (var collection in stats.ForCollections)
@@ -643,16 +645,16 @@ namespace Raven.Server.Json
                     writer.WriteComma();
 
                 isFirst = false;
-                writer.WriteString(context.GetLazyString(collection));
+                writer.WriteString((collection));
             }
             writer.WriteEndArray();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.IsInMemory)));
+            writer.WritePropertyName((nameof(stats.IsInMemory)));
             writer.WriteBool(stats.IsInMemory);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.LastIndexedEtags)));
+            writer.WritePropertyName((nameof(stats.LastIndexedEtags)));
             writer.WriteStartObject();
             isFirst = true;
             foreach (var kvp in stats.LastIndexedEtags)
@@ -662,71 +664,71 @@ namespace Raven.Server.Json
 
                 isFirst = false;
 
-                writer.WritePropertyName(context.GetLazyString(kvp.Key));
+                writer.WritePropertyName((kvp.Key));
                 writer.WriteInteger(kvp.Value);
             }
             writer.WriteEndObject();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.LastIndexingTime)));
+            writer.WritePropertyName((nameof(stats.LastIndexingTime)));
             if (stats.LastIndexingTime.HasValue)
-                writer.WriteString(context.GetLazyString(stats.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true)));
+                writer.WriteString((stats.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true)));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.LastQueryingTime)));
+            writer.WritePropertyName((nameof(stats.LastQueryingTime)));
             if (stats.LastQueryingTime.HasValue)
-                writer.WriteString(context.GetLazyString(stats.LastQueryingTime.Value.GetDefaultRavenFormat(isUtc: true)));
+                writer.WriteString((stats.LastQueryingTime.Value.GetDefaultRavenFormat(isUtc: true)));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.LockMode)));
-            writer.WriteString(context.GetLazyString(stats.LockMode.ToString()));
+            writer.WritePropertyName((nameof(stats.LockMode)));
+            writer.WriteString((stats.LockMode.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.Name)));
-            writer.WriteString(context.GetLazyString(stats.Name));
+            writer.WritePropertyName((nameof(stats.Name)));
+            writer.WriteString((stats.Name));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.Priority)));
-            writer.WriteString(context.GetLazyString(stats.Priority.ToString()));
+            writer.WritePropertyName((nameof(stats.Priority)));
+            writer.WriteString((stats.Priority.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.Type)));
-            writer.WriteString(context.GetLazyString(stats.Type.ToString()));
+            writer.WritePropertyName((nameof(stats.Type)));
+            writer.WriteString((stats.Type.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.CreatedTimestamp)));
-            writer.WriteString(context.GetLazyString(stats.CreatedTimestamp.GetDefaultRavenFormat(isUtc: true)));
+            writer.WritePropertyName((nameof(stats.CreatedTimestamp)));
+            writer.WriteString((stats.CreatedTimestamp.GetDefaultRavenFormat(isUtc: true)));
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.EntriesCount)));
+            writer.WritePropertyName((nameof(stats.EntriesCount)));
             writer.WriteInteger(stats.EntriesCount);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.Id)));
+            writer.WritePropertyName((nameof(stats.Id)));
             writer.WriteInteger(stats.Id);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.MapAttempts)));
+            writer.WritePropertyName((nameof(stats.MapAttempts)));
             writer.WriteInteger(stats.MapAttempts);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.MapErrors)));
+            writer.WritePropertyName((nameof(stats.MapErrors)));
             writer.WriteInteger(stats.MapErrors);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.MapSuccesses)));
+            writer.WritePropertyName((nameof(stats.MapSuccesses)));
             writer.WriteInteger(stats.MapSuccesses);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.ErrorsCount)));
+            writer.WritePropertyName((nameof(stats.ErrorsCount)));
             writer.WriteInteger(stats.ErrorsCount);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.IsTestIndex)));
+            writer.WritePropertyName((nameof(stats.IsTestIndex)));
             writer.WriteBool(stats.IsTestIndex);
 
             writer.WriteEndObject();
@@ -736,83 +738,88 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(options.Analyzer)));
+            writer.WritePropertyName((nameof(options.Analyzer)));
             if (string.IsNullOrWhiteSpace(options.Analyzer) == false)
-                writer.WriteString(context.GetLazyString(options.Analyzer));
+                writer.WriteString((options.Analyzer));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(options.Indexing)));
+            writer.WritePropertyName((nameof(options.Indexing)));
             if (options.Indexing.HasValue)
-                writer.WriteString(context.GetLazyString(options.Indexing.ToString()));
+                writer.WriteString((options.Indexing.ToString()));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(options.Sort)));
+            writer.WritePropertyName((nameof(options.Sort)));
             if (options.Sort.HasValue)
-                writer.WriteString(context.GetLazyString(options.Sort.ToString()));
+                writer.WriteString((options.Sort.ToString()));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(options.Storage)));
+            writer.WritePropertyName((nameof(options.Storage)));
             if (options.Storage.HasValue)
-                writer.WriteString(context.GetLazyString(options.Storage.ToString()));
+                writer.WriteString((options.Storage.ToString()));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(options.Suggestions)));
+            writer.WritePropertyName((nameof(options.Suggestions)));
             if (options.Suggestions.HasValue)
                 writer.WriteBool(options.Suggestions.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(options.TermVector)));
+            writer.WritePropertyName((nameof(options.TermVector)));
             if (options.TermVector.HasValue)
-                writer.WriteString(context.GetLazyString(options.TermVector.ToString()));
+                writer.WriteString((options.TermVector.ToString()));
             else
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial)));
+            writer.WritePropertyName((nameof(options.Spatial)));
             if (options.Spatial != null)
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.Type)));
-                writer.WriteString(context.GetLazyString(options.Spatial.Type.ToString()));
+                writer.WritePropertyName((nameof(options.Spatial.Type)));
+                writer.WriteString((options.Spatial.Type.ToString()));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.MaxTreeLevel)));
+                writer.WritePropertyName((nameof(options.Spatial.MaxTreeLevel)));
                 writer.WriteInteger(options.Spatial.MaxTreeLevel);
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.MaxX)));
-                writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(options.Spatial.MaxX.ToInvariantString())));
+                writer.WritePropertyName((nameof(options.Spatial.MaxX)));
+                LazyStringValue lazyStringValue;
+                using (lazyStringValue = context.GetLazyString(options.Spatial.MaxX.ToInvariantString()))
+                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.MaxY)));
-                writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(options.Spatial.MaxY.ToInvariantString())));
+                writer.WritePropertyName((nameof(options.Spatial.MaxY)));
+                using (lazyStringValue = context.GetLazyString(options.Spatial.MaxY.ToInvariantString()))
+                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.MinX)));
-                writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(options.Spatial.MinX.ToInvariantString())));
+                writer.WritePropertyName((nameof(options.Spatial.MinX)));
+                using (lazyStringValue = context.GetLazyString(options.Spatial.MinX.ToInvariantString()))
+                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.MinY)));
-                writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(options.Spatial.MinY.ToInvariantString())));
+                writer.WritePropertyName((nameof(options.Spatial.MinY)));
+                using (lazyStringValue = context.GetLazyString(options.Spatial.MinY.ToInvariantString()))
+                    writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.Strategy)));
-                writer.WriteString(context.GetLazyString(options.Spatial.Strategy.ToString()));
+                writer.WritePropertyName((nameof(options.Spatial.Strategy)));
+                writer.WriteString((options.Spatial.Strategy.ToString()));
                 writer.WriteComma();
 
-                writer.WritePropertyName(context.GetLazyString(nameof(options.Spatial.Units)));
-                writer.WriteString(context.GetLazyString(options.Spatial.Units.ToString()));
+                writer.WritePropertyName((nameof(options.Spatial.Units)));
+                writer.WriteString((options.Spatial.Units.ToString()));
 
                 writer.WriteEndObject();
             }

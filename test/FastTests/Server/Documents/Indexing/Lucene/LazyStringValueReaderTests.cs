@@ -23,13 +23,14 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [InlineData("לכובע שלי שלוש פינות")]
         public void Reads_unicode(string expected)
         {
-            var lazyString = _ctx.GetLazyString(expected);
+            using (var lazyString = _ctx.GetLazyString(expected))
+            {
+                var stringResult = _sut.GetStringFor(lazyString);
+                var readerResult = _sut.GetTextReaderFor(lazyString);
 
-            var stringResult = _sut.GetStringFor(lazyString);
-            var readerResult = _sut.GetTextReaderFor(lazyString);
-
-            Assert.Equal(expected, stringResult);
-            Assert.Equal(expected, readerResult.ReadToEnd());
+                Assert.Equal(expected, stringResult);
+                Assert.Equal(expected, readerResult.ReadToEnd());
+            }
         }
 
         [Theory]
@@ -40,13 +41,14 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         public void Reads_very_long_text(int length)
         {
             var expected = new string('a', length);
-            var lazyString = _ctx.GetLazyString(expected);
+            using (var lazyString = _ctx.GetLazyString(expected))
+            {
+                var stringResult = _sut.GetStringFor(lazyString);
+                var readerResult = _sut.GetTextReaderFor(lazyString);
 
-            var stringResult = _sut.GetStringFor(lazyString);
-            var readerResult = _sut.GetTextReaderFor(lazyString);
-
-            Assert.Equal(expected, stringResult);
-            Assert.Equal(expected, readerResult.ReadToEnd());
+                Assert.Equal(expected, stringResult);
+                Assert.Equal(expected, readerResult.ReadToEnd());
+            }
         }
 
         [Fact]

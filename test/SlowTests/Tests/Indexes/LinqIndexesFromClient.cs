@@ -66,8 +66,11 @@ namespace SlowTests.Tests.Indexes
                 var converter = new AnonymousLuceneDocumentConverter(fields);
                 foreach (var result in results)
                 {
-                    var doc = converter.ConvertToCachedDocument(context.GetLazyString("docs/1"), result);
-                    Assert.Equal("docs/1", doc.Get("__document_id"));
+                    using (var lazyStringValue = context.GetLazyString("docs/1"))
+                    {
+                        var doc = converter.ConvertToCachedDocument(lazyStringValue, result);
+                        Assert.Equal("docs/1", doc.Get("__document_id"));
+                    }
                 }
             }
         }

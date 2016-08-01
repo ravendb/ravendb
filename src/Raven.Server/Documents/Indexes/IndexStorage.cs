@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data.Tables;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes
@@ -308,20 +309,20 @@ namespace Raven.Server.Documents.Indexes
                 {
                     foreach (var error in stats.Errors)
                     {
-                        var ticksBigEndian = IPAddress.HostToNetworkOrder(error.Timestamp.Ticks);
-                        var document = context.GetLazyString(error.Document);
-                        var action = context.GetLazyString(error.Action);
-                        var e = context.GetLazyString(error.Error);
-
-                        var tvb = new TableValueBuilder
+                        var ticksBigEndian = Bits.SwapBytes(error.Timestamp.Ticks);
+                        using (var document = context.GetLazyString(error.Document))
+                        using (var action = context.GetLazyString(error.Action))
+                        using (var e = context.GetLazyString(error.Error))
                         {
-                            {(byte*)&ticksBigEndian, sizeof(long)},
-                            {document.Buffer, document.Size},
-                            {action.Buffer, action.Size},
-                            {e.Buffer, e.Size}
-                        };
-
-                        table.Insert(tvb);
+                            var tvb = new TableValueBuilder
+                            {
+                                {(byte*) &ticksBigEndian, sizeof (long)},
+                                {document.Buffer, document.Size},
+                                {action.Buffer, action.Size},
+                                {e.Buffer, e.Size}
+                            };
+                            table.Insert(tvb);
+                        }
                     }
 
                     CleanupErrors(table);

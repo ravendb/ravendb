@@ -116,8 +116,8 @@ namespace Raven.Server.Documents.Handlers
                                 if (headerStart == false)
                                     writer.WriteComma();
                                 headerStart = false;
-                                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(header.Key));
-                                writer.WriteString(context.GetLazyString(value));
+                                writer.WritePropertyName(header.Key);
+                                writer.WriteString(value);
                             }
                         }
                         writer.WriteEndObject();
