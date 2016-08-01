@@ -134,7 +134,21 @@ namespace Sparrow.Json
             if (_disposed)
                 return;
             Reset();
-  
+
+            if (_allocatedMemory != null)
+            {
+                foreach (var stack in _allocatedMemory)
+                {
+                    if(stack == null)
+                        continue;
+                    while (stack.Count > 0)
+                    {
+                        var memoryData = stack.Pop();
+                        Pool.Return(memoryData);
+                    }
+                }
+            }
+
             if (_tempBuffer != null)
                 Pool.Return(_tempBuffer);
             if (_fieldNames != null)
