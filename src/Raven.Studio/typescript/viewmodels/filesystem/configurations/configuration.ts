@@ -10,7 +10,6 @@ import configurationKey = require("models/filesystem/configurationKey");
 import changeSubscription = require('common/changeSubscription');
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
-import Pair = require("common/pair");
 import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
 import deleteConfigurationKeys = require("viewmodels/filesystem/configurations/deleteConfigurationKeys");
 import createConfigurationKey = require("viewmodels/filesystem/configurations/createConfigurationKey");
@@ -24,7 +23,7 @@ class configuration extends viewModelBase {
 
     keys = ko.observableArray<configurationKey>();
     text: KnockoutComputed<string>;
-    selectedKeyValue = ko.observable<Pair<string, string>>();
+    selectedKeyValue = ko.observable<[string, string]>();
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
     currentKey = ko.observable<configurationKey>();
     configurationEditor: AceAjax.Editor;
@@ -122,7 +121,7 @@ class configuration extends viewModelBase {
         }
     }
 
-    selectKeyValue(selection: Pair<string, string>) {
+    selectKeyValue(selection: [string, string]) {
         this.selectedKeyValue(selection);
     }
 

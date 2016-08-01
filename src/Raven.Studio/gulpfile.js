@@ -19,7 +19,7 @@ var paths = {
         '../Raven.Server/**/*Handler.cs'
     ],
     handlersConstantsTargetDir: './typescript/',
-    tsdConfig: './tsd.json',
+    typingsConfig: './typings.json',
     tsSource: './typescript/**/*.ts',
     typings: './typings/**/*.d.ts',
     tsOutput: './wwwroot/App/',
@@ -161,11 +161,9 @@ gulp.task('ts-compile', ['parse-handlers', 'generate-typings'], function () {
         .pipe(gulp.dest(paths.tsOutput));
 });
 
-gulp.task('tsd', function(callback) {
-    return plugins.tsd({
-        command: 'reinstall',
-        config: paths.tsdConfig
-    }, callback);
+gulp.task('typings', function() {
+    return gulp.src(paths.typingsConfig)
+        .pipe(plugins.typings());
 });
 
 gulp.task('bower', function () {
@@ -256,7 +254,7 @@ gulp.task('release-durandal', function() {
 
 gulp.task('build', function (callback) {
     return runSequence('clean',
-      ['bower', 'tsd'],
+      ['bower', 'typings'],
       ['less', 'ts-compile'],
       ['release-copy-favicon', 'release-copy-images', 'release-copy-fonts', 'release-process-index', 'release-process-css', 'release-process-ext-js', 'release-durandal'],
       callback);
