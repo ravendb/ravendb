@@ -14,9 +14,15 @@ module.exports = function parseHandlers(outputFileName) {
         var groupedActions = groupRavenActions(ravenActions);
         var outputFile = createDefinitionFile(groupedActions, outputFileName);
         this.push(outputFile);
+        cleanup();
         cb();
     });
 };
+
+function cleanup() {
+    ravenActions.clear();
+    latestFile = null;
+}
 
 function findHandlerAnnotations(file, ravenActions) {
     var contents = file.contents.toString();

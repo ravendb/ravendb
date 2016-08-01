@@ -23,6 +23,8 @@ var paths = {
     tsSource: './typescript/**/*.ts',
     typings: './typings/**/*.d.ts',
     tsOutput: './wwwroot/App/',
+    tsTestSource: '../../test/Studio/typescript/**/*.ts',
+    tsTestOutput: '../../test/Studio/js/',
     lessSource: [
         './wwwroot/Content/app.less',
         './wwwroot/Content/bootstrap.less',
@@ -149,6 +151,16 @@ gulp.task('generate-typings', function(cb) {
         console.log(stderr);
         cb(err);
     });
+});
+
+gulp.task('ts-test-compile', ['parse-handlers', 'generate-typings'], function() {
+     return gulp.src([paths.tsTestSource])
+        .pipe(plugins.changed(paths.tsTestOutput, { extension: '.js' }))
+        .pipe(plugins.sourcemaps.init())
+        .pipe(plugins.typescript(tsCompilerConfig))
+        .js
+        .pipe(plugins.sourcemaps.write("."))
+        .pipe(gulp.dest(paths.tsTestOutput));
 });
 
 gulp.task('ts-compile', ['parse-handlers', 'generate-typings'], function () {

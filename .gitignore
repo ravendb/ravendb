@@ -100,3 +100,6 @@ test/FastTests/Databases/
 /test/SlowTests/test-timings.xml
 
 /src/Raven.Server/**/Logs
+
+test/Studio/setup/tests.js
+test/Studio/js/

@@ -5,3 +5,8 @@
 /// <reference path="_studio/computedAppUrls.d.ts"/>
 /// <reference path="_studio/customTypings.d.ts" />
 /// <reference path="index.d.ts"/>
+
+declare module "*.htm" {
+    var _temp: string;
+    export = _temp;
+}
