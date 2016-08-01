@@ -1,5 +1,6 @@
 ﻿using System;
-
+using System.IO;
+using System.Text;
 using Lucene.Net.Documents;
 using Raven.Server.Json;
 
@@ -8,17 +9,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
     public class CachedFieldItem<T> : IDisposable where T : AbstractField
     {
         public T Field;
-        private LazyStringReader _reader;
 
-        public LazyStringReader LazyStringReader
-        {
-            get { return _reader ?? (_reader = new LazyStringReader()); }
-            set { _reader = value; }
-        }
+        public LazyStringReader LazyStringReader { get; set; }
+
+        public BlittableObjectReader BlittableObjectReader { get; set; }
 
         public void Dispose()
         {
-            _reader?.Dispose();
+            LazyStringReader?.Dispose();
+            BlittableObjectReader?.Dispose();
         }
     }
 }
