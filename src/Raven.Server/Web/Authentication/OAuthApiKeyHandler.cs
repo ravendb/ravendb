@@ -69,8 +69,8 @@ namespace Raven.Server.Web.Authentication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations("Failed to authenticate api key", e);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Failed to authenticate api key", e);
                         await SendError(webSocket, e.ToString(), "InvalidOperationException");
                     }
                 }

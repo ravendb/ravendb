@@ -10,12 +10,13 @@ using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.SqlReplication
 {
     public class RelationalDatabaseWriter : RelationalDatabaseWriterBase, IDisposable
     {
-        private readonly ILog log = LogManager.GetLogger(typeof(RelationalDatabaseWriter));
+        private readonly Logger _logger;
 
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.SqlReplication
             _context = context;
             _predefinedSqlConnection = predefinedSqlConnection;
             _sqlReplication = sqlReplication;
-
+            _logger = _database.LoggerSetup.GetLogger<RelationalDatabaseWriter>(_database.Name);
             _providerFactory = GetDbProviderFactory(_sqlReplication.Configuration);
             _commandBuilder = _providerFactory.CreateCommandBuilder();
             _connection = _providerFactory.CreateConnection();
@@ -94,7 +95,8 @@ namespace Raven.Server.Documents.SqlReplication
             }
             catch (Exception e)
             {
-                log.WarnException($"Could not find provider factory {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not find provider factory {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring", e);
 
                 _database.AddAlert(new Alert
                 {
@@ -189,8 +191,8 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                     catch (Exception e)
                     {
-                        log.WarnException(
-                            "Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
                             Environment.NewLine + cmd.CommandText, e);
                         _sqlReplication.Statistics.RecordWriteError(e, _database);
                         hadErrors = true;
@@ -201,10 +203,8 @@ namespace Raven.Server.Documents.SqlReplication
 
                         var elapsedMilliseconds = sp.ElapsedMilliseconds;
 
-                        if (log.IsDebugEnabled)
-                        {
-                            log.Debug($"Insert took: {elapsedMilliseconds}ms, statement: {stmt}");
-                        }
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Insert took: {elapsedMilliseconds}ms, statement: {stmt}");
 
                         var sqlReplicationTableMetrics = _sqlReplication.MetricsCountersManager.GetTableMetrics(tableName);
                         sqlReplicationTableMetrics.SqlReplicationInsertActionsMeter.Mark(1);
@@ -274,7 +274,8 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                     catch (Exception e)
                     {
-                        log.WarnException("Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + ", will continue trying." + Environment.NewLine + cmd.CommandText, e);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + ", will continue trying." + Environment.NewLine + cmd.CommandText, e);
                         _sqlReplication.Statistics.RecordWriteError(e, _database);
                         hadErrors = true;
                     }
@@ -284,11 +285,8 @@ namespace Raven.Server.Documents.SqlReplication
 
                         var elapsedMiliseconds = sp.ElapsedMilliseconds;
 
-                        if (log.IsDebugEnabled)
-                        {
-                            log.Debug($"Delete took: {elapsedMiliseconds}ms, statement: {stmt}");
-                        }
-
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Delete took: {elapsedMiliseconds}ms, statement: {stmt}");
 
                         var sqlReplicationTableMetrics = _sqlReplication.MetricsCountersManager.GetTableMetrics(tableName);
                         sqlReplicationTableMetrics.SqlReplicationDeleteActionsMeter.Mark(1);
@@ -305,7 +303,8 @@ namespace Raven.Server.Documents.SqlReplication
         private void HandleSlowSql(long elapsedMiliseconds, string stmt)
         {
             var message = $"Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}";
-            log.Warn(message);
+            if (_logger.IsInfoEnabled)
+                _logger.Info(message);
             _database.AddAlert(new Alert
             {
                 IsError = false,

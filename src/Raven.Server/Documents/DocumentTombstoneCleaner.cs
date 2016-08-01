@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-
+using Sparrow.Logging;
 using Raven.Abstractions.Logging;
 
 using Sparrow.Collections;
@@ -10,7 +10,7 @@ namespace Raven.Server.Documents
 {
     public class DocumentTombstoneCleaner : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(DocumentTombstoneCleaner));
+        private static Logger _logger;
 
         private bool _disposed;
 
@@ -25,6 +25,7 @@ namespace Raven.Server.Documents
         public DocumentTombstoneCleaner(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
+            _logger = _documentDatabase.LoggerSetup.GetLogger<DocumentTombstoneCleaner>(_documentDatabase.Name);
         }
 
         public void Initialize()
@@ -101,7 +102,8 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        Log.ErrorException($"Could not delete tombstones for '{tombstone.Key}' collection and '{tombstone.Value}' etag.", e);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Could not delete tombstones for '{tombstone.Key}' collection and '{tombstone.Value}' etag.", e);
                     }
                 }
             }

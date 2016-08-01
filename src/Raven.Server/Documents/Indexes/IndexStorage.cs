@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStorage
     {
-        protected readonly ILog Log = LogManager.GetLogger(typeof(IndexStorage));
+        protected readonly Logger _logger;
 
         private readonly Index _index;
 
@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.Indexes
             _index = index;
             _contextPool = contextPool;
             DocumentDatabase = database;
+            _logger = DocumentDatabase.LoggerSetup.GetLogger<IndexStorage>(DocumentDatabase.Name);
         }
 
         public void Initialize(StorageEnvironment environment)
@@ -260,8 +261,8 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
-            if (Log.IsDebugEnabled)
-                Log.Debug($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
+           if (_logger.IsInfoEnabled)
+                _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
             statsTree.Add(collection, Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long)));
@@ -280,8 +281,8 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe void UpdateStats(DateTime indexingTime, IndexingRunStats stats)
         {
-            if (Log.IsDebugEnabled)
-                Log.Debug($"Updating statistics for '{_index.Name} ({_index.IndexId})'. Stats: {stats}.");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Updating statistics for '{_index.Name} ({_index.IndexId})'. Stats: {stats}.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
