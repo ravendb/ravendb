@@ -1,18 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class ListIndexOf : RavenTest
+    public class ListIndexOf : RavenTestBase
     {
-        [Fact]
-        public void CanUseIndexOf()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task CanUseIndexOf()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ProjectsIndex().Execute(store);
 
@@ -31,7 +32,7 @@ namespace Raven.Tests.Linq
                 }
 
                 WaitForIndexing(store);
-                AssertNoIndexErrors(store);
+                TestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -44,14 +45,14 @@ namespace Raven.Tests.Linq
             }
         }
 
-        public class Project
+        private class Project
         {
             public string Id { get; set; }
             public string SiteId { get; set; }
             public string Title { get; set; }
         }
 
-        public class Portfolio
+        private class Portfolio
         {
             public string Id { get; set; }
             public List<string> Projects { get; set; }
@@ -62,7 +63,7 @@ namespace Raven.Tests.Linq
             }
         }
 
-        public class ProjectsIndex : AbstractIndexCreationTask<Project>
+        private class ProjectsIndex : AbstractIndexCreationTask<Project>
         {
             public ProjectsIndex()
             {
