@@ -60,38 +60,33 @@ namespace Raven.Database.Indexing
                     catch (OutOfMemoryException oome)
                     {
                         foundWork = true;
-                        HandleOutOfMemoryException(oome);
-                    }
-                    catch (AggregateException ae)
-                    {
-                        foundWork = true;
-                        var actual = ae.ExtractSingleInnerException();
-                        var oome = actual as OutOfMemoryException;
-                        if (oome == null)
-                        {
-                            if (TransactionalStorageHelper.IsOutOfMemoryException(actual))
-                            {
-                                autoTuner.HandleOutOfMemory();
-                            }
-                            Log.ErrorException("Failed to execute indexing", ae);
-                        }
-                        else
-                        {
-                            HandleOutOfMemoryException(oome);
-                        }
+                        HandleSystemOutOfMemoryException(oome);
                     }
                     catch (OperationCanceledException)
                     {
                         Log.Info("Got rude cancellation of indexing as a result of shutdown, aborting current indexing run");
                         return;
                     }
+                    catch (AggregateException ae)
+                    {
+                        if (IsOperationCanceledException(ae))
+                        {
+                            Log.Info("Got rude cancellation of indexing as a result of shutdown, aborting current indexing run");
+                            return;
+                        }
+
+                        foundWork = true;
+                        if (HandleIfOutOfMemory(ae) == null)
+                        {
+                            Log.ErrorException("Failed to execute indexing", ae);
+                        }
+                    }
                     catch (Exception e)
                     {
                         foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
-                        Log.ErrorException("Failed to execute indexing", e);
-                        if (TransactionalStorageHelper.IsOutOfMemoryException(e))
+                        if (HandleIfOutOfMemory(e) == null)
                         {
-                            autoTuner.HandleOutOfMemory();
+                            Log.ErrorException("Failed to execute indexing", e);
                         }
                     }
                     if (foundWork == false && ShouldRun)
@@ -137,6 +132,79 @@ namespace Raven.Database.Indexing
             }
         }
 
+        protected static bool IsOperationCanceledException(Exception e)
+        {
+            var ae = e as AggregateException;
+            if (ae == null)
+            {
+                return e is OperationCanceledException;
+            }
+
+            foreach (var innerException in ae.Flatten().InnerExceptions)
+            {
+                if (innerException is AggregateException &&
+                    IsOperationCanceledException(innerException))
+                    continue;
+
+                if (innerException is OperationCanceledException == false)
+                    return false;
+            }
+
+            //return true only if all of the exceptions are operation canceled exceptions
+            return true;
+        }
+
+        protected Exception HandleIfOutOfMemory(Exception exception)
+        {
+            Exception ravenOutOfMemoryException = null;
+
+            var ae = exception as AggregateException;
+            if (ae == null)
+            {
+                if (exception is OutOfMemoryException)
+                {
+                    HandleSystemOutOfMemoryException(exception);
+                }  
+                else if (TransactionalStorageHelper.IsOutOfMemoryException(exception))
+                {
+                    autoTuner.DecreaseBatchSize();
+                    ravenOutOfMemoryException = exception;
+                }
+                    
+                return ravenOutOfMemoryException;
+            }
+
+            var isRavenOutOfMemoryException = false;
+            var isSystemOutOfMemory = false;
+            Exception oome = null;
+            
+            foreach (var innerException in ae.Flatten().InnerExceptions)
+            {
+                if (innerException is OutOfMemoryException)
+                {
+                    isSystemOutOfMemory = true;
+                    oome = innerException;
+                }
+
+                if (TransactionalStorageHelper.IsOutOfMemoryException(innerException))
+                {
+                    isRavenOutOfMemoryException = true;
+                    ravenOutOfMemoryException = innerException;
+                }
+
+                if (isSystemOutOfMemory && isRavenOutOfMemoryException)
+                    break;
+            }
+
+            if (isSystemOutOfMemory)
+                HandleSystemOutOfMemoryException(oome);
+
+            if (isRavenOutOfMemoryException)
+                autoTuner.DecreaseBatchSize();
+
+            return ravenOutOfMemoryException;
+        }
+
         public abstract bool ShouldRun { get; }
 
         protected virtual bool ExecuteTasks()
@@ -158,7 +226,7 @@ namespace Raven.Database.Indexing
             return index == null ? string.Format("N/A, index id: {0}", indexId) : index.PublicName;
         }
 
-        private void HandleOutOfMemoryException(Exception oome)
+        private void HandleSystemOutOfMemoryException(Exception oome)
         {
             Log.WarnException(
                 @"Failed to execute indexing because of an out of memory exception. Will force a full GC cycle and then become more conservative with regards to memory",

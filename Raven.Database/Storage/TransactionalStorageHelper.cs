@@ -4,26 +4,47 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-
 using Microsoft.Isam.Esent.Interop;
-
 using Voron.Exceptions;
+using ConcurrencyException = Raven.Abstractions.Exceptions.ConcurrencyException;
+using VoronConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Database.Storage
 {
     public static class TransactionalStorageHelper
     {
-        public static bool IsWriteConflict(Exception exception)
+        public static bool IsWriteConflict(Exception exception, out Exception conflictException)
         {
-            if (IsEsentWriteConflict(exception))
-                return true;
+            var ae = exception as AggregateException;
+            if (ae == null)
+            {
+                conflictException = exception;
 
-            return IsVoronWriteConflict(exception);
+                return exception is ConcurrencyException ||
+                       IsEsentWriteConflict(exception) || IsVoronWriteConflict(exception);
+            }
+
+            var isWriteConflict = false;
+            conflictException = null;
+            foreach (var innerException in ae.Flatten().InnerExceptions)
+            {
+                //if all inner exceptions are write conflicts
+                isWriteConflict = innerException is ConcurrencyException || 
+                    IsEsentWriteConflict(innerException) || IsVoronWriteConflict(innerException);
+
+                if (isWriteConflict)
+                {
+                    conflictException = innerException;
+                    break;
+                }
+            }
+
+            return isWriteConflict;
         }
 
         private static bool IsVoronWriteConflict(Exception exception)
         {
-            return exception is ConcurrencyException;
+            return exception is VoronConcurrencyException;
         }
 
         private static bool IsEsentWriteConflict(Exception exception)

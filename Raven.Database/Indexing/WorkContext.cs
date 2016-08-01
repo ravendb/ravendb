@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
@@ -289,7 +290,7 @@ namespace Raven.Database.Indexing
             if (aggregateException != null)
                 exception = aggregateException.ExtractSingleInnerException();
 
-            AddError(index, indexName, key, exception?.Message ?? "Unknown message", component);
+            AddError(index, indexName, key, exception?.Message ?? "Unknown message", component ?? "Unknown");
         }
 
         public void AddError(int index, string indexName, string key, string error)
@@ -373,27 +374,30 @@ namespace Raven.Database.Indexing
             ReplicationResetEvent.Dispose();
         }
 
-        public void HandleIndexRename(string oldIndexName, string newIndexName, IStorageActionsAccessor accessor)
+        public void HandleIndexRename(string oldIndexName, string newIndexName, int newIndexId, IStorageActionsAccessor accessor)
         {
             // remap indexing errors (if any)
-            var indexesToRename = indexingErrors.Where(x => x.IndexName == oldIndexName).ToList();
+            var indexesToRename = indexingErrors.Where(x => StringComparer.OrdinalIgnoreCase.Equals(x.IndexName, oldIndexName)).ToList();
             foreach (var indexingError in indexesToRename)
             {
                 indexingError.IndexName = newIndexName;
             }
 
             var oldListName = "Raven/Indexing/Errors/" + oldIndexName;
-            
             var existingErrors = accessor.Lists.Read(oldListName, Etag.Empty, null, 5000).ToList();
             if (existingErrors.Any())
             {
-                var timestamp = SystemTime.UtcNow;
-                var newListName = "Raven/Indexing/Errors/" + newIndexName;
-                foreach (var existingError in existingErrors)
+                lock (indexingErrorLocks.GetOrAdd(newIndexId, new object()))
                 {
-                    accessor.Lists.Set(newListName, existingError.Key, existingError.Data, UuidType.Indexing);
+                    var newListName = "Raven/Indexing/Errors/" + newIndexName;
+                    foreach (var existingError in existingErrors)
+                    {
+                        accessor.Lists.Set(newListName, existingError.Key, existingError.Data, UuidType.Indexing);
+                    }
+
+                    var timestamp = SystemTime.UtcNow;
+                    accessor.Lists.RemoveAllOlderThan(oldListName, timestamp);
                 }
-                accessor.Lists.RemoveAllOlderThan(oldListName, timestamp);
             }
 
             // update queryTime
@@ -445,6 +449,23 @@ namespace Raven.Database.Indexing
                 {
                     accessor.Lists.Remove("Raven/Indexing/Errors/" + indexName, removedError.Id.ToString(CultureInfo.InvariantCulture));
                 }
+            });
+        }
+
+        public void ReplaceIndexingErrors(string indexToReplaceName, 
+            int? indexToReplaceId, string indexName, int newIndexId)
+        {
+            TransactionalStorage.Batch(accessor =>
+            {
+                ClearErrorsFor(indexToReplaceName);
+
+                if (indexToReplaceId.HasValue)
+                {
+                    object _;
+                    indexingErrorLocks.TryRemove(indexToReplaceId.Value, out _);
+                }
+                
+                HandleIndexRename(indexName, indexToReplaceName, newIndexId, accessor);
             });
         }
 

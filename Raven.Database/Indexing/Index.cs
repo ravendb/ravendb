@@ -57,13 +57,17 @@ namespace Raven.Database.Indexing
         protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
 
         private const long WriteErrorsLimit = 10;
+        private long writeErrors;
+
+        private const long OutOfMemoryErrorsLimit = 25;
+        private long outOfMemoryErrors;
 
         private readonly List<Document> currentlyIndexDocuments = new List<Document>();
         protected Directory directory;
         protected readonly IndexDefinition indexDefinition;
         private volatile string waitReason;
         private readonly long flushSize;
-        private long writeErrors;
+        
         // Users sometimes configure index outputs without realizing that we need to count on that for memory 
         // management. That can result in very small batch sizes, so we want to make sure that we don't trust
         // the user configuration, and use what is actually going on
@@ -332,7 +336,7 @@ namespace Raven.Database.Indexing
             }
             catch (IOException e)
             {
-                string msg = string.Format("Error when trying to create the index writer for index '{0}'.", this.PublicName);
+                var msg = string.Format("Error when trying to create the index writer for index '{0}'.", this.PublicName);
                 throw new IOException(msg, e);
             }
         }
@@ -568,7 +572,7 @@ namespace Raven.Database.Indexing
                             {
                                 throw new InvalidOperationException(
                                     string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
-                                                                                  PublicName));
+                                        PublicName));
                             }
 
                             itemsInfo = action(indexWriter, searchAnalyzer, stats);
@@ -597,8 +601,8 @@ namespace Raven.Database.Indexing
                         {
                             var invalidSpatialShapeException = e as InvalidSpatialShapException;
                             var invalidDocId = (invalidSpatialShapeException == null) ?
-                                                        null :
-                                                        invalidSpatialShapeException.InvalidDocumentId;
+                                null :
+                                invalidSpatialShapeException.InvalidDocumentId;
                             context.AddError(indexId, indexDefinition.Name, invalidDocId, e, "Write");
                             throw;
                         }
@@ -624,8 +628,20 @@ namespace Raven.Database.Indexing
                         locker.Release();
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
+                    Exception _;
+                    if (TransactionalStorageHelper.IsOutOfMemoryException(e) ||
+                        TransactionalStorageHelper.IsWriteConflict(e, out _))
+                    {
+                        //we are handling this
+                        throw;
+                    }
+
                     throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
                 }
                 finally
@@ -704,8 +720,12 @@ namespace Raven.Database.Indexing
                                 accessor.Indexing.UpdateIndexingStats(indexId, stats);
                             });
                         }
-                        catch (ConcurrencyException)
+                        catch (Exception e)
                         {
+                            Exception _;
+                            if (TransactionalStorageHelper.IsWriteConflict(e, out _) == false)
+                                throw;
+
                             run = true;
                         }
                         break;
@@ -717,8 +737,12 @@ namespace Raven.Database.Indexing
                                 accessor.Indexing.UpdateReduceStats(indexId, stats);
                             });
                         }
-                        catch (ConcurrencyException)
+                        catch (Exception e)
                         {
+                            Exception _;
+                            if (TransactionalStorageHelper.IsWriteConflict(e, out _) == false)
+                                throw;
+
                             run = true;
                         }
                         break;
@@ -858,7 +882,7 @@ namespace Raven.Database.Indexing
                     logIndexing.WarnException(
                     String.Format("Failed to execute indexing function on {0} on {1}", indexDefinition.Name, TryGetDocKey(o)), exception);
 
-                    stats.IndexingErrors++;
+                    Interlocked.Increment(ref stats.IndexingErrors);
                 };
 
             return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
@@ -892,7 +916,7 @@ namespace Raven.Database.Indexing
                             key),
                         exception);
 
-                    stats.ReduceErrors++;
+                    Interlocked.Increment(ref stats.ReduceErrors);
                 })
             {
                 MoveNextDuration = linqExecutionDuration
@@ -1989,6 +2013,59 @@ namespace Raven.Database.Indexing
             return false;
         }
 
+        public void HandleOutOfMemoryErrors(Exception e)
+        {
+            if (disposed)
+                return;
+
+            var errorCount = Interlocked.Increment(ref outOfMemoryErrors);
+            if (errorCount < OutOfMemoryErrorsLimit)
+            {
+                AddOutOfMemoryDatabaseAlert();
+                return;
+            }
+
+            if ((Priority & IndexingPriority.Error) == IndexingPriority.Error ||
+                (Priority & IndexingPriority.Disabled) == IndexingPriority.Disabled)
+                return;
+
+            var errorMessage = $"Index '{PublicName}' got {errorCount} times of out of memory exception. The index priority was set to disabled.";
+            var title = $"Index '{PublicName}' marked as disabled due to out of memory exception";
+
+            AddIndexError(e, errorMessage, title, IndexingPriority.Disabled, IndexChangeTypes.IndexDemotedToDisabled);
+        }
+
+        private void AddOutOfMemoryDatabaseAlert()
+        {
+            string configurationKey = null;
+            if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.VoronTypeName, StringComparison.OrdinalIgnoreCase))
+            {
+                configurationKey = Constants.Voron.MaxScratchBufferSize;
+            }
+            else if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.EsentTypeName, StringComparison.OrdinalIgnoreCase))
+            {
+                configurationKey = Constants.Esent.MaxVerPages;
+            }
+
+            logIndexing.Warn("Out of memory exception occured in storage during indexing process. " +
+                             $"Try increasing '{configurationKey}' value in configuration");
+
+            context.Database.AddAlert(new Alert
+            {
+                AlertLevel = AlertLevel.Warning,
+                CreatedAt = SystemTime.UtcNow,
+                Title = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception",
+                UniqueKey = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception",
+                Message = $"Out of memory exception occured in storage during indexing process for index '{PublicName}'. " +
+                          $"Will try to reduce batch size. Try increasing '{configurationKey}' value in configuration."
+            });
+        }
+
+        public void ResetOutOfMemoryErrors()
+        {
+            Interlocked.Exchange(ref outOfMemoryErrors, 0);
+        }
+
         public void HandleWriteError(Exception e)
         {
             if (disposed)
@@ -2020,22 +2097,24 @@ namespace Raven.Database.Indexing
             if (indexCorrupted == false || (Priority & IndexingPriority.Error) == IndexingPriority.Error)
                 return;
 
-            AddIndexError(e, errorMessage, string.Format("Index '{0}' marked as errored due to corruption", PublicName));
+            var title = $"Index '{PublicName}' marked as errored due to corruption";
+            AddIndexError(e, errorMessage, title);
         }
 
-        private void AddIndexError(Exception e, string msg, string title)
+        private void AddIndexError(Exception e, string msg, string title, 
+            IndexingPriority priority = IndexingPriority.Error, IndexChangeTypes changeType = IndexChangeTypes.IndexMarkedAsErrored)
         {
             using (context.TransactionalStorage.DisableBatchNesting())
             {
                 try
                 {
-                    context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
-                    Priority = IndexingPriority.Error;
+                    context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, priority));
+                    Priority = priority;
 
                     context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
                     {
                         Name = PublicName,
-                        Type = IndexChangeTypes.IndexMarkedAsErrored
+                        Type = changeType
                     });
 
                     if (string.IsNullOrEmpty(msg))
@@ -2051,12 +2130,12 @@ namespace Raven.Database.Indexing
                         CreatedAt = SystemTime.UtcNow,
                         Message = msg,
                         Title = title,
-                        UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
+                        UniqueKey = title,
                     });
                 }
                 catch (Exception ex)
                 {
-                    logIndexing.WarnException(string.Format("Failed to handle corrupted {0} index", PublicName), ex);
+                    logIndexing.WarnException($"Failed to handle index error for '{PublicName}' index", ex);
                 }
             }
         }
