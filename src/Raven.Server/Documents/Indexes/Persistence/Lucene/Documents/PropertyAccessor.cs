@@ -13,6 +13,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public static PropertyAccessor Create(Type type)
         {
+            if (type.GetTypeInfo().IsValueType)
+                throw new InvalidOperationException("We cannot create property accessor for value type: " + type.Name);
+
             var accessor = new PropertyAccessor();
 
             foreach (var prop in type.GetProperties())
