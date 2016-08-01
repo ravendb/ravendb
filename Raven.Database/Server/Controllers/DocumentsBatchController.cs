@@ -113,6 +113,9 @@ namespace Raven.Database.Server.Controllers
             var parts = waitIndexes.Split(';');
             var throwOnTimeout = bool.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
+            string indexPrefix = null;
+            if (parts.Length > 2)
+                indexPrefix = parts[3];
 
             Etag lastEtag = null;
             var allIndexes = false;
@@ -138,15 +141,21 @@ namespace Raven.Database.Server.Controllers
             var indexes = new List<Index>();
             foreach (var index in Database.IndexStorage.GetAllIndexes())
             {
-                if(allIndexes)
+                if (string.IsNullOrEmpty(indexPrefix) == false)
+                {
+                    if(index.PublicName.StartsWith(indexPrefix,StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+                }
+
+                if (allIndexes && index.ViewGenerator.ForEntityNames.Count == 0)
                     indexes.Add(index);
-                else if (index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
+                if (index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
                     indexes.Add(index);
             }
 
             var sp = Stopwatch.StartNew();
             var needToWait = true;
-            var tasks = new Task[indexes.Count +1];
+            var tasks = new Task[indexes.Count + 1];
             do
             {
                 needToWait = false;

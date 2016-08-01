@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 
             using (var s1 = store1.OpenSession())
             {
-                s1.Advanced.OnSaveChangesWaitForReplication(replicas: 2, timeout: TimeSpan.FromSeconds(30));
+                s1.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2, timeout: TimeSpan.FromSeconds(30));
 
                 s1.Store(new {Name = "Oren"}, "users/1");
 

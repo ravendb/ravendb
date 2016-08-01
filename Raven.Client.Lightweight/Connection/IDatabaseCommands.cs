@@ -805,6 +805,7 @@ namespace Raven.Client.Connection
         public bool WaitForIndexes { get; set; }
         public TimeSpan WaitForIndexesTimeout { get; set; }
         public bool ThrowOnTimeoutInWaitForIndexes { get; set; }
+        public string WaitForIndexesIndexNamePrefix { get; set; }
     }
 
 }

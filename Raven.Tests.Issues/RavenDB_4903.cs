@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
                 }
                 using (var s = store.OpenSession())
                 {
-                    s.Advanced.OnSaveChangesWaitForIndexes(timeout: TimeSpan.FromSeconds(30));
+                    s.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(30));
 
                     s.Store(new User {Name = "Oren"});
 

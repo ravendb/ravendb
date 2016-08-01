@@ -1571,8 +1571,12 @@ namespace Raven.Client.Connection.Async
                     if (options?.WaitForReplicas == true)
                         request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout);
 
-                    if(options?.WaitForIndexes == true)
-                        request.AddHeader("Raven-Wait-Indexes", options.ThrowOnTimeoutInWaitForIndexes+ ";" + options.WaitForIndexesTimeout);
+                    if (options?.WaitForIndexes == true)
+                    {
+                        var headerVal = options.ThrowOnTimeoutInWaitForIndexes + ";" + options.WaitForIndexesTimeout +
+                                  (string.IsNullOrEmpty(options.WaitForIndexesIndexNamePrefix) ? string.Empty : ";" + options.WaitForIndexesIndexNamePrefix);
+                        request.AddHeader("Raven-Wait-Indexes", headerVal);
+                    }
 
 
                     var serializedData = commandDatas.Select(x => x.ToJson()).ToList();
