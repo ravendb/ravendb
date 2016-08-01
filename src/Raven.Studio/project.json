@@ -1,39 +1,59 @@
 {
-  "version": "1.0.0-*",
+  "dependencies": {
+    "Microsoft.NETCore.App": {
+      "version": "1.0.0",
+      "type": "platform"
+    },
+    "Microsoft.AspNetCore.Diagnostics": "1.0.0",
+    "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0",
+    "Microsoft.AspNetCore.Server.Kestrel": "1.0.0",
+    "Microsoft.AspNetCore.StaticFiles": "1.0.0",
+    "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0",
+    "Microsoft.Extensions.Configuration.Json": "1.0.0",
+    "Microsoft.Extensions.Logging": "1.0.0",
+    "Microsoft.Extensions.Logging.Console": "1.0.0",
+    "Microsoft.Extensions.Logging.Debug": "1.0.0",
+    "Microsoft.Extensions.Options.ConfigurationExtensions": "1.0.0",
+    "Microsoft.VisualStudio.Web.BrowserLink.Loader": "14.0.0",
+    "TypingsGenerator": "1.0.0-*"
+  },
 
-  "packOptions": {
-    "tags": [ "database", "nosql", "doc db" ],
-    "projectUrl": "https://ravendb.net"
+  "tools": {
+    "BundlerMinifier.Core": "2.0.238",
+    "Microsoft.AspNetCore.Server.IISIntegration.Tools": "1.0.0-preview2-final"
+  },
+
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": [
+        "dotnet5.6",
+        "portable-net45+win8"
+      ]
+    }
   },
 
   "buildOptions": {
-    "emitEntryPoint": false,
+    "emitEntryPoint": true,
+    "preserveCompilationContext": true,
     "compile": {
-      "exclude": [ "wwwroot", "node_modules" ]
-    },
-    "embed": {
-      "exclude": [ "wwwroot", "node_modules" ]
+      "exclude": [ "**/*.cs" ]
+    }
+  },
+
+  "runtimeOptions": {
+    "configProperties": {
+      "System.GC.Server": true
     }
   },
 
   "publishOptions": {
-    "exclude": [ "**.user", "**.vspscc" ]
+    "include": [
+      "wwwroot"
+    ]
   },
 
-  "configurations": {
-    "Release": {
-      "buildOptions": {
-        "optimize": true
-      }
-    }
-  },
-
-  "dependencies": {
-    "Microsoft.CSharp": "4.0.1"
-  },
-  "commands": { },
-
-  "frameworks": {
-    "netstandard1.6": { }
+  "scripts": {
+    "prepublish": [ "npm install", "bower install", "gulp build", "dotnet bundle" ],
+    "postpublish": [ "dotnet publish-iis --publish-folder %publish:OutputPath% --framework %publish:FullTargetFramework%" ]
   }
 }

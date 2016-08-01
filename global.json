@@ -3,7 +3,8 @@
     "src",
     "test",
     "bench",
-    "libs"
+    "libs",
+    "tools"
   ],
   "sdk": {
     "version": "1.0.0-preview2-003121",
