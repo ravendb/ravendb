@@ -1569,12 +1569,13 @@ namespace Raven.Client.Connection.Async
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     if (options?.WaitForReplicas == true)
-                        request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout);
+                        request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout+";" + 
+                            options.ThrowOnTimeoutInWaitForReplicas);
 
                     if (options?.WaitForIndexes == true)
                     {
                         var headerVal = options.ThrowOnTimeoutInWaitForIndexes + ";" + options.WaitForIndexesTimeout +
-                                  (string.IsNullOrEmpty(options.WaitForIndexesIndexNamePrefix) ? string.Empty : ";" + options.WaitForIndexesIndexNamePrefix);
+                                  ";" + string.Join(";", options.WaitForSpecificIndexes ?? new string[0]);
                         request.AddHeader("Raven-Wait-Indexes", headerVal);
                     }
 

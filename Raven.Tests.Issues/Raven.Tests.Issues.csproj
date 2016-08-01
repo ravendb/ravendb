@@ -623,6 +623,10 @@
       <Project>{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}</Project>
       <Name>Raven.Client.UniqueConstraints</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
+      <Project>{f796f69f-d17b-4260-92d6-65cb94c0e05c}</Project>
+      <Name>Rachis</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

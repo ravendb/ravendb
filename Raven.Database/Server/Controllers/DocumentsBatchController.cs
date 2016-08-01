@@ -110,12 +110,10 @@ namespace Raven.Database.Server.Controllers
 
         private async Task WaitForIndexesAsync(string waitIndexes, BatchResult[] results)
         {
-            var parts = waitIndexes.Split(';');
+            var parts = waitIndexes.Split(new [] {';'},StringSplitOptions.RemoveEmptyEntries);
             var throwOnTimeout = bool.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
-            string indexPrefix = null;
-            if (parts.Length > 2)
-                indexPrefix = parts[3];
+            var specificIndexes = new HashSet<string>(parts.Skip(2));
 
             Etag lastEtag = null;
             var allIndexes = false;
@@ -141,9 +139,9 @@ namespace Raven.Database.Server.Controllers
             var indexes = new List<Index>();
             foreach (var index in Database.IndexStorage.GetAllIndexes())
             {
-                if (string.IsNullOrEmpty(indexPrefix) == false)
+                if (specificIndexes.Count > 0)
                 {
-                    if(index.PublicName.StartsWith(indexPrefix,StringComparison.OrdinalIgnoreCase) == false)
+                    if(specificIndexes.Contains(index.PublicName) == false)
                         continue;
                 }
 
@@ -211,7 +209,7 @@ namespace Raven.Database.Server.Controllers
             var parts = writeAssurance.Split(';');
             var replicas = int.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
-
+            var throwOnTimeout = bool.Parse(parts[3]);
             var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
             if (replicationTask == null)
             {
@@ -223,7 +221,7 @@ namespace Raven.Database.Server.Controllers
             }
             if (lastResultWithEtag != null)
             {
-                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas).ConfigureAwait(false);
+                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas,throwOnTimeout).ConfigureAwait(false);
             }
         }
 

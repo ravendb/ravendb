@@ -977,12 +977,12 @@ namespace Raven.Bundles.Replication.Tasks
 
             docDb.Documents.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null, null);
 
-            foreach (var state in _waitForReplicationTasks)
+            foreach (var state in waitForReplicationTasks)
             {
                 if (ReplicatedPast(state.Etag) < state.Replicas)
                     continue;
 
-                _waitForReplicationTasks.TryRemove(state);
+                waitForReplicationTasks.TryRemove(state);
                 state.Task.TrySetResult(null);
             }
         }
@@ -1060,9 +1060,9 @@ namespace Raven.Bundles.Replication.Tasks
             public int Replicas;
         }
 
-        private readonly ConcurrentSet<WaitForReplicationState> _waitForReplicationTasks = new ConcurrentSet<WaitForReplicationState>();
+        private readonly ConcurrentSet<WaitForReplicationState> waitForReplicationTasks = new ConcurrentSet<WaitForReplicationState>();
 
-        public async Task WaitForReplicationAsync(Etag etag, TimeSpan timeout, int replicas)
+        public async Task WaitForReplicationAsync(Etag etag, TimeSpan timeout, int replicas, bool throwOnTimeout)
         {
             if (ReplicatedPast(etag) >= replicas)
                 return;
@@ -1073,13 +1073,16 @@ namespace Raven.Bundles.Replication.Tasks
                 Replicas = replicas,
                 Task = new TaskCompletionSource<object>()
             };
-            _waitForReplicationTasks.Add(state);
+            waitForReplicationTasks.Add(state);
 
             var hadReplicated = state.Task.Task;
             if (await Task.WhenAny(hadReplicated, Task.Delay(timeout)).ConfigureAwait(false) == hadReplicated)
                 return;
             var replicatedPast = ReplicatedPast(etag);
             if (replicatedPast >= replicas)
+                return;
+
+            if (throwOnTimeout == false)
                 return;
 
             throw new TimeoutException("Could not verify that etag " + etag + " was replicated to " + replicas + " servers in " + timeout+ "." +
