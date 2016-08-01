@@ -15,6 +15,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -27,6 +28,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 //TODO: select small context size (maybe pool just for them?)
                 JsonOperationContext context;
+                _logger = Database.LoggerSetup.GetLogger<ChangesHandler>(Database.Name);
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     try

@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide
 
         public CancellationToken ServerShutdown => shutdownNotification.Token;
 
-        private static readonly ILog Log = LogManager.GetLogger(typeof(ServerStore));
+        private static Logger _logger;
 
         private StorageEnvironment _env;
 
@@ -53,7 +53,7 @@ namespace Raven.Server.ServerWide
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
             _loggerSetup = loggerSetup;
-
+            _logger = _loggerSetup.GetLogger<ServerStore>("ServerStore");
             DatabasesLandlord = new DatabasesLandlord(this, _loggerSetup);
 
             // We use the follow format for the items data
@@ -76,10 +76,9 @@ namespace Raven.Server.ServerWide
 
             AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
 
-            if (Log.IsDebugEnabled)
-            {
-                Log.Debug("Starting to open server store for {0}", Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory);
-            }
+            if (_logger.IsInfoEnabled)
+                _logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory));
+
             var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
@@ -98,11 +97,9 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (Log.IsWarnEnabled)
-                {
-                    Log.FatalException(
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(
                         "Could not open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory), e);
-                }
                 options.Dispose();
                 throw;
             }
@@ -224,7 +221,8 @@ namespace Raven.Server.ServerWide
                     }
                     catch (Exception e)
                     {
-                        Log.WarnException("Error during idle operation run for " + db.Key, e);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Error during idle operation run for " + db.Key, e);
                     }
                 }
 
@@ -246,7 +244,8 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    Log.WarnException("Error during idle operations for the server", e);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Error during idle operations for the server", e);
                 }
             }
             finally

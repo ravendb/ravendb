@@ -44,8 +44,8 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Failed to initialize the server", e);
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations("Failed to initialize the server", e);
                     Console.WriteLine(e);
                     return -1;
                 }

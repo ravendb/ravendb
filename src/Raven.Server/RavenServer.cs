@@ -91,8 +91,8 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not open the server store", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Could not open the server store", e);
                 throw;
             }
 
@@ -133,8 +133,8 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not start server", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Could not start server", e);
                 throw;
             }
         }

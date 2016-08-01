@@ -17,19 +17,20 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web.Authentication
 {
     public class OAuthApiKeyHandler : RequestHandler
     {
         private const string DebugTag = "/oauth/api-key";
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(OAuthApiKeyHandler));
         private const int MaxOAuthContentLength = 1500;
         private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
 
         [RavenAction("/oauth/api-key", "GET", "/oauth/api-key", NoAuthorizationRequired = true)]
         public async Task OauthGetApiKey()
         {
+            _logger = Server.LoggerSetup.GetLogger<OAuthApiKeyHandler>("Raven/Server");
             try
             {
                 using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -68,15 +69,16 @@ namespace Raven.Server.Web.Authentication
                     }
                     catch (Exception e)
                     {
-                        if (Logger.IsWarnEnabled)
-                            Logger.WarnException("Failed to authenticate api key", e);
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations("Failed to authenticate api key", e);
                         await SendError(webSocket, e.ToString(), "InvalidOperationException");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.DebugException("Got exception while handling /oauth/api-key endpoint", ex);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Got exception while handling /oauth/api-key endpoint", ex);
             }
         }
 
@@ -162,8 +164,8 @@ namespace Raven.Server.Web.Authentication
 
                 if (response != expectedResponse)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failure to authenticate api key {apiKeyName}");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failure to authenticate api key {apiKeyName}");
                     return null;
                 }
                 return accessToken;
@@ -221,8 +223,8 @@ namespace Raven.Server.Web.Authentication
             }
             catch (Exception e)
             {
-                if (Logger.IsDebugEnabled)
-                    Logger.DebugException("Error sending error to client using web socket", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error sending error to client using web socket", e);
             }
         }
 

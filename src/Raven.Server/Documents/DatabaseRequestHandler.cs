@@ -18,7 +18,6 @@ namespace Raven.Server.Documents
             Database = context.Database;
             ContextPool = Database?.DocumentsStorage?.ContextPool;
             IndexStore = context.Database.IndexStore;
-            _logger = Database.LoggerSetup.GetLogger<DatabaseRequestHandler>(Database.Name);
         }
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()
