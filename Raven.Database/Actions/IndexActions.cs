@@ -306,7 +306,6 @@ namespace Raven.Database.Actions
             {
                 foreach (var indexToAdd in indexesToAdd)
                 {
-                    long opId;
                     var nameToAdd = PutIndexInternal(indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true);
                     if (nameToAdd == null)
                         continue;
@@ -811,51 +810,6 @@ namespace Raven.Database.Actions
             return findIndexCreationOptions;
         }
 
-        internal Task StartDeletingIndexDataAsync(int id, string indexName)
-        {
-            var sp = Stopwatch.StartNew();
-            //remove the header information in a sync process
-            TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
-            var deleteIndexTask = Task.Run(() =>
-            {
-                Debug.Assert(Database.IndexStorage != null);
-                Log.Info("Starting async deletion of index {0}", indexName);
-                Database.IndexStorage.DeleteIndexData(id); // Data can take a while
-
-                TransactionalStorage.Batch(actions =>
-                {
-                    // And Esent data can take a while too
-                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
-                    if (WorkContext.CancellationToken.IsCancellationRequested)
-                        return;
-
-                    actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
-                });
-            });
-
-            long taskId;
-            Database.Tasks.AddTask(deleteIndexTask, new TaskBasedOperationState(deleteIndexTask), new TaskActions.PendingTaskDescription
-            {
-                StartTime = SystemTime.UtcNow,
-                TaskType = TaskActions.PendingTaskType.IndexDeleteOperation,
-                Description = indexName
-            }, out taskId);
-
-            deleteIndexTask.ContinueWith(t =>
-            {
-                if (t.IsFaulted || t.IsCanceled)
-                {
-                    Log.WarnException("Failure when deleting index " + indexName, t.Exception);
-                }
-                else
-                {
-                    Log.Info("The async deletion of index {0} was completed in {1}", indexName, sp.Elapsed);
-                }
-            });
-
-            return deleteIndexTask;
-        }
-
         public RavenJArray GetIndexNames(int start, int pageSize)
         {
             return new RavenJArray(
@@ -931,9 +885,10 @@ namespace Raven.Database.Actions
                     Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }
 
-                // And delete the data in the background
-                StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
-
+                //remove the header information in a sync process
+                TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(instance.IndexId));
+                //and delete the data in the background
+                Database.Maintenance.StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
 
                 var indexChangeType = isSideBySideReplacement ? IndexChangeTypes.SideBySideReplace : IndexChangeTypes.IndexRemoved;
 
@@ -979,7 +934,7 @@ namespace Raven.Database.Actions
                             actions.Documents.DeleteDocument(ScriptedIndexResults.IdPrefix + existingIndexName, scriptedIndexSetup.Etag, out metadata, out etag);
                         }
 
-                        WorkContext.HandleIndexRename(existingIndexName, newIndexName, actions);
+                        WorkContext.HandleIndexRename(existingIndexName, newIndexName, instance.IndexId, actions);
                     });
                 }
             }

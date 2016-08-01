@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -648,7 +649,6 @@ namespace Raven.Database.Indexing
             };
         }
 
-        
         protected override void ExecuteIndexingWork(IList<IndexToWorkOn> mapReduceIndexes)
         {
             ReducingBatchInfo reducingBatchInfo = null;
@@ -674,17 +674,44 @@ namespace Raven.Database.Indexing
                     try
                     {
                         var performanceStats = HandleReduceForIndex(indexToWorkOn, context.CancellationToken);
-
                         if (performanceStats != null)
                             reducingBatchInfo.PerformanceStats.TryAdd(indexToWorkOn.Index.PublicName, performanceStats);
+                    }
+                    catch (IndexDoesNotExistsException)
+                    {
+                        //race condition -> index was deleted
+                        //we can ignore this
+                    }
+                    catch (Exception e)
+                    {
+                        //if we got a OOME we need to decrease the batch size
+                        var ravenOutOfMemoryException = HandleIfOutOfMemory(e);
+                        if (ravenOutOfMemoryException != null)
+                        {
+                            indexToWorkOn.Index.HandleOutOfMemoryErrors(ravenOutOfMemoryException);
+                            return;
+                        }
 
+                        Exception conflictException;
+                        if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
+                        {
+                            Log.Info($"Write conflict encountered for index '{indexToWorkOn.Index.PublicName}' during reduce." +
+                                     $"Will retry. Details: {conflictException.Message}");
+                            return;
+                        }
+
+                        if (IsOperationCanceledException(e))
+                            throw;
+
+                        context.AddError(indexToWorkOn.IndexId, indexToWorkOn.Index.PublicName, null, e);
+                    }
+                    finally
+                    {
                         if (Interlocked.Read(ref executedPartially) == 1)
                         {
                             context.NotifyAboutWork();
                         }
-                    }
-                    finally
-                    {
+
                         Index _;
                         currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
                     }

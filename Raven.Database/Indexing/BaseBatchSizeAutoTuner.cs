@@ -281,15 +281,26 @@ namespace Raven.Database.Indexing
             return true;
         }
 
+        /// <summary>
+        /// This let us know that an esent/voron out of memory exception has happened.
+        /// We need to decrease the batch size.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void DecreaseBatchSize()
+        {
+            var prev = NumberOfItemsToProcessInSingleBatch;
+            NumberOfItemsToProcessInSingleBatch = CalculateReductionOfItemsInSingleBatch();
+            var reason = $"Number of items per batch was reset from {prev} to {NumberOfItemsToProcessInSingleBatch} due to esent/voron OOME";
+            context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
+        }
+
         private int CalculateReductionOfItemsInSingleBatch()
         {
             var minNumberOfItemsToProcess = InitialNumberOfItems;
             if (IsProcessingUsingTooMuchMemory)
             {
-
                 minNumberOfItemsToProcess /= 4;
             }
-
 
             // we have had a couple of times were we didn't get to the current max, so we can probably
             // reduce the max again now, this will reduce the memory consumption eventually, and will cause 
@@ -312,7 +323,6 @@ namespace Raven.Database.Indexing
                 var reason = string.Format("Using too much memory, NumberOfItemsToProcess was decreased from {0} to {1}", prevNum, newNumberOfItemsToProcess);
                 context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
             }
-
             else
             {
                 var preNum = newNumberOfItemsToProcess;
@@ -320,7 +330,6 @@ namespace Raven.Database.Indexing
                 var reason = string.Format("we hit OOME so we should decrease batch size even when process is not using too much memory. NumberOfItemsToProcess was decreased from {0} to {1}", preNum, newNumberOfItemsToProcess);
                 context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
             }
-
 
             // first thing to do, reset the number of items per batch
             var prev = NumberOfItemsToProcessInSingleBatch;
