@@ -113,6 +113,19 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        public IEnumerable<object> Select(Func<object, object> func)
+        {
+            var list = new List<object>();
+            foreach (var property in BlittableJson.GetPropertyNames())
+            {
+                var value = this[property];
+                var result = func(new KeyValuePair<string, object>(property, value));
+                list.Add(TypeConverter.DynamicConvert(result));
+            }
+
+            return new DynamicArray(list);
+        }
+
         public override string ToString()
         {
             return BlittableJson.ToString();

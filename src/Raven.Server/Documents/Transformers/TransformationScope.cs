@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Transformers
                         {
                             var propertyValue = property.Value(transformedResult);
                             var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
-                            if (propertyValueAsEnumerable != null)
+                            if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
                             {
                                 value[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(ConvertType));
                                 continue;
@@ -110,6 +110,13 @@ namespace Raven.Server.Documents.Transformers
             foreach (var property in accessor.Properties)
             {
                 var propertyValue = property.Value(value);
+                var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
+                if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
+                {
+                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(ConvertType));
+                    continue;
+                }
+
                 inner[property.Key] = ConvertType(propertyValue);
             }
 
