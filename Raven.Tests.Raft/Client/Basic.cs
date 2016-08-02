@@ -17,6 +17,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
@@ -114,6 +115,43 @@ namespace Raven.Tests.Raft.Client
                     allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/1"));
                     allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/2"));
                 }
+            }
+        }
+
+        [Theory]
+        [InlineData(3)]
+        [InlineData(5)]
+        public void CanRedirectFromNonLeader(int numberOfNodes)
+        {
+            using (WithCustomDatabaseSettings(doc => doc.Settings["Raven/Replication/ReplicationRequestTimeout"] = "4000"))
+            {
+                var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store =>
+                {
+                    store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
+                });
+
+                foreach (var documentStore in clusterStores)
+                {
+                    documentStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(5);
+                }
+
+                SetupClusterConfiguration(clusterStores);
+
+                clusterStores.ForEach(store => AsyncHelpers.RunSync(()=>((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true)));
+
+
+                var leader = servers.First(x => x.Options.ClusterManager.Value.IsLeader());
+                var nonLeader = servers.First(x => x.Options.ClusterManager.Value.IsLeader() == false);
+                var leaderDocStore = clusterStores.First(x => x.Url == leader.Configuration.ServerUrl.Trim('/'));
+                var nonLeaderDocStore = clusterStores.First(x => x.Url == nonLeader.Configuration.ServerUrl.Trim('/'));
+                var databaseCommands = nonLeaderDocStore.DatabaseCommands;
+                var clusterAwareRequestExecuter = ((ClusterAwareRequestExecuter)((ServerClient)databaseCommands).RequestExecuter);
+                var nonLeaderUrl = clusterAwareRequestExecuter.LeaderNode.Url.Replace(leader.Configuration.ServerUrl, nonLeader.Configuration.ServerUrl);
+                clusterAwareRequestExecuter.LeaderNode = new OperationMetadata(nonLeaderUrl);
+                databaseCommands.Put("keys/" + 1, null, new RavenJObject(), new RavenJObject());
+
+                Assert.NotNull(leaderDocStore.DatabaseCommands.Get("keys/1"));
+
             }
         }
 

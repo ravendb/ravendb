@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
 using Raven.Tests.Common;
 using Xunit;
@@ -259,6 +260,11 @@ namespace Raven.Tests.Raft
                     }
                 }));
             }
+        }
+
+        protected void UpdateTopologyForAllClients(IEnumerable<DocumentStore> clusterStores)
+        {
+            clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
         }
     }
 }
