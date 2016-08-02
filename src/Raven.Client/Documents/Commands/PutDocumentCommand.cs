@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Commands
         {
             EnsureIsNotNullOrEmpty(Id, nameof(Id));
 
-            var request = new HttpRequestMessage(HttpMethod.Put, $"{Url}/databases/{Database}/docs?id={UrlEncode(Id)}")
+            var request = new HttpRequestMessage(HttpMethod.Put, $"{ServerUrl}/databases/{Database}/docs?id={UrlEncode(Id)}")
             {
                 Content = new BlittableJsonContent(Document, Context),
             };
@@ -26,6 +26,10 @@ namespace Raven.Client.Documents.Commands
         public override void SetResponse(BlittableJsonReaderObject response)
         {
             Result = JsonDeserialization.PutResult(response);
+        }
+
+        public PutDocumentCommand(string serverUrl, string database) : base(serverUrl, database)
+        {
         }
     }
 }

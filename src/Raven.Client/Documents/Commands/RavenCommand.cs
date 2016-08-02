@@ -9,10 +9,16 @@ namespace Raven.Client.Documents.Commands
 {
     public abstract class RavenCommand<TResult>
     {
+        public readonly string ServerUrl;
+        public readonly string Database;
+
         public CancellationToken CancellationToken = CancellationToken.None;
 
-        public string Database;
-        public string Url;
+        protected RavenCommand(string serverUrl, string database)
+        {
+            ServerUrl = serverUrl;
+            Database = database;
+        }
 
         public JsonOperationContext Context;
 

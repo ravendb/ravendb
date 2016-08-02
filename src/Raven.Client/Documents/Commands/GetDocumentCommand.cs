@@ -16,9 +16,13 @@ namespace Raven.Client.Documents.Commands
 
         public bool MetadataOnly;
 
+        public GetDocumentCommand(string serverUrl, string database) : base(serverUrl, database)
+        {
+        }
+
         public override HttpRequestMessage CreateRequest()
         {
-            return new HttpRequestMessage(HttpMethod.Get, $"{Url}/databases/{Database}/docs?id={UrlEncode(Id)}");
+            return new HttpRequestMessage(HttpMethod.Get, $"{ServerUrl}/databases/{Database}/docs?id={UrlEncode(Id)}");
         }
 
         public override void SetResponse(BlittableJsonReaderObject response)
