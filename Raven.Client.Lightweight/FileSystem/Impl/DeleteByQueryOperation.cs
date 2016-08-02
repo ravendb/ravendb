@@ -15,9 +15,6 @@ namespace Raven.Client.FileSystem.Impl
             if (string.IsNullOrWhiteSpace(query))
                 throw new ArgumentNullException("query", "The query cannot be null, empty or whitespace!");
 
-            if (string.IsNullOrWhiteSpace(query))
-                throw new ArgumentNullException("query", "The query cannot be null, empty or whitespace!");
-
             Query = query;
         }
 
