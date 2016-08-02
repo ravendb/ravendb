@@ -103,11 +103,14 @@ namespace Raven.Client.Http
                                 await ExecuteCommandAsync(command, context);
                                 return;
                             case HttpStatusCode.Forbidden:
+                                throw new UnauthorizedAccessException("Forbidan acesses. Make sure you're using the correct ApiKey.");
+                            case HttpStatusCode.ServiceUnavailable:
+                                // What todo here?
                                 break;
                             case HttpStatusCode.InternalServerError:
-                                throw new ErrorResponseException(response, "TODO");
+                                throw new InvalidOperationException($"Got internal server error: {response.ReadErrorResponse()}");
                             default:
-                                throw new InvalidOperationException("Doesn't know how to handle error: TODO");
+                                throw new InvalidOperationException($"Doesn't know how to handle error: {response.StatusCode}, response: {response.ReadErrorResponse()}");
                         }
                     }
 
@@ -154,6 +157,7 @@ namespace Raven.Client.Http
         public void Dispose()
         {
             _cache.Dispose();
+            _authenticator.Dispose();
         }
     }
 }

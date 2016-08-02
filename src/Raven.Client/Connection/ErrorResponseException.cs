@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Http;
 
 namespace Raven.Abstractions.Connection
 {
@@ -59,18 +60,12 @@ namespace Raven.Abstractions.Connection
             var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
 
             string responseString = null;
-            if (readErrorString && response.Content != null)
+            if (readErrorString)
             {
-                var readAsStringAsync = response.GetResponseStreamWithHttpDecompression();
-                if (readAsStringAsync.IsCompleted)
-                {
-                    using (var streamReader = new StreamReader(readAsStringAsync.Result))
-                    {
-                        responseString = streamReader.ReadToEnd();
-                        sb.AppendLine(responseString);
-                    }
-                }
+                responseString = response.ReadErrorResponse();
+                sb.AppendLine(responseString);
             }
+
             return new ErrorResponseException(response, sb.ToString())
             {
                 ResponseString = responseString

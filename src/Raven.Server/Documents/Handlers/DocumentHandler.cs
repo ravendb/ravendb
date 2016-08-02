@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
         public Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
+            //TODO: If-None-Match handling
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())

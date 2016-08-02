@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Platform.Unix;
 
+// TODO: Move to Raven.Client.Http
 namespace Raven.Client.Platform
 {
     public class RavenClientWebSocket : IDisposable
