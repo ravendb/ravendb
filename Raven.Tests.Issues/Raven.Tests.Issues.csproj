@@ -138,6 +138,7 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-4917.cs" />
     <Compile Include="RavenDB-4877.cs" />
     <Compile Include="RavenDB-4802.cs" />
     <Compile Include="RavenDB-4613.cs" />

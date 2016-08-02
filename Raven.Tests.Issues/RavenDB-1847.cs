@@ -2,11 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Raven.Tests.Common;
-
 using Xunit;
 using Raven.Client.Indexes;
 
@@ -110,49 +106,41 @@ namespace Raven.Tests.Issues
         }
     }
 
-
     public class TestObjectIndex : AbstractIndexCreationTask<TestObject>
-     {
-         public TestObjectIndex()
-         {
-                    this.Map = testobjects => from testobject in testobjects
-                                              from daterangewithnumber in testobject.DateRangesWithNumbers
-                                              select new
-                                              {
-                                                  From = daterangewithnumber.From,
-                                                  To = daterangewithnumber.To,
-                                                  Number = daterangewithnumber.Number
-                                              };
-         }
-   }
-
-
-
-    
-        public class DateRangeWithNumber
+    {
+        public TestObjectIndex()
         {
-            public DateTimeOffset From { get; set; }
-            public DateTimeOffset To { get; set; }
+            this.Map = testobjects => from testobject in testobjects
+                from daterangewithnumber in testobject.DateRangesWithNumbers
+                select new
+                {
+                    From = daterangewithnumber.From,
+                    To = daterangewithnumber.To,
+                    Number = daterangewithnumber.Number
+                };
+        }
+    }
 
-            public int Number { get; set; }
+    public class DateRangeWithNumber
+    {
+        public DateTimeOffset From { get; set; }
+        public DateTimeOffset To { get; set; }
 
-            public static bool Equals(DateRangeWithNumber date1,DateRangeWithNumber date2)
-            {
-                return date1.From.Equals(date2.From) && date1.To.Equals(date2.To) && (date1.Number == date2.Number);
-            }
+        public int Number { get; set; }
+
+        public static bool Equals(DateRangeWithNumber date1, DateRangeWithNumber date2)
+        {
+            return date1.From.Equals(date2.From) && date1.To.Equals(date2.To) && (date1.Number == date2.Number);
+        }
+    }
+
+    public class TestObject
+    {
+        public TestObject()
+        {
+            this.DateRangesWithNumbers = new List<DateRangeWithNumber>();
         }
 
-        public class TestObject
-        {
-            public TestObject()
-            {
-                this.DateRangesWithNumbers = new List<DateRangeWithNumber>();
-            }
-
-            public List<DateRangeWithNumber> DateRangesWithNumbers { get; set; }
-        }
-    
-
-
-    
+        public List<DateRangeWithNumber> DateRangesWithNumbers { get; set; }
+    }
 }
