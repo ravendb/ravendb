@@ -989,7 +989,13 @@ namespace Raven.Bundles.Replication.Tasks
             foreach (var state in waitForReplicationTasks)
             {
                 if (ReplicatedPast(state.Etag) < state.Replicas)
-                    continue;
+                {
+                    if ((SystemTime.UtcNow - state.Start) <= state.Timeout)
+                        continue;
+
+                    waitForReplicationTasks.TryRemove(state);
+                    Task.Run(() => state.Task.TrySetCanceled());
+                }
 
                 waitForReplicationTasks.TryRemove(state);
                 Task.Run(() => state.Task.TrySetResult(null));
