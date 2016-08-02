@@ -93,7 +93,7 @@ namespace Raven.Tests.Raft.Client
             var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader);
 
             SetupClusterConfiguration(clusterStores);
-
+            UpdateTopologyForAllClients(clusterStores);
             for (int i = 0; i < clusterStores.Count; i++)
             {
                 var store = clusterStores[i];
