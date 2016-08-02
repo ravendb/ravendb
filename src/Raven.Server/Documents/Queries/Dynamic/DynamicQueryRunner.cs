@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
-using Raven.Client.Data;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -66,6 +67,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _context))
                 {
+                    var fieldsToFetch = new FieldsToFetch(query, null);
                     var documents = _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize);
                     var results = scope != null ? scope.Transform(documents) : documents;
 
@@ -73,8 +75,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         _token.Token.ThrowIfCancellationRequested();
 
-                        result.Results.Add(document);
-                        includeDocumentsCommand.Gather(document);
+                        var doc = fieldsToFetch.IsProjection
+                            ? MapQueryResultRetriever.GetProjectionFromDocument(document, fieldsToFetch, _context)
+                            : document;
+
+                        result.Results.Add(doc);
+                        includeDocumentsCommand.Gather(doc);
                     }
                 }
 

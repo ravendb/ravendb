@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 _reduceValueBuffer = new byte[0];
             }
             else
-                _blittableTraverser = new BlittableJsonTraverser();
+                _blittableTraverser = BlittableJsonTraverser.Default;
         }
         
         protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object doc)

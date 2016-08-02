@@ -6,6 +6,8 @@ namespace Sparrow.Json
 {
     public class BlittableJsonTraverser
     {
+        public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
+
         private const char PropertySeparator = '.';
         private const char CollectionSeparator = ',';
 
@@ -20,15 +22,6 @@ namespace Sparrow.Json
         {
             if (nonDefaultSeparators != null)
                 _separators = nonDefaultSeparators;
-        }
-
-        public StringSegment GetNameFromPath(StringSegment path)
-        {
-            var indexOfLastSeparator = path.IndexOfLast(_separators);
-            if (indexOfLastSeparator == -1)
-                return path;
-
-            return path.SubSegment(indexOfLastSeparator + 1);
         }
 
         public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result)

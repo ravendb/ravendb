@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
 
@@ -16,7 +14,6 @@ namespace Raven.Server.Utils
         private const string SuffixStart = "{0}/";
         private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
         private static readonly char[] SuffixSeparatorChar = { SuffixSeparator };
-        private static readonly BlittableJsonTraverser Traverser = new BlittableJsonTraverser();
         private static Func<object, StringSegment, string> ValueHandler;
 
         public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath,
@@ -52,7 +49,7 @@ namespace Raven.Server.Utils
             }
 
             object value;
-            if (Traverser.TryRead(docReader, pathSegment, out value) == false)
+            if (BlittableJsonTraverser.Default.TryRead(docReader, pathSegment, out value) == false)
                 return;
 
             var collectionOfIds = value as IEnumerable;

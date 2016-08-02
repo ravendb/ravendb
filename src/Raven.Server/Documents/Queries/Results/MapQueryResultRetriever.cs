@@ -18,14 +18,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         private readonly FieldsToFetch _fieldsToFetch;
 
-        private readonly BlittableJsonTraverser _traverser;
-
         public MapQueryResultRetriever(DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch)
         {
             _documentsStorage = documentsStorage;
             _context = context;
             _fieldsToFetch = fieldsToFetch;
-            _traverser = _fieldsToFetch.IsProjection ? new BlittableJsonTraverser() : null;
         }
 
         public Document Get(Lucene.Net.Documents.Document input)
@@ -35,6 +32,11 @@ namespace Raven.Server.Documents.Queries.Results
             if (_fieldsToFetch.IsProjection)
                 return GetProjection(input, id);
 
+            return DirectGet(id);
+        }
+
+        private Document DirectGet(string id)
+        {
             var doc = _documentsStorage.Get(_context, id);
             if (doc == null)
                 return null;
@@ -45,10 +47,16 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Document GetProjection(Lucene.Net.Documents.Document input, string id)
         {
-            if (_fieldsToFetch.AnyExtractableFromIndex == false)
-                return GetProjectionFromDocument(id);
-
             Document doc = null;
+            if (_fieldsToFetch.AnyExtractableFromIndex == false)
+            {
+                doc = DirectGet(id);
+                if (doc == null)
+                    return null;
+
+                return GetProjectionFromDocument(doc, _fieldsToFetch, _context);
+            }
+
             var documentLoaded = false;
 
             var result = new DynamicJsonValue();
@@ -73,29 +81,25 @@ namespace Raven.Server.Documents.Queries.Results
                 TryExtractValueFromDocument(fieldToFetch, doc, result);
             }
 
-            return ReturnProjection(result, doc);
+            return ReturnProjection(result, doc, _context);
         }
 
-        private Document GetProjectionFromDocument(string id)
+        public static Document GetProjectionFromDocument(Document doc, FieldsToFetch fieldsToFetch, JsonOperationContext context)
         {
-            var doc = _documentsStorage.Get(_context, id);
-            if (doc == null)
-                return null;
-
             var result = new DynamicJsonValue();
 
-            if (_fieldsToFetch.IsDistinct == false)
+            if (fieldsToFetch.IsDistinct == false)
                 result[Constants.DocumentIdFieldName] = doc.Key;
 
-            foreach (var fieldToFetch in _fieldsToFetch.Fields.Values)
+            foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
                 TryExtractValueFromDocument(fieldToFetch, doc, result);
 
-            return ReturnProjection(result, doc);
+            return ReturnProjection(result, doc, context);
         }
 
-        private Document ReturnProjection(DynamicJsonValue result, Document doc)
+        private static Document ReturnProjection(DynamicJsonValue result, Document doc, JsonOperationContext context)
         {
-            var newData = _context.ReadObject(result, doc.Key);
+            var newData = context.ReadObject(result, doc.Key);
 
             try
             {
@@ -118,7 +122,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;
 
-            var name = _traverser.GetNameFromPath(fieldToFetch.Name.Value);
+            var name = fieldToFetch.Name.Value;
 
             DynamicJsonArray array = null;
             FieldType fieldType = null;
@@ -184,13 +188,13 @@ namespace Raven.Server.Documents.Queries.Results
             return _context.ReadForMemory(ms, field.Name);
         }
 
-        private bool TryExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
+        private static bool TryExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
             object value;
-            if (_traverser.TryRead(document.Data, fieldToFetch.Name, out value) == false)
+            if (BlittableJsonTraverser.Default.TryRead(document.Data, fieldToFetch.Name, out value) == false)
                 return false;
 
-            toFill[_traverser.GetNameFromPath(fieldToFetch.Name.Value)] = value;
+            toFill[fieldToFetch.Name.Value] = value;
             return true;
         }
     }
