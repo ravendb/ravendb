@@ -47,12 +47,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 case "Select":
                     return ModifyLambdaForSelect(node, invocation);
+                case "SelectMany":
+                    return ModifyLambdaForSelectMany(node);
                 case "Sum":
                 case "Average":
                     return ModifyLambdaForNumerics(node);
             }
 
             return base.VisitSimpleLambdaExpression(node);
+        }
+
+        private static SyntaxNode ModifyLambdaForSelectMany(SimpleLambdaExpressionSyntax node)
+        {
+            return SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})");
         }
 
         private static SyntaxNode ModifyLambdaForSelect(SimpleLambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
