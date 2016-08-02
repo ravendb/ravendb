@@ -14,6 +14,15 @@ namespace Raven.Database.Bundles.Replication.Impl
         public static bool IsDirectChildOfCurrent(RavenJObject incomingMetadata, RavenJObject existingMetadata)
         {
             var history = incomingMetadata[Constants.RavenReplicationHistory];
+            //if we the source of the metadata we have is the same as the incoming
+            //and the incoming has a higher version than we can assume it is a parent
+            //since we now merge histories.
+            if (incomingMetadata[Constants.RavenReplicationSource].Value<string>() ==
+                existingMetadata[Constants.RavenReplicationSource].Value<string>()
+                && incomingMetadata[Constants.RavenReplicationVersion].Value<long>()
+                >= existingMetadata[Constants.RavenReplicationVersion].Value<long>())
+                return true;
+
             if (history == null || history.Type == JTokenType.Null) // no history, not a parent
                 return false;
 

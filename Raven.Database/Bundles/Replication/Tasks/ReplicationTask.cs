@@ -924,6 +924,15 @@ namespace Raven.Bundles.Replication.Tasks
             if (string.IsNullOrWhiteSpace(lastError) == false)
                 stats.LastError = lastError;
 
+            foreach (var state in waitForReplicationTasks)
+            {
+                if ((SystemTime.UtcNow - state.Start) <= state.Timeout)
+                    continue;
+
+                waitForReplicationTasks.TryRemove(state);
+                Task.Run(() => state.Task.TrySetCanceled());
+            }
+
             var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null);
             var failureInformation = new DestinationFailureInformation { Destination = url };
             if (jsonDocument != null)
@@ -980,10 +989,16 @@ namespace Raven.Bundles.Replication.Tasks
             foreach (var state in waitForReplicationTasks)
             {
                 if (ReplicatedPast(state.Etag) < state.Replicas)
-                    continue;
+                {
+                    if ((SystemTime.UtcNow - state.Start) <= state.Timeout)
+                        continue;
+
+                    waitForReplicationTasks.TryRemove(state);
+                    Task.Run(() => state.Task.TrySetCanceled());
+                }
 
                 waitForReplicationTasks.TryRemove(state);
-                state.Task.TrySetResult(null);
+                Task.Run(() => state.Task.TrySetResult(null));
             }
         }
 
@@ -1058,6 +1073,8 @@ namespace Raven.Bundles.Replication.Tasks
             public TaskCompletionSource<object> Task;
             public Etag Etag;
             public int Replicas;
+            public TimeSpan Timeout;
+            public DateTime Start;
         }
 
         private readonly ConcurrentSet<WaitForReplicationState> waitForReplicationTasks = new ConcurrentSet<WaitForReplicationState>();
@@ -1071,19 +1088,31 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 Etag = etag,
                 Replicas = replicas,
+                Timeout = timeout,
+                Start = SystemTime.UtcNow,
                 Task = new TaskCompletionSource<object>()
             };
             waitForReplicationTasks.Add(state);
 
             var hadReplicated = state.Task.Task;
-            if (await Task.WhenAny(hadReplicated, Task.Delay(timeout)).ConfigureAwait(false) == hadReplicated)
-                return;
-            var replicatedPast = ReplicatedPast(etag);
-            if (replicatedPast >= replicas)
-                return;
+            int replicatedPast;
+            try
+            {
+                if (await Task.WhenAny(hadReplicated, Task.Delay(timeout)).ConfigureAwait(false) == hadReplicated)
+                    return;
+                replicatedPast = ReplicatedPast(etag);
+                if (replicatedPast >= replicas)
+                    return;
 
-            if (throwOnTimeout == false)
-                return;
+                if (throwOnTimeout == false)
+                    return;
+            }
+            catch (OperationCanceledException)
+            {
+                replicatedPast = ReplicatedPast(etag);
+                if (replicatedPast >= replicas)
+                    return;
+            }
 
             throw new TimeoutException("Could not verify that etag " + etag + " was replicated to " + replicas + " servers in " + timeout+ "." +
                                        " So far, it only replicated to " + replicatedPast);
