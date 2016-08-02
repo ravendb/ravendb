@@ -23,7 +23,7 @@ namespace FastTests
 {
     public abstract class RavenLowLevelTestBase : IDisposable
     {
-        private MetricsScheduler _metricsScheduler = new MetricsScheduler();
+        private MetricsScheduler _metricsScheduler = new MetricsScheduler(new LoggerSetup(Path.GetTempFileName(), LogMode.None));
 
         private readonly ConcurrentSet<string> _pathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 

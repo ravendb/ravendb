@@ -58,7 +58,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     var indexStorage = new IndexStorage(index, contextPool, database);
 
                     var reducer = new ReduceMapResultsOfAutoIndex(index.Definition, indexStorage, 
-                        new MetricsCountersManager(new MetricsScheduler()), mapReduceContext);
+                        new MetricsCountersManager(new MetricsScheduler(database.LoggerSetup)), mapReduceContext);
 
                     await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
                 }
@@ -91,7 +91,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 using (var contextPool = new TransactionContextPool(pool, database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
-                    var reducer = new ReduceMapResultsOfStaticIndex(index._compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(new MetricsScheduler()), mapReduceContext);
+                    var reducer = new ReduceMapResultsOfStaticIndex(index._compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(new MetricsScheduler(database.LoggerSetup)), mapReduceContext);
 
                     await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
                 }

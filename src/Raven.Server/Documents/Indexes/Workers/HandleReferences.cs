@@ -10,13 +10,14 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
     public class HandleReferences : IIndexingWork
     {
-        protected readonly ILog Log = LogManager.GetLogger(typeof(CleanupDeletedDocuments));
+        protected Logger _logger;
 
         private readonly StaticMapIndex _index;
         private readonly IndexingConfiguration _configuration;
@@ -31,6 +32,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             _configuration = configuration;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
+            _logger = _indexStorage.DocumentDatabase.LoggerSetup
+                .GetLogger<HandleReferences>(_indexStorage.DocumentDatabase.Name);
         }
 
         public string Name => "References";
@@ -72,8 +75,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                 {
                     using (var collectionStats = stats.For("Collection_" + referencedCollection))
                     {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Collection: {referencedCollection}. Type: {actionType}.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Collection: {referencedCollection}. Type: {actionType}.");
 
                         long lastReferenceEtag;
 
@@ -89,8 +92,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 throw new NotSupportedException();
                         }
 
-                        if (Log.IsDebugEnabled)
-                            Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. LastReferenceEtag: {lastReferenceEtag}.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. LastReferenceEtag: {lastReferenceEtag}.");
 
                         var lastEtag = lastReferenceEtag;
                         var count = 0;
@@ -131,8 +134,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             foreach (var referencedDocument in references)
                             {
-                                if (Log.IsDebugEnabled)
-                                    Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing reference: {referencedDocument.Key}.");
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing reference: {referencedDocument.Key}.");
 
                                 lastEtag = referencedDocument.Etag;
                                 count++;
@@ -159,8 +162,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         if (indexWriter == null)
                                             indexWriter = writeOperation.Value;
 
-                                        if (Log.IsDebugEnabled)
-                                            Log.Debug($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
+                                        if (_logger.IsInfoEnabled)
+                                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
 
                                         try
                                         {
@@ -168,10 +171,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                         catch (Exception e)
                                         {
-                                            if (Log.IsWarnEnabled)
-                                                Log.WarnException(
-                                                    $"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.",
-                                                    e);
+                                            if (_logger.IsInfoEnabled)
+                                                _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
                                         }
 
                                         if (sw.Elapsed > timeoutProcessing)
@@ -184,8 +185,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                         if (count == 0)
                             continue;
 
-                        if (Log.IsDebugEnabled)
-                            Log.Debug($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
                         switch (actionType)
                         {

@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Client.Document.Batches;
 using Sparrow.Collections;
+using Sparrow.Logging;
 
 namespace Raven.Server.Utils.Metrics
 {
@@ -23,8 +24,11 @@ namespace Raven.Server.Utils.Metrics
         private readonly ConcurrentSet<MeterMetric> _scheduledActions =
             new ConcurrentSet<MeterMetric>();
 
-        public MetricsScheduler()
+        private Logger _logger;
+
+        public MetricsScheduler(LoggerSetup loggerSetup)
         {
+            _logger = loggerSetup.GetLogger<MetricsScheduler>("MetricsScheduler");
             _tickIntervalInNanoseconds = Clock.NanosecondsInSecond;
             _schedulerThread = new Thread(SchedulerTicking)
             {
@@ -33,8 +37,6 @@ namespace Raven.Server.Utils.Metrics
             };
             _schedulerThread.Start();
         }
-
-        private ILog _logger = LogManager.GetLogger(typeof(MetricsScheduler));
 
         private readonly int _tickIntervalInNanoseconds;
 
@@ -54,7 +56,8 @@ namespace Raven.Server.Utils.Metrics
                     }
                     catch (Exception e)
                     {
-                        _logger.Error("Error occured during MetricsScheduler ticking of a single action", e);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Error occured during MetricsScheduler ticking of a single action", e);
                     }
                 }
 

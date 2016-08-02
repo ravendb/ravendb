@@ -16,7 +16,7 @@ namespace Raven.Server.ReplicationUtil
         protected BaseReplicationLoader(DocumentDatabase database)
         {
             _database = database;
-            _logger = _database.LoggerSetup.GetLogger<BaseReplicationLoader>(_database.Name);
+            _logger = _database.LoggerSetup.GetLogger<BaseReplicationLoader>(_database.GetType().FullName);
             _database.Notifications.OnDocumentChange += WakeReplication;
             _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
         }

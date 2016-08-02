@@ -9,6 +9,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(DocumentDatabase));
+        private static Logger _logger;
 
         private readonly TableSchema _docsSchema = new TableSchema();
 
@@ -31,6 +32,7 @@ namespace Raven.Server.Documents.Versioning
         {
             _versioningConfiguration = versioningConfiguration;
 
+            _logger = database.LoggerSetup.GetLogger<VersioningStorage>(database.Name);
             // The documents schema is as follows
             // 5 fields (lowered key, recored separator, etag, lazy string key, document)
             // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
@@ -77,8 +79,8 @@ namespace Raven.Server.Documents.Versioning
                 {
                     //TODO: This should generate an alert, so admin will know that something is very bad
                     //TODO: Or this should throw and we should have a config flag to ignore the error
-                    if (Log.IsWarnEnabled)
-                        Log.WarnException($"Cannot enable versioning for documents as the versioning configuration document {Constants.Versioning.RavenVersioningConfiguration} is not valid: {configuration.Data}", e);
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Cannot enable versioning for documents as the versioning configuration document {Constants.Versioning.RavenVersioningConfiguration} is not valid: {configuration.Data}", e);
                     return null;
                 }
             }

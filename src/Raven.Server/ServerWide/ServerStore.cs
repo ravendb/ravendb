@@ -49,7 +49,7 @@ namespace Raven.Server.ServerWide
         public ServerStore(RavenConfiguration configuration, LoggerSetup loggerSetup)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            MetricsScheduler = new MetricsScheduler();
+            MetricsScheduler = new MetricsScheduler(loggerSetup);
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
             _loggerSetup = loggerSetup;
