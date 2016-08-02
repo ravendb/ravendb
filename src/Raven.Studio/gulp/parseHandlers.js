@@ -6,6 +6,14 @@ var Map = require('es6-map');
 var ravenActions = new Map();
 var latestFile;
 
+var HANDLER_PATTERN = "Handler.cs";
+
+if (!String.prototype.endsWith) {
+    String.prototype.endsWith = function(suffix) {
+        return this.indexOf(suffix, this.length - suffix.length) !== -1;
+    };
+}
+
 module.exports = function parseHandlers(outputFileName) {
     return through.obj(function (inputFile, encoding, callback) {
         latestFile = inputFile;
@@ -37,9 +45,10 @@ function findHandlerAnnotations(file, ravenActions) {
 
 function findHandlerName(input) {
     var fileName = path.basename(input);
-    if (!fileName.endsWith("Handler.cs")) {
-        throw new Error("Can not handle file: " + input);
+    if (!fileName.endsWith(HANDLER_PATTERN)) {
+        throw new Error("Cannot handle file: " + input);
     }
+
     return fileName.substring(0, fileName.length - 10);
 }
 
