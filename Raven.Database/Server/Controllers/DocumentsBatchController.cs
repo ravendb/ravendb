@@ -209,7 +209,7 @@ namespace Raven.Database.Server.Controllers
             var parts = writeAssurance.Split(';');
             var replicas = int.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
-            var throwOnTimeout = bool.Parse(parts[3]);
+            var throwOnTimeout = bool.Parse(parts[2]);
             var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
             if (replicationTask == null)
             {
