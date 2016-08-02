@@ -61,6 +61,7 @@ namespace SubscriptionsBenchmark
         public int DocsRequested { get; set; }
         public long ElapsedMs { get; set; }
         public long DocsProccessed { get; set; }
+
         public override string ToString()
         {
             return $"Elapsed: {ElapsedMs}; MaxDocs: {DocsRequested}; ProccessedDocs: {DocsProccessed}";
@@ -68,12 +69,17 @@ namespace SubscriptionsBenchmark
     }
     public class SingleSubscriptionBenchmark : IDisposable
     {
-        private int? _batchSize;
+        private int _batchSize;
+        private long? _subscriptionId;
+        private readonly string _collectionName;
         private DocumentStore _store;
 
-        public SingleSubscriptionBenchmark(string url = "http://localhost:8080", int? batchSize = null, string databaseName = "freeDB")
+        public SingleSubscriptionBenchmark(int batchSize , string url, 
+            string databaseName = "freeDB", string collectionName = "Disks")
         {
             _batchSize = batchSize;
+            
+            _collectionName = collectionName;
             _store = new DocumentStore()
             {
                 DefaultDatabase = databaseName,
@@ -87,27 +93,32 @@ namespace SubscriptionsBenchmark
         {
             public string Name { get; set; }
         }
+
         public void PerformBenchmark()
         {
-            var runResult = SingleTestRun(100 * 1000).Result;
+            var runResult = SingleTestRun().Result;
             Console.WriteLine(runResult.DocsProccessed + " " + runResult.DocsRequested + " " + runResult.ElapsedMs);
         }
 
-
-        private async Task<RunResult> SingleTestRun(int docCount = 10000, string collectionName="Disks")
+        private async Task<RunResult> SingleTestRun()
         {
-
-            var subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
+            if (_subscriptionId.HasValue == false)
             {
-                Collection = collectionName
-            });
+                _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
+                {
+                    Collection = _collectionName
+                });
+            }
+            
+            
             using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
             {
-                MaxDocsPerBatch = _batchSize ?? docCount,
-                SubscriptionId = subscriptionId
+                MaxDocsPerBatch = 20,
+                SubscriptionId = _subscriptionId.Value,
+                Strategy = SubscriptionOpeningStrategy.WaitForFree
             }))
             {
-                var observer = new CounterObserver(docCount);
+                var observer = new CounterObserver(_batchSize);
                 var sp = Stopwatch.StartNew();
                 subscription.Subscribe(observer);
                 await subscription.StartAsync();
@@ -118,7 +129,7 @@ namespace SubscriptionsBenchmark
                 return new RunResult
                 {
                     DocsProccessed = observer.CurCount,
-                    DocsRequested = docCount,
+                    DocsRequested = _batchSize,
                     ElapsedMs = sp.ElapsedMilliseconds
                 };
             }

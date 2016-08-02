@@ -12,7 +12,7 @@ namespace Raven.Abstractions.Data
         public long SubscriptionId { get; set; }
         public SubscriptionCriteria Criteria { get; set; }
         public long? AckEtag { get; set; }
-        public long TimeOfSendingLastBatch { get; set; }
-        public long TimeOfLastClientActivity { get; set; }
+        public string TimeOfSendingLastBatch { get; set; }
+        public string TimeOfLastClientActivity { get; set; }
     }
 }

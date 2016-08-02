@@ -71,10 +71,7 @@ namespace Raven.Client.Document
         {
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
-
-            if (options.MaxBatchSize.HasValue && options.MaxBatchSize.Value < 16 * 1024)
-                throw new InvalidOperationException("Max size value of batch options cannot be lower than that 16 KB");
-
+            
             // todo: treat the sharded connection case..
             AsyncServerClient commands =
                  (AsyncServerClient ) (database == null

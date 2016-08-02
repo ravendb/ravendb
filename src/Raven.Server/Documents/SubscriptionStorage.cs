@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -10,6 +11,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Database.Util;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
@@ -33,7 +35,7 @@ namespace Raven.Server.Documents
     public class SubscriptionStorage : IDisposable
     {
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
-        private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
+        private readonly ConcurrentDictionary<long, SubscriptionState> _subscriptionStates = new ConcurrentDictionary<long, SubscriptionState>();
         private readonly TableSchema _subscriptionsSchema = new TableSchema();
         private readonly DocumentDatabase _db;
         private readonly MetricsScheduler _metricsScheduler;
@@ -65,7 +67,7 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            foreach (var state in _subscriptionConnectionStates.Values)
+            foreach (var state in _subscriptionStates.Values)
             {
                 state.Dispose();
             }
@@ -151,10 +153,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SubscriptionConnectionState OpenSubscription(SubscriptionConnectionOptions options)
+        public SubscriptionState OpenSubscription(SubscriptionConnection connection)
         {
-            return _subscriptionConnectionStates.GetOrAdd(options.SubscriptionId,
-                _ => new SubscriptionConnectionState(options, _metricsScheduler));
+            return _subscriptionStates.GetOrAdd(connection.SubscriptionId,
+                _ => new SubscriptionState(connection));
         }
 
 
@@ -188,7 +190,7 @@ namespace Raven.Server.Documents
 
         public void AssertSubscriptionExists(long id)
         {
-            if (_subscriptionConnectionStates.ContainsKey(id) == false)
+            if (_subscriptionStates.ContainsKey(id) == false)
                 throw new SubscriptionClosedException("There is no open subscription with id: " + id);
         }
 
@@ -235,11 +237,11 @@ namespace Raven.Server.Documents
 
         public unsafe void DeleteSubscription(long id)
         {
-            SubscriptionConnectionState subscriptionConnectionState;
-            if (_subscriptionConnectionStates.TryRemove(id, out subscriptionConnectionState))
+            SubscriptionState subscriptionState;
+            if (_subscriptionStates.TryRemove(id, out subscriptionState))
             {
-                subscriptionConnectionState.EndConnection();
-                subscriptionConnectionState.Dispose();
+                subscriptionState.EndConnection();
+                subscriptionState.Dispose();
             }
 
             using (var tx = _environment.WriteTransaction())
@@ -254,70 +256,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public List<TableValueReader> GetSubscriptions(int start, int take)
-        {
-            var subscriptions = new List<TableValueReader>();
-
-            using (var tx = _environment.WriteTransaction())
-            {
-                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-                var seen = 0;
-                var taken = 0;
-                foreach (var subscriptionForKey in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
-                {
-                    if (seen < start)
-                    {
-                        seen++;
-                        continue;
-                    }
-
-                    subscriptions.Add(subscriptionForKey);
-
-                    if (taken > take)
-                        break;
-                }
-                return subscriptions;
-            }
-        }
-
-        public unsafe List<SubscriptionConnectionOptions> GetDebugInfo()
-        {
-            using (var tx = _environment.ReadTransaction())
-            {
-                var subscriptions = new List<SubscriptionConnectionOptions>();
-
-                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-
-                foreach (var subscriptionsForKey in table.SeekForwardFrom(_subscriptionsSchema.Key, Slices.BeforeAllKeys))
-                {
-                    foreach (var subscriptionForKey in subscriptionsForKey.Results)
-                    {
-                        int longSize;
-                        var subscriptionId = *(long*)subscriptionForKey.Read(0, out longSize);
-                        SubscriptionConnectionState connectionState;
-
-                        if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out connectionState))
-                        {
-                            var options = connectionState.Connection;
-                            if (options != null)
-                            {
-                                subscriptions.Add(connectionState.Connection);
-                            }
-                        }
-                    }
-                }
-
-                return subscriptions;
-            }
-        }
-
         public void DropSubscriptionConnection(long subscriptionId)
         {
-            SubscriptionConnectionState connectionState;
-            if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out connectionState))
+            SubscriptionState subscriptionState;
+            if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
             {
-                connectionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
-                connectionState.Connection.CancellationTokenSource.Cancel();
+                subscriptionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
+                subscriptionState.Connection.CancellationTokenSource.Cancel();
             }
         }
 
@@ -333,21 +278,44 @@ namespace Raven.Server.Documents
             var timeOfLastClientActivity =
                 *(long*)tvr.Read(Schema.SubscriptionTable.TimeOfLastActivityIndex, out size);
             var criteria = new BlittableJsonReaderObject(tvr.Read(Schema.SubscriptionTable.CriteriaIndex, out size), size, context);
-
-            var criteriaInstance = JsonDeserialization.SubscriptionCriteria(criteria);
-            criteria.Dispose();
-
+            
             return new DynamicJsonValue
                 {
                     ["SubscriptionId"] = subscriptionId,
                     ["Criteria"] = criteria,
                     ["AckEtag"] = ackEtag,
-                    ["TimeOfSendingLastBatch"] = timeOfSendingLastBatch,
-                    ["TimeOfLastClientActivity"] = timeOfLastClientActivity,
+                    ["TimeOfSendingLastBatch"] = new DateTime(timeOfSendingLastBatch).ToString(CultureInfo.InvariantCulture),
+                    ["TimeOfLastClientActivity"] = new DateTime(timeOfLastClientActivity).ToString(CultureInfo.InvariantCulture),
                 };
         }
 
-        public void WriteSubscriptionTableValues(BlittableJsonTextWriter writer,
+        private void WriteSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData, bool writeHistory = false)
+        {
+            var subscriptionConnection = subscriptionState.Connection;
+            if (subscriptionConnection != null)
+                SetSubscriptionConnectionStats(subscriptionConnection, subscriptionData);
+
+            if (!writeHistory) return;
+
+            subscriptionData["RecentConnections"] = new DynamicJsonArray(subscriptionState.RecentConnections.Select(
+                connection =>
+                {
+                    var connectionStats = new DynamicJsonValue();
+                    SetSubscriptionConnectionStats(connection, connectionStats);
+                    return connectionStats;
+                }));
+
+            subscriptionData["RecentRejectedConnections"] =
+                new DynamicJsonArray(subscriptionState.RecentRejectedConnections.Select(
+                    connection =>
+                    {
+                        var connectionStats = new DynamicJsonValue();
+                        SetSubscriptionConnectionStats(connection, connectionStats);
+                        return connectionStats;
+                    }));
+        }
+
+        public unsafe void GetAllSubscriptions(BlittableJsonTextWriter writer,
             DocumentsOperationContext context, int start, int take)
         {
             using (var tx = _environment.WriteTransaction())
@@ -356,7 +324,7 @@ namespace Raven.Server.Documents
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
                 var seen = 0;
                 var taken = 0;
-                foreach (var subscriptionForKey in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
                 {
                     if (seen < start)
                     {
@@ -364,7 +332,19 @@ namespace Raven.Server.Documents
                         continue;
                     }
 
-                    subscriptions.Add(ExtractSubscriptionConfigValue(subscriptionForKey,context));
+                    var subscriptionData = ExtractSubscriptionConfigValue(subscriptionTvr,context);
+                    subscriptions.Add(subscriptionData);
+                    int size;
+                    var subscriptionId = 
+                        Bits.SwapBytes(*(long*)subscriptionTvr.Read(Schema.SubscriptionTable.IdIndex, out size));
+                    SubscriptionState subscriptionState = null;
+
+                    if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
+                    {
+                        WriteSubscriptionStateData(subscriptionState, subscriptionData);
+                    }
+
+                    taken++;
 
                     if (taken > take)
                         break;
@@ -374,20 +354,42 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void WriteRunningSubscriptions(BlittableJsonTextWriter writer,
+        private void SetSubscriptionConnectionStats(SubscriptionConnection connection, DynamicJsonValue config)
+        {
+            config["ClientUri"] = connection.ClientEndpoint.ToString();
+            config["TimeWaitedForConnectionToBeOvertaken"] = new TimeSpan(connection.Stats.WaitedForConnection).ToString();
+            config["ConnectedAt"] = new DateTime(connection.Stats.ConnectedAt).ToString(CultureInfo.InvariantCulture);
+            config["ConnectionException"] = connection.ConnectionException;
+
+            config["LastMessageSentAt"] = new DateTime(connection.Stats.LastMessageSentAt).ToString(CultureInfo.InvariantCulture); 
+            config["LastAckReceivedAt"] = new DateTime(connection.Stats.LastAckReceivedAt).ToString(CultureInfo.InvariantCulture); 
+
+            config["DocsRate"] = connection.Stats.DocsRate.CreateMeterData();
+            config["BytesRate"] = connection.Stats.BytesRate.CreateMeterData();
+            config["AckRate"] = connection.Stats.AckRate.CreateMeterData();
+        }
+
+        public void GetRunningSusbscriptions(BlittableJsonTextWriter writer,
            DocumentsOperationContext context, int start, int take)
         {
             using (var tx = _environment.ReadTransaction())
             {
                 var connections =
-                    _subscriptionConnectionStates.
-                    Where(x => x.Value.Connection != null).
-                    Select(x =>
-                    {
-                        var config = ExtractSubscriptionConfigValue(GetSubscriptionConfig(x.Key, tx), context);
-                        config["ClientUri"] = x.Value.Connection.ClientEndpoint.ToString();
-                        config["DocsRate"] = x.Value.DocsRate.CreateMeterData();
-                        return config;
+                    _subscriptionStates
+                    .Where(x => x.Value.Connection != null)
+                    .OrderBy(x=>x.Key)
+                    .Skip(start)
+                    .Take(take)
+                    .Select(x =>
+                        {
+                            var subscriptionState = x.Value;
+                            var subscriptionId = x.Key;
+                            if (subscriptionState.Connection == null)
+                                return null;
+
+                            var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
+                            WriteSubscriptionStateData(subscriptionState, subscriptionData);
+                            return subscriptionData;
                     });
 
 
@@ -396,29 +398,60 @@ namespace Raven.Server.Documents
             }
         }
 
-        // ReSharper disable once ClassNeverInstantiated.Local
-        public class Schema
+        public void GetRunningSubscriptionConnectionHistory(BlittableJsonTextWriter writer, DocumentsOperationContext context, long subscriptionId)
         {
-            public static readonly string IdsTree = "SubscriptionsIDs";
-            public static readonly string SubsTree = "Subscriptions";
-            public static readonly Slice Id = Slice.From( StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable);
+            SubscriptionState subscriptionState;
+            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState)) return;
 
-            public static class SubscriptionTable
+            var subscriptionConnection = subscriptionState.Connection;
+            if (subscriptionConnection == null) return;
+
+            using (var tx = _environment.ReadTransaction())
             {
-#pragma warning disable 169
-                public static readonly int IdIndex = 0;
-                public static readonly int CriteriaIndex = 1;
-                public static readonly int AckEtagIndex = 2;
-                public static readonly int TimeOfSendingLastBatch = 3;
-                public static readonly int TimeOfLastActivityIndex = 4;
-#pragma warning restore 169
+                var subscriptionData =
+                    ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
+                WriteSubscriptionStateData(subscriptionState, subscriptionData, true);
+
+                context.Write(writer, subscriptionData);
+                writer.Flush();
             }
+        }
+        public long GetRunningCount()
+        {
+            return _subscriptionStates.Count(x=>x.Value.Connection!=null);
         }
 
 
         public StorageEnvironment Environment()
         {
             return _environment;
+        }
+        public long GetAllSubscriptionsCount()
+        {
+            using (var tx = _environment.WriteTransaction())
+            {
+                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
+                return table.NumberOfEntries;
+            }
+        }
+    }
+
+    // ReSharper disable once ClassNeverInstantiated.Local
+    public class Schema
+    {
+        public static readonly string IdsTree = "SubscriptionsIDs";
+        public static readonly string SubsTree = "Subscriptions";
+        public static readonly Slice Id = Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable);
+
+        public static class SubscriptionTable
+        {
+#pragma warning disable 169
+            public static readonly int IdIndex = 0;
+            public static readonly int CriteriaIndex = 1;
+            public static readonly int AckEtagIndex = 2;
+            public static readonly int TimeOfSendingLastBatch = 3;
+            public static readonly int TimeOfLastActivityIndex = 4;
+#pragma warning restore 169
         }
     }
 }

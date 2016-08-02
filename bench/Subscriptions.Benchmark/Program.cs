@@ -31,7 +31,7 @@ namespace SubscriptionsBenchmark
                 paramDictionary.Add(keyValue[0], keyValue[1]);
             }
 
-            if (paramDictionary.Count== 5)
+            if (paramDictionary.Count== 6)
             {
                 
                 string url = paramDictionary["url"];
@@ -42,6 +42,8 @@ namespace SubscriptionsBenchmark
                 var canProcceedToStressHandle = new EventWaitHandle(false,EventResetMode.ManualReset,canProcceedToStressMre);
                 
                 var proccessStartedMre = paramDictionary["started"];
+                var reconnect = Boolean.Parse(paramDictionary["reconnect"]);
+                
                 var proccessStartedHandle = new EventWaitHandle(false,EventResetMode.ManualReset,proccessStartedMre);
 
                 proccessStartedHandle.Set();
@@ -53,31 +55,40 @@ namespace SubscriptionsBenchmark
                 {
                     int retries = 0;
                     int successfullAttempts = 0;
+
+                    var benchmark = new SingleSubscriptionBenchmark(batchSize, url);
+                    
                     while (true)
                     {
+                        if (reconnect == false)
+                        {
+                            benchmark?.Dispose();
+                            benchmark = new SingleSubscriptionBenchmark(batchSize, url);
+                        }
                         try
                         {
-                            new SingleSubscriptionBenchmark(url, batchSize).PerformBenchmark();
+                            benchmark.PerformBenchmark();
                             Console.Write($"Attempt {successfullAttempts} succeeded");
                         }
                         catch (Exception e)
                         {
                             retries++;
                             Console.WriteLine($"Operation Failed, retries: {retries}, Exception: {e}");
+                            benchmark?.Dispose();
+                            benchmark = new SingleSubscriptionBenchmark(batchSize, url);
                             Thread.Sleep(100);
                         }
                     }
-                    
-
                 });
 
             }
-            else if (args.Length <5)
+            else if (args.Length <6)
             {
                 string url;
                 string parallelism;
                 string innerParallelism;
                 string batchSize;
+                string reconnect;
                 if (paramDictionary.TryGetValue("url", out url) == false)
                 {
                     url = "http://localhost:8080";
@@ -94,6 +105,10 @@ namespace SubscriptionsBenchmark
                 {
                     batchSize = "1024";
                 }
+                if (paramDictionary.TryGetValue("reconnect", out reconnect) == false)
+                {
+                    reconnect = "false";
+                }
 
                 var canProcceedToStressMre = "SubsStress.CanStart";
                 var canProcceedToStressHandle = new EventWaitHandle(false,EventResetMode.ManualReset,canProcceedToStressMre);
@@ -108,7 +123,7 @@ namespace SubscriptionsBenchmark
                         var hasProccessBegan = new EventWaitHandle(false,EventResetMode.ManualReset,hasProccessBeganMreName);
                         var proc = Process.Start(new ProcessStartInfo()
                         {
-                            Arguments = $"Subscriptions.Benchmark.dll url={url} batch={batchSize} ipar={innerParallelism} procceed={canProcceedToStressMre} started={hasProccessBeganMreName}",
+                            Arguments = $"Subscriptions.Benchmark.dll url={url} batch={batchSize} ipar={innerParallelism} procceed={canProcceedToStressMre} started={hasProccessBeganMreName} reconnect={reconnect}",
                             FileName = "dotnet"
                         });
 

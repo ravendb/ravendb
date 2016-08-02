@@ -52,7 +52,7 @@ namespace Raven.Abstractions.Data
         public RavenJObject Data { get; set; }
         public string Exception { get; set; }
     }
-
+  
     public class SubscriptionConnectionOptions
     {
         public long SubscriptionId { get; set; }
@@ -63,19 +63,9 @@ namespace Raven.Abstractions.Data
             MaxDocsPerBatch = 4096;
         }
 
-        [JsonIgnore] public CancellationTokenSource CancellationTokenSource;
-        [JsonIgnore] public IDisposable DisposeOnDisconnect;
-        [JsonIgnore] public EndPoint ClientEndpoint;
-        [JsonIgnore] public SubscriptionException ConnectionException;
-
         public int TimeToWaitBeforeConnectionRetryMilliseconds { get; set; } = 5000;
-
         public bool IgnoreSubscribersErrors { get; set; }
-
         public SubscriptionOpeningStrategy Strategy { get; set; }
-
-        public int? MaxBatchSize { get; set; }
-
         public int MaxDocsPerBatch { get; set; }
     }        
 }

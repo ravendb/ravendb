@@ -68,12 +68,83 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    Database.SubscriptionStorage.WriteRunningSubscriptions(writer, context, start, take);
+                    Database.SubscriptionStorage.GetRunningSusbscriptions(writer, context, start, take);
                 }
             }
 
             return Task.CompletedTask;
         }
+
+        [RavenAction("/databases/*/subscriptions/running/history", "GET", "/databases/{databaseName:string}/subscriptions/running/history?id={subscriptionId:long}")]
+        public Task GetRunningSubscriptionHistory()
+        {
+            var ids = HttpContext.Request.Query["id"];
+            if (ids.Count == 0)
+                throw new ArgumentException("The 'id' query string parameter is mandatory");
+
+            long id;
+            if (long.TryParse(ids[0], out id) == false)
+                throw new ArgumentException("The 'id' query string parameter must be a valid long");
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                HttpContext.Response.StatusCode = 200;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    Database.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(writer, context, id);
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+
+        [RavenAction("/databases/*/subscriptions/running/count", "GET", "/databases/{databaseName:string}/subscriptions/running/count")]
+        public Task GetRunningSubscriptionsCount()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                HttpContext.Response.StatusCode = 200;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var runningSubscriptionsCount = Database.SubscriptionStorage.GetRunningCount();
+                    context.Write(writer, new DynamicJsonValue()
+                    {
+                        ["RunningSubscriptionCount"] = runningSubscriptionsCount
+                    });
+                    writer.Flush();
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/subscriptions/count", "GET", "/databases/{databaseName:string}/subscriptions/count")]
+        public Task GetSubscriptionsCount()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                HttpContext.Response.StatusCode = 200;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var runningSubscriptionsCount = Database.SubscriptionStorage.GetAllSubscriptionsCount();
+                    context.Write(writer, new DynamicJsonValue()
+                    {
+                        ["TotalSubscriptionsCount"] = runningSubscriptionsCount
+                    });
+                    writer.Flush();
+                }
+            }
+            return Task.CompletedTask;
+        }
+
 
         [RavenAction("/databases/*/subscriptions/drop", "POST",
             "/databases/{databaseName:string}/subscriptions/drop?id={subscriptionId:long}")]
@@ -86,7 +157,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions?start={start:int}&pageSize={pageSize:int}")]
-        public Task Get()
+        public Task GetAllSubscriptions()
         {
             var start = GetStart();
             var take = GetPageSize(Database.Configuration.Core.MaxPageSize);
@@ -98,10 +169,12 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    Database.SubscriptionStorage.WriteSubscriptionTableValues(writer, context, start, take);
+                    Database.SubscriptionStorage.GetAllSubscriptions(writer, context, start, take);
                 }
             }
             return Task.CompletedTask;
         }
+
+       
     }
 }

@@ -267,7 +267,7 @@ namespace Raven.Server
                                 BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                                SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+								SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient.Client.RemoteEndPoint, multiDocumentParser, ServerStore.MetricsScheduler);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
                                 documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(context, stream, tcpClient, multiDocumentParser);
