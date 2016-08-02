@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public abstract class MapReduceIndexBase<T> : Index<T> where T : IndexDefinitionBase
     {
         internal const string MapEntriesTreeName = "MapEntries";
+        internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
 
         internal readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
 
@@ -26,11 +27,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
             _mapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
+            _mapReduceWorkContext.ResultsStoreTypes = _mapReduceWorkContext.MapEntries.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
             return _mapReduceWorkContext;
         }
 
-        public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(tombstone.Key, sizeof(ulong));
 
@@ -39,12 +41,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             foreach (var mapEntry in GetMapEntries(documentMapEntries))
             {
-                var state = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
-
-                var entryId = mapEntry.Id;
-                state.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)&entryId, sizeof(long)));
-
-                _mapReduceWorkContext.EntryDeleted(mapEntry.Id);
+                var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
+                
+                store.Delete(mapEntry.Id);
             }
 
             _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.Key, sizeof(ulong));
@@ -59,9 +58,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             // map entries structure
             // MapEntries tree has the following entries
-            // -> { document key, fixed size tree }
-            // each fixed size tree stored records like 
-            // -> { identifier of a map result, hash of a reduce key for the map result }
+            // 1) { document key, fixed size tree }
+            // each fixed size tree stores records like 
+            //   |----> { identifier of a map result, hash of a reduce key for the map result }
+            // 2) entry to keep track of the identifier of last stored entry { #LastMapResultId, long_value }
+            // 3) { ResultsStoreTypes, fixed size tree } where the fixed size tree stores records like
+            //   |----> { reduce key hash, MapResultsStorageType enum } 
 
             return tx.CreateTree(MapEntriesTreeName);
         }
@@ -74,6 +76,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             if (documentMapEntries.NumberOfEntries > 0)
             {
+                // update operation, let's retrieve ids of existing entries to try to reuse them 
+
                 existingIdsPerReduceKey = new Dictionary<ulong, Queue<long>>();
 
                 var mapEntries = GetMapEntries(documentMapEntries);
@@ -97,6 +101,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 long id;
 
+                bool isUpdate = false;
+
                 Queue<long> availableIds;
                 if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.TryGetValue(reduceKeyHash, out availableIds))
                 {
@@ -105,6 +111,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     if (availableIds.Count == 0)
                         existingIdsPerReduceKey.Remove(reduceKeyHash);
+
+                    isUpdate = true;
                 }
                 else
                 {
@@ -113,9 +121,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     documentMapEntries.Add(id, Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong)));
                 }
 
-                var pos = mapResult.State.Tree.DirectAdd(Slice.External(indexContext.Allocator, (byte*)&id, sizeof(long)), mapResult.Data.Size);
-
-                mapResult.Data.CopyTo(pos);
+                GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data, isUpdate);
             }
 
             if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.Count > 0)
@@ -127,17 +133,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     var reduceKeyHash = stillExisting.Key;
                     var ids = stillExisting.Value;
 
-                    var oldState = GetReduceKeyState(reduceKeyHash, indexContext, create: false);
+                    var oldState = GetResultsStore(reduceKeyHash, indexContext, create: false);
 
                     while (ids.Count > 0)
                     {
                         var idToDelete = ids.Dequeue();
 
-                        oldState.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)&idToDelete, sizeof(long)));
+                        oldState.Delete(idToDelete);
 
                         documentMapEntries.Delete(idToDelete);
-
-                        _mapReduceWorkContext.EntryDeleted(idToDelete);
                     }
                 }
             }
@@ -167,22 +171,26 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return entries;
         }
 
-        public ReduceKeyState GetReduceKeyState(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)
+        public unsafe MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)
         {
-            ReduceKeyState state;
-            if (_mapReduceWorkContext.StateByReduceKeyHash.TryGetValue(reduceKeyHash, out state) == false)
+            MapReduceResultsStore store;
+            if (_mapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
             {
-                //TODO: Need better way to handle tree names
-                Tree tree;
+                var read = _mapReduceWorkContext.ResultsStoreTypes.Read((long) reduceKeyHash);
 
-                if (create)
-                    tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + reduceKeyHash);
+                MapResultsStorageType type;
+
+                if (read.HasValue)
+                    type = (MapResultsStorageType)(*read.CreateReader().Base);
                 else
-                    tree = indexContext.Transaction.InnerTransaction.ReadTree("TODO_" + reduceKeyHash);
+                    type = MapResultsStorageType.Nested;
 
-                _mapReduceWorkContext.StateByReduceKeyHash[reduceKeyHash] = state = new ReduceKeyState(tree);
+                store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, _mapReduceWorkContext, create);
+
+                _mapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
             }
-            return state;
+
+            return store;
         }
 
         protected override void LoadValues()

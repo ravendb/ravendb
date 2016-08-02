@@ -110,26 +110,21 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
 
-                    var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
+                    var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
-                    var state = new ReduceKeyState(tree);
-
-                    unsafe
+                    for (int i = 0; i < numberOfUsers; i++)
                     {
-                        for (int i = 0; i < numberOfUsers; i++)
+                        using (var mappedResult = indexContext.ReadObject(new DynamicJsonValue
                         {
-                            using (var mappedResult = indexContext.ReadObject(new DynamicJsonValue
-                            {
-                                ["Count"] = 1,
-                                ["Location"] = locations[i%locations.Length]
-                            }, $"users/{i}"))
-                            {
-                                mappedResult.CopyTo(tree.DirectAdd(i.ToString(), mappedResult.Size));
-                            }
+                            ["Count"] = 1,
+                            ["Location"] = locations[i%locations.Length]
+                        }, $"users/{i}"))
+                        {
+                            store.Add(i, mappedResult, false);
                         }
                     }
 
-                    mapReduceContext.StateByReduceKeyHash.Add(hashOfReduceKey, state);
+                    mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
@@ -171,26 +166,21 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
 
-                    var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
+                    var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
-                    var state = new ReduceKeyState(tree);
-
-                    unsafe
+                    for (int i = 0; i < locations.Length; i++)
                     {
-                        for (int i = 0; i < locations.Length; i++)
+                        using (var mappedResult = indexContext.ReadObject(new DynamicJsonValue
                         {
-                            using (var mappedResult = indexContext.ReadObject(new DynamicJsonValue
-                            {
-                                ["Count"] = 2, // increased by 1
-                                ["Location"] = locations[i % locations.Length]
-                            }, $"users/{i}"))
-                            {
-                                mappedResult.CopyTo(tree.DirectAdd(i.ToString(), mappedResult.Size));
-                            }
+                            ["Count"] = 2, // increased by 1
+                            ["Location"] = locations[i % locations.Length]
+                        }, $"users/{i}"))
+                        {
+                            store.Add(i, mappedResult, true);
                         }
                     }
 
-                    mapReduceContext.StateByReduceKeyHash.Add(hashOfReduceKey, state);
+                    mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
@@ -230,16 +220,14 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
 
-                    var tree = tx.InnerTransaction.CreateTree(hashOfReduceKey.ToString());
-
-                    var state = new ReduceKeyState(tree);
+                    var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
                     for (int i = 0; i < locations.Length; i++)
                     {
-                        tree.Delete(i.ToString());
+                        store.Delete(i);
                     }
 
-                    mapReduceContext.StateByReduceKeyHash.Add(hashOfReduceKey, state);
+                    mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));

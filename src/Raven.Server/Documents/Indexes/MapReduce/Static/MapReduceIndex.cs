@@ -198,7 +198,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     Current.Data = _parent._indexContext.ReadObject(mapResult, "map-result");
                     Current.ReduceKeyHash = reduceHashKey;
-                    Current.State = _parent._index.GetReduceKeyState(reduceHashKey, _parent._indexContext, create: true);
 
                     return true;
                 }
