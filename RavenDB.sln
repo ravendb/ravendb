@@ -136,6 +136,8 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Raven.Client.UniqueConstrai
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Raven.Tests.Core", "Raven.Tests.Core\Raven.Tests.Core.xproj", "{D0139CD0-2720-4B4E-A76C-A83EB1BA954B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tryouts", "Raven.Tryouts\Raven.Tryouts.csproj", "{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -454,6 +456,12 @@ Global
 		{D0139CD0-2720-4B4E-A76C-A83EB1BA954B}.Profiling|Any CPU.Build.0 = Debug|Any CPU
 		{D0139CD0-2720-4B4E-A76C-A83EB1BA954B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0139CD0-2720-4B4E-A76C-A83EB1BA954B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Profiling|Any CPU.ActiveCfg = Profiling|Any CPU
+		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Profiling|Any CPU.Build.0 = Profiling|Any CPU
+		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -504,6 +512,7 @@ Global
 		{43EBD466-4A7B-4CF3-85CD-72FECEE22986} = {DACEBB9C-8BAC-4A0B-B9AD-A2BFC7C0C5DD}
 		{674195AE-D3EB-47C2-A2D7-F0096414507D} = {DACEBB9C-8BAC-4A0B-B9AD-A2BFC7C0C5DD}
 		{D0139CD0-2720-4B4E-A76C-A83EB1BA954B} = {DACEBB9C-8BAC-4A0B-B9AD-A2BFC7C0C5DD}
+		{68BC3141-C2EF-487A-B4A6-A0AD7E754FB1} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57
