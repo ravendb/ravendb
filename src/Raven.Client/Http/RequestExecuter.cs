@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -18,7 +17,12 @@ namespace Raven.Client.Http
             public TimeSpan Duration;
         }
 
-        public ThreadLocal<AggresiveCacheOptions> AggressiveCaching = new ThreadLocal<AggresiveCacheOptions>();
+        private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
+
+        public readonly ThreadLocal<AggresiveCacheOptions> AggressiveCaching = new ThreadLocal<AggresiveCacheOptions>();
+
+        public readonly ThreadLocal<string> ApiKey = new ThreadLocal<string>();
+        public readonly ThreadLocal<string> ApiKeyToken = new ThreadLocal<string>();
 
         private readonly HttpCache _cache = new HttpCache();
 
@@ -84,7 +88,27 @@ namespace Raven.Client.Http
                     // TODO: 500 <-- raise error
                     if (response.IsSuccessStatusCode == false)
                     {
-                        throw new ErrorResponseException(response, "TODO");
+                        switch (response.StatusCode)
+                        {
+                            case HttpStatusCode.NotFound:
+                                // No need to set command result, as it is null
+                                return;
+                            case HttpStatusCode.Unauthorized:
+                            case HttpStatusCode.PreconditionFailed:
+                                if (++command.AuthenticationRetries > 1)
+                                {
+                                    throw new UnauthorizedAccessException("Got unauthorized response exception after trying to authenticate using ApiKey. Please use a valid ApiKey which is enabled on .");
+                                }
+                                await HandleUnauthorized(response, command.ServerUrl, context).ConfigureAwait(false);
+                                await ExecuteCommandAsync(command, context);
+                                return;
+                            case HttpStatusCode.Forbidden:
+                                break;
+                            case HttpStatusCode.InternalServerError:
+                                throw new ErrorResponseException(response, "TODO");
+                            default:
+                                throw new InvalidOperationException("Doesn't know how to handle error: TODO");
+                        }
                     }
 
                     using (var stream = await response.Content.ReadAsStreamAsync())
@@ -104,6 +128,27 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private async Task HandleUnauthorized(HttpResponseMessage response, string serverUrl, JsonOperationContext context)
+        {
+            var apiKey = ApiKey.Value;
+            if (string.IsNullOrEmpty(apiKey))
+                throw new UnauthorizedAccessException("Got unauthorized response exception. Please specify an API Key.");
+
+            var oauthSource = response.Headers.GetFirstValue("OAuth-Source");
+
+#if DEBUG && FIDDLER
+                // Make sure to avoid a cross DNS security issue, when running with Fiddler
+                if (string.IsNullOrEmpty(oauthSource) == false)
+                    oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
+#endif
+
+            if (string.IsNullOrEmpty(oauthSource))
+                oauthSource = serverUrl + "/OAuth/API-Key";
+
+            var currentToken = await _authenticator.AuthenticateAsync(oauthSource, apiKey, context).ConfigureAwait(false);
+            _httpClient.DefaultRequestHeaders.Add("Raven-Authorization", currentToken);
         }
 
         public void Dispose()

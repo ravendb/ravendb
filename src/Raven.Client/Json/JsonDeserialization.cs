@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
+using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
@@ -12,6 +13,7 @@ namespace Raven.Client.Json
         private static readonly Type[] EmptyTypes = new Type[0];
 
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
+        public static readonly Func<BlittableJsonReaderObject, AuthenticatorChallenge> AuthenticatorChallenge = GenerateJsonDeserializationRoutine<AuthenticatorChallenge>();
 
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderMessage> TcpConnectionHeaderMessage = GenerateJsonDeserializationRoutine<TcpConnectionHeaderMessage>();
 

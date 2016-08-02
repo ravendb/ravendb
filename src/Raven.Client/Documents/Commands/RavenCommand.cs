@@ -23,6 +23,7 @@ namespace Raven.Client.Documents.Commands
         public JsonOperationContext Context;
 
         public TResult Result;
+        public int AuthenticationRetries;
 
         public abstract HttpRequestMessage CreateRequest();
         public abstract void SetResponse(BlittableJsonReaderObject response);
