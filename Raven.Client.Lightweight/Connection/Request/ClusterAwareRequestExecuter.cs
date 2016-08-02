@@ -387,18 +387,16 @@ namespace Raven.Client.Connection.Request
                             .Select(x => x.Task)
                             .ToArray();
 
-                        Task.WaitAll(tasks);
+                        Task.WaitAll(tasks, GetReplicationDestinationsTimeout);
 
                         replicationDocuments.ForEach(x =>
                         {
-                            if (x.Task.Result == null)
-                                return;
-
-                            FailureCounters.ResetFailureCount(x.Node.Url);
+                            if (x.Task.IsCompleted && x.Task.Result != null)
+                                FailureCounters.ResetFailureCount(x.Node.Url);
                         });
 
                         var newestTopology = replicationDocuments
-                            .Where(x => x.Task.Result != null)
+                            .Where(x => x.Task.IsCompleted && x.Task.Result != null)
                             .OrderByDescending(x => x.Task.Result.Term)
                             .ThenByDescending(x =>
                             {
@@ -414,10 +412,12 @@ namespace Raven.Client.Connection.Request
                         if (newestTopology == null && triedFailoverServers)
                         {
                             LeaderNode = primaryNode;
-                            Nodes = new List<OperationMetadata>
-                            {
-                                primaryNode
-                            };
+                            //yes this happens
+                            if(Nodes.Count == 0)
+                                Nodes = new List<OperationMetadata>
+                                {
+                                    primaryNode
+                                };
                             return;
                         }
 
