@@ -513,10 +513,13 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 }
                 catch (Exception e)
                 {
-                    logger.ErrorException(
-                        $"Error occured while executing RavenThreadPool task ; ThreadPool name: {Name} ; " +
-                        $"Task queued at: {threadTask.QueuedAt} ; Task Description: {threadTask.Description}", e);
-
+                    if (logger.IsDebugEnabled)
+                    {
+                        logger.DebugException(
+                            $"Error occured while executing RavenThreadPool task ; ThreadPool name: {Name} ; " +
+                            $"Task queued at: {threadTask.QueuedAt} ; Task Description: {threadTask.Description}", e);
+                    }
+                    
                     throw;
                 }
                 finally
@@ -658,9 +661,13 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             }
             catch (Exception e)
             {
-                logger.ErrorException(
-                    $"Error occured while executing RavenThreadPool task ; ThreadPool name: {Name} ; " +
-                    $"Task queued at: {threadTask.QueuedAt} ; Task Description: {threadTask.Description}", e);
+                if (logger.IsDebugEnabled)
+                {
+                    logger.DebugException(
+                     "Error occured while executing RavenThreadPool task ; " +
+                     $"ThreadPool name: {Name} ; Task queued at: {threadTask.QueuedAt} ; " +
+                     $"Task Description: {threadTask.Description}", e);
+                }
 
                 throw;
             }

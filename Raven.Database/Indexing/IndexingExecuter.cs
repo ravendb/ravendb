@@ -316,8 +316,9 @@ namespace Raven.Database.Indexing
 
             public void PrefetchDocuments()
             {
-                /*prefetchDisposable  = new WeakReference<IDisposable>(
+                /*prefetchDisposable = new WeakReference<IDisposable>(
                     PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs));*/
+
                 prefetchDisposable =
                     PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs);
             }
@@ -326,16 +327,13 @@ namespace Raven.Database.Indexing
             {
                 if (Thread.VolatileRead(ref disposed) == 0)
                 {
-                    this.Dispose();
+                    Dispose();
                 }
             }
 
             public void Dispose()
-                    {
-                if (prefetchDisposable != null)
-                        {
-                    prefetchDisposable.Dispose();
-                }
+            {
+                prefetchDisposable?.Dispose();
                 Interlocked.Increment(ref disposed);
             }
         }
@@ -371,7 +369,7 @@ namespace Raven.Database.Indexing
             var indexingAutoTunerContext = ((IndexBatchSizeAutoTuner) autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(
                 groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument)),
                 groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce)));
-            indexesToWorkOn.ForEach(x => x.Index.CurrentNumberOfItemsToIndexInSingleBatch = autoTuner.NumberOfItemsToProcessInSingleBatch);
+
             using (indexingAutoTunerContext)
             {
                 var indexBatchOperations = new ConcurrentDictionary<IndexingBatchOperation, object>();
@@ -768,7 +766,7 @@ namespace Raven.Database.Indexing
                 if (performanceResult != null)
                     performanceResult.RunCompleted();
 
-                batchForIndex.Index.ResetOutOfMemoryErrors();
+                batchForIndex.Index.DecrementIndexingOutOfMemoryErrors();
             }
             catch (IndexDoesNotExistsException)
             {
@@ -783,35 +781,29 @@ namespace Raven.Database.Indexing
             }
             catch (Exception e)
             {
-                if (IsOperationCanceledException(e))
-                {
-                    wasOperationCanceled = true;
-                    throw;
-                }
-
-                var hasWriteConflict = false;
                 Exception conflictException;
                 if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
                 {
                     Log.Info($"Write conflict encountered for index {batchForIndex.Index.PublicName}, " +
                              $"probably when updating indexing stats. Will retry." +
                              $"Details: {conflictException.Message}");
-                    hasWriteConflict = true;
+                    return null;
                 }
 
-                var hasRavenOutOfMemory = false;
-                var ravenOutOfMemoryException = HandleIfOutOfMemory(e);
-                if (ravenOutOfMemoryException != null)
+                if (HandleIfOutOfMemory(e, new OutOfMemoryDetails
+                {
+                    Index = batchForIndex.Index,
+                    FailedItemsToProcessCount = batchForIndex.Batch.Ids.Count
+                }))
                 {
                     wasOperationCanceled = true;
-                    batchForIndex.Index.HandleOutOfMemoryErrors(ravenOutOfMemoryException);
-                    hasRavenOutOfMemory = true;
+                    return null;
                 }
 
-                if (hasWriteConflict || hasRavenOutOfMemory)
+                if (IsOperationCanceledException(e))
                 {
-                    //write conflict is expected and raven out of memory is handled in HandleOutOfMemoryErrors
-                    return null;
+                    wasOperationCanceled = true;
+                    throw;
                 }
 
                 Log.WarnException($"Failed to index documents for index: {batchForIndex.Index.PublicName}", e);
@@ -858,7 +850,7 @@ namespace Raven.Database.Indexing
                             {
                                 if (TransactionalStorageHelper.IsOutOfMemoryException(e))
                                 {
-                                    batchForIndex.Index.HandleOutOfMemoryErrors(e);
+                                    batchForIndex.Index.AddOutOfMemoryDatabaseAlert(e);
                                     //if it's an esent/voron OOME we can keep trying
                                     keepTrying = true;
                                 }
@@ -1078,7 +1070,7 @@ namespace Raven.Database.Indexing
                     {
                         if (TransactionalStorageHelper.IsOutOfMemoryException(e))
                         {
-                            index.HandleOutOfMemoryErrors(e);
+                            index.AddOutOfMemoryDatabaseAlert(e);
 
                             //we can keep trying if it's an esent/voron OOME
                             //if we fail to save the last indexed (after all the retries),
@@ -1109,7 +1101,6 @@ namespace Raven.Database.Indexing
 
             return results.Where(x => x != null);
         }
-
 
         protected override bool IsValidIndex(IndexStats indexesStat)
         {

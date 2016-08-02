@@ -43,6 +43,7 @@ using Raven.Json.Linq;
 using Constants = Raven.Abstractions.Data.Constants;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
+using Enum = System.Enum;
 using Field = Lucene.Net.Documents.Field;
 using Version = Lucene.Net.Util.Version;
 
@@ -59,8 +60,9 @@ namespace Raven.Database.Indexing
         private const long WriteErrorsLimit = 10;
         private long writeErrors;
 
-        private const long OutOfMemoryErrorsLimit = 25;
-        private long outOfMemoryErrors;
+        private const long OutOfMemoryErrorsLimit = 10;
+        private long indexingOutOfMemoryErrors;
+        private long reducingOutOfMemoryErrors;
 
         private readonly List<Document> currentlyIndexDocuments = new List<Document>();
         protected Directory directory;
@@ -140,7 +142,6 @@ namespace Raven.Database.Indexing
 
             MemoryStatistics.RegisterLowMemoryHandler(this);
         }
-        public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
         [ImportMany]
         public OrderedPartCollection<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
@@ -2013,30 +2014,59 @@ namespace Raven.Database.Indexing
             return false;
         }
 
-        public void HandleOutOfMemoryErrors(Exception e)
+        public void TryDisable(Exception e, long outOfMemoryErrorCount, int failedToProcessCount)
         {
             if (disposed)
                 return;
 
-            var errorCount = Interlocked.Increment(ref outOfMemoryErrors);
-            if (errorCount < OutOfMemoryErrorsLimit)
-            {
-                AddOutOfMemoryDatabaseAlert();
+            if (outOfMemoryErrorCount < OutOfMemoryErrorsLimit)
                 return;
-            }
 
             if ((Priority & IndexingPriority.Error) == IndexingPriority.Error ||
                 (Priority & IndexingPriority.Disabled) == IndexingPriority.Disabled)
                 return;
 
-            var errorMessage = $"Index '{PublicName}' got {errorCount} times of out of memory exception. The index priority was set to disabled.";
             var title = $"Index '{PublicName}' marked as disabled due to out of memory exception";
+            var errorMessage = $"Index '{PublicName}' got out of memory exception " +
+                               $"(failed to process {failedToProcessCount} entries). " +
+                               $"The index priority was set to disabled.";
 
             AddIndexError(e, errorMessage, title, IndexingPriority.Disabled, IndexChangeTypes.IndexDemotedToDisabled);
         }
 
-        private void AddOutOfMemoryDatabaseAlert()
+        public long IncrementOutOfMemoryErrors(bool isReducing)
         {
+            if (isReducing)
+            {
+                return Interlocked.Increment(ref reducingOutOfMemoryErrors);
+            }
+
+            return Interlocked.Increment(ref indexingOutOfMemoryErrors);
+        }
+
+        public void DecrementIndexingOutOfMemoryErrors()
+        {
+            if (Interlocked.Read(ref indexingOutOfMemoryErrors) == 0)
+                return;
+
+            if (Interlocked.Decrement(ref indexingOutOfMemoryErrors) < 0)
+                Interlocked.Exchange(ref indexingOutOfMemoryErrors, 0);
+        }
+
+        public void DecrementReducingOutOfMemoryErrors()
+        {
+            if (Interlocked.Read(ref reducingOutOfMemoryErrors) == 0)
+                return;
+
+            if (Interlocked.Decrement(ref reducingOutOfMemoryErrors) < 0)
+                Interlocked.Exchange(ref reducingOutOfMemoryErrors, 0);
+        }
+
+        public void AddOutOfMemoryDatabaseAlert(Exception e)
+        {
+            if (disposed)
+                return;
+
             string configurationKey = null;
             if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.VoronTypeName, StringComparison.OrdinalIgnoreCase))
             {
@@ -2054,16 +2084,11 @@ namespace Raven.Database.Indexing
             {
                 AlertLevel = AlertLevel.Warning,
                 CreatedAt = SystemTime.UtcNow,
-                Title = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception",
+                Title = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception for index '{PublicName}', id: {IndexId}",
                 UniqueKey = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception",
                 Message = $"Out of memory exception occured in storage during indexing process for index '{PublicName}'. " +
-                          $"Will try to reduce batch size. Try increasing '{configurationKey}' value in configuration."
+                          $"Will try to reduce batch size. Try increasing '{configurationKey}' value in configuration. Error: {e.Message}"
             });
-        }
-
-        public void ResetOutOfMemoryErrors()
-        {
-            Interlocked.Exchange(ref outOfMemoryErrors, 0);
         }
 
         public void HandleWriteError(Exception e)

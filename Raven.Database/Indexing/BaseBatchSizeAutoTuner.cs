@@ -320,14 +320,14 @@ namespace Raven.Database.Indexing
             {
                 var prevNum = newNumberOfItemsToProcess;
                 newNumberOfItemsToProcess /= 4;
-                var reason = string.Format("Using too much memory, NumberOfItemsToProcess was decreased from {0} to {1}", prevNum, newNumberOfItemsToProcess);
+                var reason = $"Using too much memory, NumberOfItemsToProcess was decreased from {prevNum} to {newNumberOfItemsToProcess}";
                 context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
             }
             else
             {
                 var preNum = newNumberOfItemsToProcess;
                 newNumberOfItemsToProcess /= 2; // we hit OOME so we should rapidly decrease batch size even when process is not using too much memory
-                var reason = string.Format("we hit OOME so we should decrease batch size even when process is not using too much memory. NumberOfItemsToProcess was decreased from {0} to {1}", preNum, newNumberOfItemsToProcess);
+                var reason = $"we hit OOME so we should decrease batch size even when process is not using too much memory. NumberOfItemsToProcess was decreased from {preNum} to {newNumberOfItemsToProcess}";
                 context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
             }
 
@@ -343,7 +343,7 @@ namespace Raven.Database.Indexing
         }
 
         // The following methods and properties are wrappers around members of the context which are different for the different indexes
-        protected abstract int InitialNumberOfItems { get; }
+        public abstract int InitialNumberOfItems { get; }
         protected abstract int MaxNumberOfItems { get; }
         protected abstract int CurrentNumberOfItems { get; set; }
         protected abstract int LastAmountOfItemsToRemember { get; set; }

@@ -428,7 +428,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
             catch (Exception e)
             {
                 if (errorInUserAction == false)
-                    log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                    log.ErrorException("Failed to execute transaction. Most likely something is really wrong here.", e);
+
                 throw;
             }
             finally

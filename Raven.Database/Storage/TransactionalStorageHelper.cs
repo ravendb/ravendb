@@ -72,7 +72,7 @@ namespace Raven.Database.Storage
             return IsVoronOutOfMemoryException(exception);
         }
 
-        private static bool IsVoronOutOfMemoryException(Exception exception)
+        public static bool IsVoronOutOfMemoryException(Exception exception)
         {
             return exception is ScratchBufferSizeLimitException;
         }

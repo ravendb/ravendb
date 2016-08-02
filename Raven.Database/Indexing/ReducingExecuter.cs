@@ -41,7 +41,7 @@ namespace Raven.Database.Indexing
 
             transactionalStorage.Batch(actions =>
             {
-                var mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexId, 
+                var mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexId,
                                                                     context.CurrentNumberOfItemsToReduceInSingleBatch, 
                                                                     context.NumberOfItemsToExecuteReduceInSingleStep, token);
 
@@ -67,7 +67,7 @@ namespace Raven.Database.Indexing
             {
                 if (singleStepReduceKeys.Count > 0)
                 {
-                    if ( Log.IsDebugEnabled )
+                    if (Log.IsDebugEnabled)
                         Log.Debug("SingleStep reduce for keys: {0}", string.Join(",", singleStepReduceKeys));
                     
                     var singleStepStats = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete, token);
@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
 
                 if (multiStepsReduceKeys.Count > 0)
                 {
-                    if ( Log.IsDebugEnabled )
+                    if (Log.IsDebugEnabled)
                         Log.Debug("MultiStep reduce for keys: {0}", string.Join(",", multiStepsReduceKeys));
 
                     var multiStepStats = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete, token);
@@ -85,21 +85,42 @@ namespace Raven.Database.Indexing
                     performanceStats.Add(multiStepStats);
                 }
             }
-            catch (OperationCanceledException)
+            catch (IndexDoesNotExistsException)
             {
+                //race condition -> index was deleted
+                //we can ignore this
                 operationCanceled = true;
             }
-            catch (AggregateException e)
+            catch (Exception e)
             {
-                var anyOperationsCanceled = e
-                    .InnerExceptions
-                    .OfType<OperationCanceledException>()
-                    .Any();
+                //if we got a OOME we need to decrease the batch size
+                if (HandleIfOutOfMemory(e, new OutOfMemoryDetails
+                {
+                    Index = indexToWorkOn.Index,
+                    FailedItemsToProcessCount = singleStepReduceKeys.Count + multiStepsReduceKeys.Count,
+                    IsReducing = true
+                }))
+                {
+                    operationCanceled = true;
+                    return null;
+                }
 
-                if (anyOperationsCanceled == false) 
-                    throw;
+                Exception conflictException;
+                if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
+                {
+                    Log.Info($"Write conflict encountered for index '{indexToWorkOn.Index.PublicName}' during reduce." +
+                             $"Will retry. Details: {conflictException.Message}");
+                    operationCanceled = true;
+                    return null;
+                }
 
-                operationCanceled = true;
+                if (IsOperationCanceledException(e))
+                {
+                    operationCanceled = true;
+                    return null;
+                }
+                    
+                context.AddError(indexToWorkOn.IndexId, indexToWorkOn.Index.PublicName, null, e);
             }
             finally
             {
@@ -653,7 +674,6 @@ namespace Raven.Database.Indexing
         {
             ReducingBatchInfo reducingBatchInfo = null;
 
-            long executedPartially = 0;
             try
             {
                 var currentlyRunning = currentlyProcessedIndexes.Keys;
@@ -676,49 +696,18 @@ namespace Raven.Database.Indexing
                         var performanceStats = HandleReduceForIndex(indexToWorkOn, context.CancellationToken);
                         if (performanceStats != null)
                             reducingBatchInfo.PerformanceStats.TryAdd(indexToWorkOn.Index.PublicName, performanceStats);
-                    }
-                    catch (IndexDoesNotExistsException)
-                    {
-                        //race condition -> index was deleted
-                        //we can ignore this
-                    }
-                    catch (Exception e)
-                    {
-                        //if we got a OOME we need to decrease the batch size
-                        var ravenOutOfMemoryException = HandleIfOutOfMemory(e);
-                        if (ravenOutOfMemoryException != null)
-                        {
-                            indexToWorkOn.Index.HandleOutOfMemoryErrors(ravenOutOfMemoryException);
-                            return;
-                        }
 
-                        Exception conflictException;
-                        if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
-                        {
-                            Log.Info($"Write conflict encountered for index '{indexToWorkOn.Index.PublicName}' during reduce." +
-                                     $"Will retry. Details: {conflictException.Message}");
-                            return;
-                        }
+                        indexToWorkOn.Index.DecrementReducingOutOfMemoryErrors();
 
-                        if (IsOperationCanceledException(e))
-                            throw;
-
-                        context.AddError(indexToWorkOn.IndexId, indexToWorkOn.Index.PublicName, null, e);
+                        context.NotifyAboutWork();
                     }
                     finally
                     {
-                        if (Interlocked.Read(ref executedPartially) == 1)
-                        {
-                            context.NotifyAboutWork();
-                        }
-
                         Index _;
                         currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
                     }
                 }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, 
                     description: $"Executing indexes reduction on {indexesToWorkOn.Count} indexes");
-
-                Interlocked.Increment(ref executedPartially);
             }
             finally
             {

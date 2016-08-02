@@ -346,10 +346,10 @@ namespace Raven.Storage.Voron
             try
             {
                 snapshotRef.Value = tableStorage.CreateSnapshot();
-                writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false }; // prevent from disposing after write to allow read from batch OnStorageCommit
+                writeBatchRef.Value = new WriteBatch {DisposeAfterWrite = false}; // prevent from disposing after write to allow read from batch OnStorageCommit
                 var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-                                                                        documentCacher, writeBatchRef, snapshotRef,
-                                                                        tableStorage, this, bufferPool);
+                    documentCacher, writeBatchRef, snapshotRef,
+                    tableStorage, this, bufferPool);
 
                 if (disableBatchNesting.Value == null)
                     current.Value = storageActionsAccessor;
@@ -374,8 +374,21 @@ namespace Raven.Storage.Voron
             }
             catch (Exception e)
             {
+                var exception = e;
+                var ae = e as AggregateException;
+                if (ae != null)
+                    exception = ae.ExtractSingleInnerException();
+
+                Exception _;
+                if (TransactionalStorageHelper.IsVoronOutOfMemoryException(exception) ||
+                    TransactionalStorageHelper.IsWriteConflict(e, out _))
+                {
+                    throw;
+                }
+
                 if (errorInUserAction == false)
-                    Log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                    Log.ErrorException("Failed to execute transaction. Most likely something is really wrong here.", e);
+
                 throw;
             }
             finally
