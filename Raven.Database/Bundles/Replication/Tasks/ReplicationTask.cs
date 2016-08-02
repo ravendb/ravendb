@@ -1064,6 +1064,7 @@ namespace Raven.Bundles.Replication.Tasks
 
         public async Task WaitForReplicationAsync(Etag etag, TimeSpan timeout, int replicas, bool throwOnTimeout)
         {
+            
             if (ReplicatedPast(etag) >= replicas)
                 return;
 
@@ -1094,7 +1095,7 @@ namespace Raven.Bundles.Replication.Tasks
             int replicated = 0;
             foreach (var dest in destinationStats.Values)
             {
-                if (dest.LastReplicatedEtag.CompareTo(etag) >= 0)
+                if (dest.LastReplicatedEtag?.CompareTo(etag) >= 0)
                 {
                     replicated++;
                 }

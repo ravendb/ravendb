@@ -2684,6 +2684,26 @@ namespace Raven.Client.Connection.Async
             return new AsyncServerClient(Url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false);
         }
 
+        internal async Task WithWriteAssurance(OperationMetadata operationMetadata,
+            IRequestTimeMetric requestTimeMetric, Etag etag, TimeSpan? timeout = null, int replicas = 1)
+        {
+            var sb = new StringBuilder(operationMetadata.Url + "/replication/writeAssurance?");
+            sb.Append("etag=").Append(etag).Append("&");
+            sb.Append("replicas=").Append(replicas).Append("&");
+            if (timeout == null)
+            {
+                timeout = TimeSpan.FromSeconds(60);
+            }
+            sb.Append("timeout=").Append(timeout);
+
+
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric);
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
+            {
+                await request.ReadResponseJsonAsync().ConfigureAwait(false);
+            }   
+        }
+
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, TimeSpan? timeout = null)
         {
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric, timeout);
