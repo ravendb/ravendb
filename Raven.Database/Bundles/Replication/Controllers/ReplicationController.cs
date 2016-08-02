@@ -547,6 +547,33 @@ namespace Raven.Database.Bundles.Replication.Controllers
         }
 
         [HttpGet]
+        [RavenRoute("replication/writeAssurance")]
+        [RavenRoute("databases/{databaseName}/replication/writeAssurance")]
+        public async Task<HttpResponseMessage> ReplicationWriteAssurance(string etag, int replicas, TimeSpan timeout)
+        {
+            if (etag == null)
+            {
+                var message = "Was asked to get write assurance With null etag";
+                if (Log.IsDebugEnabled)
+                    Log.Debug(message);
+
+                return GetMessageWithObject(new
+                {
+                    Error = message
+                }, HttpStatusCode.ExpectationFailed);
+            }
+            ReplicationStrategy[] destinations = ReplicationTask.GetReplicationDestinations();
+            if (destinations != null)
+            {
+                replicas = Math.Min(destinations.Length, replicas);
+            }
+            Etag innerEtag = Etag.Parse(etag);
+            await ReplicationTask.WaitForReplicationAsync(innerEtag, timeout, replicas, true).ConfigureAwait(false);
+
+            return GetEmptyMessage();
+        }
+
+        [HttpGet]
         [RavenRoute("replication/lastEtag")]
         [RavenRoute("databases/{databaseName}/replication/lastEtag")]
         public HttpResponseMessage ReplicationLastEtagGet()
