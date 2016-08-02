@@ -37,13 +37,10 @@ class statistics extends viewModelBase {
 
     fetchStats(): JQueryPromise<databaseStatisticsDto> {
         var db = this.activeDatabase();
-        if (db) {
-            return new getDatabaseStatsCommand(db)
-                .execute()
-                .done((result: databaseStatisticsDto) => this.processStatsResults(result));
-        }
+        return new getDatabaseStatsCommand(db)
+            .execute()
+            .done((result: databaseStatisticsDto) => this.processStatsResults(result));
 
-        return null;
     }
 
     createNotifications(): Array<changeSubscription> {

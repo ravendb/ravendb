@@ -45,7 +45,7 @@ function listFiles(path, extension) {
     return files;
 }
 
-var files = listFiles('js', '-test.js');
+var files = listFiles('js', '.spec.js');
 // console.log('found test files:', files);
 
 var text = '// auto generated unit tests lists based on file extension\n' +

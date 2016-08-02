@@ -5,9 +5,10 @@ require([], function() {
         logEnabled = !isPhantomJS;
 
     mocha.setup('bdd')
-        .globals(['jQuery*'])
-        // .enableTimeouts(false)
-        .checkLeaks();
+        .globals(['jQuery*', '__extends'])
+        .checkLeaks()
+        .slow(1500)
+        .timeout(5000);
 
     function run() {
         if (isPhantomJS) {
