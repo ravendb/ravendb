@@ -79,8 +79,11 @@ namespace Raven.Tests.Raft
                 throw new Exception("WaitFor failed");
         }
 
+        private Action<DocumentStore> defaultConfigureStore = store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
         public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true, bool fiddler = false)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var nodes = Enumerable.Range(0, numberOfNodes)
                 .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory, 
                 configureConfig: configuration =>
@@ -149,11 +152,18 @@ namespace Raven.Tests.Raft
 
         public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
             Assert.NotNull(leader);
 
             var nodes = Enumerable.Range(0, numberOfExtraNodes)
-                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
+                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory,
+                configureConfig: configuration =>
+                {
+                    configuration.Cluster.ElectionTimeout *= 10;
+                    configuration.Cluster.HeartbeatTimeout *= 10;
+                }))
                 .ToList();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
