@@ -38,6 +38,10 @@ namespace Raven.Client.Changes
 
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
 
+        private int isReconnecting = 0;
+        private const int Reconnecting = 1;
+        private const int Idle = 0;
+
         public RemoteChangesClientBase(
             string url,
             string apiKey,
@@ -80,7 +84,6 @@ namespace Raven.Client.Changes
             logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
         }
 
-
         public Task<TChangesApi> Task { get; private set; }
 
         public void WaitForAllPendingSubscriptions()
@@ -96,11 +99,7 @@ namespace Raven.Client.Changes
             if (disposed)
                 return;
 
-            if (clientSideHeartbeatTimer != null)
-            {
-                clientSideHeartbeatTimer.Dispose();
-                clientSideHeartbeatTimer = null;
-            }
+            DisposeHeartbeatTimer();
 
             var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
             {
@@ -160,23 +159,44 @@ namespace Raven.Client.Changes
 
             clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
 
-            await SubscribeOnServer();
+            await SubscribeOnServer().ConfigureAwait(false);
         }
 
         private void ClientSideHeartbeat(object _)
         {
-            TimeSpan elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
+            if (Connected == false)
+                return;
+
+            var elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
             if (elapsedTimeSinceHeartbeat.TotalSeconds < 45)
                 return;
 
-            if (clientSideHeartbeatTimer != null)
+            if (DisposeHeartbeatTimer() == false)
             {
-                clientSideHeartbeatTimer.Dispose();
-                clientSideHeartbeatTimer = null;
+                //timer already disposed means that we started a new reconnection process
+                return;
             }
 
             OnError(new TimeoutException("Over 45 seconds have passed since we got a server heartbeat, even though we should get one every 10 seconds or so.\r\n" +
                                          "This connection is now presumed dead, and will attempt reconnection"));
+        }
+
+        private bool DisposeHeartbeatTimer()
+        {
+            var timer = clientSideHeartbeatTimer;
+            if (timer == null)
+                return false;
+
+            try
+            {
+                timer.Dispose();
+                clientSideHeartbeatTimer = null;
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private Task lastSendTask;
@@ -235,12 +255,11 @@ namespace Raven.Client.Changes
         {
             if (disposed)
                 return new CompletedTask();
+
             disposed = true;
             onDispose();
 
-            if (clientSideHeartbeatTimer != null)
-                clientSideHeartbeatTimer.Dispose();
-            clientSideHeartbeatTimer = null;
+            DisposeHeartbeatTimer();
 
             return Send("disconnect", null).
                 ContinueWith(_ =>
@@ -252,41 +271,59 @@ namespace Raven.Client.Changes
                     }
                     catch (Exception e)
                     {
-                        logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
-
+                        logger.ErrorException("Got error from server connection after disconnect for " + url + " on id " + id, e);
                     }
                 });
         }
 
-
         public virtual void OnError(Exception error)
         {
-            logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
+            if (disposed)
+                return;
 
-            try
-            {
-                if (connection != null)
-                {
-                    connection.Dispose();
-                    connection = null;
-                }
-            }
-            catch (Exception e)
-            {
-                // ignore
-            }
+            logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
 
             RenewConnection();
         }
 
+        private void DisposeConnection()
+        {
+            var connectionLocal = connection;
+            if (connectionLocal == null)
+                return;
+
+            try
+            {
+                connectionLocal.Dispose();
+                connection = null;
+            }
+            catch (Exception e)
+            {
+                //ignore
+            }
+        }
+
         private void RenewConnection()
         {
+            if (disposed)
+                return;
+
+            if (Interlocked.CompareExchange(ref isReconnecting, Reconnecting, Idle) == Reconnecting)
+            {
+                //we already started the reconnection process
+                return;
+            }
+
+            DisposeConnection();
+
             Time.Delay(TimeSpan.FromSeconds(15))
                 .ContinueWith(_ => EstablishConnection())
                 .Unwrap()
                 .ObserveException()
                 .ContinueWith(task =>
                 {
+                    Interlocked.Exchange(ref isReconnecting, Idle);
+
                     if (task.IsFaulted == false)
                         return;
 
@@ -306,13 +343,12 @@ namespace Raven.Client.Changes
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
 
-            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
 
             switch (type)
             {
                 case "Disconnect":
-                    if (connection != null)
-                        connection.Dispose();
                     RenewConnection();
                     break;
                 case "Initialized":

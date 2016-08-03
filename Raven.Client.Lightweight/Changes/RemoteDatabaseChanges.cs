@@ -71,12 +71,12 @@ namespace Raven.Client.Changes
 
             foreach (var watchedCollection in watchedCollections)
             {
-                await Send("watch-collection", watchedCollection);
+                await Send("watch-collection", watchedCollection).ConfigureAwait(false);
             }
 
             foreach (var watchedType in watchedTypes)
             {
-                await Send("watch-type", watchedType);
+                await Send("watch-type", watchedType).ConfigureAwait(false);
             }
 
             foreach (var watchedIndex in watchedIndexes)
