@@ -31,7 +31,7 @@ namespace Raven.Client.Connection.Request
     {
         public TimeSpan WaitForLeaderTimeout { get; set; }= TimeSpan.FromSeconds(5);
 
-        public TimeSpan GetReplicationDestinationsTimeout { get; set; } = TimeSpan.FromSeconds(2);
+        public TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
         private readonly ManualResetEventSlim leaderNodeSelected = new ManualResetEventSlim();
 
@@ -106,7 +106,7 @@ namespace Raven.Client.Connection.Request
             LeaderNode = null;
             return UpdateReplicationInformationForCluster(serverClient, new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
             {
-                return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, null, timeout: GetReplicationDestinationsTimeout).ContinueWith(t =>
+                return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, null, timeout: ReplicationDestinationsTopologyTimeout).ContinueWith(t =>
                 {
                     if (t.IsFaulted || t.IsCanceled)
                         return null;
@@ -384,10 +384,10 @@ namespace Raven.Client.Connection.Request
                             .ToArray();
 
                         var tasks = replicationDocuments
-                            .Select(x => x.Task)
+                            .Select(x => (Task)x.Task)
                             .ToArray();
 
-                        Task.WaitAll(tasks, GetReplicationDestinationsTimeout);
+                        Task.WaitAll(tasks, ReplicationDestinationsTopologyTimeout);
 
                         replicationDocuments.ForEach(x =>
                         {
@@ -431,7 +431,8 @@ namespace Raven.Client.Connection.Request
 
                             if (newestTopology.Task.Result.ClientConfiguration != null)
                             {
-                                newestTopology.Task.Result.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
+                                if (newestTopology.Task.Result.ClientConfiguration.FailoverBehavior == null)
+                                    newestTopology.Task.Result.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
                                 serverClient.convention.UpdateFrom(newestTopology.Task.Result.ClientConfiguration);
                             }
 
