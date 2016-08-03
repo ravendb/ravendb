@@ -79,7 +79,7 @@ namespace Raven.Tests.Raft
                 throw new Exception("WaitFor failed");
         }
 
-        public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
+        public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true, bool fiddler = false)
         {
             var nodes = Enumerable.Range(0, numberOfNodes)
                 .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
@@ -133,7 +133,7 @@ namespace Raven.Tests.Raft
             }
 
             return nodes
-                .Select(node => NewRemoteDocumentStore(ravenDbServer: node, activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
+                .Select(node => NewRemoteDocumentStore(ravenDbServer: node, fiddler: fiddler,activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
                 .ToList();
         }
 
