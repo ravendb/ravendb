@@ -62,8 +62,8 @@ namespace Raven.Database.Linq
                         continue;
                     foreach (var instruction in methodInfo.GetInstructions())
                     {
-                        if (instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Call &&
-                            instruction.OpCode != OpCodes.Callvirt && instruction.OpCode != OpCodes.Newobj)
+                        if (instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Callvirt &&
+                            instruction.OpCode != OpCodes.Newobj)
                             continue;
 
                         var memberInfo = instruction.Operand as MemberInfo;
