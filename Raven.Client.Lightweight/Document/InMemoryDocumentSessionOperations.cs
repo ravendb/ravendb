@@ -999,7 +999,7 @@ more responsive application.
 
         public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (saveChangesOptions == null)
                 saveChangesOptions = new BatchOptions();
             saveChangesOptions.WaitForReplicas = true;
@@ -1010,7 +1010,7 @@ more responsive application.
 
         public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (saveChangesOptions == null)
                 saveChangesOptions = new BatchOptions();
             saveChangesOptions.WaitForIndexes = true;
