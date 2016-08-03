@@ -82,7 +82,12 @@ namespace Raven.Tests.Raft
         public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true, bool fiddler = false)
         {
             var nodes = Enumerable.Range(0, numberOfNodes)
-                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
+                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory, 
+                configureConfig: configuration =>
+                {
+                    configuration.Cluster.ElectionTimeout *= 10;
+                    configuration.Cluster.HeartbeatTimeout *= 10;
+                }))
                 .ToList();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -132,9 +137,14 @@ namespace Raven.Tests.Raft
                 ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
             }
 
-            return nodes
+            var documentStores = nodes
                 .Select(node => NewRemoteDocumentStore(ravenDbServer: node, fiddler: fiddler,activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
                 .ToList();
+            foreach (var documentStore in documentStores)
+            {
+                ((ClusterAwareRequestExecuter)((ServerClient)documentStore.DatabaseCommands).RequestExecuter).WaitForLeaderTimeout = TimeSpan.FromSeconds(30);
+            }
+            return documentStores;
         }
 
         public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
