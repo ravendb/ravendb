@@ -4,12 +4,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web.UI.WebControls;
 using Lucene.Net.Index;
 using Raven.Database.Config;
-using Raven.Database.Linq.PrivateExtensions;
+using Raven.Abstractions.Data;
 using Sparrow.Collections;
 
 namespace Raven.Database.Indexing.Sorting
@@ -18,16 +15,49 @@ namespace Raven.Database.Indexing.Sorting
     {
         public class DocumentIdSetCleaner : ILowMemoryHandler
         {
-            public void HandleLowMemory()
+            public LowMemoryHandlerStatistics HandleLowMemory()
             {
+                var allReaders = _keys.Select(x =>
+                {
+                    IndexReader reader;
+                    x.TryGetTarget(out reader);
+                    return reader;
+
+                }).Where(x => x != null).Distinct();
+                var documentIdsSetsCount = allReaders.Sum(x =>
+              {
+                  var c = 0;
+                  ConcurrentDictionary<Tuple<string, Predicate<string>>, Predicate<int>> documentIdsSets;
+                  if (documentIdsSetBuildersCache.TryGetValue(x, out documentIdsSets))
+                  {
+                      c += documentIdsSets.Count;
+                  }
+                  return c;
+              });
+
+                var valuesInReadersCacheCount = allReaders.Sum(x =>
+                {
+                    var c = 0;
+                    ConcurrentDictionary<string, Dictionary<int, string>> valuesInReadersCache;
+                    if (fieldsStringValuesInReadersCache.TryGetValue(x, out valuesInReadersCache))
+                    {
+                        c += valuesInReadersCache.Count;
+                    }
+                    return c;
+                });
+
                 documentIdsSetBuildersCache = new ConditionalWeakTable<IndexReader, ConcurrentDictionary<Tuple<string, Predicate<string>>, Predicate<int>>>();
+
                 fieldsStringValuesInReadersCache = new ConditionalWeakTable<IndexReader, ConcurrentDictionary<string, Dictionary<int, string>>>();
                 _keys = new ConcurrentSet<WeakReference<IndexReader>>();
-            }
 
-            public void SoftMemoryRelease()
-            {
-                
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = "DocumentIdSet",
+                    DatabaseName = null,
+                    Summary = $"Cleared {documentIdsSetsCount} Document Ids sets with {allReaders} readers " +
+                             $"Cleared {valuesInReadersCacheCount} values in readers cache with {allReaders} readers"
+                };
             }
 
             public LowMemoryHandlerStatistics GetStats()
@@ -38,7 +68,7 @@ namespace Raven.Database.Indexing.Sorting
                     x.TryGetTarget(out reader);
                     return reader;
                 })
-                .Where(x=> x != null)
+                .Where(x => x != null)
                 .Distinct().Select(x =>
                 {
                     long curSize = 0;
@@ -48,7 +78,7 @@ namespace Raven.Database.Indexing.Sorting
                         //SparseDocumentIdSet,List
                         foreach (var predicate in documentIdsSets)
                         {
-                            curSize += predicate.Key.Item1.Length *sizeof(char);
+                            curSize += predicate.Key.Item1.Length * sizeof(char);
                             var documentsIDsSetBuilder = predicate.Value.Target as DocumentsIDsSetBuilder;
                             if (documentsIDsSetBuilder != null)
                             {
@@ -69,14 +99,14 @@ namespace Raven.Database.Indexing.Sorting
                     {
                         foreach (var fieldValuesPair in fieldStringValues)
                         {
-                            curSize += fieldValuesPair.Key.Length *sizeof(char);
+                            curSize += fieldValuesPair.Key.Length * sizeof(char);
                             foreach (var docsToValuesKeyPair in fieldValuesPair.Value)
                             {
-                                curSize += docsToValuesKeyPair.Key*sizeof (int);
-                                curSize += docsToValuesKeyPair.Value.Length*sizeof(char);
+                                curSize += docsToValuesKeyPair.Key * sizeof(int);
+                                curSize += docsToValuesKeyPair.Value.Length * sizeof(char);
                             }
                         }
-                        
+
                     }
                     return curSize;
 
@@ -96,7 +126,7 @@ namespace Raven.Database.Indexing.Sorting
             MemoryStatistics.RegisterLowMemoryHandler(documentIdSetCleaner);
         }
 
-        private static ConditionalWeakTable<IndexReader, ConcurrentDictionary<Tuple<string,Predicate<string>>,Predicate<int>>> documentIdsSetBuildersCache = new ConditionalWeakTable<IndexReader, ConcurrentDictionary<Tuple<string, Predicate<string>>, Predicate<int>>>();
+        private static ConditionalWeakTable<IndexReader, ConcurrentDictionary<Tuple<string, Predicate<string>>, Predicate<int>>> documentIdsSetBuildersCache = new ConditionalWeakTable<IndexReader, ConcurrentDictionary<Tuple<string, Predicate<string>>, Predicate<int>>>();
         private static ConditionalWeakTable<IndexReader, ConcurrentDictionary<string, Dictionary<int, string>>> fieldsStringValuesInReadersCache = new ConditionalWeakTable<IndexReader, ConcurrentDictionary<string, Dictionary<int, string>>>();
         private readonly static DocumentIdSetCleaner documentIdSetCleaner = new DocumentIdSetCleaner();
 
@@ -110,7 +140,7 @@ namespace Raven.Database.Indexing.Sorting
                 value = documentIdsSetBuildersCache.GetOrCreateValue(reader);
                 _keys.Add(new WeakReference<IndexReader>(reader));
                 IndexReader target;
-                _keys.RemoveWhere(x=>x.TryGetTarget(out target) == false);
+                _keys.RemoveWhere(x => x.TryGetTarget(out target) == false);
             }
 
             var readerFieldTuple = Tuple.Create(field, termAcceptanceFunction);
@@ -118,7 +148,7 @@ namespace Raven.Database.Indexing.Sorting
             Predicate<int> predicate;
             if (value.TryGetValue(readerFieldTuple, out predicate))
                 return predicate;
-        
+
 
             var termDocs = reader.TermDocs();
             var termEnum = reader.Terms(new Term(field));
@@ -212,21 +242,21 @@ namespace Raven.Database.Indexing.Sorting
 
             public SparseDocumentIdSet(int size)
             {
-                _bitArraySize = (int)Math.Ceiling((double)size/_numOfBitArrays);
+                _bitArraySize = (int)Math.Ceiling((double)size / _numOfBitArrays);
             }
 
             public void Set(int docId)
             {
-                var idx = docId/_bitArraySize;
+                var idx = docId / _bitArraySize;
                 if (_bitArrays[idx] == null)
                     _bitArrays[idx] = new BitArray(_bitArraySize);
 
-                _bitArrays[idx].Set(docId%_bitArraySize, true);
+                _bitArrays[idx].Set(docId % _bitArraySize, true);
             }
 
             public bool Contains(int docId)
             {
-                var idx = docId/_bitArraySize;
+                var idx = docId / _bitArraySize;
                 if (_bitArrays[idx] == null)
                     return false;
                 return _bitArrays[idx].Get(docId % _bitArraySize);
@@ -238,7 +268,7 @@ namespace Raven.Database.Indexing.Sorting
                 return _bitArrays.Sum(x =>
                 {
                     if (x != null)
-                        return x.Count/8;
+                        return x.Count / 8;
                     return 0;
                 });
             }

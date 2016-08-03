@@ -10,6 +10,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -41,6 +42,7 @@ namespace Raven.Bundles.Replication.Responders
         protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId,
             string existingDocumentConflictId, JsonDocument existingItem, RavenJObject existingMetadata)
         {
+            existingMetadata.Add(Constants.RavenReplicationConflictDocument, true);
             existingMetadata.Add(Constants.RavenReplicationConflict, true);
             Actions.Documents.AddDocument(existingDocumentConflictId, Etag.Empty, existingItem.DataAsJson, existingItem.Metadata);
             var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Etag.Empty : existingItem.Etag;
@@ -137,6 +139,14 @@ namespace Raven.Bundles.Replication.Responders
             documentToSave = null;
 
             return false;
+        }
+
+        protected override bool TryResolveConflictByCheckingIfIdentical(RavenJObject metadata, RavenJObject document, JsonDocument existing, out RavenJObject resolvedMetadataToSave)
+        {
+            //if the metadata is not equal there is no reason the compare the data
+            if (CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(existing.Metadata, metadata, out resolvedMetadataToSave) == false)
+                return false;
+            return RavenJTokenEqualityComparer.Default.Equals(document, existing.DataAsJson);
         }
     }
 }

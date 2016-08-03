@@ -6,7 +6,6 @@ import appUrl = require("common/appUrl");
 import changesContext = require("common/changesContext");
 import ace = require("ace/ace");
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
 import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");
 import filesystem = require("models/filesystem/filesystem");
 import configurationKey = require("models/filesystem/configurationKey");
@@ -57,6 +56,8 @@ class configuration extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+
+        this.updateHelpLink("J3KIEN");
 
         this.appUrls = appUrl.forCurrentFilesystem();
 
@@ -208,7 +209,7 @@ class configuration extends viewModelBase {
             }
             this.focusOnEditor();
         }
-        if (message != "") {
+        if (message) {
             messagePublisher.reportError(message, undefined, undefined, false);
             return;
         }
@@ -233,18 +234,18 @@ class configuration extends viewModelBase {
     }
 
     removeKey(key: string) {
-        var foundKey = this.keys().filter((configKey: configurationKey) => configKey.key == key );
+        var foundKey = this.keys().filter((configKey: configurationKey) => configKey.key === key );
 
         if (foundKey.length > 0) {
             var currentIndex = this.keys.indexOf(this.currentKey());
             var foundIndex = this.keys.indexOf(foundKey[0]);
             var newIndex = currentIndex;
-            if (currentIndex + 1 == this.keys().length) {
+            if (currentIndex + 1 === this.keys().length) {
                 newIndex = currentIndex - 1;
             }
 
             this.keys.remove(foundKey[0]);
-            if (this.keys()[newIndex] && currentIndex == foundIndex) {
+            if (this.keys()[newIndex] && currentIndex === foundIndex) {
                 this.selectKey(this.keys()[newIndex]);
             }
             else {
@@ -254,7 +255,7 @@ class configuration extends viewModelBase {
     }
 
     addKey(key: string) {
-        var foundKey = this.keys.first((configKey: configurationKey) => configKey.key == key);
+        var foundKey = this.keys.first((configKey: configurationKey) => configKey.key === key);
 
         if (!foundKey) {
             var newKey = new configurationKey(this.activeFilesystem(), key);

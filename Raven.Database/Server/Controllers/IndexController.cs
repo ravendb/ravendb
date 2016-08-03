@@ -144,10 +144,10 @@ namespace Raven.Database.Server.Controllers
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
             }
 
-            IndexActions.SideBySideIndexInfo[] createdIndexes;
+            List<IndexActions.IndexInfo> createdIndexes;
             try
             {
-                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes.IndexesToAdd);
+                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes);
             }
             catch (Exception ex)
             {
@@ -161,19 +161,6 @@ namespace Raven.Database.Server.Controllers
                     Error = ex.ToString()
                 }, HttpStatusCode.BadRequest);
             }
-
-            Database.TransactionalStorage.Batch(accessor =>
-            {
-                foreach (var createdIndex in createdIndexes.Where(x => x.IsSideBySide))
-                {
-                    Database.Documents.Put(
-                        Constants.IndexReplacePrefix + createdIndex.Name,
-                        null,
-                        RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = createdIndex.OriginalName, MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace, ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc}),
-                        new RavenJObject(),
-                        null);
-        }
-            });
 
             return GetMessageWithObject(new { Indexes = createdIndexes.Select(x => x.Name).ToArray() }, HttpStatusCode.Created);
         }
@@ -273,17 +260,7 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                long opId;
-                Database.Indexes.PutIndex(index, data, out opId);
-
-                //treat includePrecomputeOperation as a flag
-                var includePrecomputeOperation = GetQueryStringValue("includePrecomputeOperation");
-                if (!String.IsNullOrWhiteSpace(includePrecomputeOperation) &&
-                    includePrecomputeOperation.Equals("yes",StringComparison.OrdinalIgnoreCase))
-                {
-                    return GetMessageWithObject(new { Index = index, OperationId = opId }, HttpStatusCode.Created);
-                }
-
+                Database.Indexes.PutIndex(index, data);
                 return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
             }
             catch (Exception ex)
@@ -329,11 +306,11 @@ namespace Raven.Database.Server.Controllers
 
             if ("forceReplace".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
             {
-                var indexDefiniton = Database.IndexDefinitionStorage.GetIndexDefinition(id);
-                if (indexDefiniton == null)
+                var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+                if (indexDefinition == null)
                     return GetEmptyMessage(HttpStatusCode.NotFound);
 
-                Database.IndexReplacer.ForceReplacement(indexDefiniton);
+                Database.IndexReplacer.ForceReplacement(indexDefinition);
                 return GetEmptyMessage();
             }
 
@@ -394,6 +371,25 @@ namespace Raven.Database.Server.Controllers
             }
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
+        }
+
+        [HttpPost]
+        [RavenRoute("indexes-rename/{*id}")]
+        [RavenRoute("databases/{databaseName}/indexes-rename/{*id}")]
+        public HttpResponseMessage Rename(string id)
+        {
+            var newIndexName = GetQueryStringValue("newName");
+
+            var instance = Database.Indexes.GetIndexDefinition(id);
+            if (instance == null)
+                throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", id));
+
+            if (Database.Indexes.GetIndexDefinition(newIndexName) != null)
+                throw new InvalidOperationException($"Cannot rename to {newIndexName}. Index already exists.");
+
+            Database.Indexes.RenameIndex(instance, newIndexName);
+
+            return GetEmptyMessage();
         }
 
         [HttpPost]

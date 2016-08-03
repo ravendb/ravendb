@@ -4,8 +4,8 @@ import d3 = require("d3/d3");
 
 interface autoRefreshConfigDto {
     duration: number;
-    autoStart: boolean;
     onRefresh: () => JQueryPromise<any>;
+    active?: KnockoutObservable<boolean> | boolean;
 }
 
 interface autoRefreshContext extends autoRefreshConfigDto {
@@ -42,9 +42,10 @@ class autoRefreshBindingHandler {
 
         var context = autoRefreshBindingHandler.initRefresh(element, config);
 
-        $(element).click(() => autoRefreshBindingHandler.toggleAutorefresh(context));
+        $(element).click(() => context.autorefreshEnabled(!context.autorefreshEnabled()));
 
-        if (config.autoStart) {
+        var active = ko.unwrap(config.active);
+        if (active) {
             autoRefreshBindingHandler.animatePath(context);
         } else {
             context.refreshing(true);
@@ -120,17 +121,20 @@ class autoRefreshBindingHandler {
             .startAngle(0)
             .endAngle(d => d * 2 * Math.PI);
 
-        return {
+        var autorefreshEnabled = ko.isObservable(config.active) ? <KnockoutObservable<boolean>>config.active : ko.observable<boolean>(true);
+        var context = {
             svg: svg,
             path: path,
             arc: arc,
-            autorefreshEnabled: ko.observable<boolean>(true),
+            autorefreshEnabled: autorefreshEnabled,
             refreshing: ko.observable<boolean>(false),
             duration: config.duration,
             onRefresh: config.onRefresh,
-            autoStart: config.autoStart,
             disposed: false
-    };
+        };
+        autorefreshEnabled.subscribe(() => this.toggleAutorefresh(context));
+
+        return context;
     }
 
     private static animatePath(context: autoRefreshContext) {
@@ -152,7 +156,7 @@ class autoRefreshBindingHandler {
     }
 
     private static toggleAutorefresh(context: autoRefreshContext) {
-        if (context.autorefreshEnabled()) {
+        if (!context.autorefreshEnabled()) {
             // stop current animation if any
             if (!context.refreshing()) {
                 context.path
@@ -167,7 +171,6 @@ class autoRefreshBindingHandler {
             context.onRefresh()
                 .always(() => autoRefreshBindingHandler.animatePath(context));
         }
-        context.autorefreshEnabled(!context.autorefreshEnabled());
     }
 
     update(element: HTMLInputElement, valueAccessor: () => any, allBindingsAccessor, viewModel: viewModelBase, bindingContext) {

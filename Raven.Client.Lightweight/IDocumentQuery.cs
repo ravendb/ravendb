@@ -21,6 +21,11 @@ namespace Raven.Client
     public interface IDocumentQuery<T> : IEnumerable<T>, IDocumentQueryBase<T, IDocumentQuery<T>>
     {
         /// <summary>
+        ///   Get the name of the index being queried
+        /// </summary>
+        string IndexQueried { get; }
+
+        /// <summary>
         ///     Whatever we should apply distinct operation to the query on the server side
         /// </summary>
         bool IsDistinct { get; }
@@ -111,5 +116,42 @@ namespace Raven.Client
         /// </summary>
         IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new();
+
+        /// <summary>
+        /// Get the facets as per the specified facet document with the given start and pageSize
+        /// </summary>
+        FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize);
+
+        /// <summary>
+        /// Get the facet results as per the specified facets with the given start and pageSize
+        /// </summary>
+        FacetResults GetFacets(List<Facet> facets, int start, int? pageSize);
+
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty.
+        /// </summary>
+        T First();
+ 
+        /// <summary>
+        ///     Returns first element or default value for type if sequence is empty.
+        /// </summary>
+        T FirstOrDefault();
+ 
+        /// <summary>
+        ///     Returns first element or throws if sequence is empty or contains more than one element.
+        /// </summary>
+        T Single();
+ 
+        /// <summary>
+        ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
+        ///     one element.
+        /// </summary>
+        T SingleOrDefault();
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        /// <returns></returns>
+        int Count();
     }
 }

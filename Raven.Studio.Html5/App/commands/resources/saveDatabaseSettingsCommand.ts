@@ -12,7 +12,7 @@ class saveDatabaseSettingsCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<databaseDocumentSaveDto> {
         this.reportInfo("Saving Database Settings for '" + this.db.name + "'...");
 
         var jQueryOptions: JQueryAjaxSettings = {
@@ -30,6 +30,7 @@ class saveDatabaseSettingsCommand extends commandBase {
         saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save Database Settings!", response.responseText, response.statusText));
         return saveTask;
     }
+
 }
 
 export = saveDatabaseSettingsCommand;

@@ -2,7 +2,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Sparrow.Collections;
@@ -12,7 +11,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using Sparrow;
 using Voron.Trees;
@@ -142,11 +140,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             if (newValue == 0)
             {
-                DeleteReduceKeyCount(keySlice, view, viewKey, version);
+                DeleteReduceKeyCount(keySlice, viewKey, version, shouldIgnoreConcurrencyExceptions: true);
                 return;
             }
 
-            AddReduceKeyCount(keySlice, view, viewKey, reduceKey, newValue, version);
+            AddReduceKeyCount(keySlice, view, viewKey, reduceKey, newValue, version, shouldIgnoreConcurrencyExceptions: true);
         }
 
         private void DecrementReduceKeyCounter(int view, string reduceKey, int val)
@@ -165,7 +163,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, keySlice, writeBatch.Value);
 
-                    DeleteReduceKeyCount(keySlice, view, viewKeySlice, reduceKeyCountVersion);
+                    DeleteReduceKeyCount(keySlice, viewKeySlice, reduceKeyCountVersion);
                     DeleteReduceKeyType(keySlice, viewKeySlice, reduceKeyTypeVersion);
                     return;
                 }
@@ -174,6 +172,20 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
 
             AddReduceKeyCount(keySlice, view, viewKeySlice, reduceKey, newValue, reduceKeyCountVersion);
+        }
+
+        public bool HasMappedResultsForIndex(int view)
+        {
+            var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
+            var viewKey = CreateViewKey(view);
+
+            using (var iterator = mappedResultsByView.MultiRead(Snapshot, viewKey))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                    return false;
+
+                return true;
+            }
         }
 
         public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)
@@ -718,7 +730,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
+        public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete, CancellationToken token)
         {
             if (itemsToDelete == null)
                 return null;
@@ -728,6 +740,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var currentEtag = Etag.Empty;
             foreach (Etag etag in itemsToDelete.Where(x => x != null))
             {
+                token.ThrowIfCancellationRequested();
+
                 var etagAsString = (Slice)etag.ToString();
 
                 ushort version;
@@ -740,6 +754,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     hasResult = true;
                     result.Etag = etag;
                     result.Timestamp = DateTime.FromBinary(value.ReadLong(ScheduledReductionFields.Timestamp));
+                    currentEtag = etag;
                 }
 
                 var view = value.ReadInt(ScheduledReductionFields.IndexId);
@@ -875,13 +890,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var viewAndReduceKeyAndLevelAndSourceBucket = CreateReduceResultsWithBucketKey(view, reduceKey, level, sourceBucket);
             var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
 
-            using (var iterator = reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(Snapshot, (Slice)viewAndReduceKeyAndLevelAndSourceBucket))
-            {
-                if (!iterator.Seek(Slice.BeforeAllKeys))
-                    return;
-
-                RemoveReduceResult(iterator, null, CancellationToken.None);
-            }
+            RemoveReduceResults(() => reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(Snapshot, viewAndReduceKeyAndLevelAndSourceBucket), false, CancellationToken.None);
         }
 
         public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken)
@@ -949,11 +958,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
             AddReduceKeyType(reduceKeySlice, view, reduceKey, reduceType, reduceKeyTypeVersion);
         }
 
-        private void DeleteReduceKeyCount(Slice key, int view, Slice viewKey, ushort? expectedVersion)
+        private void DeleteReduceKeyCount(Slice key, Slice viewKey, 
+            ushort? expectedVersion, bool shouldIgnoreConcurrencyExceptions = false)
         {
             var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
-            tableStorage.ReduceKeyCounts.Delete(writeBatch.Value, key, expectedVersion);
+            tableStorage.ReduceKeyCounts.Delete(writeBatch.Value, key, expectedVersion, shouldIgnoreConcurrencyExceptions);
             reduceKeyCountsByView.MultiDelete(writeBatch.Value, viewKey, key);
         }
 
@@ -965,7 +975,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             reduceKeyTypesByView.MultiDelete(writeBatch.Value, viewKey, key);
         }
 
-        private void AddReduceKeyCount(Slice key, int view, Slice viewKey, string reduceKey, int count, ushort? expectedVersion)
+        private void AddReduceKeyCount(Slice key, int view, Slice viewKey, string reduceKey, int count, 
+            ushort? expectedVersion, bool shouldIgnoreConcurrencyExceptions = false)
         {
             var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
@@ -976,7 +987,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     .Set(ReduceKeyCountFields.IndexId, view)
                     .Set(ReduceKeyCountFields.MappedItemsCount, count)
                     .Set(ReduceKeyCountFields.ReduceKey, reduceKey),
-                expectedVersion);
+                expectedVersion, shouldIgnoreConcurrencyExceptions);
 
             reduceKeyCountsByView.MultiAdd(writeBatch.Value, viewKey, key);
         }
@@ -1256,13 +1267,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
 
-            using (var iterator = reduceResultsByView.MultiRead(Snapshot, CreateViewKey(view)))
-            {
-                if (!iterator.Seek(Slice.BeforeAllKeys))
-                    return;
-
-                RemoveReduceResult(iterator, PulseTransaction, token);
-            }
+            RemoveReduceResults(() => reduceResultsByView.MultiRead(Snapshot, CreateViewKey(view)), true, token);
         }
 
         private void DeleteScheduledReduction(Etag etag, Slice etagAsString, Slice scheduleReductionKey, Slice viewKey, int bucket)
@@ -1303,57 +1308,69 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        private void RemoveReduceResult(IIterator iterator, Action afterRecordDeleted, CancellationToken token)
+        private void RemoveReduceResults(Func<IIterator> createIterator, bool tryPulseTransaction, CancellationToken token)
         {
-            var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
-            var reduceResultsByViewAndReduceKeyAndLevel = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
-            var reduceResultsByViewAndReduceKeyAndLevelAndBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
-            var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
-            var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
+            var iterator = createIterator();
 
-            do
+            try
             {
-                // TODO: Check if we can avoid the clone.
-                Slice id = iterator.CurrentKey.Clone();
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                    return;
 
-                ushort version;
-                var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
-                if (value == null)
-                    continue;
-                var view = value.ReadInt(ReduceResultFields.IndexId);
-                var reduceKey = value.ReadString(ReduceResultFields.ReduceKey);
-                var level = value.ReadInt(ReduceResultFields.Level);
-                var bucket = value.ReadInt(ReduceResultFields.Bucket);
-                var sourceBucket = value.ReadInt(ReduceResultFields.SourceBucket);
+                var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
+                var reduceResultsByViewAndReduceKeyAndLevel = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
+                var reduceResultsByViewAndReduceKeyAndLevelAndBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
+                var reduceResultsByView = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
+                var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
 
-                var viewKey = CreateViewKey(view);
-                var viewAndReduceKeyAndLevel = CreateReduceResultsKey(view, reduceKey, level);
-                var viewAndReduceKeyAndLevelAndSourceBucket = CreateReduceResultsWithBucketKey(view, reduceKey, level, sourceBucket);
-                var viewAndReduceKeyAndLevelAndBucket = CreateReduceResultsWithBucketKey(view, reduceKey, level, bucket);
+                bool skipMoveNext;
+                do
+                {
+                    skipMoveNext = false;
 
-                tableStorage.ReduceResults.Delete(writeBatch.Value, id);
+                    // TODO: Check if we can avoid the clone.
+                    Slice id = iterator.CurrentKey.Clone();
 
-                reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiDelete(writeBatch.Value, viewAndReduceKeyAndLevelAndSourceBucket, id);
-                reduceResultsByViewAndReduceKeyAndLevel.MultiDelete(writeBatch.Value, viewAndReduceKeyAndLevel, id);
-                reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiDelete(writeBatch.Value, viewAndReduceKeyAndLevelAndBucket, id);
-                reduceResultsByView.MultiDelete(writeBatch.Value, viewKey, id);
+                    ushort version;
+                    var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
+                    if (value == null)
+                        continue;
+                    var view = value.ReadInt(ReduceResultFields.IndexId);
+                    var reduceKey = value.ReadString(ReduceResultFields.ReduceKey);
+                    var level = value.ReadInt(ReduceResultFields.Level);
+                    var bucket = value.ReadInt(ReduceResultFields.Bucket);
+                    var sourceBucket = value.ReadInt(ReduceResultFields.SourceBucket);
 
-                reduceResultsData.Delete(writeBatch.Value, id);
+                    var viewKey = CreateViewKey(view);
+                    var viewAndReduceKeyAndLevel = CreateReduceResultsKey(view, reduceKey, level);
+                    var viewAndReduceKeyAndLevelAndSourceBucket = CreateReduceResultsWithBucketKey(view, reduceKey, level, sourceBucket);
+                    var viewAndReduceKeyAndLevelAndBucket = CreateReduceResultsWithBucketKey(view, reduceKey, level, bucket);
 
-                if (afterRecordDeleted != null)
-                    afterRecordDeleted();
+                    tableStorage.ReduceResults.Delete(writeBatch.Value, id);
+
+                    reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiDelete(writeBatch.Value, viewAndReduceKeyAndLevelAndSourceBucket, id);
+                    reduceResultsByViewAndReduceKeyAndLevel.MultiDelete(writeBatch.Value, viewAndReduceKeyAndLevel, id);
+                    reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiDelete(writeBatch.Value, viewAndReduceKeyAndLevelAndBucket, id);
+                    reduceResultsByView.MultiDelete(writeBatch.Value, viewKey, id);
+
+                    reduceResultsData.Delete(writeBatch.Value, id);
+
+                    if (tryPulseTransaction && generalStorageActions.MaybePulseTransaction(iterator))
+                    {
+                        iterator = createIterator();
+                        if (!iterator.Seek(Slice.BeforeAllKeys))
+                            break;
+
+                        skipMoveNext = true;
+                    }
+                }
+                while ((skipMoveNext || iterator.MoveNext()) && token.IsCancellationRequested == false);
             }
-            while (iterator.MoveNext() && token.IsCancellationRequested == false);
-        }
-
-        private void PulseTransaction()
-        {
-            storageActionsAccessor.General.MaybePulseTransaction();
-        }
-
-        private static string HashKey(string key)
-        {
-            return Convert.ToBase64String(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(key)));
+            finally
+            {
+                if (iterator != null)
+                    iterator.Dispose();
+            }
         }
     }
 

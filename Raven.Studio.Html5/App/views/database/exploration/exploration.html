@@ -1,5 +1,6 @@
 <div id="explorationContainer">
     <ul class="breadcrumb">
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
             <h3>
           
@@ -46,9 +47,10 @@
         <div class="row">
             <div class="col-md-4">
                 <div class="form-group">
-                    <label class="col-sm-6 control-label">Timeout (seconds):</label>
-                    <div class="col-md-4">
-                        <input data-bind="value: explorationRequest.timeoutSeconds, disable: isBusy" type="number" required class="form-control"/>
+                    <label class="col-sm-6 control-label">Timeout:</label>
+                    <div class="input-group col-md-4">
+                        <input data-bind="value: explorationRequest.timeoutSeconds, disable: isBusy" type="number" required class="form-control" />
+                        <span class="input-group-addon">sec</span>
                     </div>
                 </div>
             </div>
@@ -79,7 +81,7 @@
                     Results
                 </label>
                 <div class="col-md-11 exploration-results">
-                    <div id="explorationResultsPanel" class="panel panel-default">
+                    <div id="explorationResultsPanel" class="panel panel-default panel-wo-margin">
                         <div class="panel-body" data-bind="visible: isLoading">
                             <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
                         </div>

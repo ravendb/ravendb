@@ -17,7 +17,7 @@ namespace Raven.Tests.MailingList
             using (var store = NewDocumentStore())
             {
                 var dataDumper = new DatabaseDataDumper(store.SystemDatabase);
-                using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
+                using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendbdump"))
                 {
                     await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream });
                 }
@@ -38,7 +38,7 @@ namespace Raven.Tests.MailingList
             using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
                 var dataDumper = new DatabaseDataDumper(store.SystemDatabase);
-                using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
+                using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendbdump"))
                 {
                     await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream });
                 }

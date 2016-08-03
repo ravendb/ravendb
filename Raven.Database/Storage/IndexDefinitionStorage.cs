@@ -610,7 +610,22 @@ public bool Contains(string indexName)
             return null;
         }
 
-        internal bool ReplaceIndex(string indexName, string indexToSwapName)
+        internal bool RenameIndex(string existingIndexName, string newIndexName)
+        {
+            var index = GetIndexDefinition(existingIndexName);
+            if (index == null)
+                return false;
+
+            int _;
+            indexNameToId.TryRemove(index.Name, out _);
+
+            index.Name = newIndexName;
+            CreateAndPersistIndex(index);
+            AddIndex(index.IndexId, index);
+            return true;
+        }
+
+        internal bool ReplaceIndex(string indexName, string indexToSwapName, Action replaceIndexingErrors)
         {
             var index = GetIndexDefinition(indexName);
             if (index == null)
@@ -621,6 +636,7 @@ public bool Contains(string indexName)
             index.IsSideBySideIndex = false;
 
             var indexToReplace = GetIndexDefinition(indexToSwapName);
+            replaceIndexingErrors();
             index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;
             CreateAndPersistIndex(index);
             AddIndex(index.IndexId, index);

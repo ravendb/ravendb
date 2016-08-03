@@ -254,8 +254,12 @@ namespace Raven.Client.Indexes
 
                 switch (serverDef.LockMode)
                 {
-                    //Nothing to do we just ignore this index
+                    case IndexLockMode.SideBySide:
+                        //keep the SideBySide lock mode from the replaced index
+                        indexDefinition.LockMode = IndexLockMode.SideBySide;
+                        break;
                     case IndexLockMode.LockedIgnore:
+                        //Nothing to do we just ignore this index
                         return;
                     case IndexLockMode.LockedError:
                         throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to: LockedError", serverDef.IndexId));
@@ -335,6 +339,7 @@ namespace Raven.Client.Indexes
             try
             {
                 serverDef.IndexId = indexDefinition.IndexId;
+                indexDefinition.RemoveDefaultValues();
 
                 if (serverDef.Equals(indexDefinition, false))
                     return true;
@@ -442,8 +447,12 @@ namespace Raven.Client.Indexes
 
                 switch (serverDef.LockMode)
                 {
-                    //Nothing to do we just ignore this index
+                    case IndexLockMode.SideBySide:
+                        //keep the SideBySide lock mode from the replaced index
+                        indexDefinition.LockMode = IndexLockMode.SideBySide;
+                        break;
                     case IndexLockMode.LockedIgnore:
+                        //Nothing to do we just ignore this index
                         return;
                     case IndexLockMode.LockedError:
                         throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to: LockedError", serverDef.IndexId));

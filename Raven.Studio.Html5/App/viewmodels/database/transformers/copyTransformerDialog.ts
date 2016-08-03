@@ -48,6 +48,8 @@ class copyTransformerDialog extends dialogViewModelBase {
         // edit the JSON, or even type some in manually, enter might really mean new line, not Save changes.
         if (!this.isPaste) {
             return super.enterKeyPressed();
+        } else {
+            this.saveTransformer();
         }
 
         return true;
@@ -60,7 +62,7 @@ class copyTransformerDialog extends dialogViewModelBase {
             return;
         }
 
-        if (this.isPaste === true && !!transformerJson) {
+        if (transformerJson) {
             var transformerDto: savedTransformerDto;
             var transformerObj: transformer;
 
@@ -73,24 +75,29 @@ class copyTransformerDialog extends dialogViewModelBase {
                 messagePublisher.reportError("Transformer paste failed, invalid JSON.", e);
             }
 
-            // Verify there's not a transformer with this name.
-            new getSingleTransformerCommand(transformerDto.Transformer.Name, this.db)
-                .execute()
-                .done(() => messagePublisher.reportError("Duplicate transformer name. Change the name and try again."))
-                .fail((xhr: JQueryXHR, status: any, error: string) => {
-                    if (xhr.status === ResponseCodes.NotFound) {
-                        // Good. No existing transformer with this name. We can proceed saving it.
-                        new saveTransformerCommand(transformerObj, this.db)
-                            .execute()
-                            .done(() => {
-                                router.navigate(appUrl.forEditTransformer(transformerObj.name(), this.db));
-                                this.close();
-                            });
-                    } else {
-                        // Some other error occurred while checking for duplicate transformer. Error out.
-                        messagePublisher.reportError("Cannot paste transformer, error occured.", error);
-                    }
-                });
+            if (transformerDto) {
+                // Verify there's not a transformer with this name.
+                new getSingleTransformerCommand(transformerDto.Transformer.Name, this.db)
+                    .execute()
+                    .done(() => messagePublisher
+                        .reportError("Duplicate transformer name. Change the name and try again."))
+                    .fail((xhr: JQueryXHR, status: any, error: string) => {
+                        if (xhr.status === ResponseCodes.NotFound) {
+                            // Good. No existing transformer with this name. We can proceed saving it.
+                            new saveTransformerCommand(transformerObj, this.db)
+                                .execute()
+                                .done(() => {
+                                    router.navigate(appUrl.forEditTransformer(transformerObj.name(), this.db));
+                                    this.close();
+                                });
+                        } else {
+                            // Some other error occurred while checking for duplicate transformer. Error out.
+                            messagePublisher.reportError("Cannot paste transformer, error occured.", error);
+                        }
+                    });
+            }
+        } else {
+            this.close();
         }
     }
 

@@ -136,7 +136,7 @@ namespace Raven.Tests.Bundles.Replication
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new Company());
+                    session.Store(new Company {Name = "Company2"});
                     session.SaveChanges();
                 }
 
@@ -203,10 +203,10 @@ namespace Raven.Tests.Bundles.Replication
             using (var store1 = CreateEmbeddableStore())
             using (var store2 = CreateEmbeddableStore())
             {
-                store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
-                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
+                store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(new byte[] {}), new RavenJObject());
+                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream (new byte[] { 1, 2 }), new RavenJObject());
 
-                store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(), new RavenJObject());
+                store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
                 TellFirstInstanceToReplicateToSecondInstance();
 
@@ -228,10 +228,10 @@ namespace Raven.Tests.Bundles.Replication
             using (var store1 = CreateEmbeddableStore())
             using (var store2 = CreateEmbeddableStore())
             {
-                store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
-                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(), new RavenJObject());
+                store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(new byte[] { }), new RavenJObject());
+                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
 
-                store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(), new RavenJObject());
+                store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
                 TellFirstInstanceToReplicateToSecondInstance();
 

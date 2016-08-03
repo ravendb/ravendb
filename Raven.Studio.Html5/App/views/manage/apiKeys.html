@@ -15,7 +15,7 @@
                 </button>
             </div>
             <div class="btn-group">
-                <div class="input-group" data-bind="visible: apiKeys().length > 0">
+                <div class="input-group" style="width: 500px" data-bind="visible: apiKeys().length > 0">
                     <span class="input-group-addon"><i class="fa fa-search"></i></span>
                     <input type="text" id="apiKeysSearchInput" class="form-control" placeholder="Search for API Keys" data-bind="value: searchText, valueUpdate: 'afterkeydown'"/>
                 </div>
@@ -110,11 +110,11 @@
                                     <tr>
                                         <td>
                                             <div class="btn-group">
-                                                <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="textInput: tenantId, customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
                                                 <ul class="dropdown-menu scrollable-resource-menu" style="display: none; overflow-x: hidden" data-bind="autoComplete: '#databaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                     <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                         <a role="menuitem" tabindex="-1" href="#" class="nounderline" data-bind="attr : { 'title': $data }">
-                                                            <span data-bind="text: $data"></span>
+                                                            <span class="text" data-bind="text: $data"></span>
                                                         </a>
                                                     </li>
                                                 </ul>

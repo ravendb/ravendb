@@ -150,9 +150,11 @@ namespace Raven.Client.Connection.Implementation
                         Credentials = credentialsToUse
                     };
 #else
-                    var handler = new WinHttpHandler
+                    var handler = new HttpClientHandler
                     {
-                        ServerCredentials = useDefaultCredentials ? CredentialCache.DefaultCredentials : credentialsToUse
+                        AllowAutoRedirect = false,
+                        UseDefaultCredentials = useDefaultCredentials,
+                        Credentials = credentialsToUse
                     };
 #endif
                     return handler;
@@ -246,7 +248,7 @@ namespace Raven.Client.Connection.Implementation
                     Response = exception.Response;
                     ResponseStatusCode = Response.StatusCode;
                     throw exception;
-                } 
+                }
                 catch (TaskCanceledException e)
                 {
                     var exception = ErrorResponseException.FromException(e);
@@ -316,6 +318,10 @@ namespace Raven.Client.Connection.Implementation
                     throw;
                 }
                 catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException)
                 {
                     throw;
                 }
@@ -605,9 +611,9 @@ namespace Raven.Client.Connection.Implementation
 
         public HttpJsonRequest AddRequestExecuterAndReplicationHeaders(
             AsyncServerClient serverClient,
-            string currentUrl)
+            string currentUrl, bool withClusterFailoverHeader = false)
         {
-            serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl);
+            serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl,withClusterFailoverHeader);
             return this; // not because of failover, no need to do this.
         }
 
@@ -987,7 +993,7 @@ namespace Raven.Client.Connection.Implementation
             if (httpClient != null)
             {
                 if (criticalError == false)
-                factory.httpClientCache.ReleaseClient(httpClient, _credentials);
+                    factory.httpClientCache.ReleaseClient(httpClient, _credentials);
                 else
                     httpClient.Dispose();
 

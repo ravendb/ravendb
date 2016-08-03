@@ -6679,6 +6679,15 @@ body {
 .exceptionText {
   white-space: pre-wrap !important;
 }
+.sqlRepActions .fa-cogs {
+  color: grey;
+}
+.sqlRepActions .fa-cogs:hover {
+  color: black;
+}
+.sqlRepActions a {
+  cursor: pointer;
+}
 #sqlReplicationStats .sqlStatsPanel {
   overflow-x: auto;
   overflow-y: auto;
@@ -6792,8 +6801,6 @@ body {
   overflow-y: hidden;
 }
 .replicationSimulation .replicationSimulationData .form-group {
-  max-height: 55vh !important;
-  height: 55vh !important;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -6895,14 +6902,6 @@ body {
 .vertical-navbar-menu-item a {
   padding: 0 0 0 0;
 }
-.panel span {
-  overflow: hidden;
-  -ms-text-overflow: ellipsis;
-  -o-text-overflow: ellipsis;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: auto;
-}
 .page {
   padding: 0 10px 20px 10px;
   width: 98%;
@@ -6910,6 +6909,12 @@ body {
 .btn-group-vertical label,
 .btn-group-vertical button {
   text-align: left;
+}
+#resources-page .databases-summary {
+  color: #af282e;
+}
+#resources-page .file-systems-summary {
+  color: #7109AA;
 }
 #resources-page .btn-toolbar {
   margin-bottom: 20px;
@@ -6942,6 +6947,9 @@ body {
 }
 #resources-page .resources-container .resource .checkbox img {
   height: 25px;
+}
+#resources-page .resources-container .resource .checkbox label {
+  right: -9px;
 }
 #resources-page .resources-container .resource .details {
   float: left;
@@ -7174,7 +7182,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .indexes-container .index-group .panel-heading .indexGroup-actions-container,
 #index-merge-suggestions .index-group .panel-heading .indexGroup-actions-container {
   display: none;
-  padding-top: 5px;
+  padding-top: 3px;
 }
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container,
 #index-merge-suggestions .index-group .panel-heading:hover .indexGroup-actions-container {
@@ -7588,11 +7596,16 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .ko-grid:focus {
   outline: 0;
 }
+.ko-grid .ko-grid-column-container-clip {
+  overflow: hidden;
+}
 .ko-grid .ko-grid-column-container {
   white-space: nowrap;
   overflow: hidden;
+  height: 37px;
 }
 .ko-grid .ko-grid-column-container .ko-grid-column-header {
+  float: left;
   display: inline-block;
   font-weight: bold;
   padding: 8px;
@@ -7639,6 +7652,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   background-color: #ffc;
 }
 .ko-grid .ko-grid-cell {
+  float: left;
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
@@ -7697,6 +7711,9 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   left: 40%;
   z-index: 2000;
   width: 400px;
+}
+#editSQLReplication .btn:focus {
+  outline: 0;
 }
 #editDocumentContainer:focus {
   outline: 0;
@@ -7791,6 +7808,13 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 #shellHeader #goToDocInput {
   width: 9em;
+  -webkit-transition: width 0.5s ease-in-out;
+  -moz-transition: width 0.5s ease-in-out;
+  -o-transition: width 0.5s ease-in-out;
+  transition: width 0.5s ease-in-out;
+}
+#shellHeader #goToDocInput:focus {
+  width: 20em;
 }
 @media (max-width: 1150px) {
   #shellHeader .nav li a {
@@ -8121,6 +8145,9 @@ footer ul {
 #replicationTopologySection path.link.error {
   stroke: #DF382C;
 }
+#replicationTopologySection path.link.warning {
+  stroke: #EFB73E;
+}
 #replicationTopologySection svg:not(.active):not(.ctrl) path.link {
   cursor: pointer;
 }
@@ -8321,7 +8348,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   bottom: 50px;
   left: 0;
   height: 300px;
-  z-index: 9999;
+  z-index: 500;
   margin-bottom: 0;
   background-color: #f5f5f5;
 }
@@ -8578,7 +8605,6 @@ a.global_help_link:focus {
 }
 .alert-danger a {
   color: white;
-  text-decoration: underline;
 }
 .experimental {
   font-size: 9px;
@@ -9026,6 +9052,9 @@ a.global_help_link:focus {
 .panel.panel-wo-margin {
   margin: 0;
 }
+.panel-group.panel-group-wo-margin {
+  margin: 0;
+}
 /* Override default awesome bootstrap checkbox style - start */
 .checkbox label::after {
   padding-top: 3px !important;
@@ -9057,7 +9086,7 @@ a.global_help_link:focus {
   background-color: #f36523;
   border-color: #f36523;
 }
-.checkbo input[type="checkbox"]:indeterminate + label::after,
+.checkbox input[type="checkbox"]:indeterminate + label::after,
 .checkbox input[type="radio"]:indeterminate + label::after {
   background-color: #fff;
 }
@@ -9068,4 +9097,85 @@ a.global_help_link:focus {
   margin-top: 0;
   margin-bottom: 0;
 }
+.checkbox label:empty {
+  pointer-events: none;
+}
+.checkbox label::before {
+  pointer-events: auto;
+}
+.form-horizontal .radio,
+.form-horizontal .checkbox {
+  min-height: 20px;
+}
+.form-horizontal .radio,
+.form-horizontal .checkbox,
+.form-horizontal .radio-inline,
+.form-horizontal .checkbox-inline {
+  padding-top: 0;
+}
 /* Override default awesome bootstrap checkbox style - end */
+/**
+    Multiselect customization required for awesome checkboxes, see: http://jsfiddle.net/natearmagost/aznvcLps/
+*/
+.multiselect-container div.checkbox {
+  margin: 0;
+  padding: 5px 15px 5px 35px;
+}
+.multiselect-container label {
+  margin: 0;
+  white-space: nowrap;
+  width: 100%;
+}
+.flex-container {
+  display: flex;
+  -ms-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+.flex-container .flex-grow {
+  -ms-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+  overflow-y: auto;
+}
+.form-condensed .form-group {
+  margin-bottom: 5px;
+}
+a#uploadQueuePanelToggle {
+  color: white;
+}
+#synchronization-conflicts-page .conflicts-select {
+  text-align: center;
+  background-color: #ffc;
+  margin-top: 5px;
+  border: 1px solid;
+  padding: 5px;
+  border: 1px solid #999999;
+}
+#synchronization-conflicts-page .conflicts-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
+}
+.center-progress-text {
+  font-size: 14px;
+  position: absolute;
+  width: 100%;
+}
+.center-progress-text > span {
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  padding: 0px 6px;
+  font-size: 11px;
+  position: relative;
+  top: -1px;
+}
+.selectable-tooltip {
+  pointer-events: all;
+  -webkit-touch-callout: all;
+  -webkit-user-select: all;
+  -khtml-user-select: all;
+  -moz-user-select: all;
+  -ms-user-select: all;
+  user-select: all;
+  padding: 10px;
+}

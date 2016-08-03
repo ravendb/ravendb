@@ -1,33 +1,49 @@
-{
+﻿{
   "version": "3.5.0",
 
-  "compilationOptions": { "allowUnsafe": true },
-  "compile": [ "../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs", "**/*.cs", "../CommonAssemblyInfo.cs" ],
-  "compileExclude": [ "../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ],
+  "buildOptions": {
+    "allowUnsafe": true,
+    "compile": {
+      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs" ],
+      "exclude": [ "../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ]
+    },
+    "warningsAsErrors": false
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
 
   "dependencies": {
+    "NETStandard.Library": "1.6.0",
+
     "Sparrow": "3.5.0"
   },
 
   "frameworks": {
-    "dnxcore50": {
-      "compilationOptions": {
-        "define": [ "PORTABLE" ]
+    "netstandard1.6": {
+      "imports": "dnxcore50",
+      "buildOptions": {
+        "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
       },
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "Microsoft.Framework.ConfigurationModel": "1.0.0-beta4",
-        "System.Collections.Specialized": "4.0.1-beta-23516",
-        "System.IO.Compression": "4.1.0-beta-23516",
-        "System.Net.Http.WinHttpHandler": "4.0.0-beta-23516",
-        "System.Net.WebHeaderCollection": "4.0.1-beta-23516",
-        "System.Reflection.TypeExtensions": "4.1.0-beta-23516",
-        "System.Security.Cryptography.RSA": "4.0.0-beta-23225",
-        "System.Security.Principal": "4.0.1-beta-23516",
-        "System.ServiceModel.Primitives": "4.1.0-beta-23516",
-        "System.Text.RegularExpressions": "4.0.11-beta-23516",
-        "System.Threading.Thread": "4.0.0-beta-23516",
-        "System.Xml.XDocument": "4.0.11-beta-23516"
+        "Microsoft.CSharp": "4.0.1",
+        "System.Collections.NonGeneric": "4.0.1",
+        "System.Collections.Specialized": "4.0.1",
+        "Microsoft.Extensions.Configuration": "1.0.0",
+        "System.IO.Compression": "4.1.0",
+        "System.Net.WebHeaderCollection": "4.0.1",
+        "System.Reflection.TypeExtensions": "4.1.0",
+        "System.Security.Cryptography.Csp": "4.0.0",
+        "System.Security.Principal": "4.0.1",
+        "System.ServiceModel.Primitives": "4.1.0",
+        "System.Text.RegularExpressions": "4.1.0",
+        "System.Threading.Thread": "4.0.0",
+        "System.Xml.XDocument": "4.0.11"
       }
     }
   }

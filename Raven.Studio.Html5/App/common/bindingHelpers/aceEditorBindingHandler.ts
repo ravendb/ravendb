@@ -261,6 +261,7 @@ class aceEditorBindingHandler {
         if (code !== editorCode) {
             aceEditor.getSession().setValue(code||"");
         }
+        aceEditor.setReadOnly(bindingValues.readOnly);
         if (this.allowResize) {
             this.alterHeight(element, aceEditor);
         }

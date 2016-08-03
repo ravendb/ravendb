@@ -1,3 +1,5 @@
+Set-Variable CUSTOM_BUILD_NUMBER -option Constant -value "13"
+
 function Get-File-Exists-On-Path
 {
     param(
@@ -47,4 +49,43 @@ Function Get-PackagePath {
                         Sort-Object Name -Descending | 
                         Select-Object -First 1
     Return "$packagePath"
+}
+
+function Get-InformationalVersion($version, $label, $category) 
+{
+    if (!$category) {
+        throw [System.ArgumentException] "Invalid build category $type"
+    }
+
+    if ($category.EndsWith("-Unstable") -or $category.EndsWith("-RC")) {
+        $result = "$version-rc-$label"
+    }
+    elseif ($category.EndsWith("-Hotfix")) {
+        $result = "$version-hotfix-$label"
+    }
+    elseif ($category.EndsWith("-Custom")) {
+        $result = "$version-custom-$label"
+    }
+    elseif ($category -eq "RavenDB") {
+        $result = "$version"
+    }
+    else
+    {
+        throw [System.ArgumentException] "Invalid build category $type"
+    }
+    
+    $result
+}
+
+function Get-BuildLabel
+{
+    $result = ""
+    if($env:BUILD_NUMBER -ne $null) {
+        $result = $env:BUILD_NUMBER
+    }
+    else {
+        $result = $CUSTOM_BUILD_NUMBER
+    }
+    
+    $result
 }

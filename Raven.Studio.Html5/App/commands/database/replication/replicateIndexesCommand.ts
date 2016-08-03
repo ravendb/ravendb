@@ -4,27 +4,20 @@ import appUrl = require("common/appUrl");
 import replicationDestination = require("models/database/replication/replicationDestination");
 
 class replicateIndexesCommand extends commandBase {
-    private destination: replicationDestination;
-    constructor(private db: database, destination: replicationDestination) {
+
+    constructor(private db: database, private destination: replicationDestination) {
         super();
-        this.destination = destination;
     }
 
-    execute(): JQueryPromise<any> {
-        var promise = $.Deferred();
-
+    execute(): JQueryPromise<void> {
         var indexesUrl = '/databases/' + this.db.name + '/replication/replicate-indexes?op=replicate-all-to-destination';
         var destinationJson = JSON.stringify(this.destination.toDto());
-        this.post(indexesUrl, destinationJson, appUrl.getSystemDatabase())
+        return this.post(indexesUrl, destinationJson, appUrl.getSystemDatabase(), { dataType: undefined })
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to send replicate indexes command!", response.responseText, response.statusText);
-                promise.reject();
             }).done(() => {
                 this.reportSuccess("Sent replicate indexes command.");
-                promise.resolve();
             });
-
-        return promise;
     }
 }
 

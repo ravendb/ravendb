@@ -695,7 +695,7 @@ namespace Raven.Client.Shard
                             string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
                     var localCopy = shardAndObjects.Value;
-                    saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray());
+                    saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray(), data.Options );
                     saveChanges.Add(localCopy);
                 }
                 await Task.WhenAll(saveTasks).ConfigureAwait(false);
@@ -754,7 +754,7 @@ namespace Raven.Client.Shard
 
         public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default (CancellationToken))
         {
-            throw new NotSupportedException("Async kazy requests are not supported for sharded store");
+            throw new NotSupportedException("Async lazy requests are not supported for sharded store");
         }
 
         public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)

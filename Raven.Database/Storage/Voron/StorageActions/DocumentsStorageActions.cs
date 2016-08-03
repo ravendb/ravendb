@@ -265,6 +265,57 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 lastProcessedDocument(lastDocEtag);
         }
 
+        public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
+            Func<string, RavenJObject, Func<JsonDocument>, bool> filterDocument, 
+            Reference<bool> earlyExit, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(etag))
+                throw new ArgumentNullException("etag");
+
+            earlyExit.Value = false;
+
+            using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+                .Iterate(Snapshot, writeBatch.Value))
+            {
+                var slice = (Slice)etag.ToString();
+                if (iterator.Seek(slice) == false)
+                    yield break;
+
+                if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+                {
+                    if (iterator.MoveNext() == false)
+                        yield break;
+                }
+
+                long fetchedDocumentCount = 0;
+
+                do
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (++fetchedDocumentCount >= maxTake)
+                    {
+                        earlyExit.Value = true;
+                        break;
+                    }
+
+                    var key = GetKeyFromCurrent(iterator);
+                    var normalizedKey = CreateKey(key);
+                    var sliceKey = (Slice)normalizedKey;
+
+                    int metadataSize;
+                    var metadata = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize).Metadata;
+
+                    Func<JsonDocument> getDocument = () => DocumentByKey(key);
+                    if (filterDocument(key, metadata, getDocument) == false)
+                        continue;
+
+                    yield return key;
+
+                } while (iterator.MoveNext());
+            }
+        }
+
         public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
         {
             return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
@@ -318,6 +369,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
+        public IEnumerable<JsonDocument> GetDocuments(int start)
+        {
+            using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false || 
+                    iterator.Skip(start) == false)
+                    yield break;
+
+                do
+                {
+                    var key = iterator.CurrentKey.ToString();
+
+                    var fetchedDocument = DocumentByKey(key);
+                    if (fetchedDocument == null)
+                        continue;
+
+                    yield return fetchedDocument;
+                } while (iterator.MoveNext());
+            }
+        }
+
         public long GetDocumentsCount()
         {
             return tableStorage.GetEntriesCount(tableStorage.Documents);
@@ -351,7 +423,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (metadataDocument == null)
             {
                 if (logger.IsDebugEnabled)
-                logger.Debug("Document with key='{0}' was not found", key);
+                    logger.Debug("Document with key='{0}' was not found", key);
                 return null;
             }
 
@@ -439,7 +511,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                           .Delete(writeBatch.Value, deletedETag);
 
             documentCacher.RemoveCachedDocument(normalizedKey, existingEtag);
-            if (logger.IsDebugEnabled)
+
             if (logger.IsDebugEnabled) { logger.Debug("Deleted document with key = '{0}'", key); }
 
             return true;
@@ -456,7 +528,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             DateTime savedAt;
             var normalizedKey = CreateKey(key);
             var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
-            if (logger.IsDebugEnabled)
+
             if (logger.IsDebugEnabled) { logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key); }
 
             if (existingEtag != null)
@@ -534,7 +606,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             documentCacher.RemoveCachedDocument(normalizedKey, preTouchEtag);
             etagTouches.Add(preTouchEtag, afterTouchEtag);
-            if (logger.IsDebugEnabled)
+
             if (logger.IsDebugEnabled) { logger.Debug("TouchDocument() - document with key = '{0}'", key); }
         }
 
@@ -660,7 +732,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
             catch (Exception e)
             {
-
                 throw new InvalidDataException("Failed to de-serialize metadata of document " + normalizedKey, e);
             }
         }
@@ -779,10 +850,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public DebugDocumentStats GetDocumentStatsVerySlowly()
+        public DebugDocumentStats GetDocumentStatsVerySlowly(Action<string> progress, CancellationToken token)
         {
             var sp = Stopwatch.StartNew();
             var stat = new DebugDocumentStats { Total = GetDocumentsCount() };
+
+            var processedDocuments = 0;
 
             var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
             using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch.Value))
@@ -795,6 +868,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 do
                 {
+                    if (processedDocuments%64 == 0)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        progress($"Scanned {$"{processedDocuments:#,#;;0}"} documents");
+                    }
+
+                    
                     var key = GetKeyFromCurrent(iterator);
                     var doc = DocumentByKey(key);
                     if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
@@ -815,6 +895,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     if (doc.Metadata.ContainsKey(Constants.RavenDeleteMarker))
                         stat.Tombstones++;
 
+                    processedDocuments++;
                 }
                 while (iterator.MoveNext());
                 stat.TimeToGenerate = sp.Elapsed;

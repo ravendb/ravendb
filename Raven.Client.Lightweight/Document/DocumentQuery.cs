@@ -7,12 +7,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
+using Raven.Client.Document.Batches;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
 
@@ -69,7 +71,7 @@ namespace Raven.Client.Document
             return this;
         }
 
-        public IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+        public virtual IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var documentQuery = new DocumentQuery<TTransformerResult>(theSession,
@@ -155,8 +157,6 @@ namespace Raven.Client.Document
             this.transformerParameters = transformerParameters;
             return this;
         }
-
-        public bool IsDistinct { get { return isDistinct; } }
 
         /// <summary>
         /// Selects the specified fields directly from the index
@@ -422,6 +422,27 @@ namespace Raven.Client.Document
             {
                 NegateNext();
                 return this;
+            }
+        }
+        /// <summary>
+        ///   Get the name of the index being queried
+        /// </summary>
+        public string IndexQueried
+        {
+            get { return indexName; }
+        }
+        /// <summary>
+        ///   Gets the query result
+        ///   Execute the query the first time that this is called.
+        /// </summary>
+        /// <value>The query result.</value>
+        public QueryResult QueryResult
+        {
+            get
+            {
+                InitSync();
+
+                return queryOperation.CurrentQueryResults.CreateSnapshot();
             }
         }
 
@@ -1122,6 +1143,27 @@ namespace Raven.Client.Document
             return GetEnumerator();
         }
 
+        /// <summary>
+        ///   Gets the enumerator.
+        /// </summary>
+        public virtual IEnumerator<T> GetEnumerator()
+        {
+            InitSync();
+            while (true)
+            {
+                try
+                {
+                    return queryOperation.Complete<T>().GetEnumerator();
+                }
+                catch (Exception e)
+                {
+                    if (queryOperation.ShouldQueryAgain(e) == false)
+                        throw;
+                    ExecuteActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
+                }
+            }
+        }
+
         public IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             return Spatial(path.ToPropertyPath(), clause);
@@ -1145,6 +1187,132 @@ namespace Raven.Client.Document
             if (isSpatialQuery)
                 return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", query, spatialFieldName, queryShape, spatialRelation);
             return query;
+        }
+
+        public T First()
+        {
+            return ExecuteQueryOperation(1).First();
+        }
+
+        public T FirstOrDefault()
+        {
+            return ExecuteQueryOperation(1).FirstOrDefault();
+        }
+
+        public T Single()
+        {
+            return ExecuteQueryOperation(2).Single();
+        }
+
+        public T SingleOrDefault()
+        {
+            return ExecuteQueryOperation(2).SingleOrDefault();
+        }
+
+        private IEnumerable<T> ExecuteQueryOperation(int take)
+        {
+            if (!pageSize.HasValue || pageSize > take)
+                Take(take);
+
+            InitSync();
+
+            return queryOperation.Complete<T>();
+        }
+
+        protected virtual void InitSync()
+        {
+            if (queryOperation != null)
+                return;
+            ClearSortHints(DatabaseCommands);
+            ExecuteBeforeQueryListeners();
+            queryOperation = InitializeQueryOperation();
+            ExecuteActualQuery();
+        }
+
+        public FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery(false);
+            return DatabaseCommands.GetFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+        }
+
+        public FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery(false);
+            return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
+        }
+
+        protected virtual void ExecuteActualQuery()
+        {
+            theSession.IncrementRequestCount();
+            while (true)
+            {
+                using (queryOperation.EnterQueryContext())
+                {
+                    queryOperation.LogQuery();
+                    var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
+                    if (queryOperation.IsAcceptable(result) == false)
+                    {
+                        Thread.Sleep(100);
+                        continue;
+                    }
+                    break;
+                }
+            }
+            InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+        }
+
+        /// <summary>
+        /// Gets the total count of records for this query
+        /// </summary>
+        public int Count()
+        {
+            Take(0);
+            var queryResult = QueryResult;
+            return queryResult.TotalResults;
+        }
+
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public Lazy<IEnumerable<T>> Lazily()
+        {
+            return Lazily(null);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy-count query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public virtual Lazy<int> CountLazily()
+        {
+            if (queryOperation == null)
+            {
+                ExecuteBeforeQueryListeners();
+                Take(0);
+                queryOperation = InitializeQueryOperation();
+            }
+
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
+
+            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+        {
+            if (queryOperation == null)
+            {
+                ExecuteBeforeQueryListeners();
+                queryOperation = InitializeQueryOperation();
+            }
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
+            return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
     }
 }

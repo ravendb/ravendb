@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/database/replication/replicationsSetup");
 import replicationConfig = require("models/database/replication/replicationConfig")
 import replicationDestination = require("models/database/replication/replicationDestination");
-import collection = require("models/database/documents/collection");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
 import updateServerPrefixHiLoCommand = require("commands/database/documents/updateServerPrefixHiLoCommand");
@@ -16,12 +15,9 @@ import deleteLocalReplicationsSetupCommand = require("commands/database/globalCo
 import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import appUrl = require("common/appUrl");
-import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
-import replicationPatchScript = require("models/database/replication/replicationPatchScript");
-import ResolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
+import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 
 class replications extends viewModelBase {
 
@@ -33,7 +29,6 @@ class replications extends viewModelBase {
     globalClientFailoverBehaviour = ko.observable<string>(null);
     globalClientRequestTimeSlaThreshold = ko.observable<number>();
     globalReplicationConfig = ko.observable<replicationConfig>();
-    collections = ko.observableArray<collection>();
 
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -61,19 +56,14 @@ class replications extends viewModelBase {
     }
 
     private getIndexReplicationStatusForAllDestinations(): string {
-        var countOfSkipIndexReplication: number = 0;
-        ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
-            if (dest.skipIndexReplication()) {
-                countOfSkipIndexReplication++;
-            }
-        });
+        var nonEtlDestinations = this.replicationsSetup().destinations().filter(x => !x.enableReplicateOnlyFromCollections());
+        var nonEtlWithSkipedIndexReplicationCount = nonEtlDestinations.filter(x => x.skipIndexReplication()).length;
 
-        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
-            return 'all';
-
-        // ReSharper disable once ConditionIsAlwaysConst
-        if (countOfSkipIndexReplication === 0)
+        if (nonEtlWithSkipedIndexReplicationCount === 0)
             return 'none';
+
+        if (nonEtlWithSkipedIndexReplicationCount === nonEtlDestinations.length)
+            return 'all';
 
         return 'mixed';
     }
@@ -140,13 +130,6 @@ class replications extends viewModelBase {
 
         var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.usingGlobal];
 
-        $.each(this.replicationsSetup().destinations(), (i, dest) => {
-            replicationSetupDirtyFlagItems.push(<any>dest.specifiedCollections);
-            dest.specifiedCollections.subscribe(array => {
-                dest.ignoredClient(dest.specifiedCollections.length > 0);
-            });
-            this.addScriptHelpPopover();
-        });
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
 
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
@@ -158,11 +141,11 @@ class replications extends viewModelBase {
             return rc || rs || sp;
         });
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag, this.usingGlobal]);
+    }
 
-        var db = this.activeDatabase();
-        this.fetchCollections(db).done(results => {
-            this.collections(results);
-        });
+    attached() {
+        super.attached();
+        $.each(this.replicationsSetup().destinations(), this.addScriptHelpPopover);
     }
 
     private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
@@ -219,10 +202,11 @@ class replications extends viewModelBase {
         $(".scriptPopover").popover({
             html: true,
             trigger: 'hover',
+            container: ".form-horizontal",
             content:
-            'Return <code>null</code> in transform script to skip document from replication. <br />' +
-            'Example: ' +
-            '<pre>if (this.Region !== "Europe") { <br />   return null; <br />}<br/>this.Currency = "EUR"; </pre>'
+            '<p>Return <code>null</code> in transform script to skip document from replication. </p>' +
+            '<p>Example: </p>' +
+            '<pre><span class="code-keyword">if</span> (<span class="code-keyword">this</span>.Region !== <span class="code-string">"Europe"</span>) { <br />   <span class="code-keyword">return null</span>; <br />}<br/><span class="code-keyword">this</span>.Currency = <span class="code-string">"EUR"</span>; </pre>'
         });
     }
 
@@ -234,20 +218,6 @@ class replications extends viewModelBase {
             item.script("");
         } else {
             item.script(undefined);
-        }
-
-        destination.specifiedCollections.notifySubscribers();
-    }
-
-    public onReplicateToCollectionClick(destination: replicationDestination, collectionName: string) {
-        var collections = destination.specifiedCollections();
-        var item = collections.first(c => c.collection() === collectionName);
-        if (item) {
-            collections.remove(item);
-        } else {
-            var patchScript = replicationPatchScript.empty();
-            patchScript.collection(collectionName);
-            collections.push(patchScript);
         }
 
         destination.specifiedCollections.notifySubscribers();
@@ -309,13 +279,12 @@ class replications extends viewModelBase {
         }
     }
 
-    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return new getCollectionsCommand(db, this.collections()).execute();
-    }
-
     toggleIndexReplication(skipReplicationValue: boolean) {
         this.replicationsSetup().destinations().forEach(dest => {
-            dest.skipIndexReplication(skipReplicationValue);
+            // since we are on replications page filter toggle to non-etl destinations only
+            if (!dest.enableReplicateOnlyFromCollections()) {
+                dest.skipIndexReplication(skipReplicationValue);    
+            }
         });
     }
 
@@ -343,7 +312,7 @@ class replications extends viewModelBase {
     sendResolveAllConflictsCommand() {
         var db = this.activeDatabase();
         if (db) {
-            new ResolveAllConflictsCommand(db).execute();
+            new resolveAllConflictsCommand(db).execute();
         } else {
             alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
         }
@@ -385,6 +354,17 @@ class replications extends viewModelBase {
     }
 
     useGlobal() {
+        // using global configuration will discard all ETL configurations, if you find any warning user about this. 
+        if (this.replicationsSetup().destinations().filter(x => x.enableReplicateOnlyFromCollections()).length) {
+            this.confirmationMessage("Are you sure?",
+                    "All ETL destinations will be discarded when using global configuration.")
+                .done(() => this.proceedWithUseGlobal());
+        } else {
+            this.proceedWithUseGlobal();
+        }
+    }
+
+    private proceedWithUseGlobal() {
         this.usingGlobal(true);
         if (this.globalReplicationConfig()) {
             this.replicationConfig().attachmentConflictResolution(this.globalReplicationConfig().attachmentConflictResolution());
@@ -404,9 +384,6 @@ class replications extends viewModelBase {
                 this.fetchServerPrefixForHiLoCommand(db);
                 this.fetchAutomaticConflictResolution(db);
                 this.fetchReplications(db);
-                this.fetchCollections(db).done(results => {
-                    this.collections(results);
-                });
             });
     }
 

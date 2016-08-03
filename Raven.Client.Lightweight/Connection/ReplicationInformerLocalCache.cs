@@ -97,6 +97,28 @@ namespace Raven.Client.Connection
 #endif
         }
 
+        public static void ClearLocalCache(string serverHash)
+        {
+#if !DNXCORE50
+
+            using (var machineStoreForApplication = GetIsolatedStorageFile())
+            {
+                var path = "RavenDB Cluster Nodes For - " + serverHash;
+                if (machineStoreForApplication.GetFileNames(path).Length == 0)
+                    return;
+
+                try
+                {
+                    machineStoreForApplication.DeleteFile(path);
+                }
+                catch (Exception)
+                {
+                    // not important
+                }
+            }
+#endif
+        }
+
         public static List<OperationMetadata> TryLoadClusterNodesFromLocalCache(string serverHash)
         {
 #if !DNXCORE50

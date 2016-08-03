@@ -5,18 +5,18 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
     using System.Collections.Generic;
     using System.IO;
 
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Extensions;
-    using Raven.Database.Impl;
-    using Raven.Database.Storage.Voron.Impl;
+    using Abstractions.Data;
+    using Abstractions.Extensions;
+    using Database.Impl;
+    using Impl;
     using Raven.Json.Linq;
 
     using global::Voron;
@@ -31,9 +31,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
         private readonly Reference<WriteBatch> writeBatch;
         private readonly GeneralStorageActions generalStorageActions;
 
-        public ListsStorageActions(TableStorage tableStorage, 
-            IUuidGenerator generator, Reference<SnapshotReader> snapshot, 
-            Reference<WriteBatch> writeBatch, 
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+
+        public ListsStorageActions(TableStorage tableStorage,
+            IUuidGenerator generator, Reference<SnapshotReader> snapshot,
+            Reference<WriteBatch> writeBatch,
             IBufferPool bufferPool,
             GeneralStorageActions generalStorageActions)
             : base(snapshot, bufferPool)
@@ -78,9 +80,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 internalKeyAsSlice,
                 new RavenJObject
                 {
-                    { "name", name }, 
-                    { "key", key }, 
-                    { "etag", etag.ToByteArray() }, 
+                    { "name", name },
+                    { "key", key },
+                    { "etag", etag.ToByteArray() },
                     { "data", data },
                     { "createdAt", createdAt}
                 });
@@ -159,7 +161,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 int skipped = 0;
                 while (skipped < start)
                 {
-                    if(!iterator.MoveNext())
+                    if (!iterator.MoveNext())
                         yield break;
                     skipped++;
                 }
@@ -236,11 +238,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
 
                     var key = value.Value<string>("key");
-                    var etagSlice = (Slice) currentEtag.ToString();
+                    var etagSlice = (Slice)currentEtag.ToString();
 
                     tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
                     listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
-                    listsByNameAndKey.Delete(writeBatch.Value, (Slice) AppendToKey(nameKey, key));
+                    listsByNameAndKey.Delete(writeBatch.Value, (Slice)AppendToKey(nameKey, key));
 
                     if (generalStorageActions.MaybePulseTransaction(iterator))
                     {
@@ -253,7 +255,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
             finally
             {
-                if(iterator!=null)
+                if (iterator != null)
                     iterator.Dispose();
             }
         }
@@ -278,14 +280,20 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     skipMoveNext = false;
                     ushort version;
                     var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
-                    var createdAt = value.Value<DateTime>("createdAt");
+                    if (value == null)
+                    {
+                        Logger.Warn("Couldn't locate key : '{0}' in Lists TableStorage for '{1}'",
+                            iterator.CurrentKey, name);
+                        continue;
+                    }
 
+                    var createdAt = value.Value<DateTime>("createdAt");
                     if (createdAt > cutoff)
                         break;
 
                     var key = value.Value<string>("key");
                     var etag = Etag.Parse(iterator.CurrentKey.ToString());
-                    var etagSlice = (Slice) etag.ToString();
+                    var etagSlice = (Slice)etag.ToString();
 
                     tableStorage.Lists.Delete(writeBatch.Value, etagSlice);
                     listsByName.MultiDelete(writeBatch.Value, nameKeySlice, etagSlice);
@@ -302,7 +310,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
             finally
             {
-                if(iterator!=null)
+                if (iterator != null)
                     iterator.Dispose();
             }
         }
@@ -323,7 +331,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             afterTouchEtag = generator.CreateSequentialUuid(uuidType);
             var internalKey = afterTouchEtag.ToString();
-            var internalKeyAsSlice = (Slice) internalKey;
+            var internalKeyAsSlice = (Slice)internalKey;
 
             tableStorage.Lists.Add(
                 writeBatch.Value,
@@ -341,8 +349,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
             var nameKey = CreateKey(name);
-            var nameKeySlice = (Slice) nameKey;
-            var nameAndKeySlice = (Slice) AppendToKey(nameKey, key);
+            var nameKeySlice = (Slice)nameKey;
+            var nameAndKeySlice = (Slice)AppendToKey(nameKey, key);
 
             listsByName.MultiAdd(writeBatch.Value, nameKeySlice, internalKeyAsSlice);
             listsByNameAndKey.Add(writeBatch.Value, nameAndKeySlice, internalKey);

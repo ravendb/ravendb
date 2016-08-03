@@ -8,7 +8,7 @@ class getReplicationTopology extends commandBase {
     }
 
     execute(): JQueryPromise<replicationTopologyDto> {
-        return this.post("/admin/replication/topology/view", null, this.db).then((result) => {
+        return this.post("/admin/replication/topology/view", null, this.db, null, 20000).then((result) => {
             return result;
         });
     }

@@ -50,7 +50,7 @@ namespace Raven.Bundles.Replication.Triggers
             }
         }
 
-        public override void AfterDelete(string key, TransactionInformation transactionInformation)
+        public override void AfterDelete(string key, TransactionInformation transactionInformation,RavenJObject metaJObject)
         {
             var now = DateTime.UtcNow;
             var metadata = new RavenJObject
@@ -59,10 +59,12 @@ namespace Raven.Bundles.Replication.Triggers
                 {Constants.RavenReplicationHistory, deletedHistory.Value},
                 {Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
                 {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)},
-                {Constants.LastModified,now},
-                {Constants.RavenLastModified,now }
-
+                {Constants.LastModified, now},
+                {Constants.RavenLastModified, now}
             };
+            //Adding Raven-Entity-Name to tombstones so we can filter them when using ETL.
+            if (metaJObject.ContainsKey(Constants.RavenEntityName))
+                metadata[Constants.RavenEntityName] = metaJObject[Constants.RavenEntityName];
             deletedHistory.Value = null;
 
             Database.TransactionalStorage.Batch(accessor =>

@@ -628,14 +628,13 @@ namespace Raven.Client.Document
 
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)query);
-            var indexQuery = ravenQueryInspector.GetIndexQuery(false);
+            var indexQuery = query.GetIndexQuery(false);
             bool waitForNonStaleResultsWasSetGloably = this.Advanced.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite;
             if (!waitForNonStaleResultsWasSetGloably && (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow))
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
             IncrementRequestCount();
-            var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+            var enumerator = DatabaseCommands.StreamQuery(query.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);
         }
 
@@ -745,7 +744,7 @@ namespace Raven.Client.Document
                 IncrementRequestCount();
                 LogBatch(data);
 
-                var batchResults = DatabaseCommands.Batch(data.Commands);
+                var batchResults = DatabaseCommands.Batch(data.Commands, data.Options);
                 if (batchResults == null)
                     throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");
                 UpdateBatchResults(batchResults, data);

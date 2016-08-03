@@ -108,6 +108,19 @@
                 Clear selection
             </span>
         </div>
+
+        <div class="documents-select" data-bind="with: selectedCollection, visible: showCollectionChanged">
+            <!-- ko if: isAllDocuments -->
+                Documents count was modified,
+            <!-- /ko -->
+
+            <!-- ko ifnot: isAllDocuments -->
+                '<span data-bind="text: name"></span>' collection count was modified,
+            <!-- /ko -->
+            
+            press <span class="select-link" data-bind="click: $root.refresh.bind($root)">here</span> to refresh.
+        </div>
+
         <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyDocumentsAutoSelected, isAllAutoSelected: isAllDocumentsAutoSelected, noResultsMessage: 'No documents were found!', container: '#documents-page-right-container' }"></div>
     </div>
 </div>

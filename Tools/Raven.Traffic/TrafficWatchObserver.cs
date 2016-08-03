@@ -122,13 +122,14 @@ namespace Raven.Traffic
                 this);
 
         }
-
+        
         private string GetAuthToken()
         {
             string authToken;
+            var databasePartialUrl = databaseName == null ? string.Empty : "//databases//" + databaseName;
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null,
-                    store.Url + "//databases//" + databaseName + "/singleAuthToken",
+                    store.Url + databasePartialUrl + "/singleAuthToken",
                     HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions)))
             {
@@ -139,9 +140,10 @@ namespace Raven.Traffic
 
         private HttpJsonRequest GetTrafficWatchRequest()
         {
+            var databasePartialUrl = databaseName == null ? string.Empty : "//databases//" + databaseName;
             return store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null,
-                    store.Url + "//databases//" + databaseName + "/traffic-watch/events?" + "singleUseAuthToken=" + GetAuthToken() + "&id=" + Guid.NewGuid(),
+                    store.Url + databasePartialUrl + "/traffic-watch/events?" + "singleUseAuthToken=" + GetAuthToken() + "&id=" + Guid.NewGuid(),
                     HttpMethod.Get,
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions)

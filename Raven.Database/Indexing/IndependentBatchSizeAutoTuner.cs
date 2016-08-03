@@ -22,7 +22,7 @@ namespace Raven.Database.Indexing
             metricCounters.AddGauge(typeof(IndependentBatchSizeAutoTuner), User + ".CurrentNumberOfItems", () => CurrentNumberOfItems);
         }
 
-        protected override int InitialNumberOfItems
+        public override int InitialNumberOfItems
         {
             get { return context.Configuration.InitialNumberOfItemsToProcessInSingleBatch; }
         }
@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing
             yield return lastAmount;
         }
 
-        protected override string GetName
+        protected override string Name
         {
             get { return "IndependentBatchSizeAutoTuner"; }
         }

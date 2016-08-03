@@ -12,6 +12,7 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
+import messagePublisher = require("common/messagePublisher");
 
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import database = require("models/resources/database");
@@ -164,9 +165,6 @@ class query extends viewModelBase {
 
         this.isDynamicIndex = ko.computed(() => {
             var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
-            if (currentIndex) {
-                console.log(currentIndex.name);
-            }
             return !!currentIndex && currentIndex.name.startsWith("Auto/");
         });
 
@@ -232,7 +230,7 @@ class query extends viewModelBase {
             html: true,
             trigger: "hover",
             container: ".form-horizontal",
-            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
         });
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
 
@@ -344,7 +342,7 @@ class query extends viewModelBase {
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
             var firstIndexName = this.indexes.first().name;
             this.setSelectedIndex(firstIndexName);
-        } else if (this.indexes.first(i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf(this.dynamicPrefix) === 0 || indexNameOrRecentQueryHash === "dynamic") {
+        } else if (this.indexes.first(i => i.name === indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf(this.dynamicPrefix) === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
@@ -354,6 +352,10 @@ class query extends viewModelBase {
             } else {
                 this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
+        } else if (indexNameOrRecentQueryHash) {
+            // if indexName exists and we didn't fall into any case show error and redirect to documents page
+            messagePublisher.reportError("Could not find " + indexNameOrRecentQueryHash + " index");
+            router.navigate(appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()));
         }
     }
 
@@ -808,6 +810,11 @@ class query extends viewModelBase {
             if (option === "Numeric Double") {
                 if (from !== "*") fromPrefix = "Dx";
                 if (to !== "*") toPrefix = "Dx";
+                this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix + to + "]");
+            }
+            else if (option === "Numeric Long") {
+                if (from !== "*") fromPrefix = "Lx";
+                if (to !== "*") toPrefix = "Lx";
                 this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix + to + "]");
             }
             else if (option === "Numeric Int") {

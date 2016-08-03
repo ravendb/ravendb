@@ -27,7 +27,11 @@ class indexes extends viewModelBase {
 
     resetsInProgress = d3.set();
 
-    indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index>; groupHidden: KnockoutObservable<boolean> }>();
+    indexGroups = ko.observableArray<{ 
+        entityName: string; 
+        indexes: KnockoutObservableArray<index>; 
+        groupHidden: KnockoutObservable<boolean>;
+    }>();
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
@@ -35,11 +39,12 @@ class indexes extends viewModelBase {
     indexMutex = true;
     btnState = ko.observable<boolean>(false);
     btnStateTooltip = ko.observable<string>("ExpandAll");
-    btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
+    btnTitle = ko.computed(() => this.btnState() ? "Expand all" : "Collapse all");
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
     corruptedIndexes: KnockoutComputed<index[]>;
     lockModeCommon: KnockoutComputed<string>;
     searchText = ko.observable<string>();
+    summary: KnockoutComputed<string>;
 
     constructor() {
         super();
@@ -69,11 +74,47 @@ class indexes extends viewModelBase {
 
             var firstLockMode = allIndexes[0].lockMode();
             for (var i = 1; i < allIndexes.length; i++) {
-                if (allIndexes[i].lockMode() != firstLockMode) {
+                if (allIndexes[i].lockMode() !== firstLockMode) {
                     return "Mixed";
                 }
             }
             return firstLockMode;
+        });
+
+        
+        this.summary = ko.computed(() => {
+            var indexesCount = 0;
+            var mapReduceCount = 0;
+            this.indexGroups().forEach(g => {
+                g.indexes().forEach(index => {
+                    indexesCount += 1;
+                    if (index.isMapReduce()) {
+                        mapReduceCount++;
+                    }
+                });
+            });
+
+            var summary = "";
+            if (indexesCount === 0) {
+                return summary;
+            }
+
+            summary += indexesCount + " index";
+            if (indexesCount > 1) {
+                summary += "es";
+            }
+
+            var groupsCount = this.indexGroups().length;
+            summary += " for " + groupsCount + " collection";
+            if (groupsCount > 1) {
+                summary += "s";
+            }
+
+            if (mapReduceCount > 0) {
+                summary += " (" + mapReduceCount + " MapReduce)";
+            }
+
+            return summary;
         });
     }
 
@@ -238,28 +279,30 @@ class indexes extends viewModelBase {
     putIndexIntoGroupNamed(i: index, groupName: string) {
         var group = this.indexGroups.first(g => g.entityName === groupName);
         var oldIndex: index;
-        var indexExists: boolean;
         if (group) {
-            oldIndex = group.indexes.first((cur: index) => cur.name == i.name);
+            oldIndex = group.indexes.first((cur: index) => cur.name === i.name);
             if (!!oldIndex) {
                 group.indexes.replace(oldIndex, i);
             } else {
                 group.indexes.push(i);
             }
         } else {
-            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]), groupHidden: ko.observable<boolean>(false) });
+            this.indexGroups.push({ 
+                entityName: groupName, 
+                indexes: ko.observableArray([i]), 
+                groupHidden: ko.observable<boolean>(false) });
         }
     }
 
     createNotifications(): Array<changeSubscription> {
         return [
             changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
-            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, e => this.processReplaceEvent())
+            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
         ];
     }
 
     processReplaceEvent() {
-         if (this.indexMutex == true) {
+         if (this.indexMutex) {
             this.indexMutex = false;
             setTimeout(() => {
                 this.fetchIndexes().always(() => this.indexMutex = true);
@@ -286,7 +329,7 @@ class indexes extends viewModelBase {
         var result = new Array<index>();
         this.indexGroups().forEach(g => {
             g.indexes().forEach(i => {
-                if (i.name == indexName) {
+                if (i.name === indexName) {
                     result.push(i);
                 }
             });
@@ -315,10 +358,9 @@ class indexes extends viewModelBase {
         });
     }
     toggleExpandAll() {
-        if (this.btnState() === true) {
+        if (this.btnState()) {
             $(".index-group-content").collapse('show');
-        }
-        else {
+        } else {
             $(".index-group-content").collapse('hide');
         }
         
@@ -358,7 +400,7 @@ class indexes extends viewModelBase {
         app.showDialog(cancelSideBySideIndexViewModel);
         cancelSideBySideIndexViewModel.cancelTask
             .done((closedWithoutDeletion: boolean) => {
-                if (closedWithoutDeletion == false) {
+                if (!closedWithoutDeletion) {
                     this.removeIndexesFromAllGroups([i]);
                 }
             })
@@ -374,7 +416,7 @@ class indexes extends viewModelBase {
             app.showDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask
                 .done((closedWithoutDeletion: boolean) => {
-                    if (closedWithoutDeletion == false) {
+                    if (!closedWithoutDeletion) {
                         this.removeIndexesFromAllGroups(indexes);
                     }
                 })
@@ -461,7 +503,7 @@ class indexes extends viewModelBase {
 
     setLockModeAllIndexes(lockModeString: string, lockModeStrForTitle: string) {
         if (this.lockModeCommon() === lockModeString)
-            return false;
+            return;
 
         var lockModeTitle = "Do you want to " + lockModeStrForTitle + " ALL Indexes?";
 

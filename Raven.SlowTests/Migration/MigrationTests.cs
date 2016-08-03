@@ -9,7 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -112,6 +112,25 @@ namespace Raven.SlowTests.Migration
                     operation.WaitForCompletion();
 
                     ValidateBackup(store);
+
+                    // modify docs to force update of indexes on existing data internal data - like mapped results, internal indexes etc, see RavenDB-4677
+                    using (var session = store.OpenSession())
+                    {
+                        var orders = session.Query<Order>().Take(1024).ToList();
+
+                        foreach (var order in orders)
+                        {
+                            order.OrderedAt = SystemTime.UtcNow;
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    ValidateBackup(store);
+
+                    var stats = store.DatabaseCommands.GetStatistics();
+
+                    Assert.True(stats.Errors.Length == 0, $"Indexing errors after migration of : {file.Name}, number of errors: {stats.Errors.Length}");
                 }
             }
         }

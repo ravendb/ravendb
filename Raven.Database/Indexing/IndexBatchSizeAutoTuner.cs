@@ -22,7 +22,7 @@ namespace Raven.Database.Indexing
             metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "CurrentNumberOfItems", () => CurrentNumberOfItems);
         }
 
-        protected override int InitialNumberOfItems
+        public override int InitialNumberOfItems
         {
             get { return context.Configuration.InitialNumberOfItemsToProcessInSingleBatch; }
         }
@@ -62,7 +62,7 @@ namespace Raven.Database.Indexing
             return lastAmountOfItemsToIndex;
         }
 
-        protected override string GetName
+        protected override string Name
         {
             get { return "IndexBatchSizeAutoTuner"; }
         }

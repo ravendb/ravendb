@@ -36,5 +36,7 @@ namespace Raven.Smuggler
             parameters.Destination.Url = parameters.BackupPath;
             await api.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions> { From = parameters.Source, To = parameters.Destination }).ConfigureAwait(false);
         }
+
+        protected override string FileExtension => "ravendbdump";
     }
 }

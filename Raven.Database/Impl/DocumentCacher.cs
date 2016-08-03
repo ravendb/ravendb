@@ -17,7 +17,7 @@ namespace Raven.Database.Impl
         private readonly InMemoryRavenConfiguration configuration;
         private MemoryCache cachedSerializedDocuments;
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
-        
+
         [ThreadStatic]
         private static bool skipSetAndGetDocumentInCache;
 
@@ -48,18 +48,19 @@ namespace Raven.Database.Impl
             return result;
         }
 
-        public void HandleLowMemory()
+        public LowMemoryHandlerStatistics HandleLowMemory()
         {
-            var oldCache = cachedSerializedDocuments;
-
-            cachedSerializedDocuments = CreateCache();
-
-            oldCache.Dispose();
-        }
-
-        public void SoftMemoryRelease()
-        {
-            
+            using (var oldCache = cachedSerializedDocuments)
+            {
+                cachedSerializedDocuments = CreateCache();
+                var oldCount = oldCache.GetCount();
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = oldCache.Name,
+                    DatabaseName = configuration.DatabaseName,
+                    Summary = $"A new document cache was created. Old Cache had {oldCount:#,#} items"
+                };
+            }
         }
 
         public LowMemoryHandlerStatistics GetStats()

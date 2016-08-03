@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="RavenDB_1516.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RavenDB_2516.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -66,13 +66,20 @@ namespace Raven.Tests.Issues
                 Assert.Equal(5, topology.Servers.Count);
                 Assert.Equal(5, topology.Connections.Count);
 
-                topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store2.Url.ForDatabase(store2.DefaultDatabase) && x.Source == store1.Url.ForDatabase(store1.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store3.Url.ForDatabase(store3.DefaultDatabase) && x.Source == store2.Url.ForDatabase(store2.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store4.Url.ForDatabase(store4.DefaultDatabase) && x.Source == store3.Url.ForDatabase(store3.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store5.Url.ForDatabase(store5.DefaultDatabase) && x.Source == store4.Url.ForDatabase(store4.DefaultDatabase));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store1.Url.ForDatabase(store1.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store5.Url.ForDatabase(store5.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store2.Url.ForDatabase(store2.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store1.Url.ForDatabase(store1.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store3.Url.ForDatabase(store3.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store2.Url.ForDatabase(store2.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store4.Url.ForDatabase(store4.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store3.Url.ForDatabase(store3.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store5.Url.ForDatabase(store5.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store4.Url.ForDatabase(store4.DefaultDatabase)));
 
-                foreach (var connection in topology.Connections.Where(x => x.Destination != store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source != store5.Url.ForDatabase(store5.DefaultDatabase)))
+                foreach (var connection in topology.Connections.Where(x => x.DestinationUrl
+                    .All(y => y != store1.Url.ForDatabase(store1.DefaultDatabase))
+                            && x.SourceUrl.All(y => y != store5.Url.ForDatabase(store5.DefaultDatabase))))
                 {
                     Assert.Equal(ReplicatonNodeState.Online, connection.SourceToDestinationState);
                     Assert.Equal(ReplicatonNodeState.Online, connection.DestinationToSourceState);
@@ -85,7 +92,8 @@ namespace Raven.Tests.Issues
                     Assert.NotNull(connection.StoredServerId);
                 }
 
-                var c = topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
+                var c = topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store1.Url.ForDatabase(store1.DefaultDatabase))
+                                                         && x.SourceUrl.Any(y => y == store5.Url.ForDatabase(store5.DefaultDatabase)));
                 Assert.Equal(ReplicatonNodeState.Online, c.SourceToDestinationState);
                 Assert.Equal(ReplicatonNodeState.Offline, c.DestinationToSourceState);
                 Assert.NotNull(c.Source);
@@ -149,13 +157,20 @@ namespace Raven.Tests.Issues
                 Assert.Equal(5, topology.Servers.Count);
                 Assert.Equal(5, topology.Connections.Count);
 
-                topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store2.Url.ForDatabase(store2.DefaultDatabase) && x.Source == store1.Url.ForDatabase(store1.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store3.Url.ForDatabase(store3.DefaultDatabase) && x.Source == store2.Url.ForDatabase(store2.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store4.Url.ForDatabase(store4.DefaultDatabase) && x.Source == store3.Url.ForDatabase(store3.DefaultDatabase));
-                topology.Connections.Single(x => x.Destination == store5.Url.ForDatabase(store5.DefaultDatabase) && x.Source == store4.Url.ForDatabase(store4.DefaultDatabase));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store1.Url.ForDatabase(store1.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store5.Url.ForDatabase(store5.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store2.Url.ForDatabase(store2.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store1.Url.ForDatabase(store1.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store3.Url.ForDatabase(store3.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store2.Url.ForDatabase(store2.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store4.Url.ForDatabase(store4.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store3.Url.ForDatabase(store3.DefaultDatabase)));
+                topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store5.Url.ForDatabase(store5.DefaultDatabase))
+                                                 && x.SourceUrl.Any(y => y == store4.Url.ForDatabase(store4.DefaultDatabase)));
 
-                foreach (var connection in topology.Connections.Where(x => x.Destination != store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source != store5.Url.ForDatabase(store5.DefaultDatabase)))
+                foreach (var connection in topology.Connections
+                    .Where(x => x.DestinationUrl.All(y => y != store1.Url.ForDatabase(store1.DefaultDatabase))
+                                && x.SourceUrl.All(y => y != store5.Url.ForDatabase(store5.DefaultDatabase))))
                 {
                     Assert.Equal(ReplicatonNodeState.Online, connection.SourceToDestinationState);
                     Assert.Equal(ReplicatonNodeState.Online, connection.DestinationToSourceState);
@@ -168,7 +183,8 @@ namespace Raven.Tests.Issues
                     Assert.NotNull(connection.StoredServerId);
                 }
 
-                var c = topology.Connections.Single(x => x.Destination == store1.Url.ForDatabase(store1.DefaultDatabase) && x.Source == store5.Url.ForDatabase(store5.DefaultDatabase));
+                var c = topology.Connections.Single(x => x.DestinationUrl.Any(y => y == store1.Url.ForDatabase(store1.DefaultDatabase))
+                                                         && x.SourceUrl.Any(y => y == store5.Url.ForDatabase(store5.DefaultDatabase)));
                 Assert.Equal(ReplicatonNodeState.Online, c.SourceToDestinationState);
                 Assert.Equal(ReplicatonNodeState.Offline, c.DestinationToSourceState);
                 Assert.NotNull(c.Source);

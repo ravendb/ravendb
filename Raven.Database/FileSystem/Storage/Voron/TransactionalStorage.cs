@@ -31,7 +31,7 @@ using Voron.Impl.Compaction;
 using VoronConstants = Voron.Impl.Constants;
 using Constants = Raven.Abstractions.Data.Constants;
 using VoronExceptions = Voron.Exceptions;
-using Raven.Abstractions.Threading;
+using Raven.Database.Storage;
 
 namespace Raven.Database.FileSystem.Storage.Voron
 {
@@ -209,6 +209,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var snapshotRef = new Reference<SnapshotReader>();
             var writeBatchRef = new Reference<WriteBatch>();
 
+            var errorInUserAction = false;
             try
             {
                 snapshotRef.Value = tableStorage.CreateSnapshot();
@@ -217,10 +218,31 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 if (disableBatchNesting.Value == null)
                     current.Value = storageActionsAccessor;
 
+                errorInUserAction = true;
                 action(storageActionsAccessor);
+                errorInUserAction = false;
                 storageActionsAccessor.Commit();
 
                 tableStorage.Write(writeBatchRef.Value);
+            }
+            catch (Exception e)
+            {
+                var exception = e;
+                var ae = e as AggregateException;
+                if (ae != null)
+                    exception = ae.ExtractSingleInnerException();
+
+                Exception _;
+                if (TransactionalStorageHelper.IsVoronOutOfMemoryException(exception) ||
+                    TransactionalStorageHelper.IsWriteConflict(e, out _))
+                {
+                    throw;
+                }
+
+                if (errorInUserAction == false)
+                    Log.ErrorException("Failed to execute transaction. Most likely something is really wrong here.", e);
+
+                throw;
             }
             finally
             {

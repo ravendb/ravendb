@@ -19,6 +19,7 @@ class selectColumns extends dialogViewModelBase {
     maxTableHeight = ko.observable<number>();
     private csvColumns = ko.observableArray<csvColumn>([]);
     private activeInput: JQuery;
+    private lastActiveInput: JQuery;
     private autoCompleteBase = ko.observableArray<KnockoutObservable<string>>([]);
     private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
@@ -72,6 +73,7 @@ class selectColumns extends dialogViewModelBase {
                     this.completionSearchSubscriptions.push(
                         change.value.name.subscribe(this.searchForCompletions.bind(this))
                     );
+                    change.value.name
                 }
                 if (change.status === "deleted") {
                     somethingRemoved = true;
@@ -191,6 +193,10 @@ class selectColumns extends dialogViewModelBase {
         this.activeInput = $("[id ^= 'binding-']:focus");
         if (this.activeInput.length > 0) {
             this.autoCompleterSupport.searchForCompletions(this.activeInput);
+            this.lastActiveInput = this.activeInput;
+        }
+        else if (!!this.lastActiveInput) {
+            this.autoCompleterSupport.searchForCompletions(this.lastActiveInput);
         }
     }
 

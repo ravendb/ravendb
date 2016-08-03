@@ -408,22 +408,10 @@ namespace Raven.Client.Document
 
             var allDocsObservable = changes.ForAllDocuments();
 
-            putDocumentsObserver = allDocsObservable.Subscribe(notification =>
-            {
-                if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    newDocuments.Set();
-                }
-            });
+            putDocumentsObserver = allDocsObservable.Subscribe(new SubscriptionObserver(this));
 
             var bulkInsertObservable = changes.ForBulkInsert();
-            endedBulkInsertsObserver = bulkInsertObservable.Subscribe(notification =>
-            {
-                if (notification.Type == DocumentChangeTypes.BulkInsertEnded)
-                {
-                    newDocuments.Set();
-                }
-            });
+            endedBulkInsertsObserver = bulkInsertObservable.Subscribe(new BulkInsertObserver(this));
 
             Task.WaitAll(new Task[]
             {
@@ -435,29 +423,7 @@ namespace Raven.Client.Document
         {
             var dataSubscriptionObservable = changes.ForDataSubscription(id);
 
-            dataSubscriptionReleasedObserver = dataSubscriptionObservable.Subscribe(notification =>
-            {
-                if (notification.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
-                {
-                    try
-                    {
-                        ensureOpenSubscription().Wait();
-                    }
-                    catch (Exception)
-                    {
-                        return;
-                    }
-
-                    // succeeded in opening the subscription
-
-                    // no longer need to be notified about subscription status changes
-                    dataSubscriptionReleasedObserver.Dispose();
-                    dataSubscriptionReleasedObserver = null;
-
-                    // start standard stuff
-                    Start();
-                }
-            });
+            dataSubscriptionReleasedObserver = dataSubscriptionObservable.Subscribe(new DataSubscriptionChangeObserver(this));
 
             dataSubscriptionObservable.Task.Wait();
         }
@@ -602,6 +568,100 @@ namespace Raven.Client.Document
             {
                 await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
                 IsConnectionClosed = true;
+            }
+        }
+
+        internal class SubscriptionObserver : IObserver<DocumentChangeNotification>
+        {
+            private readonly Subscription<T> subscription;
+
+            public SubscriptionObserver(Subscription<T> subscription)
+            {
+                this.subscription = subscription;
+            }
+
+            public void OnNext(DocumentChangeNotification notification)
+            {
+                if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    subscription.newDocuments.Set();
+                }
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnCompleted()
+            {
+            }
+        }
+
+        internal class BulkInsertObserver : IObserver<BulkInsertChangeNotification>
+        {
+            private readonly Subscription<T> subscription;
+
+            public BulkInsertObserver(Subscription<T> subscription)
+            {
+                this.subscription = subscription;
+            }
+
+            public void OnNext(BulkInsertChangeNotification notification)
+            {
+                if (notification.Type == DocumentChangeTypes.BulkInsertEnded)
+                {
+                    subscription.newDocuments.Set();
+                }
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnCompleted()
+            {
+            }
+        }
+
+        private class DataSubscriptionChangeObserver : IObserver<DataSubscriptionChangeNotification>
+        {
+            private readonly Subscription<T> subscription;
+
+            public DataSubscriptionChangeObserver(Subscription<T> subscription)
+            {
+                this.subscription = subscription;
+            }
+
+            public void OnNext(DataSubscriptionChangeNotification notification)
+            {
+                if (notification.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+                {
+                    try
+                    {
+                        subscription.ensureOpenSubscription().Wait();
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
+
+                    // succeeded in opening the subscription
+
+                    // no longer need to be notified about subscription status changes
+                    subscription.dataSubscriptionReleasedObserver.Dispose();
+                    subscription.dataSubscriptionReleasedObserver = null;
+
+                    // start standard stuff
+                    subscription.Start();
+                }
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnCompleted()
+            {
             }
         }
     }

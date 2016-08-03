@@ -3,23 +3,26 @@
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
 
-    <form data-bind="submit: saveChanges, visible: isForbidden() == false">
-        <div class="btn-toolbar">
-            <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: isEditingEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: editDatabaseSettings, visible: !isEditingEnabled()" title="Edit Database Settings"><i class="fa fa-pencil"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes">
-                <i class="fa fa-refresh"></i>
-            </button>
-            <button type="button" class="btn btn-default" data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="[">
-                <i class="fa fa-align-justify"></i>
-            </button>
+    <form data-bind="submit: saveChanges, visible: !isForbidden()">
+        <div class="panel panel-default panel-wo-margin">
+            <div class="panel-heading">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: isEditingEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: editDatabaseSettings, visible: !isEditingEnabled()" title="Edit Database Settings"><i class="fa fa-pencil"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button type="button" class="btn btn-default" data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="[">
+                    <i class="fa fa-align-justify"></i>
+                </button>
+            </div>
+            <div class="panel-body">
+                <ul class="nav nav-tabs">
+                    <li accesskey="d" data-bind="click: activateDoc, css: { active: isEditingMetadata() === false }" title="Edit document data (Alt+Shift+D)"><a style="cursor: pointer;">Data</a></li>
+                    <li accesskey="m" data-bind="click: activateMeta, css: { active: isEditingMetadata }" title="Edit document metadata (Alt+Shift+M)"><a style="cursor: pointer;">Metadata</a></li>
+                </ul>
+                <pre id="dbDocEditor" data-bind="aceEditor: { code: text, lang: 'ace/mode/json', readOnly: !isEditingEnabled() }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#databaseSettingsContainer' }"></pre>
+
+            </div>
         </div>
-
-        <ul class="nav nav-tabs">
-            <li accesskey="d" data-bind="click: activateDoc, css: { active: isEditingMetadata() === false }" title="Edit document data (Alt+Shift+D)"><a style="cursor: pointer;">Data</a></li>
-            <li accesskey="m" data-bind="click: activateMeta, css: { active: isEditingMetadata }" title="Edit document metadata (Alt+Shift+M)"><a style="cursor: pointer;">Metadata</a></li>
-        </ul>
-        <pre id="dbDocEditor" data-bind="aceEditor: { code: text, fontSize: '18px', lang: 'ace/mode/json', readOnly: 'true' }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }"></pre>
-
     </form>
 </div>

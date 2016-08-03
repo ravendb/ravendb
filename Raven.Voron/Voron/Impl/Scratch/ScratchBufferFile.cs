@@ -200,14 +200,14 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public Page ReadPage(long p, PagerState pagerState = null)
+        public Page ReadPage(Transaction tx, long p, PagerState pagerState = null)
         {
-            return _scratchPager.Read(p, pagerState);
+            return _scratchPager.Read(tx, p, pagerState);
         }
 
-        public byte* AcquirePagePointer(long p)
+        public byte* AcquirePagePointer(Transaction tx, long p)
         {
-            return _scratchPager.AcquirePagePointer(p);
+            return _scratchPager.AcquirePagePointer(tx, p);
         }
 
         public long ActivelyUsedBytes(long oldestActiveTransaction)

@@ -31,7 +31,12 @@ namespace Raven.Database.Raft.Storage.Handlers
             if (document.IsClusterDatabase() == false)
                 return; // ignore non-cluster databases
 
-            var configuration = Landlord.CreateTenantConfiguration(DatabaseHelper.GetDatabaseName(command.Name), true);
+            var databaseName = DatabaseHelper.GetDatabaseName(command.Name);
+            var configuration = Landlord.CreateTenantConfiguration(databaseName, true);
+            var isLoaded = Landlord.IsDatabaseLoaded(databaseName);
+            if (isLoaded)
+                Landlord.Cleanup(databaseName,null);
+
             if (configuration == null)
                 return;
 

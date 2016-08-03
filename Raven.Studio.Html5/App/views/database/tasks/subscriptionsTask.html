@@ -1,4 +1,4 @@
-<div class="panel panel-default" data-bind="visible: data.length === 0">
+<div class="panel panel-default" data-bind="visible: data().length === 0">
     <div class="panel-heading">
         Data subscriptions
     </div>
@@ -26,11 +26,13 @@
                     </div>
                     <form class="form-group" data-bind="submit: $root.setSubscriptionEtag.bind($root, $data)">
                         <label class="col-md-2 control-label">Set Acknowledged Etag</label>
-                        <div class="input-group">
-                            <input required class="form-control" size="38" data-bind="value: newAckEtag, valueUpdate: 'afterkeyup', customValidity: etagCustomValidityError">
-                            <span class="input-group-btn">
-                                <button class="btn btn-default" type="submit" data-bind="disable: isButtonDisabled">Set</button>
-                            </span>
+                        <div class="col-md-5">
+                            <div class="input-group">
+                                <input required class="form-control" size="38" data-bind="value: newAckEtag, valueUpdate: 'afterkeyup', customValidity: etagCustomValidityError">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default" type="submit" data-bind="disable: isButtonDisabled">Set</button>
+                                </span>
+                            </div>
                         </div>
                     </form>
                 </div>

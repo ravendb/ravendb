@@ -695,8 +695,6 @@ namespace Raven.Client.Document
 
         public bool AcceptGzipContent { get; set; }
 
-        public ClusterBehavior ClusterBehavior { get; set; }
-
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
         private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();

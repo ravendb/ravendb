@@ -69,7 +69,7 @@ namespace Raven.Database.Indexing
             else
             {
                 var maps = new ArrayInitializerExpression();
-                _indexDefinition.Maps.ForEach(map => maps.Elements.Add(new VerbatimStringLiteralExpression(_indexDefinition.Map)));
+                _indexDefinition.Maps.ForEach(map => maps.Elements.Add(new VerbatimStringLiteralExpression(map)));
 
                 objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Maps", maps));
             }

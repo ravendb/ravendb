@@ -1,13 +1,22 @@
+using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Streaming;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
@@ -20,13 +29,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
         public override string BundleName
         {
             get { return "replication"; }
-        }
-
-        private readonly HttpRavenRequestFactory requestFactory;
-
-        public AdminReplicationController()
-        {
-            requestFactory = new HttpRavenRequestFactory();
         }
 
         [HttpPost]
@@ -98,6 +100,148 @@ namespace Raven.Database.Bundles.Replication.Controllers
             return GetMessageWithObjectAsTask(topology);
         }
 
+        [HttpPost]
+        [RavenRoute("admin/replication/docs-left-to-replicate")]
+        [RavenRoute("databases/{databaseName}/admin/replication/docs-left-to-replicate")]
+        public async Task<HttpResponseMessage> DocumentsLeftToReplicate()
+        {
+            var serverInfo = await ReadJsonObjectAsync<ServerInfo>().ConfigureAwait(false);
+            var documentsToReplicateCalculator = new DocumentsLeftToReplicate(Database);
+            var documentsToReplicate = documentsToReplicateCalculator.Calculate(serverInfo);
+
+            return await GetMessageWithObjectAsTask(documentsToReplicate).ConfigureAwait(false);
+        }
+
+        [HttpPost]
+        [RavenRoute("admin/replication/replicated-docs-by-entity-names")]
+        [RavenRoute("databases/{databaseName}/admin/replication/replicated-docs-by-entity-names")]
+        public async Task<HttpResponseMessage> ReplicatedDocumentsByEntityNames()
+        {
+            var query = await ReadJsonObjectAsync<string>().ConfigureAwait(false);
+            var documentsToReplicateCalculator = new DocumentsLeftToReplicate(Database);
+            var documentsToReplicateCount = documentsToReplicateCalculator.GetDocumentCountForEntityNames(query);
+
+            return await GetMessageWithObjectAsTask(documentsToReplicateCount).ConfigureAwait(false);
+        }
+
+        [HttpPost]
+        [RavenRoute("admin/replication/export-docs-left-to-replicate")]
+        [RavenRoute("databases/{databaseName}/admin/replication/export-docs-left-to-replicate")]
+        public Task<HttpResponseMessage> ExportDocumentsLeftToReplicate([FromBody] StudioTasksController.ExportData optionsJson)
+        {
+            var result = GetEmptyMessage();
+            var taskId = optionsJson.ProgressTaskId;
+            var status = new OperationStatus();
+
+            var tcs = new TaskCompletionSource<object>();
+            try
+            {
+                var sp = Stopwatch.StartNew();
+
+                Database.Tasks.AddTask(tcs.Task, status, new TaskActions.PendingTaskDescription
+                {
+                    StartTime = SystemTime.UtcNow,
+                    TaskType = TaskActions.PendingTaskType.ExportDocumentsLeftToReplicate,
+                    Description = "Monitoring progress of export of docs left to replicate"
+                }, taskId, null, skipStatusCheck: true);
+
+                var requestString = optionsJson.DownloadOptions;
+                ServerInfo serverInfo;
+
+                using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+                {
+                    var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                    serverInfo = (ServerInfo)serializer.Deserialize(jsonReader, typeof(ServerInfo));
+                }
+
+                var documentsToReplicateCalculator = new DocumentsLeftToReplicate(Database);
+
+                if (serverInfo.SourceId != documentsToReplicateCalculator.DatabaseId)
+                {
+                    throw new InvalidOperationException("Cannot export documents to replicate from a server other than this one!");
+                }
+
+                // create PushStreamContent object that will be called when the output stream will be ready.
+                result.Content = new PushStreamContent((outputStream, content, arg3) =>
+                {
+                    using (var writer = new ExcelOutputWriter(outputStream))
+                    {
+                        try
+                        {
+                            writer.WriteHeader();
+                            writer.Write("document-ids-left-to-replicate");
+
+                            long count = 0;
+                            long skipped = 0;
+                            Action<string> action = (documentId) =>
+                            {
+                                writer.Write(documentId);
+
+                                if (++count%1000 != 0)
+                                    return;
+
+                                status.MarkProgress($"Exported {count:#,#} documents");
+                                outputStream.Flush();
+                            };
+
+                            Action skippedAction = () =>
+                            {
+                                if (++skipped%100 != 0)
+                                    return;
+
+                                status.MarkProgress($"Skipped {skipped:#,#} documents");
+                                outputStream.Flush();
+                            };
+
+                            documentsToReplicateCalculator.ExtractDocumentIds(serverInfo, action, skippedAction);
+
+                            var message = $"Completed export of {count:#,#} document ids";
+                            status.MarkCompleted(message, sp.Elapsed);
+                        }
+                        catch (Exception e)
+                        {
+                            status.ExceptionDetails = e.ToString();
+                            status.MarkFaulted(e.ToString());
+                            writer.WriteError(e);
+                            throw;
+                        }
+                        finally
+                        {
+                            tcs.SetResult("Completed");
+                            outputStream.Close();
+                        }
+                    }
+                });
+
+                var fileName = $"Documents to replicate from '{serverInfo.SourceUrl}' to '{serverInfo.DestinationUrl}', " +
+                                $"{DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";
+
+                foreach (char c in Path.GetInvalidFileNameChars())
+                {
+                    fileName = fileName.Replace(c, '_');
+                }
+
+                result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                {
+                    FileName = fileName + ".csv"
+                };
+            }
+            catch (Exception e)
+            {
+                status.ExceptionDetails = e.ToString();
+                status.MarkFaulted(e.ToString());
+                tcs.SetResult("Completed");
+                throw;
+            }
+            
+            return new CompletedTask<HttpResponseMessage>(result);
+        }
+
+        private class OperationStatus : OperationStateBase
+        {
+            public string ExceptionDetails { get; set; }
+        }
+
         private ReplicationInfoStatus[] CheckDestinations(ReplicationDocument replicationDocument)
         {
             var results = new ReplicationInfoStatus[replicationDocument.Destinations.Count];
@@ -131,6 +275,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                                                                      replicationDestination.Password,
                                                                                      replicationDestination.Domain ?? string.Empty);
                 }
+
+                var requestFactory = new HttpRavenRequestFactory();
                 var request = requestFactory.Create(url + "/replication/info", HttpMethods.Post, ravenConnectionStringOptions);
                 try
                 {

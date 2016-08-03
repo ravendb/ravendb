@@ -11,37 +11,43 @@ class importDatabase extends viewModelBase {
     shouldDisableVersioningBundle = ko.observable(false);
     hasFileSelected = ko.observable(false);
     importedFileName = ko.observable<string>();
-    isUploading = false;
+    isUploading = ko.observable<boolean>(false);
     private filePickerTag = "#importFilesystemFilePicker";
 
     attached() {
         super.attached();
-        this.updateHelpLink("YD9M1R");
-
-        var fs: filesystem = this.activeFilesystem();
-        var importStatus = fs.importStatus();
-        if (importStatus === "Uploading 100%") {
-            fs.importStatus("");
-        }
+        this.updateHelpLink("N822WN");
     }
 
     canDeactivate(isClose) {
         super.canDeactivate(isClose);
         
-        if (this.isUploading) {
+        if (this.isUploading()) {
             this.confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", ['OK']);
             return false;
         }
+
         return true;
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => this.activeFilesystem().importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, '') + "%")),
+            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => {
+                var fs = this.activeFilesystem();
+                if (!fs) {
+                    return;
+                }
+
+                if (fs.isImporting() === false || this.isUploading() === false) {
+                    return;
+                }
+
+                fs.importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, '') + "%");
+            }),
             ko.postbox.subscribe("ChangesApiReconnected", (fs: filesystem) => {
                 fs.importStatus("");
                 fs.isImporting(false);
-                this.isUploading = false;
+                this.isUploading(false);
             })
         ];
     }
@@ -59,20 +65,18 @@ class importDatabase extends viewModelBase {
                     this.importedFileName(importFileName);
                     fs.importStatus("");
                 })
-                .fail(
-                () => {
+                .fail(() => {
                     fs.importStatus("No sufficient diskspace for import, consider using Raven.Smuggler.exe directly.");
                     this.hasFileSelected(false);
                     this.importedFileName("");
-                }
-                )
+                });
         }
     }
 
     importFs() {
         var fs: filesystem = this.activeFilesystem();
         fs.isImporting(true);
-        this.isUploading = true;
+        this.isUploading(true);
         fs.importStatus("Uploading 0%");
 
         var formData = new FormData();
@@ -86,27 +90,33 @@ class importDatabase extends viewModelBase {
                 this.waitForOperationToComplete(fs, operationId);
                 fs.importStatus("Processing uploaded file");
             })
-            .fail(() => fs.importStatus(""))
-            .always(() => this.isUploading = false);
+            .fail(() => {
+                fs.importStatus("");
+                fs.isImporting(false);
+            })
+            .always(() => this.isUploading(false));
     }
 
     private waitForOperationToComplete(fs: filesystem, operationId: number) {        
         new getOperationStatusCommand(fs, operationId)
             .execute()
-            .done((result: importOperationStatusDto) => this.importStatusRetrieved(fs, operationId, result));
+            .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(fs, operationId, result));
     }
 
-    private importStatusRetrieved(fs: filesystem, operationId: number, result: importOperationStatusDto) {
+    private importStatusRetrieved(fs: filesystem, operationId: number, result: dataDumperOperationStatusDto) {
         if (result.Completed) {
-            if (result.ExceptionDetails == null && result.State != null && result.State.Progress != null) {
+            if (result.ExceptionDetails == null) {
                 this.hasFileSelected(false);
-                $(this.filePickerTag).val('');
-                fs.importStatus("Last import was from '" + this.importedFileName() + "', " + result.State.Progress.toLocaleLowerCase());
+                $(this.filePickerTag).val("");
+                fs.importStatus("Last import was from '" + this.importedFileName());
                 messagePublisher.reportSuccess("Successfully imported data to " + fs.name);
+            } else if (result.Canceled) {
+                fs.importStatus("Import was canceled!");
             } else {
-                fs.importStatus("");
-                messagePublisher.reportError("Failed to import data!", result.ExceptionDetails);
+                fs.importStatus("Failed to import file system, see recent errors for details!");
+                messagePublisher.reportError("Failed to import file system!", result.ExceptionDetails);
             }
+
             fs.isImporting(false);
         }
         else {

@@ -5,16 +5,20 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Management;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
+using System.Web.UI.WebControls;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+
 using Raven.Abstractions.Logging;
-using Raven.Database.Util;
 
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
@@ -40,10 +44,11 @@ namespace Raven.Database.Config
         private static bool dynamicLoadBalancing;
 
         public static double Average { get; private set; }
+        public static readonly FixedSizeConcurrentQueue<CpuUsageCallsRecord> CpuUsageCallsRecordsQueue = new FixedSizeConcurrentQueue<CpuUsageCallsRecord>(100);
 
         static CpuStatistics()
         {
-            if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancing) && 
+            if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancing) &&
                 dynamicLoadBalancing == false)
                 return; // disabled, so we avoid it
             dynamicLoadBalancing = true;
@@ -83,8 +88,14 @@ namespace Raven.Database.Config
             }.Start();
         }
 
-        private static void HandleCpuUsage(float usageInPercents)
+        public static void HandleCpuUsage(float usageInPercents)
         {
+
+            var stats = new CpuUsageCallsRecord
+            {
+                StartedAt = SystemTime.UtcNow,
+            };
+
             var previousWriteIndex = nextWriteIndex;
             LastUsages[previousWriteIndex] = usageInPercents;
             nextWriteIndex = (nextWriteIndex + 1) % NumberOfItemsInQueue;
@@ -98,10 +109,35 @@ namespace Raven.Database.Config
             if (average < 0)
                 return; // there was an error in getting the CPU stats, ignoring
 
+            CpuUsageCallsRecord cpuUsage;
+            CpuUsageCallsRecordsQueue.TryPeek(out cpuUsage);
+
             if (average >= HighNotificationThreshold)
+            {
+                if (cpuUsage?.Reason != CpuUsageLevel.HighCpuUsage)
+                {
+                    stats.Reason = CpuUsageLevel.HighCpuUsage;
+                    CpuUsageCallsRecordsQueue.Enqueue(stats);
+                }
                 RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
-            else if(average < LowNotificationThreshold)
+            }
+            else if (average < LowNotificationThreshold)
+            {
+                if (cpuUsage?.Reason != CpuUsageLevel.LowCpuUsage)
+                {
+                    stats.Reason = CpuUsageLevel.LowCpuUsage;
+                    CpuUsageCallsRecordsQueue.Enqueue(stats);
+                }
                 RunCpuUsageHandlers(handler => handler.HandleLowCpuUsage());
+            }
+            //Normal CPU usage
+            else if (cpuUsage?.Reason != CpuUsageLevel.NormalCpuUsage)
+            {
+
+                stats.Reason = CpuUsageLevel.NormalCpuUsage;
+                CpuUsageCallsRecordsQueue.Enqueue(stats);
+
+            }
 
         }
 

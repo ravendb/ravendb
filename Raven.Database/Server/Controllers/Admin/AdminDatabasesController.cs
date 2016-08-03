@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
@@ -89,11 +91,42 @@ namespace Raven.Database.Server.Controllers.Admin
 
                 dataDir = dataDir.ToFullPath(SystemConfiguration.DataDirectory);
 
-                if (Directory.Exists(dataDir))
+                // if etag is not null, it means we want to update existing database
+                if (Directory.Exists(dataDir) && etag == null)
+                {
                     return GetMessageWithString(string.Format("Failed to create '{0}' database, because data directory '{1}' exists and it is forbidden to create non-empty cluster-wide databases.", id, dataDir), HttpStatusCode.BadRequest);
+                }
 
-                await ClusterManager.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
-                return GetEmptyMessage();
+                var changesAppliedMre = new ManualResetEventSlim(false);
+                Etag newEtag = null;
+                var documentKey = Constants.Database.Prefix + id;
+
+                Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> onDocumentAction = (database, notification, jObject) =>
+                {
+                    if (notification.Type == DocumentChangeTypes.Put && notification.Id == documentKey)
+                    {
+                        newEtag = notification.Etag;
+                        changesAppliedMre.Set();
+                    }
+                };
+                Database.Notifications.OnDocumentChange += onDocumentAction;
+                try
+                {
+                    await ClusterManager.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
+                    changesAppliedMre.Wait(TimeSpan.FromSeconds(15));
+                }
+                finally
+                {
+                    Database.Notifications.OnDocumentChange -= onDocumentAction;
+                }
+                
+                var clusterPutResult = new PutResult
+                {
+                    ETag = newEtag,
+                    Key = documentKey
+                };
+
+                return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(clusterPutResult);
             }
 
             DatabasesLandlord.Protect(dbDoc);
@@ -106,7 +139,6 @@ namespace Raven.Database.Server.Controllers.Admin
 
             return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
         }
-
 
         [HttpDelete]
         [RavenRoute("admin/databases/{*id}")]
@@ -220,7 +252,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpGet]
         [RavenRoute("admin/activate-hotspare")]
-        public HttpResponseMessage ActivateHotSpare()
+        public async Task<HttpResponseMessage> ActivateHotSpare()
         {
             //making sure this endpoint is not invoked on non hot spare license.
             var status = ValidateLicense.CurrentLicense;
@@ -244,7 +276,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     };
                 }
             }
-            RequestManager.HotSpareValidator.ActivateHotSpareLicense();
+            await RequestManager.HotSpareValidator.ActivateHotSpareLicense().ConfigureAwait(false);
             return GetEmptyMessage();
         }
 

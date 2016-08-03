@@ -291,31 +291,31 @@ namespace Raven.Tests.FileSystem.ClientApi
                 await sessionDestination1.SaveChangesAsync();
 
                 var notificationTask = WaitForConflictDetected(anotherStore, 1, 10);
+                var resolveTask = WaitForConflictResolved(anotherStore, 1, 10);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
                 await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 await notificationTask;
-                               
+                await await resolveTask;
+
                 Assert.Equal(1, noOpListener.DetectedCount);
                 Assert.Equal(1, takeLocalConflictListener.DetectedCount);
 
-                Assert.Equal(0, takeLocalConflictListener.ResolvedCount + noOpListener.ResolvedCount);
+                Assert.Equal(2, takeLocalConflictListener.ResolvedCount + noOpListener.ResolvedCount);
 
                 // try to change content of file in destination2
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(140));
 
-                // Assert an exception is thrown because the conflict is still there
-                var aggregateException = Assert.Throws<AggregateException>(() => sessionDestination2.SaveChangesAsync().Wait());
-                Assert.IsType<NotSupportedException>(aggregateException.InnerException);
+                // Assert an exception is not thrown because the conflict was already resolved
+                Assert.DoesNotThrow(() => sessionDestination2.SaveChangesAsync().Wait());
 
                 // try to change content of file in destination2
                 sessionDestination2.RegisterRename("test1.file", "test2.file");
 
-                // Assert an exception is thrown because the conflict is still there
-                aggregateException = Assert.Throws<AggregateException>(() => sessionDestination2.SaveChangesAsync().Wait());
-                Assert.IsType<NotSupportedException>(aggregateException.InnerException);
+                // Assert an exception is not thrown
+                Assert.DoesNotThrow(() => sessionDestination2.SaveChangesAsync().Wait());
             }
         }
 

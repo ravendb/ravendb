@@ -57,16 +57,15 @@ namespace Raven.Database.Raft
 
         private static bool IsValidLicense()
         {            
-            string hasClusteringStr;
-            bool hasClustering = false;
-            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("clustering", out hasClusteringStr) && bool.TryParse(hasClusteringStr, out hasClustering) && hasClustering)
-                return true;
-            //we allow users with no license to use clustering 
-            if (ValidateLicense.CurrentLicense.Status.Equals("AGPL - Open Source"))
+            string clustering;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("clustering", out clustering))
             {
-                return true;
+                bool active;
+                if (bool.TryParse(clustering, out active) && active)
+                    return true;
             }
-            return hasClustering;
+
+            return ValidateLicense.CurrentLicense.Status.Equals("AGPL - Open Source");
         }
 
         public void Dispose()
@@ -102,7 +101,7 @@ namespace Raven.Database.Raft
                 return;
 
             var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
-
+            clusterManager.HandleClusterConfigurationChanged(configuration);
             HandleClusterReplicationChanges(removedNodeUrls, configuration.EnableReplication);
         }
 
@@ -110,9 +109,16 @@ namespace Raven.Database.Raft
         {
             var currentTopology = clusterManager.Engine.CurrentTopology;
             var replicationDocumentJson = systemDatabase.Documents.Get(Constants.Global.ReplicationDestinationsDocumentName, null);
+
             var replicationDocument = replicationDocumentJson != null
                 ? replicationDocumentJson.DataAsJson.JsonDeserialization<ReplicationDocument>()
-                : new ReplicationDocument();
+                : new ReplicationDocument
+                {
+                    ClientConfiguration = new ReplicationClientConfiguration
+                    {
+                        FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader
+                    }
+                };
 
             var replicationDocumentNormalizedDestinations = replicationDocument
                 .Destinations

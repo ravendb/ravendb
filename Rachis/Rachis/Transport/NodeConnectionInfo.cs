@@ -24,6 +24,8 @@ namespace Rachis.Transport
 
         public string ApiKey { get; set; }
 
+        public bool IsNoneVoter { get; set; }
+
         public override string ToString()
         {
             return Name;

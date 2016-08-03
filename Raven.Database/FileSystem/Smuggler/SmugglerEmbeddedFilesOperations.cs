@@ -44,11 +44,13 @@ namespace Raven.Database.FileSystem.Smuggler
             var stats = new FileSystemStats
             {
                 Name = filesystem.Name,
+                FileSystemId = filesystem.Storage.Id,
                 FileCount = count,
                 Metrics = filesystem.CreateMetrics(),
                 ActiveSyncs = filesystem.SynchronizationTask.Queue.Active.ToList(),
                 PendingSyncs = filesystem.SynchronizationTask.Queue.Pending.ToList()
             };
+
             return new CompletedTask<FileSystemStats[]>(new [] {stats});
         }
 

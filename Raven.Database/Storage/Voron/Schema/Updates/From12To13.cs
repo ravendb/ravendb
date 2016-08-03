@@ -33,23 +33,23 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
         {
             using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tableStorage.Environment.DeleteTree(tx, Tables.ScheduledReductions.Indices.ByView);
-                tableStorage.Environment.DeleteTree(tx, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView));
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey));
 
-                tableStorage.Environment.DeleteTree(tx, Tables.ReduceKeyTypes.Indices.ByView);
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyTypes.Indices.ByView));
 
-                tableStorage.Environment.DeleteTree(tx, Tables.ReduceKeyCounts.Indices.ByView);
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ReduceKeyCounts.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
 
-                tableStorage.Environment.DeleteTree(tx, Tables.ReduceResults.Indices.ByView);
-                tableStorage.Environment.DeleteTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
-                tableStorage.Environment.DeleteTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
-                tableStorage.Environment.DeleteTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByView));
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel));
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket));
+                tableStorage.Environment.DeleteTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket));
 
-                tableStorage.Environment.DeleteTree(tx, Tables.MappedResults.Indices.ByView);
+                tableStorage.Environment.DeleteTree(tx, tableStorage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByView));
                 // we didn't changed this one format, explicitly ignored
                 //tableStorage.Environment.DeleteTree(tx, Tables.MappedResults.Indices.ByViewAndDocumentId);
-                tableStorage.Environment.DeleteTree(tx, Tables.MappedResults.Indices.ByViewAndReduceKey);
-                tableStorage.Environment.DeleteTree(tx, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket);
+                tableStorage.Environment.DeleteTree(tx, tableStorage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKey));
+                tableStorage.Environment.DeleteTree(tx, tableStorage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket));
 
 
                 tx.Commit();
@@ -57,7 +57,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.ReduceKeyTypes.TableName,
                 tx => new
                 {
-                    reduceKeyTypesByView = tableStorage.Environment.CreateTree(tx, Tables.ReduceKeyTypes.Indices.ByView)
+                    reduceKeyTypesByView = tableStorage.Environment.CreateTree(tx, tableStorage.ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyTypes.Indices.ByView))
 
                 }, (state, it) =>
                 {
@@ -70,8 +70,8 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.ScheduledReductions.TableName,
                tx => new
                {
-                   byView = tableStorage.Environment.CreateTree(tx, Tables.ScheduledReductions.Indices.ByView),
-                   byViewAndLevelAndReduceKey = tableStorage.Environment.CreateTree(tx, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey)
+                   byView = tableStorage.Environment.CreateTree(tx, tableStorage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView)),
+                   byViewAndLevelAndReduceKey = tableStorage.Environment.CreateTree(tx, tableStorage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey))
 
                }, (state, it) =>
                {
@@ -92,7 +92,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.ReduceKeyCounts.TableName,
               tx => new
               {
-                  reduceKeyCountsByView = tableStorage.Environment.CreateTree(tx, Tables.ReduceKeyCounts.Indices.ByView)
+                  reduceKeyCountsByView = tableStorage.Environment.CreateTree(tx, tableStorage.ReduceKeyCounts.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView))
               }, (state, it) =>
               {
                   var current = it.ReadStructForCurrent(tableStorage.ReduceKeyTypes.Schema);
@@ -104,10 +104,10 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.ReduceResults.TableName,
                 tx => new
                 {
-                    reduceResultsByView = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByView),
-                    reduceResultsByViewAndKeyAndLevel = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel),
-                    reduceResultsByViewAndKeyAndLevelAndBucket = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket),
-                    reduceResultsByViewAndKeyAndLevelAndSourceBucket = tableStorage.Environment.CreateTree(tx, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket)
+                    reduceResultsByView = tableStorage.Environment.CreateTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByView)),
+                    reduceResultsByViewAndKeyAndLevel = tableStorage.Environment.CreateTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel)),
+                    reduceResultsByViewAndKeyAndLevelAndBucket = tableStorage.Environment.CreateTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket)),
+                    reduceResultsByViewAndKeyAndLevelAndSourceBucket = tableStorage.Environment.CreateTree(tx, tableStorage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket))
 
                 }, (state, it) =>
                 {
@@ -127,11 +127,11 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
             MigrateIndexes(tableStorage, output, Tables.MappedResults.TableName,
                 tx => new
                 {
-                    mappedResultsByView = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByView),
+                    mappedResultsByView = tableStorage.Environment.CreateTree(tx, tableStorage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByView)),
                     // we didn't changed this one format, explicitly ignored
                     // var mappedResultsByViewAndDocumentId = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByViewAndDocumentId);
-                    mappedResultsByViewAndReduceKey = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByViewAndReduceKey),
-                    mappedResultsByViewAndReduceKeyAndSourceBucket = tableStorage.Environment.CreateTree(tx, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket)
+                    mappedResultsByViewAndReduceKey = tableStorage.Environment.CreateTree(tx, tableStorage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKey)),
+                    mappedResultsByViewAndReduceKeyAndSourceBucket = tableStorage.Environment.CreateTree(tx, tableStorage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket))
 
                 }, (state, it) =>
                 {

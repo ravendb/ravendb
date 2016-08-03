@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -76,6 +75,11 @@ namespace Raven.Bundles.Replication.Tasks
             return metadata.Value<string>(Constants.RavenReplicationSource) == destinationId;
         }
 
+        public bool OriginatedAtOtherDestinations(string sourceId, RavenJObject metadata)
+        {
+            return metadata.Value<string>(Constants.RavenReplicationSource) != sourceId;
+        }
+
         public bool IsSystemDocumentId(string key)
         {
             if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase)) // don't replicate system docs
@@ -83,6 +87,7 @@ namespace Raven.Bundles.Replication.Tasks
                 if (key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilo documents
                     return true;
             }
+
             return false;
         }
 
@@ -115,6 +120,8 @@ namespace Raven.Bundles.Replication.Tasks
         }
 
         public Dictionary<string, string> SpecifiedCollections { get; set; }
+
+        public bool IsETL => SpecifiedCollections != null && SpecifiedCollections.Count > 0;
 
         public string CurrentDatabaseId { get; set; }
 

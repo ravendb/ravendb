@@ -20,11 +20,12 @@
     </li>
 </ul>
 
-<div class="panel-group" id="accordion" data-bind="foreach: fields, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+<div class="panel-group panel-group-wo-margin" id="accordion" data-bind="foreach: fields, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div class="panel panel-default">
         <div class="panel-heading">
             <h4 class="panel-title">
                 <a data-toggle="collapse" data-parent="#accordion" data-bind="text: name, attr: { href: '#termCollapse' + $index() }"></a>
+                <span class="text-warning padd-left-10" data-bind="visible: hasMoreTerms"><i class="fa fa-warning"></i> Displaying only first <span data-bind="text: $root.termsPageLimit - 1"></span> terms </span>
             </h4>
         </div>
         <div class="panel-collapse collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
@@ -32,6 +33,8 @@
                 <ul class="list-group" data-bind="foreach: terms">
                     <li class="list-group-item" data-bind="text: $data"></li>
                 </ul>
+                
+                <h4 class="text-center" data-bind="visible: !terms().length">No entries were found</h4>
             </div>
         </div>
     </div>

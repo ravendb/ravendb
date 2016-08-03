@@ -20,7 +20,6 @@ using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.StorageActions;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Storage.Esent.StorageActions
 {
@@ -159,7 +158,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.IncrementPerLevelCounters(level));
         }
 
-        public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
+        public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete, CancellationToken token)
         {
             if (itemsToDelete == null)
                 return null;
@@ -170,12 +169,16 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var currentEtagBinary = Guid.Empty.ToByteArray();
             foreach (OptimizedDeleter reader in itemsToDelete.Where(x => x != null))
             {
+                token.ThrowIfCancellationRequested();
+
                 if (scheduledReductionsPerViewAndLevel != null)
                 {
                     scheduledReductionsPerViewAndLevel.AddOrUpdate(reader.IndexId, new RemainingReductionPerLevel(), (key, oldvalue) => oldvalue.Add(reader.ItemsToDeletePerViewAndLevel));
                 }
                 foreach (var sortedBookmark in reader.GetSortedBookmarks())
                 {
+                    token.ThrowIfCancellationRequested();
+
                     Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
                     var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
                                                         tableColumnsCache.ScheduledReductionColumns["etag"]);
@@ -572,6 +575,17 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
 
         }
+
+        public bool HasMappedResultsForIndex(int view)
+        {
+            Api.JetSetCurrentIndex(session, MappedResults, "by_view");
+            Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
+                return false;
+
+            return true;
+        }
+
         public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)
         {
             Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_doc_key");

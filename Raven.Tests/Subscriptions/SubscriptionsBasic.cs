@@ -636,7 +636,7 @@ namespace Raven.Tests.Subscriptions
             IDocumentStore store = null;
             try
             {
-                var serverDisposed = false;
+                var serverDisposed = new ManualResetEventSlim(false);
 
                 var server = GetNewServer(dataDirectory: dataPath, runInMemory: false);
                 
@@ -668,36 +668,39 @@ namespace Raven.Tests.Subscriptions
                 });
                 store.Changes().WaitForAllPendingSubscriptions();
 
+                var docs = new BlockingCollection<RavenJObject>();
+                subscription.Subscribe(docs.Add);
+
                 var serverDisposingHandler = subscription.Subscribe(x =>
                 {
                     server.Dispose(); // dispose the server
-                    serverDisposed = true;
+                    serverDisposed.Set();
                 });
 
-                SpinWait.SpinUntil(() => serverDisposed, TimeSpan.FromSeconds(30));
+                serverDisposed.Wait(TimeSpan.FromSeconds(30));
 
                 serverDisposingHandler.Dispose();
 
-                var docs = new BlockingCollection<RavenJObject>();
-                subscription.Subscribe(docs.Add);
 
                 //recreate the server
                 GetNewServer(dataDirectory: dataPath, runInMemory: false);
                 
-                RavenJObject doc;
-                Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-
+               
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/arek");
                     session.SaveChanges();
                 }
 
-                Assert.True(docs.TryTake(out doc, waitForDocTimeout));
-                Assert.Equal("users/arek", doc[Constants.Metadata].Value<string>("@id"));
+                for (int i = 0; i < 10; i++)
+                {
+                    RavenJObject doc;
+                    Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                    if ("users/arek" == doc[Constants.Metadata].Value<string>("@id"))
+                        return;
+                }
+                Assert.False(true, "didn't get the username");
+
             }
             finally
             {

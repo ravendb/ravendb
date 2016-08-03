@@ -54,7 +54,7 @@ namespace Raven.Client.Connection.Async
 
         private readonly Guid? sessionId;
 
-        private readonly Func<AsyncServerClient, string, ClusterBehavior, bool, IRequestExecuter> requestExecuterGetter;
+        private readonly Func<AsyncServerClient, string, bool, IRequestExecuter> requestExecuterGetter;
 
         private readonly Func<string, RequestTimeMetric> requestTimeMetricGetter;
 
@@ -64,7 +64,7 @@ namespace Raven.Client.Connection.Async
 
         private readonly OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
 
-        private readonly IRequestExecuter requestExecuter;
+        private readonly RequestExecuterSelector requestExecuterSelector;
 
         internal readonly DocumentConvention convention;
 
@@ -81,7 +81,7 @@ namespace Raven.Client.Connection.Async
 
         public IRequestExecuter RequestExecuter
         {
-            get { return requestExecuter; }
+            get { return requestExecuterSelector.Select(); }
         }
 
         public OperationCredentials PrimaryCredentials
@@ -92,20 +92,17 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public ClusterBehavior ClusterBehavior { get; private set; }
-
         public AsyncServerClient(
             string url,
             DocumentConvention convention,
             OperationCredentials credentials,
             HttpJsonRequestFactory jsonRequestFactory,
             Guid? sessionId,
-            Func<AsyncServerClient, string, ClusterBehavior, bool, IRequestExecuter> requestExecuterGetter,
+            Func<AsyncServerClient, string, bool, IRequestExecuter> requestExecuterGetter,
             Func<string, RequestTimeMetric> requestTimeMetricGetter,
             string databaseName,
             IDocumentConflictListener[] conflictListeners,
-            bool incrementReadStripe,
-            ClusterBehavior clusterBehavior)
+            bool incrementReadStripe)
         {
             profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
             primaryUrl = url;
@@ -117,12 +114,12 @@ namespace Raven.Client.Connection.Async
             credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             this.databaseName = databaseName;
             this.conflictListeners = conflictListeners;
-            ClusterBehavior = clusterBehavior;
 
             this.requestExecuterGetter = requestExecuterGetter;
             this.requestTimeMetricGetter = requestTimeMetricGetter;
-            requestExecuter = requestExecuterGetter(this, databaseName, clusterBehavior, incrementReadStripe);
-            requestExecuter.UpdateReplicationInformationIfNeededAsync(this);
+            requestExecuterSelector = new RequestExecuterSelector(() => 
+                requestExecuterGetter(this, databaseName, incrementReadStripe), convention);
+            requestExecuterSelector.Select().UpdateReplicationInformationIfNeededAsync(this);
         }
 
         public void Dispose()
@@ -133,7 +130,7 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Get, async (operationMetadata, requestTimeMetric) =>
             {
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.IndexNames(start, pageSize), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.IndexNames(start, pageSize), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
                 {
                     var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     return json.Select(x => x.Value<string>()).ToArray();
@@ -148,7 +145,7 @@ namespace Raven.Client.Connection.Async
                 var operationUrl = operationMetadata.Url + "/indexes/?start=" + start + "&pageSize=" + pageSize;
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                     var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     //NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
@@ -168,7 +165,7 @@ namespace Raven.Client.Connection.Async
                 var operationUrl = operationMetadata.Url + "/transformers?start=" + start + "&pageSize=" + pageSize;
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                     var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
@@ -186,7 +183,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Post, operationMetadata.Credentials, convention)))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
@@ -208,7 +205,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + name, HttpMethods.Reset, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
@@ -223,7 +220,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
@@ -237,7 +234,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
@@ -264,7 +261,7 @@ namespace Raven.Client.Connection.Async
             var requestUri = operationMetadata.Url.Indexes(name) + "?op=hasChanged";
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
             {
-                request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                 var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 
@@ -284,11 +281,6 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication(HttpMethod.Put, (operationMetadata, requestTimeMetric) => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, requestTimeMetric, token), token);
         }
 
-        public Task<Tuple<string, Operation>> PutIndexAsyncWithOperation(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken))
-        {
-            return ExecuteWithReplication(HttpMethod.Put, (operationMetadata, requestTimeMetric) => DirectPutIndexAsyncWithOperation(name, indexDef, overwrite, operationMetadata, requestTimeMetric, token), token);
-        }
-
         public Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Put, (operationMetadata, requestTimeMetric) => DirectPutIndexesAsync(indexesToAdd, operationMetadata, token), token);
@@ -306,15 +298,10 @@ namespace Raven.Client.Connection.Async
 
         public async Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, CancellationToken token = default(CancellationToken))
         {
-            return (await DirectPutIndexAsyncWithOperation(name, indexDef, overwrite, operationMetadata, requestTimeMetric, token).ConfigureAwait(false)).Item1;
-        }
-
-        public async Task<Tuple<string, Operation>> DirectPutIndexAsyncWithOperation(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, CancellationToken token = default(CancellationToken))
-        {
-            var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes&includePrecomputeOperation=yes";
+            var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
             {
-                request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
                 try
                 {
@@ -338,12 +325,7 @@ namespace Raven.Client.Connection.Async
                 {
                     await request.WriteAsync(serializeObject).ConfigureAwait(false);
                     var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                    var resultObject = result as RavenJObject;
-                    if (resultObject == null || !resultObject.ContainsKey("OperationId"))
-                        return Tuple.Create(result.Value<string>("Index"), (Operation)null);
-
-                    var operationId = result.Value<long>("OperationId");
-                    return Tuple.Create(result.Value<string>("Index"), operationId != -1 ? new Operation(this, operationId) : null);
+                    return result.Value<string>("Index");
                 }
                 catch (ErrorResponseException e)
                 {
@@ -445,7 +427,7 @@ namespace Raven.Client.Connection.Async
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Indexes(name), HttpMethod.Delete, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(operationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
                     await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
                 }
             }, token);
@@ -466,7 +448,7 @@ namespace Raven.Client.Connection.Async
                 token.ThrowCancellationIfNotDefault(); //maybe the operation is canceled and we can spare the request..
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethod.Delete, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
                     RavenJToken jsonResponse;
                     try
                     {
@@ -494,7 +476,7 @@ namespace Raven.Client.Connection.Async
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Transformer(name), HttpMethod.Delete, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(operationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
                     await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
                 }
             }, token);
@@ -514,7 +496,7 @@ namespace Raven.Client.Connection.Async
                                 Key = key,
                                 Patches = patches,
                             }
-                    }, token).ConfigureAwait(false);
+                    }, null, token).ConfigureAwait(false);
             if (!ignoreMissing && batchResults[0].PatchResult != null &&
                 batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
                 throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
@@ -536,7 +518,7 @@ namespace Raven.Client.Connection.Async
                                 Patches = patches,
                                 Etag = etag,
                             }
-                    }, token).ConfigureAwait(false);
+                    }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -552,7 +534,7 @@ namespace Raven.Client.Connection.Async
                                 PatchesIfMissing = patchesToDefault,
                                 Metadata = defaultMetadata
                             }
-                    }, token).ConfigureAwait(false);
+                    }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -565,7 +547,7 @@ namespace Raven.Client.Connection.Async
                     Key = key,
                     Patch = patch,
                 }
-            }, token).ConfigureAwait(false);
+            }, null, token).ConfigureAwait(false);
             if (!ignoreMissing && batchResults[0].PatchResult != null &&
                 batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
                 throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
@@ -582,7 +564,7 @@ namespace Raven.Client.Connection.Async
                     Patch = patch,
                     Etag = etag
                 }
-            }, token).ConfigureAwait(false);
+            }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -598,7 +580,7 @@ namespace Raven.Client.Connection.Async
                     PatchIfMissing = patchDefault,
                     Metadata = defaultMetadata
                 }
-            }, token).ConfigureAwait(false);
+            }, null, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
         }
 
@@ -622,7 +604,7 @@ namespace Raven.Client.Connection.Async
 
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, method, metadata, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
             {
-                request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                 ErrorResponseException responseException;
                 try
@@ -644,9 +626,9 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
+        public IAsyncDatabaseCommands ForDatabase(string database)
         {
-            return ForDatabaseInternal(database, clusterBehavior);
+            return ForDatabaseInternal(database);
         }
 
         public IAsyncDatabaseCommands ForSystemDatabase()
@@ -654,18 +636,22 @@ namespace Raven.Client.Connection.Async
             return ForSystemDatabaseInternal();
         }
 
-        internal AsyncServerClient ForDatabaseInternal(string database, ClusterBehavior? clusterBehavior = null)
+        internal AsyncServerClient ForDatabaseInternal(string database)
         {
             if (database == Constants.SystemDatabase)
                 return ForSystemDatabaseInternal();
 
-            var requestedClusterBehavior = clusterBehavior ?? convention.ClusterBehavior;
-
             var databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url).ForDatabase(database);
-            if (databaseUrl == Url && ClusterBehavior == requestedClusterBehavior)
+            if (databaseUrl == Url)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false, requestedClusterBehavior) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, 
+                credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, 
+                jsonRequestFactory, sessionId, 
+                requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false)
+            {
+                operationsHeaders = operationsHeaders
+            };
         }
 
         internal AsyncServerClient ForSystemDatabaseInternal()
@@ -674,7 +660,7 @@ namespace Raven.Client.Connection.Async
             if (databaseUrl == Url)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false, ClusterBehavior.None) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, null, conflictListeners, false) { operationsHeaders = operationsHeaders };
         }
 
         public NameValueCollection OperationsHeaders
@@ -700,7 +686,7 @@ namespace Raven.Client.Connection.Async
             {
                 try
                 {
-                    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Transformer(name), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Transformer(name), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
                     {
                         var transformerDefinitionJson = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                         var value = transformerDefinitionJson.Value<RavenJObject>("Transformer");
@@ -723,7 +709,7 @@ namespace Raven.Client.Connection.Async
             {
                 try
                 {
-                    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.IndexDefinition(name), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.IndexDefinition(name), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
                     {
                         var indexDefinitionJson = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                         var value = indexDefinitionJson.Value<RavenJObject>("Index");
@@ -746,7 +732,7 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication(HttpMethod.Get, async (operationMetadata, requestTimeMetric) =>
             {
                 var url = operationMetadata.Url.IndexingPerformanceStatistics();
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
                 {
                     var indexingPerformanceStatisticsJson = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
                     var results = new IndexingPerformanceStatistics[indexingPerformanceStatisticsJson.Length];
@@ -785,7 +771,7 @@ namespace Raven.Client.Connection.Async
 
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(
                 createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
-                                           .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                                           .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 Task<JsonDocument> resolveConflictTask;
                 try
@@ -866,7 +852,7 @@ namespace Raven.Client.Connection.Async
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, path, method, metadata, operationMetadata.Credentials, convention)
                 .AddOperationHeaders(OperationsHeaders);
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
-                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 if (isGet == false)
                 {
@@ -1087,7 +1073,7 @@ namespace Raven.Client.Connection.Async
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     var cachedRequestDetails = jsonRequestFactory.ConfigureCaching(requestUri, (key, val) => request.AddHeader(key, val));
                     request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
@@ -1199,7 +1185,7 @@ namespace Raven.Client.Connection.Async
 
                 if (method == HttpMethod.Get)
                     requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
                 {
                     if (method != HttpMethod.Get)
                     {
@@ -1244,7 +1230,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     return convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(result));
@@ -1330,7 +1316,7 @@ namespace Raven.Client.Connection.Async
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, HttpMethod.Get, metadata, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     var result = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
@@ -1367,7 +1353,7 @@ namespace Raven.Client.Connection.Async
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     var requestsForServer = multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
@@ -1423,7 +1409,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, requestTimeMetric) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders)))
                 {
                     RavenJObject json = null;
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
@@ -1563,7 +1549,7 @@ namespace Raven.Client.Connection.Async
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     return new SuggestionQueryResult { Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(), };
@@ -1571,7 +1557,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default(CancellationToken))
+        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, BatchOptions options = null, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async (operationMetadata, requestTimeMetric) =>
             {
@@ -1580,7 +1566,19 @@ namespace Raven.Client.Connection.Async
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post, metadata, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
+
+                    if (options?.WaitForReplicas == true)
+                        request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout+";" + 
+                            options.ThrowOnTimeoutInWaitForReplicas);
+
+                    if (options?.WaitForIndexes == true)
+                    {
+                        var headerVal = options.ThrowOnTimeoutInWaitForIndexes + ";" + options.WaitForIndexesTimeout +
+                                  ";" + string.Join(";", options.WaitForSpecificIndexes ?? new string[0]);
+                        request.AddHeader("Raven-Wait-Indexes", headerVal);
+                    }
+
 
                     var serializedData = commandDatas.Select(x => x.ToJson()).ToList();
                     var jArray = new RavenJArray(serializedData);
@@ -1683,7 +1681,7 @@ namespace Raven.Client.Connection.Async
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag + "&start=" + start, HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     return convention.CreateSerializer().Deserialize<AttachmentInformation[]>(new RavenJTokenReader(json));
@@ -1707,7 +1705,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), HttpMethod.Put, metadata, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     await request.WriteAsync(data).WithCancellation(token).ConfigureAwait(false);
                 }
@@ -1736,7 +1734,7 @@ namespace Raven.Client.Connection.Async
             var metadata = new RavenJObject();
             AddTransactionInformation(metadata);
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/" + key), method, metadata, operationMetadata.Credentials, convention, requestTimeMetric);
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 ErrorResponseException responseException;
                 try
@@ -1813,7 +1811,7 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), HttpMethod.Delete, metadata, operationMetadata.Credentials, convention, requestTimeMetric)))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     return request.ExecuteRequestAsync();
                 }
@@ -1834,7 +1832,7 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Get, async (operationMetadata, requestTimeMetric) =>
             {
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Terms(index, field, fromValue, pageSize), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Terms(index, field, fromValue, pageSize), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
                 {
                     var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     var json = ((RavenJArray)result);
@@ -1856,7 +1854,7 @@ namespace Raven.Client.Connection.Async
 
         public IDisposable ForceReadFromMaster()
         {
-            return requestExecuter.ForceReadFromMaster();
+            return RequestExecuter.ForceReadFromMaster();
         }
 
         public Task<JsonDocumentMetadata> HeadAsync(string key, CancellationToken token = default(CancellationToken))
@@ -1932,7 +1930,7 @@ namespace Raven.Client.Connection.Async
             var request = jsonRequestFactory
                 .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, requestTimeMetric)
                 .AddOperationHeaders(OperationsHeaders))
-                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
             request.RemoveAuthorizationHeader();
 
@@ -2244,7 +2242,7 @@ namespace Raven.Client.Connection.Async
             var request = jsonRequestFactory
                 .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric)
                 .AddOperationHeaders(OperationsHeaders))
-                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
             request.RemoveAuthorizationHeader();
 
@@ -2292,7 +2290,7 @@ namespace Raven.Client.Connection.Async
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(key), HttpMethod.Delete, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(operationsHeaders)))
                 {
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
                     if (etag != null)
                         request.AddHeader("If-None-Match", etag);
 
@@ -2327,7 +2325,7 @@ namespace Raven.Client.Connection.Async
         {
             var metadata = new RavenJObject();
             AddTransactionInformation(metadata);
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, HttpMethod.Head, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, HttpMethod.Head, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 try
                 {
@@ -2381,6 +2379,7 @@ namespace Raven.Client.Connection.Async
             createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
             createHttpJsonRequestParams.DisableAuthentication = disableAuthentication;
 
+
             return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
                                      .AddRequestExecuterAndReplicationHeaders(this, currentServerUrl);
         }
@@ -2398,7 +2397,7 @@ namespace Raven.Client.Connection.Async
             {
                 metadata[Constants.MetadataEtagField] = etag.ToString();
             }
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, HttpMethod.Post, metadata, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, HttpMethod.Post, metadata, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 ErrorResponseException responseException;
                 try
@@ -2423,7 +2422,7 @@ namespace Raven.Client.Connection.Async
         [Obsolete("Use RavenFS instead.")]
         private async Task<IAsyncEnumerator<Attachment>> DirectGetAttachmentHeadersStartingWith(HttpMethod method, string idPrefix, int start, int pageSize, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, CancellationToken token = default(CancellationToken))
         {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?startsWith=" + idPrefix + "&start=" + start + "&pageSize=" + pageSize, method, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?startsWith=" + idPrefix + "&start=" + start + "&pageSize=" + pageSize, method, operationMetadata.Credentials, convention, requestTimeMetric)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 RavenJToken result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
@@ -2449,7 +2448,7 @@ namespace Raven.Client.Connection.Async
 
         private async Task DirectCommit(string txId, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, CancellationToken token)
         {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/commit?tx=" + txId, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/commit?tx=" + txId, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
             }
@@ -2462,7 +2461,7 @@ namespace Raven.Client.Connection.Async
 
         private async Task DirectRollback(string txId, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, CancellationToken token = default(CancellationToken))
         {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/rollback?tx=" + txId, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/rollback?tx=" + txId, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
             }
@@ -2481,7 +2480,7 @@ namespace Raven.Client.Connection.Async
 
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, opUrl, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric)
                 .AddOperationHeaders(OperationsHeaders))
-                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+                .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 if (recoveryInformation != null)
                 {
@@ -2517,7 +2516,7 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return await requestExecuter.ExecuteOperationAsync(this, method, currentRequest, operation, token).ConfigureAwait(false);
+                return await RequestExecuter.ExecuteOperationAsync(this, method, currentRequest, operation, token).ConfigureAwait(false);
             }
             finally
             {
@@ -2596,6 +2595,7 @@ namespace Raven.Client.Connection.Async
                         JsonDocument resolvedDocument;
                         if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
                         {
+                            resolvedDocument.Metadata.Remove(Constants.RavenReplicationConflictDocument);
                             await DirectPutAsync(operationMetadata, requestTimeMetric, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
                             return true;
                         }
@@ -2652,7 +2652,9 @@ namespace Raven.Client.Connection.Async
                 }
                 catch (ErrorResponseException e)
                 {
-                    if (e.StatusCode == HttpStatusCode.NotFound) return null;
+                    if (e.StatusCode == HttpStatusCode.NotFound)
+                        return null;
+
                     throw;
                 }
             }
@@ -2679,13 +2681,33 @@ namespace Raven.Client.Connection.Async
 
         internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
         {
-            return new AsyncServerClient(Url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false, convention.ClusterBehavior);
+            return new AsyncServerClient(Url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false);
+        }
+
+        internal async Task WithWriteAssurance(OperationMetadata operationMetadata,
+            IRequestTimeMetric requestTimeMetric, Etag etag, TimeSpan? timeout = null, int replicas = 1)
+        {
+            var sb = new StringBuilder(operationMetadata.Url + "/replication/writeAssurance?");
+            sb.Append("etag=").Append(etag).Append("&");
+            sb.Append("replicas=").Append(replicas).Append("&");
+            if (timeout == null)
+            {
+                timeout = TimeSpan.FromSeconds(60);
+            }
+            sb.Append("timeout=").Append(timeout);
+
+
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric);
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
+            {
+                await request.ReadResponseJsonAsync().ConfigureAwait(false);
+            }   
         }
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, TimeSpan? timeout = null)
         {
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric, timeout);
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
             {
                 try
                 {

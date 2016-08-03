@@ -94,7 +94,7 @@ namespace Raven.Database.Indexing
             var replaceIndexId = replaceIndex.IndexId;
 
             var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
-            if (!indexDefinition.IsSideBySideIndex)
+            if (indexDefinition.IsSideBySideIndex == false)
             {
                 indexDefinition.IsSideBySideIndex = true;
                 Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
@@ -244,7 +244,7 @@ namespace Raven.Database.Indexing
             {
                 wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
             }
-            //this is thrown when a locked inedx (with LockError mode) is been replaced by a side by side index
+            //this is thrown when a locked index (with LockError mode) is been replaced by a side by side index
             //we need to stop the timer and delete the document so it will not continue throwing errors
             catch (InvalidOperationException ie)
             {

@@ -863,37 +863,22 @@ namespace Raven.Database.FileSystem.Storage.Esent
             return Api.TrySeek(session, Config, SeekGrbit.SeekEQ);
         }
 
-        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take)
+        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take, out int totalCount)
         {
             var configs = new List<RavenJObject>();
 
-            Api.JetSetCurrentIndex(session, Config, "by_name");
+            var totalCountRef = new Reference<int>();
 
-            Api.MakeKey(session, Config, prefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, Config, SeekGrbit.SeekGE) == false)
+            using (var enumerator = IterateConfigsWithPrefix(prefix, start, take, totalCountRef).GetEnumerator())
             {
-                return configs;
-            }
-
-            Api.MakeKey(session, Config, prefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
-            try
-            {
-                Api.JetMove(session, Config, start, MoveGrbit.MoveKeyNE);
-            }
-            catch (EsentNoCurrentRecordException)
-            {
-                return configs;
-            }
-
-            if (Api.TrySetIndexRange(session, Config, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
-            {
-                do
+                while (enumerator.MoveNext())
                 {
                     var metadata = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["metadata"], Encoding.Unicode);
                     configs.Add(RavenJObject.Parse(metadata));
-                } 
-                while (Api.TryMoveNext(session, Config) && configs.Count < take);
+                }
             }
+
+            totalCount = totalCountRef.Value;
 
             return configs;
         }
@@ -901,74 +886,83 @@ namespace Raven.Database.FileSystem.Storage.Esent
         public IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total)
         {
             var configs = new List<string>();
+            var totalCountRef = new Reference<int>();
 
+            using (var enumerator = IterateConfigsWithPrefix(prefix, start, take, totalCountRef).GetEnumerator())
+            {
+                while (enumerator.MoveNext())
+                {
+                    var configName = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["name"]);
+                    configs.Add(configName);
+                }
+            }
+
+            total = totalCountRef.Value;
+
+            return configs;
+        }
+
+        private IEnumerable<object> IterateConfigsWithPrefix(string prefix, int start, int take, Reference<int> totalCount)
+        {
             Api.JetSetCurrentIndex(session, Config, "by_name");
 
-            if (!string.IsNullOrEmpty(prefix))
+            Api.MakeKey(session, Config, prefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Config, SeekGrbit.SeekGE) == false)
             {
+                totalCount.Value = 0;
+                yield break;
+            }
+
+            Api.MakeKey(session, Config, prefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
+            Api.TrySetIndexRange(session, Config, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+            try
+            {
+                Api.JetMove(session, Config, start, MoveGrbit.MoveKeyNE);
+            }
+            catch (EsentNoCurrentRecordException)
+            {
+                // looks like we requested start higher then amount of available objects
+                // however we have to provide total count
+                // restart index and compute total count
                 Api.MakeKey(session, Config, prefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
-                if (Api.TrySeek(session, Config, SeekGrbit.SeekGE) == false)
-                {
-                    total = 0;
-                    return configs;
-                }
+                Api.TrySeek(session, Config, SeekGrbit.SeekGE);
 
                 Api.MakeKey(session, Config, prefix, Encoding.Unicode,
-                            MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
-                try
+                       MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
+
+                totalCount.Value = 0;
+
+                if (Api.TrySetIndexRange(session, Config,
+                    SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
                 {
-                    Api.JetMove(session, Config, 0, MoveGrbit.MoveKeyNE);
-                }
-                catch (EsentNoCurrentRecordException)
-                {
-                    total = 0;
-                    return configs;
+                    do
+                    {
+                        totalCount.Value++;
+                    } while (Api.TryMoveNext(session, Config));
                 }
 
-                if (!Api.TrySetIndexRange(session, Config,
-                                          SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
-                {
-                    total = 0;
-                    return configs;
-                }
-            }
-            else
-            {
-                if (!Api.TryMoveFirst(session, Config))
-                {
-                    total = 0;
-                    return configs;
-                }
+                yield break;
             }
 
-            var skippedCount = 0;
+            bool hasNextRecord;
+            var returned = 0;
+            var enumerate = new object();
 
-            for (int i = 0; i < start; i++)
-            {
-                if (Api.TryMoveNext(session, Config) == false)
-                {
-                    total = skippedCount;
-                    return configs;
-                }
-                skippedCount++;
-            }
-
-            var hasNextRecord = false;
             do
             {
-                var configName = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["name"]);
-                configs.Add(configName);
+                yield return enumerate;
+                returned++;
                 hasNextRecord = Api.TryMoveNext(session, Config);
-            } while (hasNextRecord && configs.Count < take);
+            } while (hasNextRecord && returned < take);
 
             var extraRecords = 0;
             if (hasNextRecord)
             {
                 Api.JetIndexRecordCount(session, Config, out extraRecords, 0);
             }
-            total = skippedCount + configs.Count + extraRecords;
 
-            return configs;
+            totalCount.Value = start + returned + extraRecords;
         }
 
         private Etag EnsureFileEtagMatch(string key, Etag etag)

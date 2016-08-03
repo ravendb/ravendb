@@ -17,7 +17,6 @@
 
 <div id="transformersContainer">
     <div class="btn-toolbar" role="toolbar">
-        <!--data-bind="visible: transformersGroups().length > 0"-->
         <div class="btn-group">
             <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }" title="Add a new transformer (Alt+N)" accesskey="N">
                 <i class="fa fa-plus"></i> New transformer
@@ -44,7 +43,7 @@
 
     <br />
 
-    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="overflow: auto">
         <div class="transformers-container panel-group" id="transformersAccordion" data-bind="foreach: transformersGroups">
             <div class="transformers-group panel panel-default">
                 <div class="panel-heading">
@@ -56,15 +55,13 @@
                     </h4>
                 </div>
                 <div class="index-group-content panel-collapse in" data-bind="attr: { id: 'transformerCollapse' + $index() }">
-                    <div class="panel panel-default" style="overflow: visible;">
+                    <div style="overflow: visible;">
                         <div class="panel-body" data-bind="foreach: transformers">
                             <div class="index panel panel-default">
                                 <div class="panel-body">
                                     <h4 class="pull-left">
-                                        <a data-bind="attr: { href: editUrl }">
-                                            <span data-bind="text: name"></span>
-                                            <i class="fa" data-bind="css: { 'fa-lock': isLocked(), 'fa-unlock': !isLocked() }"></i>
-                                        </a>
+                                        <a data-bind="attr: { href: editUrl }"><span data-bind="text: name"></span></a>
+                                        <i class="fa" data-bind="css: { 'fa-lock': isLocked(), 'fa-unlock': !isLocked() }"></i>
                                     </h4>
                                     <div class="pull-right index-actions-container">
                                         <a class="btn btn-default" title="Edit the transformer" data-bind="attr: { href: editUrl }">

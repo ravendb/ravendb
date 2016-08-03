@@ -436,7 +436,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             var totalSize = file.Value<long?>("total_size") ?? 0;
             var uploadedSize = file.Value<long?>("uploaded_size") ?? 0;
 
-            if (uploadedSize < totalSize )
+            if (uploadedSize < totalSize)
                 file["total_size"] = Math.Abs(uploadedSize);
             else
                 file["total_size"] = Math.Abs(totalSize);            
@@ -783,61 +783,59 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return storage.Config.Contains(Snapshot, key, writeBatch.Value);
         }
 
-        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take)
+        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take, out int total)
         {
-            var key = CreateKey(prefix);
-            var keySlice = (Slice)key;
-            var result = new List<RavenJObject>();
 
-            using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
+            var results = new List<RavenJObject>();
+
+            var totalRef = new Reference<int>();
+
+            foreach (var config in GetConfigsWithPrefix(prefix, start, take, totalRef))
             {
-                if (!iterator.Seek(keySlice) || !iterator.Skip(start))
-                    return result;
-
-                var count = 0;
-
-                do
-                {
-                    var config = iterator.CreateReaderForCurrent()
-                                         .AsStream()
-                                         .ToJObject();
-
-                    var metadata = config.Value<RavenJObject>("metadata");
-                    var name = config.Value<string>("name");
-                    if (name == null || name.StartsWith(key, StringComparison.InvariantCultureIgnoreCase) == false)
-                        break;
-
-                    result.Add(metadata);
-
-                    count++;
-                } while (iterator.MoveNext() && count < take);
+                var metadata = config.Value<RavenJObject>("metadata");
+                results.Add(metadata);;
             }
 
-            return result;
+            total = totalRef.Value;
+
+            return results;
         }
 
         public IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total)
         {
-            total = 0;
             var results = new List<string>();
+            var totalRef = new Reference<int>();
 
-            var key = (Slice)CreateKey(prefix);
+            foreach (var config in GetConfigsWithPrefix(prefix, start, take, totalRef))
+            {
+                var configName = config.Value<string>("name");
+                results.Add(configName);
+            }
+
+            total = totalRef.Value;
+
+            return results;
+        }
+
+        private IEnumerable<RavenJObject> GetConfigsWithPrefix(string prefix, int start, int take, Reference<int> totalCount)
+        {
+            var key = (Slice) CreateKey(prefix);
 
             using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
             {
                 if (!iterator.Seek(key))
-                    return results;
+                    yield break;
 
                 var skippedCount = 0;
                 for (var i = 0; i < start; i++)
                 {
-                    if (iterator.MoveNext() == false)
-                    {
-                        total = skippedCount;
-                        return results;
-                    }
-
                     skippedCount++;
+
+                    if (iterator.MoveNext() == false || iterator.CurrentKey.StartsWith(key) == false)
+                    {
+                        totalCount.Value = skippedCount;
+                        yield break;
+                    }
                 }
 
                 var count = 0;
@@ -856,16 +854,14 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                     if (count < take)
                     {
-                        results.Add(configName);
+                        yield return config;
                     }
 
                     count++;
                 } while (iterator.MoveNext());
 
-                total = skippedCount + count;
+                totalCount.Value = skippedCount + count;
             }
-
-            return results;
         }
 
         private void RemoveSignature(string id, string name)

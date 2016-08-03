@@ -517,7 +517,7 @@
     <EmbeddedResource Include="MapReduceIssue\MvcMusicStore_Dump.json" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Sandbox.ravendump" />
+    <EmbeddedResource Include="Sandbox.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

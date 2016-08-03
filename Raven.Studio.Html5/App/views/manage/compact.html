@@ -24,11 +24,11 @@
                         <div class="form-group">
                             <label for="databaseName" class="col-sm-2 control-label">Database to compact</label>
                             <div class="col-sm-5">
-                                <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to compact">
+                                <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="textInput: resourceName, disable: $parent.isBusy, customValidity: nameCustomValidityError" placeholder="Database name to compact">
                                 <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
                                     <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
-                                            <span data-bind="text: $data"></span>
+                                            <span class="text" data-bind="text: $data"></span>
                                         </a>
                                     </li>
                                 </ul>
@@ -68,11 +68,11 @@
                         <div class="form-group">
                             <label for="filesystemName" class="col-sm-2 control-label">Filesystem to compact</label>
                             <div class="col-sm-5">
-                                <input tabindex="2" autocomplete="off" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="File System name to compact">
+                                <input tabindex="2" autocomplete="off" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="textInput: resourceName, disable: $parent.isBusy, customValidity: nameCustomValidityError" placeholder="File System name to compact">
                                 <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
                                     <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
-                                            <span data-bind="text: $data"></span>
+                                            <span class="text" data-bind="text: $data"></span>
                                         </a>
                                     </li>
                                 </ul>

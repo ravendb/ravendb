@@ -25,6 +25,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Management;
+using System.Reflection;
+using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Util
 {
@@ -205,6 +207,15 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
+            var expectedRangeWarnings = package.CreateEntry(zipEntryPrefix + "expected-range-warnings.json", CompressionLevel);
+
+            using (var expectedRangeWarningsStream = expectedRangeWarnings.Open())
+            using(var streamWriter = new StreamWriter(expectedRangeWarningsStream))
+            {
+                jsonSerializer.Serialize(streamWriter, GetExpectedRangeWarnings(database));
+                streamWriter.Flush();
+            }
+
             var systemUtilization = package.CreateEntry(zipEntryPrefix + "system-utilization.json", CompressionLevel);
 
             using (var systemUtilizationStream = systemUtilization.Open())
@@ -273,7 +284,109 @@ namespace Raven.Database.Util
             }
         }
 
-        internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
+        internal static object GetExpectedRangeWarnings(DocumentDatabase database)
+        {
+            Dictionary<string, Dictionary<string, ExpectedRange>> rangeWarnings = 
+                new Dictionary<string, Dictionary<string, ExpectedRange>>
+                {
+                    {"config", CreateRangeConfigWarnings(database)},
+                    {"indexs",CreateRangeIndexesWarnings(database)}
+                };
+            return rangeWarnings;
+        }
+
+        private static Dictionary<string, ExpectedRange> CreateRangeIndexesWarnings(DocumentDatabase database)
+        {
+            Dictionary<string, ExpectedRange> rangeWarnings = new Dictionary<string, ExpectedRange>();
+            var indexes = database.IndexDefinitionStorage.IndexDefinitions.ToDictionary(x => x.Key, x => x.Value);
+            foreach (var index in indexes)
+            {
+                var maxIndexOutputsPerDocument = index.Value.MaxIndexOutputsPerDocument;
+                var defaultValue = 15;
+                if (index.Value.IsMapReduce)
+                {
+                    defaultValue = 50;
+                }
+                if (maxIndexOutputsPerDocument != null)
+                {
+                    if (maxIndexOutputsPerDocument > defaultValue*10 || maxIndexOutputsPerDocument < defaultValue/10)
+                    {
+                        rangeWarnings.Add($"{index.Value.Name}.MaxIndexOutputsPerDocument",new ExpectedRange
+                        {
+                            Value = maxIndexOutputsPerDocument.Value,
+                            DefaultValue = defaultValue
+                        });
+                    }
+                }
+
+            }
+            return rangeWarnings;
+        }
+
+        private static Dictionary<string, ExpectedRange> CreateRangeConfigWarnings(DocumentDatabase database)
+        {
+            Dictionary<string, ExpectedRange> rangeWarnings = new Dictionary<string, ExpectedRange>();
+            InMemoryRavenConfiguration imrc = database.Configuration;
+            int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
+            int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
+
+            var ravenSettings = new StronglyTypedRavenSettings(imrc.Settings);
+            ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
+            Type types = ravenSettings.GetType();
+            PropertyInfo[] properties = types.GetProperties();
+
+            foreach (PropertyInfo property in properties)
+            {
+                var propertyValue = property.GetValue(ravenSettings, null) as IntegerSetting;
+                if (propertyValue != null)
+                {
+                    CheckForRangeWarnings(rangeWarnings, propertyValue, property.Name);
+                }
+                else
+                {
+                    var propertyValueObj = property.GetValue(ravenSettings, null);
+                    Type objTypes = propertyValueObj.GetType();
+                    PropertyInfo[] objProperties = objTypes.GetProperties();
+
+                    foreach (PropertyInfo objProperty in objProperties)
+                    {
+                        var subpropertyValueObj = objProperty.GetValue(propertyValueObj, null) as IntegerSetting;
+                        if (subpropertyValueObj != null)
+                        {
+                            long result = (long)subpropertyValueObj.DefaultValue * 10;
+
+                            if ((result <= int.MaxValue && subpropertyValueObj.Value > (int)result) || subpropertyValueObj.Value < subpropertyValueObj.DefaultValue / 10)
+                            {
+                                CheckForRangeWarnings(rangeWarnings, subpropertyValueObj, $"{property.Name}.{objProperty.Name}");
+                            }
+                        }
+                    }
+                }
+            }
+            return rangeWarnings;
+        }
+
+        private static void CheckForRangeWarnings(Dictionary<string, ExpectedRange> rangeWarnings, IntegerSetting propertyValue,string name)
+        {
+            long result = (long)propertyValue.DefaultValue * 10;
+
+            if ((result <= int.MaxValue && propertyValue.Value > (int)result) || propertyValue.Value < propertyValue.DefaultValue / 10)
+            {
+                rangeWarnings.Add(name, new ExpectedRange
+                {
+                    Value = propertyValue.Value,
+                    DefaultValue = propertyValue.DefaultValue
+                });
+            }
+        }
+
+        public class ExpectedRange
+        {
+            public int Value { get; set; }
+            public int DefaultValue { get; set; }
+        }
+
+internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
         {
             return requestManager.GetRecentRequests(databaseName).Select(x =>
             {
@@ -367,6 +480,7 @@ namespace Raven.Database.Util
             {
                 var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
                 var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
+                var ioSummary = prefetchingBehavior.DebugIOSummary();
 
                 var compareToCollection = new Dictionary<Etag, int>();
 
@@ -398,6 +512,7 @@ namespace Raven.Database.Util
                     result.Add(new
                     {
                         Default = prefetchingBehavior.IsDefault,
+                        IOSummary = ioSummary,
                         Indexes = indexesText,
                         LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
                         LastTimeUsed = lastTimeUsed,
@@ -423,6 +538,7 @@ namespace Raven.Database.Util
                     result.Add(new
                     {
                         Default = prefetchingBehavior.IsDefault,
+                        IOSummary = ioSummary,
                         Indexes = indexesText,
                         LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
                         LastTimeUsed = lastTimeUsed,

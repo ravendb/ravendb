@@ -337,18 +337,9 @@ class counters extends viewModelBase {
     }
 
     private refreshGroupsData() {
-        var selectedGroup: counterGroup = this.selectedGroup();
-
         this.groups().forEach((group: counterGroup) => {
-            if (group.name === selectedGroup.name) {
-                var docsGrid = this.getCountersGrid();
-                if (!!docsGrid) {
-                    docsGrid.refreshCollectionData();
-                }
-            } else {
-                var pagedList = group.getCounters();
-                pagedList.invalidateCache();
-            }
+            var pagedList = group.getCounters();
+            pagedList.invalidateCache();
         });
     }
 

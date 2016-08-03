@@ -12,7 +12,7 @@ namespace Raven.Abstractions.FileSystem
             get { return serverUrl; }
             set
             {
-                string canonicalUrl = value.TrimEnd('/');
+                var canonicalUrl = value.TrimEnd('/');
 
                 serverUrl = canonicalUrl;
                 if (canonicalUrl.EndsWith("/fs"))
@@ -22,10 +22,7 @@ namespace Raven.Abstractions.FileSystem
 
         public string FileSystem { get; set; }
 
-        public string Url
-        {
-            get { return string.Format("{0}/fs/{1}", ServerUrl, FileSystem); }
-        }
+        public string Url => $"{ServerUrl}/fs/{FileSystem}";
 
         public string Username { get; set; }
 

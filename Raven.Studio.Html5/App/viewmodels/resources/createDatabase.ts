@@ -68,7 +68,7 @@ class createDatabase extends createResourceBase {
         new getClusterTopologyCommand(appUrl.getSystemDatabase())
             .execute()
             .done((topology: topology) => {
-                this.isClusterWideVisible(topology.allNodes().length > 0);
+                this.isClusterWideVisible(topology && topology.allNodes().length > 0);
             });
     }
 

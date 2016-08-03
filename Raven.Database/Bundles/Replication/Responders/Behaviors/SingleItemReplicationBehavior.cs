@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -83,10 +84,12 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             RavenJObject resolvedMetadataToSave;
             TExternal resolvedItemToSave;
             if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
-            {
+            {                
                 if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
                    metadata.Value<bool>("Raven-Remove-Document-Marker"))
                 {
+                    if (resolvedMetadataToSave.ContainsKey(Constants.RavenEntityName))
+                        metadata[Constants.RavenEntityName] = resolvedMetadataToSave[Constants.RavenEntityName];
                     DeleteItem(id, null);
                     MarkAsDeleted(id, metadata);
                 }
@@ -100,6 +103,13 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
 
                 }
+                return;
+            }
+            //this is expensive but worth trying if we can avoid conflicts
+            if (TryResolveConflictByCheckingIfIdentical(metadata, incoming, existingItem, out resolvedMetadataToSave))
+            {
+                //The metadata here is merged (changed), it needs to be pushed.
+                AddWithoutConflict(id,null, resolvedMetadataToSave,incoming);
                 return;
             }
 
@@ -146,6 +156,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
                     metadata.Value<bool>("Raven-Remove-Document-Marker"))
                 {
+                    if(resolvedMetadataToSave.ContainsKey(Constants.RavenEntityName))
+                        metadata[Constants.RavenEntityName] = resolvedMetadataToSave[Constants.RavenEntityName];
                     DeleteItem(id, null);
                     MarkAsDeleted(id, metadata);
                 }
@@ -203,7 +215,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring.", id, Src);
                 return;
             }
-
+            if (existingMetadata.ContainsKey(Constants.RavenEntityName))
+                newMetadata[Constants.RavenEntityName] = existingMetadata[Constants.RavenEntityName];
             RavenJObject currentReplicationEntry = null;
             if (newMetadata.ContainsKey(Constants.RavenReplicationVersion) &&
                 newMetadata.ContainsKey(Constants.RavenReplicationSource))
@@ -214,9 +227,12 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     {Constants.RavenReplicationSource, newMetadata[Constants.RavenReplicationSource]}
                 };
             }
+                        
             var existingHistory = ReplicationData.GetHistory(existingMetadata);
             if (currentReplicationEntry != null &&
-                existingHistory.Contains(currentReplicationEntry, RavenJTokenEqualityComparer.Default))
+                existingHistory.Any(x => RavenJTokenEqualityComparer.Default.Equals(
+                    ((RavenJObject)x)[Constants.RavenReplicationSource], currentReplicationEntry[Constants.RavenReplicationSource])
+                    && ((RavenJObject)x)[Constants.RavenReplicationVersion].Value<long>() >= currentReplicationEntry[Constants.RavenReplicationVersion].Value<long>()))
             {
                 if (log.IsDebugEnabled)
                     log.Debug("Replicated delete for {0} already exist in item history, ignoring", id);
@@ -233,19 +249,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     newHistory.Add(currentReplicationEntry);
 
                 //Merge histories
-                foreach (var historyEntry in newHistory)
-                {
-                    if (existingHistory.Contains(historyEntry, RavenJTokenEqualityComparer.Default))
-                        continue;
-
-                    existingHistory.Add(historyEntry);
-                }
-
-                while (newHistory.Length > Constants.ChangeHistoryLength)
-                {
-                    newHistory.RemoveAt(0);
-                }
-                ReplicationData.SetHistory(newMetadata, existingHistory);
+                ReplicationData.SetHistory(newMetadata, Historian.MergeReplicationHistories(newHistory, existingHistory));
+                newMetadata[Constants.RavenReplicationMergedHistory] = true;
                 MarkAsDeleted(id, newMetadata);
 
                 return;
@@ -318,7 +323,103 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             TInternal existing, out RavenJObject resolvedMetadataToSave,
                                         out TExternal resolvedItemToSave);
 
+        /// <summary>
+        /// Tries to resolve the conflict by checking if the items are identical.
+        /// This is a seperate method since it is expensive and we don't want to 
+        /// run this method unless we faield all the other conflict resolvers.
+        /// </summary>
+        /// <param name="metadata">The metadata of the incoming object</param>
+        /// <param name="document">The incoming object data</param>
+        /// <param name="existing">The existing object</param>
+        /// <param name="resolvedMetadataToSave">The metadata to save</param>
+        /// <returns></returns>
+        protected abstract bool TryResolveConflictByCheckingIfIdentical(RavenJObject metadata, TExternal document,
+            TInternal existing, out RavenJObject resolvedMetadataToSave);
 
+        /// <summary>
+        /// Runs shallow equal on the metadata while ignoring keys starting with '@'
+        /// And replication related properties like replication
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="external"></param>
+        /// <param name="result">The output metadata incase the metadata are equal</param>
+        /// <returns></returns>
+        protected static bool CheckIfMetadataIsEqualEnoughForReplicationAndMergeHistorires(RavenJObject origin, RavenJObject external, out RavenJObject result)
+        {
+            result = null;
+            var keysToCheck = new HashSet<string>(external.Keys.Where(k => !k.StartsWith("@") && !IgnoreProperties.Contains(k)));
+            foreach (var key in origin.Keys.Where(k=>!k.StartsWith("@") && !IgnoreProperties.Contains(k)))
+            {
+                var originVal = origin[key];                
+                RavenJToken externalVal;
+                if (external.TryGetValue(key, out externalVal) == false)
+                    return false;
+                if (!RavenJTokenEqualityComparer.Default.Equals(originVal, externalVal))
+                    return false;
+                keysToCheck.Remove(key);
+            }
+            if(keysToCheck.Any())
+                return false;
+            //If we got here the metadata is the same, need to merge histories
+            MergeReplicationHistories(origin, external, ref result);
+            return true;
+        }
+
+        private static void MergeReplicationHistories(RavenJObject origin, RavenJObject external, ref RavenJObject result)
+        {
+            result = (RavenJObject) origin.CloneToken();
+            RavenJToken originHistory;
+            RavenJToken externalHisotry;
+            var originHasHistory = origin.TryGetValue(Constants.RavenReplicationHistory, out originHistory);
+            var externalHasHistory = external.TryGetValue(Constants.RavenReplicationHistory, out externalHisotry);
+            RavenJToken externalVersion;
+            RavenJToken externalSource;
+            //we are going to lose the external source and version if we don't add them here
+            if (external.TryGetValue(Constants.RavenReplicationVersion, out externalVersion)
+                && external.TryGetValue(Constants.RavenReplicationSource, out externalSource))
+            {
+                if (externalHasHistory)
+                {
+                    externalHisotry = externalHisotry.CloneToken();
+                }
+                else
+                {
+                    externalHisotry = new RavenJArray();
+                }
+                var historyEntry = new RavenJObject();
+                historyEntry[Constants.RavenReplicationVersion] = externalVersion;
+                historyEntry[Constants.RavenReplicationSource] = externalSource;
+                ((RavenJArray)externalHisotry).Add(historyEntry);
+                externalHasHistory = true;
+            }
+            RavenJArray mergedHistory = null;
+            //need to merge histories
+            if (originHasHistory)
+            {
+                mergedHistory = Historian.MergeReplicationHistories((RavenJArray) originHistory, (RavenJArray) externalHisotry);
+                result[Constants.RavenReplicationMergedHistory] = true;
+            }
+            else if (externalHasHistory)
+            {
+                //this might be a snapshot if somehow there was an history but no version or source
+                mergedHistory = (RavenJArray)(externalHisotry.IsSnapshot? externalHisotry.CloneToken(): externalHisotry);
+            }
+
+            //if the original has history and the external didn't we already cloned it.
+            if (mergedHistory != null)
+                result[Constants.RavenReplicationHistory] = mergedHistory;
+        }
+
+        private static readonly HashSet<string> IgnoreProperties = new HashSet<string>
+        {
+            Constants.RavenReplicationSource,
+            Constants.RavenReplicationVersion,
+            Constants.RavenReplicationHistory,
+            Constants.RavenReplicationMergedHistory,
+            Constants.RavenLastModified,
+            Constants.LastModified,
+            "Content-Type"
+        };
         private static string GetReplicationIdentifier(RavenJObject metadata)
         {
             return metadata.Value<string>(Constants.RavenReplicationSource);

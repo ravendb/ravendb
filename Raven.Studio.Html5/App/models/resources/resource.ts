@@ -12,6 +12,8 @@ class resource {
     activeBundles = ko.observableArray<string>();
     isImporting = ko.observable<boolean>(false);
     importStatus = ko.observable<string>("");
+    isExporting = ko.observable<boolean>(false);
+    exportStatus = ko.observable<string>("");
     statistics: KnockoutObservable<any>;
     fullTypeName: string;
 

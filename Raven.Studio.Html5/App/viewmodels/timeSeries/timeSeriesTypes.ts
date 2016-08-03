@@ -240,18 +240,9 @@ class timeSeriesTypes extends viewModelBase {
     }
 
     private refreshKeysData() {
-        var selectedGroup: timeSeriesType = this.selectedType();
-
         this.types().forEach((key: timeSeriesType) => {
-            if (key.name === selectedGroup.name) {
-                var docsGrid = this.getKeysGrid();
-                if (!!docsGrid) {
-                    docsGrid.refreshCollectionData();
-                }
-            } else {
-                var pagedList = key.getKeys();
-                pagedList.invalidateCache();
-            }
+            var pagedList = key.getKeys();
+            pagedList.invalidateCache();
         });
     }
 

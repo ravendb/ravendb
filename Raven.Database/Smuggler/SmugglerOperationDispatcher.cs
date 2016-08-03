@@ -81,7 +81,7 @@ namespace Raven.Smuggler
                     }
                     else if (exception is JsonReaderException)
                     {
-                        Console.WriteLine("Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted");
+                        Console.WriteLine("Failed to load JSON Data. Please make sure you are importing ." + FileExtension + " file, exported by smuggler (aka resource export). If you are importing a ." + FileExtension + " file then the file may be corrupted");
                     }
                     else
                     {
@@ -96,5 +96,6 @@ namespace Raven.Smuggler
         protected abstract Task PerformImportAsync(T parameters);
         protected abstract Task PerformExportAsync(T parameters);
         protected abstract Task PerformBetweenAsync(T parameters);
+        protected abstract string FileExtension { get; }
     }
 }

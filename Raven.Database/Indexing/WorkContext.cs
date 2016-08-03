@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
@@ -36,9 +37,11 @@ namespace Raven.Database.Indexing
 
         private long nextIndexingBatchInfoId = 0;
         private long nextReducingBatchInfoId = 0;
+        private long nextDeletionBatchInfoId = 0;
 
         private SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo;
         private SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo;
+        private SizeLimitedConcurrentSet<DeletionBatchInfo> lastActualDeletionBatchInfo;
         private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
         private readonly ConcurrentDictionary<int, object> indexingErrorLocks = new ConcurrentDictionary<int, object>();
         private readonly object waitForWork = new object();
@@ -287,7 +290,7 @@ namespace Raven.Database.Indexing
             if (aggregateException != null)
                 exception = aggregateException.ExtractSingleInnerException();
 
-            AddError(index, indexName, key, exception?.Message ?? "Unknown message", component);
+            AddError(index, indexName, key, exception?.Message ?? "Unknown message", component ?? "Unknown");
         }
 
         public void AddError(int index, string indexName, string key, string error)
@@ -371,6 +374,46 @@ namespace Raven.Database.Indexing
             ReplicationResetEvent.Dispose();
         }
 
+        public void HandleIndexRename(string oldIndexName, string newIndexName, int newIndexId, IStorageActionsAccessor accessor)
+        {
+            // remap indexing errors (if any)
+            var indexesToRename = indexingErrors.Where(x => StringComparer.OrdinalIgnoreCase.Equals(x.IndexName, oldIndexName)).ToList();
+            foreach (var indexingError in indexesToRename)
+            {
+                indexingError.IndexName = newIndexName;
+            }
+
+            var oldListName = "Raven/Indexing/Errors/" + oldIndexName;
+            var existingErrors = accessor.Lists.Read(oldListName, Etag.Empty, null, 5000).ToList();
+            if (existingErrors.Any())
+            {
+                lock (indexingErrorLocks.GetOrAdd(newIndexId, new object()))
+                {
+                    var newListName = "Raven/Indexing/Errors/" + newIndexName;
+                    foreach (var existingError in existingErrors)
+                    {
+                        accessor.Lists.Set(newListName, existingError.Key, existingError.Data, UuidType.Indexing);
+                    }
+
+                    var timestamp = SystemTime.UtcNow;
+                    accessor.Lists.RemoveAllOlderThan(oldListName, timestamp);
+                }
+            }
+
+            // update queryTime
+            var queryTime = accessor.Lists.Read("Raven/Indexes/QueryTime", oldIndexName);
+            if (queryTime != null)
+            {
+                accessor.Lists.Set("Raven/Indexes/QueryTime", newIndexName, queryTime.Data, UuidType.Indexing);
+                accessor.Lists.Remove("Raven/Indexes/QueryTime", oldIndexName);
+            }
+
+            // discard index/reduce/deletion stats, instead of updating them
+            LastActualIndexingBatchInfo.Clear();
+            LastActualReducingBatchInfo.Clear();
+            LastActualDeletionBatchInfo.Clear();
+        }
+
         public void ClearErrorsFor(string indexName)
         {
             var list = new List<IndexingError>();
@@ -406,6 +449,23 @@ namespace Raven.Database.Indexing
                 {
                     accessor.Lists.Remove("Raven/Indexing/Errors/" + indexName, removedError.Id.ToString(CultureInfo.InvariantCulture));
                 }
+            });
+        }
+
+        public void ReplaceIndexingErrors(string indexToReplaceName, 
+            int? indexToReplaceId, string indexName, int newIndexId)
+        {
+            TransactionalStorage.Batch(accessor =>
+            {
+                ClearErrorsFor(indexToReplaceName);
+
+                if (indexToReplaceId.HasValue)
+                {
+                    object _;
+                    indexingErrorLocks.TryRemove(indexToReplaceId.Value, out _);
+                }
+                
+                HandleIndexRename(indexName, indexToReplaceName, newIndexId, accessor);
             });
         }
 
@@ -453,6 +513,24 @@ namespace Raven.Database.Indexing
             LastActualReducingBatchInfo.Add(batchInfo);
         }
 
+        public DeletionBatchInfo ReportDeletionBatchStarted(string indexName, int documentCount)
+        {
+            return new DeletionBatchInfo
+            {
+                IndexName = indexName,
+                TotalDocumentCount = documentCount,
+                StartedAt = SystemTime.UtcNow,
+                PerformanceStats = new List<PerformanceStats>()
+            };
+        }
+
+        public void ReportDeletionBatchCompleted(DeletionBatchInfo batchInfo)
+        {
+            batchInfo.BatchCompleted();
+            batchInfo.Id = Interlocked.Increment(ref nextDeletionBatchInfoId);
+            LastActualDeletionBatchInfo.Add(batchInfo);
+        }
+
         public ConcurrentSet<FutureBatchStats> FutureBatchStats
         {
             get { return futureBatchStats; }
@@ -484,6 +562,18 @@ namespace Raven.Database.Indexing
                     lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
                 }
                 return lastActualReducingBatchInfo;
+            }
+        }
+
+        public SizeLimitedConcurrentSet<DeletionBatchInfo> LastActualDeletionBatchInfo
+        {
+            get
+            {
+                if (lastActualDeletionBatchInfo == null)
+                {
+                    lastActualDeletionBatchInfo = new SizeLimitedConcurrentSet<DeletionBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
+                }
+                return lastActualDeletionBatchInfo;
             }
         }
 

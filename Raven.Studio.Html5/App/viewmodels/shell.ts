@@ -38,7 +38,7 @@ import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getReducedDatabaseStatsCommand = require("commands/resources/getReducedDatabaseStatsCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
@@ -82,7 +82,7 @@ class shell extends viewModelBase {
     static canReadSettings = ko.observable<boolean>(false);
     static canExposeConfigOverTheWire = ko.observable<boolean>(false);
     maxResourceNameWidth: KnockoutComputed<string>;
-    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
+    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ throttle: 100 });
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
@@ -153,8 +153,7 @@ class shell extends viewModelBase {
     static clusterMode = ko.observable<boolean>(false);
     isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
-    static serverMainVersion = ko.observable<number>(4);
-    static serverMinorVersion = ko.observable<number>(5);
+    static serverMainVersion = ko.observable<number>(3);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
    
     windowHeightObservable: KnockoutObservable<number>;
@@ -452,9 +451,9 @@ class shell extends viewModelBase {
 
     private fetchDbStats(db: database) {
         if (!!db && !db.disabled() && db.isLicensed()) {
-            new getDatabaseStatsCommand(db, true)
+            new getReducedDatabaseStatsCommand(db, true)
                 .execute()
-                .done((result: databaseStatisticsDto) => db.saveStatistics(result));
+                .done((result: reducedDatabaseStatisticsDto) => db.saveStatistics(result));
         }
     }
 
@@ -585,7 +584,7 @@ class shell extends viewModelBase {
 
     private renewOAuthToken() {
         oauthContext.authHeader(null);
-        new getDatabaseStatsCommand(this.systemDatabase).execute();
+        new getReducedDatabaseStatsCommand(this.systemDatabase).execute();
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -647,15 +646,15 @@ class shell extends viewModelBase {
 
             var databasesLoadTask = shell.reloadDatabases();
             var fileSystemsLoadTask = shell.reloadFileSystems();
-            var counterStoragesLoadTask = shell.reloadCounterStorages();
-            var timeSeriesLoadTask = shell.reloadTimeSeries();
+            var counterStoragesLoadTask = shell.has40Features() ? shell.reloadCounterStorages() : null;
+            var timeSeriesLoadTask = shell.has40Features() ? shell.reloadTimeSeries() : null;
 
             $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
                 .done(() => {
                     var connectedResource = this.currentConnectedResource;
                     var resourceObservableArray: any = shell.databases;
                     var activeResourceObservable: any = this.activeDatabase;
-                    var isNotDatabase = !(connectedResource instanceof database);
+                    var isNotDatabase = !(connectedResource instanceof database); 
                     if (isNotDatabase && connectedResource instanceof fileSystem) {
                         resourceObservableArray = shell.fileSystems;
                         activeResourceObservable = this.activeFilesystem;
@@ -877,8 +876,8 @@ class shell extends viewModelBase {
         var serverConfigsLoadTask: JQueryPromise<any> = this.loadServerConfig();
         var databasesLoadTask: JQueryPromise<any> = this.loadDatabases();
         var fileSystemsLoadTask: JQueryPromise<any> = this.loadFileSystems();
-        var counterStoragesLoadTask: JQueryPromise<any> = this.loadCounterStorages();
-        var timeSeriesLoadTask: JQueryPromise<any> = this.loadTimeSeries();
+        var counterStoragesLoadTask: JQueryPromise<any> = shell.has40Features() ? this.loadCounterStorages() : null;
+        var timeSeriesLoadTask: JQueryPromise<any> = shell.has40Features() ? this.loadTimeSeries() : null;
         $.when(serverConfigsLoadTask, databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
             .always(() => {
                 var locationHash = window.location.hash;
@@ -1071,12 +1070,11 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
 
-                var assemblyVersion = serverBuildResult.ProductVersion.split("/")[0].trim();
-                var assemblyVersionTokens = assemblyVersion.split(".");
-                shell.serverMainVersion(parseInt(assemblyVersionTokens[0]));
-                shell.serverMinorVersion(parseInt(assemblyVersionTokens[1]));
-
                 var currentBuildVersion = serverBuildResult.BuildVersion;
+                if (currentBuildVersion !== 13) {
+                    shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+                }
+
                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
                     new getLatestServerBuildVersionCommand(true, 35000, 39999) //pass false as a parameter to get the latest unstable
                         .execute()

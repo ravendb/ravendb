@@ -5,12 +5,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
-using Microsoft.Isam.Esent.Interop;
-using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -433,7 +430,7 @@ namespace Raven.Database.Queries
 
                 private void IncreaseSize()
                 {
-                    var newDocumentsArray = IntArraysPool.Instance.AllocateArray(Count*2);
+                    var newDocumentsArray = IntArraysPool.Instance.AllocateArray(Count * 2);
                     Array.Copy(Documents, newDocumentsArray, Count);
                     IntArraysPool.Instance.FreeArray(Documents);
                     Documents = newDocumentsArray;
@@ -504,7 +501,7 @@ namespace Raven.Database.Queries
                     for (int i = m.Offset; i < mSize; i++)
                     {
                         int docId = m.Array[i];
-                        if (Array.BinarySearch(n.Array,n.Offset, n.Count, docId) >= 0)
+                        if (Array.BinarySearch(n.Array, n.Offset, n.Count, docId) >= 0)
                         {
 
                             if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
@@ -700,7 +697,7 @@ namespace Raven.Database.Queries
                         for (int index = 0; index < docsInQuery.Count; index++)
                         {
                             var doc = docsInQuery.Array[index];
-                        
+
                             var currentVal = longs[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
@@ -728,7 +725,7 @@ namespace Raven.Database.Queries
                         for (int index = 0; index < docsInQuery.Count; index++)
                         {
                             var doc = docsInQuery.Array[index];
-                        
+
                             var currentVal = doubles[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
@@ -909,9 +906,14 @@ namespace Raven.Database.Queries
                 });
             }
 
-            public void HandleLowMemory()
+            public LowMemoryHandlerStatistics HandleLowMemory()
             {
                 RunIdleOperations();
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = "IntArraysPool",
+                    Summary = "handle low memory called run idle operations for Faceted Query, and removes objects from array pool that weren't used in a long time"
+                };
             }
 
             public void SoftMemoryRelease()
@@ -953,7 +955,7 @@ namespace Raven.Database.Queries
                     _current = IntArraysPool.Instance.AllocateArray();
                     _pos = 0;
                 }
-                _current[_pos++] = doc +DocBase;
+                _current[_pos++] = doc + DocBase;
             }
 
             public void Complete()
@@ -978,9 +980,9 @@ namespace Raven.Database.Queries
                 curMergedArrayIndex += _pos;
                 _current = null;
                 _pos = 0;
-                    
-                Array.Sort(mergedAndSortedArray,0, curMergedArrayIndex);
-                Results = new ArraySegment<int>(mergedAndSortedArray,0, curMergedArrayIndex);
+
+                Array.Sort(mergedAndSortedArray, 0, curMergedArrayIndex);
+                Results = new ArraySegment<int>(mergedAndSortedArray, 0, curMergedArrayIndex);
             }
         }
 

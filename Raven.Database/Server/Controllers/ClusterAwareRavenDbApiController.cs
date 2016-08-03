@@ -103,12 +103,11 @@ namespace Raven.Database.Server.Controllers
             }
 
             var message = request.CreateResponse(HttpStatusCode.Redirect);
-            message.Headers.Location = new UriBuilder(leaderNode.Uri)
-            {
-                Path = request.RequestUri.LocalPath,
-                Query = request.RequestUri.Query.TrimStart('?'),
-                Fragment = request.RequestUri.Fragment
-            }.Uri;
+            message.Headers.Add("Raven-Leader-Redirect", "true");
+            var uriBuilder = new UriBuilder(leaderNode.Uri);
+            if (DatabaseName != null)
+                uriBuilder.Path = "/databases/" + DatabaseName;
+            message.Headers.Location = uriBuilder.Uri;
 
             return message;
         }

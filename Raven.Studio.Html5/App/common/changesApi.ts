@@ -39,6 +39,7 @@ class changesApi {
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
+    private watchedDocuments = {};
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
 
@@ -283,6 +284,12 @@ class changesApi {
         var value = eventDto.Value;
         if (eventType === "DocumentChangeNotification") {
             this.fireEvents(this.allDocsHandlers(), value, (event) => true);
+
+            for (var key in this.watchedDocuments) {
+                var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedDocuments[key];
+                this.fireEvents(docCallbacks(), value, (event) => event.Id != null && event.Id === key);
+            }
+
             for (var key in this.watchedPrefixes) {
                 var docCallbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
                 this.fireEvents(docCallbacks(), value, (event) => event.Id != null && event.Id.match("^" + key));
@@ -379,6 +386,22 @@ class changesApi {
             this.allDocsHandlers.remove(callback);
             if (this.allDocsHandlers().length === 0) {
                 this.send("unwatch-docs");
+            }
+        });
+    }
+
+    watchDocument(docId: string, onChange: (e: documentChangeNotificationDto) => void): changeSubscription {
+        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
+        if (typeof (this.watchedDocuments[docId]) === "undefined") {
+            this.send("watch-doc", docId);
+            this.watchedDocuments[docId] = ko.observableArray();
+        }
+        this.watchedDocuments[docId].push(callback);
+        return new changeSubscription(() => {
+            this.watchedDocuments[docId].remove(callback);
+            if (this.watchedDocuments[docId]().length === 0) {
+                delete this.watchedDocuments[docId];
+                this.send("unwatch-doc", docId);
             }
         });
     }

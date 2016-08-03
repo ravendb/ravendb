@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+
 namespace Raven.Database.Raft.Dto
 {
     public class ClusterConfiguration
@@ -11,7 +13,9 @@ namespace Raven.Database.Raft.Dto
         {
             EnableReplication = true;
         }
-
+        public bool DisableReplicationStateChecks { get; set; }
         public bool EnableReplication { get; set; }
+
+        public Dictionary<string, string> DatabaseSettings { get; set; }
     }
 }

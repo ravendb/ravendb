@@ -44,7 +44,6 @@ namespace Raven.Client.Document
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
         protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
         private static int counter;
-
         private readonly int hash = Interlocked.Increment(ref counter);
 
         protected bool GenerateDocumentKeysOnStore = true;
@@ -971,7 +970,8 @@ more responsive application.
             {
                 Entities = new List<object>(),
                 Commands = new List<ICommandData>(deferedCommands),
-                DeferredCommandsCount = deferedCommands.Count
+                DeferredCommandsCount = deferedCommands.Count,
+                Options = saveChangesOptions
             };
             deferedCommands.Clear();
 
@@ -995,6 +995,28 @@ more responsive application.
                 GetAllEntitiesChanges(changes);
                 return changes;
             }
+        }
+
+        public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1)
+        {
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            if (saveChangesOptions == null)
+                saveChangesOptions = new BatchOptions();
+            saveChangesOptions.WaitForReplicas = true;
+            saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
+            saveChangesOptions.WaitForReplicasTimout = realTimeout;
+            saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;
+        }
+
+        public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null)
+        {
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            if (saveChangesOptions == null)
+                saveChangesOptions = new BatchOptions();
+            saveChangesOptions.WaitForIndexes = true;
+            saveChangesOptions.WaitForIndexesTimeout = realTimeout;
+            saveChangesOptions.ThrowOnTimeoutInWaitForIndexes = throwOnTimeout;
+            saveChangesOptions.WaitForSpecificIndexes = indexes;
         }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
@@ -1231,6 +1253,7 @@ more responsive application.
 
         private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
         protected string _databaseName;
+        private BatchOptions saveChangesOptions;
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
         public EntityToJson EntityToJson { get; private set; }
 
@@ -1342,6 +1365,8 @@ more responsive application.
             /// </summary>
             /// <value>The commands.</value>
             public List<ICommandData> Commands { get; set; }
+
+            public BatchOptions Options { get; set; }
 
             public int DeferredCommandsCount { get; set; }
 

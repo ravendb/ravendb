@@ -619,15 +619,6 @@ namespace Raven.Database.FileSystem.Search
                 using (var termDocs = searcher.IndexReader.HasDeletions ? searcher.IndexReader.TermDocs() : null)
                 using (var termEnum = searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty)))
                 {
-                    if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
-                    {
-                        while (termEnum.Term == null || fromValue.Equals(termEnum.Term.Text))
-                        {
-                            if (termEnum.Next() == false)
-                                yield break;
-                        }
-                    }
-
                     while (termEnum.Term == null || field.Equals(termEnum.Term.Field))
                     {
                         if (termEnum.Term != null)

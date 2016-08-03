@@ -3,7 +3,8 @@
 </div>
 <div class="panel panel-default panel-wo-margin" id="disk-io-viewer" data-bind="visible: settingsAccess.canReadOrWrite">
     <div class="panel-heading panel-info">
-        Disk IO Viewer
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+        <span class="text-height-fix">Disk IO Viewer</span>
     </div>
     <div class="panel-body">
         <div class="text-center" data-bind="visible: performanceRuns().length == 0">

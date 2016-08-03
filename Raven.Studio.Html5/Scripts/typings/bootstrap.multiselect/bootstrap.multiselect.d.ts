@@ -2,4 +2,5 @@
 
 interface JQuery {
     multiselect(action?: string): void;
+    multiselect(options?: any): void;
 }

@@ -71,8 +71,8 @@ namespace Raven.Client.FileSystem
         Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null);
 
         Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, Etag etag = null);
-        Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, Etag etag = null);
-        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null);
+        Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long? size, RavenJObject metadata = null, Etag etag = null);
+        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long? size, Etag etag = null);
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 
@@ -160,6 +160,7 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
         Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
         Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
+        Task ResolveConflictsAsync(ConflictResolutionStrategy strategy);
         Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
         Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
         Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);

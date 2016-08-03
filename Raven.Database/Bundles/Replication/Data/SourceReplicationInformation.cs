@@ -5,12 +5,18 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Bundles.Replication.Data
 {
     public class SourceReplicationInformation
     {
         public Etag LastDocumentEtag { get; set; }
+
+        /// <summary>
+        /// This is the last modification time of the last batch sent from the source
+        /// </summary>
+        public DateTime? LastModifiedAtSource { get; set; }
 
         [Obsolete("Use RavenFS instead.")]
         public Etag LastAttachmentEtag { get; set; }
@@ -24,6 +30,9 @@ namespace Raven.Bundles.Replication.Data
         public int? LastBatchSize { get; set; }
 
         public string SourceCollections { get; set; }
+
+        [JsonIgnore]
+        public bool IsETL => string.IsNullOrEmpty(SourceCollections) == false;
 
         public override string ToString()
         {
@@ -40,5 +49,7 @@ namespace Raven.Bundles.Replication.Data
     public class SourceReplicationInformationWithBatchInformation : SourceReplicationInformation
     {
         public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+
+        public Guid? DatabaseId { get; set; }
     }
 }

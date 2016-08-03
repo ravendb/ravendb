@@ -723,6 +723,7 @@ namespace Raven.Database.Server.Controllers.Admin
             Database.StopIndexingWorkers(true);
         }
 
+
         [HttpPost]
         [RavenRoute("admin/startReducing")]
         [RavenRoute("databases/{databaseName}/admin/startReducing")]
@@ -739,6 +740,18 @@ namespace Raven.Database.Server.Controllers.Admin
             Database.StopReduceWorkers();
         }
 
+        [HttpGet]
+        [RavenRoute("admin/debug/auto-tuning-info")]
+        [RavenRoute("databases/{databaseName}/admin/debug/auto-tuning-info")]
+        public HttpResponseMessage DebugAutoTuningInfo()
+        {
+            return GetMessageWithObject(new AutoTunerInfo()
+            {
+                Reason = Database.AutoTuningTrace.ToList(),
+                LowMemoryCallsRecords = MemoryStatistics.LowMemoryCallRecords.ToList(),
+                CpuUsageCallsRecords = CpuStatistics.CpuUsageCallsRecordsQueue.ToList()
+            });
+        }
 
         [HttpGet]
         [RavenRoute("admin/stats")]
@@ -853,9 +866,37 @@ namespace Raven.Database.Server.Controllers.Admin
         {
             var detailedReport = GetQueryStringValue("DetailedReport");
             bool isDetailedReport;
-            if (detailedReport != null && bool.TryParse(detailedReport, out isDetailedReport) && isDetailedReport)
-                return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation(true));
-            return GetMessageWithObject(Database.TransactionalStorage.ComputeDetailedStorageInformation());
+
+            var cts = new CancellationTokenSource();
+            var state = new InternalStorageBreakdownState();
+
+            var computeExactSizes = detailedReport != null && bool.TryParse(detailedReport, out isDetailedReport) && isDetailedReport;
+
+            var computeTask = Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    var reportResults = Database.TransactionalStorage.ComputeDetailedStorageInformation(computeExactSizes, msg => state.MarkProgress(msg), cts.Token);
+                    state.ReportResults = reportResults;
+                    state.MarkCompleted();
+                }
+                catch (Exception e)
+                {
+                    state.MarkFaulted(e.Message, e);
+                }
+            });
+            long taskId;
+            Database.Tasks.AddTask(computeTask, state, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.StorageBreakdown,
+                Description = "Detailed Storage Breakdown"
+            }, out taskId, cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = taskId
+            }, HttpStatusCode.Accepted);
         }
 
         [HttpPost]
@@ -891,9 +932,9 @@ namespace Raven.Database.Server.Controllers.Admin
             switch (mode)
             {
                 case "user":
-                    return GetMessageWithObject(new {Valid = AccountVerifier.UserExists(principal) });
+                    return GetMessageWithObject(new { Valid = AccountVerifier.UserExists(principal) });
                 case "group":
-                    return GetMessageWithObject(new {Valid = AccountVerifier.GroupExists(principal) });
+                    return GetMessageWithObject(new { Valid = AccountVerifier.GroupExists(principal) });
                 default:
                     return GetMessageWithString("Unhandled mode: " + mode, HttpStatusCode.BadRequest);
             }
@@ -1346,20 +1387,16 @@ namespace Raven.Database.Server.Controllers.Admin
         private ReplicationTopology CollectReplicationTopology()
         {
             var mergedTopology = new ReplicationTopology();
-
-            int nextPageStart = 0;
-            var databases = DatabasesLandlord.SystemDatabase.Documents
-                .GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
-                    int.MaxValue, CancellationToken.None, ref nextPageStart);
-
-            var databaseNames = databases
-                .Select(database =>
-                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+            HashSet<string> databaseNames = GetDatabasesNames();
 
             DatabasesLandlord.ForAllDatabases(db =>
             {
                 if (db.IsSystemDatabase())
                     return;
+
+                var databaseId = DatabasesLandlord.GetDatabaseId(db.Name);
+                if (databaseId != null)
+                    mergedTopology.LocalDatabaseIds.Add(databaseId.Value);
 
                 databaseNames.Remove(db.Name);
                 var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(db, new RavenJArray(), 10, Log);
@@ -1377,6 +1414,19 @@ namespace Raven.Database.Server.Controllers.Admin
 
             mergedTopology.SkippedResources = databaseNames;
             return mergedTopology;
+        }
+
+        private HashSet<string> GetDatabasesNames()
+        {
+            int nextPageStart = 0;
+            var databases = DatabasesLandlord.SystemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
+                    int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+            var databaseNames = databases
+                .Select(database =>
+                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+            return databaseNames;
         }
 
         private SynchronizationTopology CollectFilesystemSynchronizationTopology()

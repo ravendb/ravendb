@@ -294,26 +294,36 @@ namespace Raven.Client.Document
             for (int i = 0; i < 2; i++)
             {
                 if (operationTask.IsCanceled || operationTask.IsFaulted)
-                    operationTask.Wait(); // error early if we have  any error
+                    operationTask.Wait(); //error early if we have any error
 
-                if (queue.TryAdd(data, options.WriteTimeoutMilliseconds / 2))
+                try
                 {
-                    if (dataSize != null && dataSize >= BigDocumentSize)
+                    if (queue.TryAdd(data, options.WriteTimeoutMilliseconds / 2))
                     {
-                        //essentially for a BatchSize == 1024 and stream of 1MB documents - the actual batch size will be 128
-                        // --> BatchSize = 1024 / (dataSize = 1024/BigDocumentSize = 250) * 2 == 128
-                        for (int skipDocIndex = 0; skipDocIndex < (dataSize / BigDocumentSize) * 2; skipDocIndex++)
+                        if (dataSize != null && dataSize >= BigDocumentSize)
                         {
-                            if (!queue.TryAdd(SkipMarker)) //if queue is full just stop adding dummy docs
-                                break;
+                            //essentially for a BatchSize == 1024 and stream of 1MB documents - the actual batch size will be 128
+                            // --> BatchSize = 1024 / (dataSize = 1024/BigDocumentSize = 250) * 2 == 128
+                            for (int skipDocIndex = 0; skipDocIndex < (dataSize / BigDocumentSize) * 2; skipDocIndex++)
+                            {
+                                if (queue.TryAdd(SkipMarker) == false) //if queue is full just stop adding dummy docs
+                                    break;
+                            }
                         }
+                        return;
                     }
-                    return;
+                }
+                catch (InvalidOperationException e)
+                {
+                    //this means that the queue is marked as complete,
+                    //probably, because there was an error
+
+                    break;
                 }
             }
 
             if (operationTask.IsCanceled || operationTask.IsFaulted)
-                operationTask.Wait(); // error early if we have  any error
+                operationTask.Wait(); //error early if we have any error
 
             throw new TimeoutException("Could not flush in the specified timeout, server probably not responding or responding too slowly.\r\nAre you writing very big documents?");
         }

@@ -6,8 +6,11 @@
         </div>
         <div class="panel-body">
             <p class="text-center">
-                <button class="btn btn-danger" data-bind="click: fetchDocCounts, enable: canSearch">Compute docs counts</button>
+                <button class="btn btn-danger" data-bind="click: fetchDocCounts, enable: canSearch"><i class="fa fa-spin fa-spinner" data-bind="visible: operationId"></i> Compute detailed storage breakdown</button>
+                <button class="btn btn-danger" data-bind="click: cancelOperation, visible: operationId"><i class="fa fa-bolt"></i> Cancel</button>
             </p>
+
+            <p class="text-center" data-bind="text: progress"></p>
         </div>
     </div>
     <div data-bind="with: data">
@@ -147,7 +150,7 @@
                         <tr>
                             <th>Collection name</th>
                             <th>Document ID</th>
-                            <th>Document Size</th>
+                            <th>Serialized Doc Size On Disk</th>
                         </tr>
                     </thead>
                     <tbody>

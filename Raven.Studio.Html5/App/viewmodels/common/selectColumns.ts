@@ -17,6 +17,7 @@ class selectColumns extends dialogViewModelBase {
     nextTaskStarted = false;
     private form: JQuery;
     private activeInput: JQuery;
+    private lastActiveInput: JQuery;
     private autoCompleteBase = ko.observableArray<KnockoutObservable<string>>([]);
     private autoCompleteResults = ko.observableArray<KnockoutObservable<string>>([]);
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
@@ -234,6 +235,10 @@ class selectColumns extends dialogViewModelBase {
         this.activeInput = $("[id ^= 'binding-']:focus");
         if (this.activeInput.length > 0) {
             this.autoCompleterSupport.searchForCompletions(this.activeInput);
+            this.lastActiveInput = this.activeInput;
+        }
+        else if (!!this.lastActiveInput) {
+            this.autoCompleterSupport.searchForCompletions(this.lastActiveInput);
         }
     }
 

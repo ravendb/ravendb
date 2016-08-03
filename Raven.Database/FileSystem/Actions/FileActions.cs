@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -25,6 +26,7 @@ using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
+using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.FileSystem.Actions
 {
@@ -134,7 +136,11 @@ namespace Raven.Database.FileSystem.Actions
 
                     if (size != null && readFileToDatabase.TotalSizeRead != size)
                     {
-                        throw new HttpResponseException(HttpStatusCode.BadRequest);
+
+                        throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.ExpectationFailed)
+                        {
+                            Content = new MultiGetSafeStringContent($"There is a mismatch between the size reported in the RavenFS-Size header and the data read server side. Declared {size} bytes, but got {readFileToDatabase.TotalSizeRead}")
+                        });
                     }
 
                     if (options.PreserveTimestamps == false)
@@ -144,10 +150,15 @@ namespace Raven.Database.FileSystem.Actions
 
                     metadata["Content-MD5"] = readFileToDatabase.FileHash;
 
+                    long totalSizeRead = readFileToDatabase.TotalSizeRead;
+
+                    if (!metadata.ContainsKey(Constants.FileSystem.RavenFsSize))
+                    {
+                        metadata[Constants.FileSystem.RavenFsSize] = totalSizeRead;
+                    }
+
                     FileUpdateResult updateMetadata = null;
                     Storage.Batch(accessor => updateMetadata = accessor.UpdateFileMetadata(name, metadata, null));
-
-                    long totalSizeRead = readFileToDatabase.TotalSizeRead;
                     metadata["Content-Length"] = totalSizeRead.ToString(CultureInfo.InvariantCulture);
 
                     Search.Index(name, metadata, updateMetadata.Etag);
@@ -443,7 +454,8 @@ namespace Raven.Database.FileSystem.Actions
 
             var filesToDelete = new List<DeleteFileOperation>();
 
-            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun)
+            int totalCount;
+            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun, out totalCount)
                                                               .Select(config => config.JsonDeserialization<DeleteFileOperation>())
                                                               .ToList());
 
@@ -527,7 +539,8 @@ namespace Raven.Database.FileSystem.Actions
 
             Storage.Batch(accessor =>
             {
-                var renameOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10);
+                int totalCount;
+                var renameOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10, out totalCount);
 
                 filesToRename = renameOpConfigs.Select(config => config.JsonDeserialization<RenameFileOperation>()).ToList();
             });
@@ -590,7 +603,8 @@ namespace Raven.Database.FileSystem.Actions
 
             Storage.Batch(accessor =>
             {
-                var copyOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.CopyOperationConfigPrefix, 0, 10);
+                int totalCount;
+                var copyOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.CopyOperationConfigPrefix, 0, 10, out totalCount);
 
                 filesToCopy = copyOpConfigs.Select(config => config.JsonDeserialization<CopyFileOperation>()).ToList();
             });

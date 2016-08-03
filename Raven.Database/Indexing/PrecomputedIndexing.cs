@@ -15,6 +15,5 @@ namespace Raven.Database.Indexing
         public DateTime LastModified;
         public List<JsonDocument> Documents;
         public Index Index;
-
     }
 }

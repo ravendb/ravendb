@@ -28,7 +28,7 @@ namespace Raven.Client.FileSystem
             Commands = asyncFilesCommands;
             conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
                                              .ForConflicts()
-                                             .Subscribe<ConflictNotification>(this.OnFileConflict);
+                                             .Subscribe(new FileConflictObserver(this));
         }
 
         /// <summary>
@@ -145,17 +145,37 @@ namespace Raven.Client.FileSystem
             return searchResults.Files.ToArray();
         }
 
-        internal void OnFileConflict(ConflictNotification notification)
+
+
+        public class FileConflictObserver : IObserver<ConflictNotification>
         {
-            if ( notification.Status == ConflictStatus.Detected)
+            private readonly AsyncFilesSession asyncFilesSession;
+
+            public FileConflictObserver(AsyncFilesSession asyncFilesSession)
             {
-                conflicts.Add(notification.FileName);                
+                this.asyncFilesSession = asyncFilesSession;
             }
-            else
+
+            public void OnNext(ConflictNotification notification)
             {
-                entitiesByKey.Remove(notification.FileName);
-                conflicts.Remove(notification.FileName);
-            }            
+                if (notification.Status == ConflictStatus.Detected)
+                {
+                    asyncFilesSession.conflicts.Add(notification.FileName);
+                }
+                else
+                {
+                    asyncFilesSession.entitiesByKey.Remove(notification.FileName);
+                    asyncFilesSession.conflicts.Remove(notification.FileName);
+                }
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnCompleted()
+            {
+            }
         }
 
         public override void Dispose ()

@@ -429,8 +429,8 @@ namespace Voron.Trees
                 throw new DataException("Index points to a non leaf page");
 
             node = p.Search(key); // will set the LastSearchPosition
-
-            AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
+            if(p.NumberOfEntries > 0)
+                AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
 
             cursor = new Lazy<Cursor>(() => c);
             return p;
@@ -712,7 +712,7 @@ namespace Voron.Trees
                     {
                         // this is a multi value
                         p.SetNodeKey(node, ref key);
-                        var tree = OpenMultiValueTree(_tx, key, node);
+                        var tree = OpenMultiValueTree(_tx, (Slice)key, node);
                         results.AddRange(tree.AllPages());
                     }
                     else

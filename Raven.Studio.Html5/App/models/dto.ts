@@ -98,6 +98,18 @@ interface databaseStatisticsDto {
     Is64Bit: boolean;
 }
 
+interface reducedDatabaseStatisticsDto {
+    DatabaseId: string;
+    CountOfDocuments: number;
+    CountOfIndexesExcludingDisabledAndAbandoned: number;
+    CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
+    CountOfErrors: number;
+    CountOfIndexes: number;
+    CountOfStaleIndexes: number;
+    ApproximateTaskCount: number;
+    CountOfAttachments: number;
+}
+
 interface futureBatchStatsDto {
     Timestamp: string;
     Duration: string;
@@ -174,6 +186,16 @@ interface reducingBatchInfoDto {
     PerfStats: indexNameAndReducingPerformanceStats[];
 }
 
+interface deletionBatchInfoDto {
+    Id: number;
+    IndexName: string;
+    TotalDocumentCount: number;
+    StartedAt: string; // ISO date string.
+    StartedAtDate?: Date;
+    TotalDurationMs: number;
+    PerformanceStats: deletionPerformanceStatsDto[];
+}
+
 interface indexNameAndReducingPerformanceStats {
     indexName: string;
     stats: reducePerformanceStatsDto;
@@ -183,6 +205,10 @@ interface indexNameAndReducingPerformanceStats {
 interface reducePerformanceStatsDto {
     ReduceType?: string;
     LevelStats: reduceLevelPeformanceStatsDto[];
+}
+
+interface deletionPerformanceStatsDto extends basePerformanceStatsDto {
+    Name: string;
 }
 
 interface reduceLevelPeformanceStatsDto {
@@ -383,6 +409,12 @@ interface replicationStatsDto {
     LastError: string;
 }
 
+interface documentCountDto {
+    Count: number;
+    Type: string;
+    IsEtl: boolean;
+}
+
 interface indexMergeSuggestionsDto {
     Suggestions: suggestionDto[];
     Unmergables: Object;
@@ -581,7 +613,7 @@ interface transformerDto {
 
 interface indexDefinitionListItemDto {
     name: string;
-    definition: indexDefinitionDto
+    definition: indexDefinitionDto;
 }
 
 interface saveTransformerDto {
@@ -653,7 +685,7 @@ interface bulkDocumentDto {
 
 interface databaseDocumentSaveDto {
     Key: string;
-    ETag: string
+    ETag: string;
 }
 
 interface backupRequestDto {
@@ -736,7 +768,7 @@ interface sqlReplicationDto extends documentDto {
 
 interface commandData {
     CommandText: string;
-    Params:{Key:string;Value:any}[]
+    Params:{Key:string;Value:any}[];
 }
 
 interface tableQuerySummary {
@@ -960,7 +992,6 @@ interface statusDebugMetricsDto {
     StaleIndexReduces: histogramDataDto;
     Gauges: any;
     ReplicationBatchSizeMeter: dictionary<meterDataDto>;
-    ReplicationDurationMeter: dictionary<meterDataDto>;
     ReplicationBatchSizeHistogram: dictionary<histogramDataDto>;
     ReplicationDurationHistogram: dictionary<histogramDataDto>;
 }
@@ -1261,6 +1292,14 @@ interface bulkOperationStatusDto extends operationStatusDto {
     OperationProgress: bulkOperationProgress;
 }
 
+interface internalStorageBreakdownState extends operationStatusDto {
+    ReportResults: string[];
+}
+
+interface debugDocumentStatsStateDto extends operationStatusDto {
+    Stats: debugDocumentStatsDto;
+}
+
 interface documentStateDto {
     Document: string;
     Deleted: boolean;
@@ -1271,7 +1310,7 @@ interface bulkOperationProgress {
     ProcessedEntries: number;
 }
 
-interface importOperationStatusDto extends operationStatusDto {
+interface dataDumperOperationStatusDto extends operationStatusDto {
     ExceptionDetails: string;
 }
 
@@ -1285,6 +1324,7 @@ interface replicationTopologyDto {
     Servers: string[];
     Connections: replicationTopologyConnectionDto[];
     SkippedResources: string[];
+    LocalDatabaseIds: string[];
 }
 
 interface synchronizationTopologyDto {
@@ -1300,20 +1340,28 @@ interface countersReplicationTopologyDto {
 }
 
 interface replicationTopologyConnectionDto {
-    Destination: string;
-    DestinationToSourceState: string;
-    Errors: string[];
+    SourceUrl: string[];
+    DestinationUrl: string[];
+    SourceServerId: string;
+    DestinationServerId: string;
     LastAttachmentEtag: string;
     LastDocumentEtag: string;
     ReplicationBehavior: string;
-    SendServerId: string;
-    Source: string;
     SourceToDestinationState: string;
+    DestinationToSourceState: string;
+    Errors: string[];
+    SendServerId: string;
     StoredServerId: string;
     UiType: string;
+    Source: string;
+    Destination: string;
 }
 
 interface synchronizationTopologyConnectionDto {
+    SourceUrl: string[];
+    DestinationUrl: string[];
+    SourceServerId: string;
+    DestinationServerId: string;
     Destination: string;
     DestinationToSourceState: string;
     Errors: string[];
@@ -1477,10 +1525,12 @@ interface nodeConnectionInfoDto {
     Password?: string;
     Domain?: string;
     ApiKey?: string;
+    IsNoneVoter : boolean;
 }
 
 interface clusterConfigurationDto {
     EnableReplication: boolean;
+    DatabaseSettings?: dictionary<string>;
 }
 
 interface clusterNodeStatusDto {

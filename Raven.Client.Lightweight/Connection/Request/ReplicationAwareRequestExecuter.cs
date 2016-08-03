@@ -65,7 +65,7 @@ namespace Raven.Client.Connection.Request
             return replicationInformer.UpdateReplicationInformationIfNeededAsync(serverClient);
         }
 
-        public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl)
+        public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl, bool withClusterFailoverHeader = false)
         {
             if (serverClient.Url.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
                 return;
@@ -78,6 +78,11 @@ namespace Raven.Client.Connection.Request
 
             httpJsonRequest.AddReplicationStatusChangeBehavior(serverClient.Url, currentUrl, HandleReplicationStatusChanges);
 
+        }
+
+        public void SetReadStripingBase(int strippingBase)
+        {
+            this.readStripingBase = strippingBase;
         }
 
         private static string ToRemoteUrl(string primaryUrl)

@@ -154,6 +154,7 @@
     <Compile Include="Auth\WindowsAuthenticationUserInfo.cs" />
     <Compile Include="BulkInsert\ChunkedBulkInsert.cs" />
     <Compile Include="Bundles\MoreLikeThis.cs" />
+    <Compile Include="ChangesApi\ActionObserver.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="ChangesApi\WebsocketsTests.cs" />
@@ -162,6 +163,7 @@
     <Compile Include="Commands\Querying.cs" />
     <Compile Include="Commands\Transformers.cs" />
     <Compile Include="Configuration\ConfigurationTests.cs" />
+    <Compile Include="Indexing\IndexCreationTests.cs" />
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
@@ -213,6 +215,10 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
+    <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
+      <Project>{f796f69f-d17b-4260-92d6-65cb94c0e05c}</Project>
+      <Name>Rachis</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

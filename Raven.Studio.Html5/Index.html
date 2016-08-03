@@ -49,7 +49,11 @@
             </div>
         </div>
     </div>
-    <iframe id="downloadFrame" style="display: none"></iframe>
+    <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
+    <form id="downloadForm" style="display: none" method="post" target="hidden-form" download>
+        <input type="hidden" id="DownloadOptions" name="DownloadOptions" />
+        <input type="hidden" id="ProgressTaskId" name="ProgressTaskId" value="-1" />
+    </form>
     <!-- Note: do not remove the "BEGIN VENDOR SCRIPTS" comment below. It is used by the optimized build to determine which scripts to inline. -->
     <!-- BEGIN VENDOR SCRIPTS -->
     <script type="text/javascript" src="Scripts/jquery-2.1.3.js"></script>

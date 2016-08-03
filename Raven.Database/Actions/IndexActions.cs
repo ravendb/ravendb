@@ -13,13 +13,13 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -228,21 +228,15 @@ namespace Raven.Database.Actions
         [MethodImpl(MethodImplOptions.Synchronized)]
         public string PutIndex(string name, IndexDefinition definition)
         {
-            long _;
-            return PutIndex(name, definition, out _);
+            return PutIndexInternal(name, definition);
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public string PutIndex(string name, IndexDefinition definition, out long opId)
-        {
-            return PutIndexInternal(name, definition, out opId);
-        }
-
-        private string PutIndexInternal(string name, IndexDefinition definition, out long opId,bool disableIndexBeforePut = false, bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
+        private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, 
+            bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
         {
             if (name == null)
                 throw new ArgumentNullException(nameof(name));
-            opId = -1;
+
             name = name.Trim();
             IsIndexNameValid(name);
 
@@ -257,6 +251,10 @@ namespace Raven.Database.Actions
                             Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
                             throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
                         }
+
+                        //keep the SideBySide lock mode from the replaced index
+                        definition.LockMode = IndexLockMode.SideBySide;
+                            
                         break;
                     case IndexLockMode.LockedIgnore:
                         Log.Info("Index {0} not saved because it was lock (with ignore)", name);
@@ -285,7 +283,7 @@ namespace Raven.Database.Actions
                     break;
             }
 
-            opId = PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
+            PutNewIndexIntoStorage(name, definition, disableIndexBeforePut);
 
             WorkContext.ClearErrorsFor(name);
 
@@ -308,8 +306,7 @@ namespace Raven.Database.Actions
             {
                 foreach (var indexToAdd in indexesToAdd)
                 {
-                    long opId;
-                    var nameToAdd = PutIndexInternal(indexToAdd.Name, indexToAdd.Definition,out opId, disableIndexBeforePut: true);
+                    var nameToAdd = PutIndexInternal(indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true);
                     if (nameToAdd == null)
                         continue;
 
@@ -343,13 +340,13 @@ namespace Raven.Database.Actions
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public SideBySideIndexInfo[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd)
+        public List<IndexInfo> PutSideBySideIndexes(SideBySideIndexes sideBySideIndexes)
         {
-            var createdIndexes = new List<SideBySideIndexInfo>();
+            var createdIndexes = new List<IndexInfo>();
             var prioritiesList = new List<IndexingPriority>();
             try
             {
-                foreach (var indexToAdd in indexesToAdd)
+                foreach (var indexToAdd in sideBySideIndexes.IndexesToAdd)
                 {
                     var originalIndexName = indexToAdd.Name.Trim();
                     var indexName = Constants.SideBySideIndexNamePrefix + originalIndexName;
@@ -374,19 +371,25 @@ namespace Raven.Database.Actions
                                 creationOptions = originalIndexCreationOptions;
                                 break;
                         }
+
+                        //keep the SideBySide lock mode from the replaced index
+                        indexToAdd.Definition.LockMode = GetCurrentLockMode(originalIndexName) ?? indexToAdd.Definition.LockMode;
                     }
 
                     long _;
-                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,out _, disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
+                    var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,
+                        disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
+
                     if (nameToAdd == null)
                         continue;
 
-                    createdIndexes.Add(new SideBySideIndexInfo
+                    createdIndexes.Add(new IndexInfo
                     {
+                        Name = indexName,
                         OriginalName = originalIndexName,
-                        Name = nameToAdd,
                         IsSideBySide = isSideBySide
                     });
+
                     prioritiesList.Add(indexToAdd.Priority);
                 }
 
@@ -395,14 +398,22 @@ namespace Raven.Database.Actions
 
                 for (var i = 0; i < createdIndexes.Count; i++)
                 {
-                    var index = createdIndexes[i].Name;
+                    var indexName = createdIndexes[i].Name;
                     var priority = prioritiesList[i];
 
-                    var instance = Database.IndexStorage.GetIndexInstance(index);
+                    var instance = Database.IndexStorage.GetIndexInstance(indexName);
+                    if (instance == null)
+                    {
+                        Log.Warn("Couldn't set index priority because index named: '{0}' doesn't exist", indexName);
+                        continue;
+                    }
+                    
                     instance.Priority = priority;
                 }
 
-                return createdIndexes.ToArray();
+                CreateIndexReplacementDocuments(sideBySideIndexes, createdIndexes);
+
+                return createdIndexes;
             }
             catch (Exception e)
             {
@@ -410,16 +421,48 @@ namespace Raven.Database.Actions
                 foreach (var index in createdIndexes)
                 {
                     DeleteIndex(index.Name);
+                    if (index.IsSideBySide)
+                        Database.Documents.Delete(index.Name, null, null);
                 }
                 throw;
             }
         }
 
-        public class SideBySideIndexInfo
+        private void CreateIndexReplacementDocuments(SideBySideIndexes sideBySideIndexes, List<IndexInfo> createdIndexes)
         {
-            public string OriginalName { get; set; }
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var createdIndex in createdIndexes)
+                {
+                    if (createdIndex.IsSideBySide == false)
+                        continue;
 
+                    Database.Documents.Put(
+                        Constants.IndexReplacePrefix + createdIndex.Name,
+                        null,
+                        RavenJObject.FromObject(new IndexReplaceDocument
+                        {
+                            IndexToReplace = createdIndex.OriginalName,
+                            MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace,
+                            ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc
+                        }),
+                        new RavenJObject(),
+                        null);
+                }
+            });
+        }
+
+        private IndexLockMode? GetCurrentLockMode(string indexName)
+        {
+            var currentIndexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexName);
+            return currentIndexDefinition?.LockMode;
+        }
+
+        public class IndexInfo
+        {
             public string Name { get; set; }
+
+            public string OriginalName { get; set; }
 
             public bool IsSideBySide { get; set; }
         }
@@ -433,7 +476,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        internal long PutNewIndexIntoStorage(string name, IndexDefinition definition, bool disableIndex = false)
+        internal void PutNewIndexIntoStorage(string name, IndexDefinition definition, bool disableIndex = false)
         {
             Debug.Assert(Database.IndexStorage != null);
             Debug.Assert(TransactionalStorage != null);
@@ -479,7 +522,7 @@ namespace Raven.Database.Actions
 
             Debug.Assert(index != null);
 
-            Func<long> precomputeTask = null;
+            Action precomputedTask = null;
             if (WorkContext.RunIndexing &&
                 name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
                 Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex) && isPrecomputedBatchForNewIndexIsRunning == false)
@@ -487,7 +530,7 @@ namespace Raven.Database.Actions
                 // optimization of handling new index creation when the number of document in a database is significantly greater than
                 // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
 
-                precomputeTask = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
+                precomputedTask = TryCreateTaskForApplyingPrecomputedBatchForNewIndex(index, definition);
             }
             else
             {
@@ -499,20 +542,14 @@ namespace Raven.Database.Actions
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
-            // we start the precomuteTask _after_ we finished adding the index
-            long operationId = -1;
-            if (precomputeTask != null)
-            {
-                operationId = precomputeTask();
-            }
+            // we start the precomputedTask _after_ we finished adding the index
+            precomputedTask?.Invoke();
 
             WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-            WorkContext.NotifyAboutWork();
-
-            return operationId;	        
+            WorkContext.NotifyAboutWork();       
         }
 
-        private Func<long> TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
+        private Action TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
             if (Database.Configuration.MaxPrecomputedBatchSizeForNewIndex <= 0) //precaution -> should never be lower than 0
             {
@@ -559,12 +596,8 @@ namespace Raven.Database.Actions
                     }
                     catch (TotalDataSizeExceededException e)
                     {
-                        Log.Warn(string.Format(
-                            @"Aborting applying precomputed batch for index {0}, 
-                                because total data size gatherered exceeded 
-                                configured data size ({1} bytes)", 
-                            index, Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes) , e);
-                        throw;
+                        //expected error
+                        Log.Info(e.Message);
                     }
                     catch (Exception e)
                     {
@@ -600,7 +633,6 @@ namespace Raven.Database.Actions
                                 },
                                 out id,
                                 cts);
-                        return id;
                     }
                     catch (Exception)
                     {
@@ -627,8 +659,9 @@ namespace Raven.Database.Actions
             var docsToIndex = new List<JsonDocument>();
             TransactionalStorage.Batch(actions =>
             {
-                var query = GetQueryForAllMatchingDocumentsForIndex(generator);
+                var query = QueryBuilder.GetQueryForAllMatchingDocumentsForIndex(Database, generator.ForEntityNames);
 
+                using (DocumentCacher.SkipSetDocumentsInDocumentCache())
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
                 {
@@ -662,9 +695,14 @@ namespace Raven.Database.Actions
                     }
 
                     if (Log.IsDebugEnabled)
-                        Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
-                              op.Header.TotalResults);
-                    int totalLoadedDocumentSize = 0;
+                    {
+                        Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs",
+                            index, op.Header.TotalResults);
+                    }
+
+                    var totalLoadedDocumentSize = 0;
+                    const int totalSizeToCheck = 16 * 1024 * 1024; //16MB
+                    var localLoadedDocumentSize = 0;
                     op.Execute(document =>
                     {
                         var metadata = document.Value<RavenJObject>(Constants.Metadata);
@@ -686,16 +724,41 @@ namespace Raven.Database.Actions
                             Metadata = metadata
                         };
 
+                        docsToIndex.Add(doc);
                         totalLoadedDocumentSize += serializedSizeOnDisk;
-                        if (totalLoadedDocumentSize >= Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes)
+                        localLoadedDocumentSize += serializedSizeOnDisk;
+
+                        if (totalLoadedDocumentSize > Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes)
                         {
+                            var error = $"Aborting applying precomputed batch for index id: {index.indexId}, " +
+                                        $"name: {index.PublicName} because we have {totalLoadedDocumentSize}MB of documents that were fetched" + 
+                                        $"and the configured max data to fetch is " +
+                                        $"{Database.Configuration.MaxPrecomputedBatchTotalDocumentSizeInBytes/1024/1024}MB";
+
                             //we are aborting operation, so don't keep the references
-                            docsToIndex.Clear(); 
-                            throw new TotalDataSizeExceededException();
+                            docsToIndex.Clear();
+                            throw new TotalDataSizeExceededException(error);
                         }
 
-                        docsToIndex.Add(doc);
+
+                        if (localLoadedDocumentSize <= totalSizeToCheck)
+                            return;
+
+                        localLoadedDocumentSize = 0;
+
+                        if (Database.Configuration.MemoryLimitForProcessingInMb > MemoryStatistics.AvailableMemoryInMb)
+                        {
+                            var error = $"Aborting applying precomputed batch for index id: {index.indexId}, " +
+                                        $"name: {index.PublicName} because we have {MemoryStatistics.AvailableMemoryInMb}MB " +
+                                        $"of available memory and the available memory for processing is: " +
+                                        $"{Database.Configuration.MemoryLimitForProcessingInMb}MB";
+
+                            //we are aborting operation, so don't keep the references
+                            docsToIndex.Clear();
+                            throw new TotalDataSizeExceededException(error);
+                        }
                     });
+
                     result = new PrecomputedIndexingBatch
                     {
                         LastIndexed = op.Header.IndexEtag,
@@ -717,39 +780,6 @@ namespace Raven.Database.Actions
                 }
             }
 
-        }
-
-        private string GetQueryForAllMatchingDocumentsForIndex(AbstractViewGenerator generator)
-        {
-            var terms = new TermsQueryRunner(Database)
-                .GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
-
-            var sb = new StringBuilder();
-
-            foreach (var entityName in generator.ForEntityNames)
-            {
-                bool added = false;
-                foreach (var term in terms)
-                {
-                    if (string.Equals(entityName, term, StringComparison.OrdinalIgnoreCase))
-                    {
-                        AppendTermToQuery(term, sb);
-                        added = true;
-                    }
-                }
-                if (added == false)
-                    AppendTermToQuery(entityName, sb);
-            }
-
-            return sb.ToString();
-        }
-
-        private static void AppendTermToQuery(string term, StringBuilder sb)
-        {
-            if (sb.Length != 0)
-                sb.Append(" OR ");
-
-            sb.Append("Tag:[[").Append(term).Append("]]");
         }
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
@@ -778,51 +808,6 @@ namespace Raven.Database.Actions
             IndexDefinitionStorage.ResolveAnalyzers(definition);
             var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
             return findIndexCreationOptions;
-        }
-
-        internal Task StartDeletingIndexDataAsync(int id, string indexName)
-        {
-            var sp = Stopwatch.StartNew();
-            //remove the header information in a sync process
-            TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
-            var deleteIndexTask = Task.Run(() =>
-            {
-                Debug.Assert(Database.IndexStorage != null);
-                Log.Info("Starting async deletion of index {0}", indexName);
-                Database.IndexStorage.DeleteIndexData(id); // Data can take a while
-
-                TransactionalStorage.Batch(actions =>
-                {
-                    // And Esent data can take a while too
-                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
-                    if (WorkContext.CancellationToken.IsCancellationRequested)
-                        return;
-
-                    actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
-                });
-            });
-
-            long taskId;
-            Database.Tasks.AddTask(deleteIndexTask, new TaskBasedOperationState(deleteIndexTask), new TaskActions.PendingTaskDescription
-            {
-                StartTime = SystemTime.UtcNow,
-                TaskType = TaskActions.PendingTaskType.IndexDeleteOperation,
-                Description = indexName
-            }, out taskId);
-
-            deleteIndexTask.ContinueWith(t =>
-            {
-                if (t.IsFaulted || t.IsCanceled)
-                {
-                    Log.WarnException("Failure when deleting index " + indexName, t.Exception);
-                }
-                else
-                {
-                    Log.Info("The async deletion of index {0} was completed in {1}", indexName, sp.Elapsed);
-                }
-            });
-
-            return deleteIndexTask;
         }
 
         public RavenJArray GetIndexNames(int start, int pageSize)
@@ -871,7 +856,8 @@ namespace Raven.Database.Actions
             return true;
         }
 
-        internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true, bool removeIndexReplaceDocument = true, bool isSideBySideReplacement = false)
+        internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, 
+            bool clearErrors = true, bool removeIndexReplaceDocument = true, bool isSideBySideReplacement = false)
         {
             using (IndexDefinitionStorage.TryRemoveIndexContext())
             {
@@ -899,9 +885,10 @@ namespace Raven.Database.Actions
                     Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }
 
-                // And delete the data in the background
-                StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
-
+                //remove the header information in a sync process
+                TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(instance.IndexId));
+                //and delete the data in the background
+                Database.Maintenance.StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
 
                 var indexChangeType = isSideBySideReplacement ? IndexChangeTypes.SideBySideReplace : IndexChangeTypes.IndexRemoved;
 
@@ -917,5 +904,40 @@ namespace Raven.Database.Actions
             }
         }
 
+        public void RenameIndex(IndexDefinition instance, string newIndexName)
+        {
+            switch (instance.LockMode)
+            {
+                case IndexLockMode.LockedIgnore:
+                    return;
+                case IndexLockMode.LockedError:
+                    throw new InvalidOperationException("An attempt to rename an index, locked with LockedError was detected.");
+            }
+
+            using (Database.IndexDefinitionStorage.TryRemoveIndexContext())
+            {
+                var existingIndexName = instance.Name;
+                if (Database.IndexDefinitionStorage.RenameIndex(existingIndexName, newIndexName))
+                {
+                    Database.IndexStorage.RenameIndex(instance, newIndexName);
+
+                    TransactionalStorage.Batch(actions =>
+                    {
+                        var scriptedIndexSetup = actions.Documents.DocumentByKey(ScriptedIndexResults.IdPrefix + existingIndexName);
+
+                        if (scriptedIndexSetup != null)
+                        {
+                            actions.Documents.AddDocument(ScriptedIndexResults.IdPrefix + newIndexName, null, scriptedIndexSetup.DataAsJson, scriptedIndexSetup.Metadata);
+
+                            Etag etag;
+                            RavenJObject metadata;
+                            actions.Documents.DeleteDocument(ScriptedIndexResults.IdPrefix + existingIndexName, scriptedIndexSetup.Etag, out metadata, out etag);
+                        }
+
+                        WorkContext.HandleIndexRename(existingIndexName, newIndexName, instance.IndexId, actions);
+                    });
+                }
+            }
+        }
     }
 }

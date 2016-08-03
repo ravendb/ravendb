@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 
 using Raven.Database.Server.Security;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.Raft.Dto;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -98,7 +99,23 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.RavenDataDir, systemConfiguration);
+            Dictionary<string, string> clusterWideSettings = null;
+            if (systemDatabase.ClusterManager?.Value?.HasNonEmptyTopology == true)
+            {
+                clusterWideSettings = GetClusterWideSettings();
+            }
+
+            return CreateConfiguration(tenantId, document, Constants.RavenDataDir, systemConfiguration, clusterWideSettings);
+        }
+
+        private Dictionary<string, string> GetClusterWideSettings()
+        {
+            var configurationJson = systemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
+            if (configurationJson == null)
+                return null;
+
+            var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+            return configuration.DatabaseSettings;
         }
 
         private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
@@ -226,11 +243,21 @@ namespace Raven.Database.Server.Tenancy
                         string tenantId,
                         DatabaseDocument document,
                         string folderPropName,
-                        InMemoryRavenConfiguration parentConfiguration)
+                        InMemoryRavenConfiguration parentConfiguration, 
+                        Dictionary<string, string> clusterSettings)
         {
+            var effectiveParentSettings = new NameValueCollection(parentConfiguration.Settings);
+            if (clusterSettings != null)
+            {
+                foreach (var keyValuePair in clusterSettings)
+                {
+                    effectiveParentSettings[keyValuePair.Key] = keyValuePair.Value;
+                }
+            }
+
             var config = new InMemoryRavenConfiguration
             {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
+                Settings = new NameValueCollection(effectiveParentSettings),
             };
 
             if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
@@ -386,6 +413,21 @@ namespace Raven.Database.Server.Tenancy
                 return false;
 
             return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
+        }
+
+        public Guid? GetDatabaseId(string tenantName)
+        {
+            if (tenantName == Constants.SystemDatabase)
+                return null;
+
+            Task<DocumentDatabase> dbTask;
+            if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
+                return null;
+
+            if (dbTask == null || dbTask.Status != TaskStatus.RanToCompletion)
+                return null;
+
+            return dbTask.Result.Statistics.DatabaseId;
         }
 
         private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)

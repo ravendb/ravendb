@@ -15,18 +15,23 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Lucene.Net.Analysis.Tokenattributes;
 using System.Linq;
 using Lucene.Net.Index;
 using Lucene.Net.Support;
 using Lucene.Net.Util;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 using IndexReader = Lucene.Net.Index.IndexReader;
 using Term = Lucene.Net.Index.Term;
 using Analyzer = Lucene.Net.Analysis.Analyzer;
 using TokenStream = Lucene.Net.Analysis.TokenStream;
 using StandardAnalyzer = Lucene.Net.Analysis.Standard.StandardAnalyzer;
 using Document = Lucene.Net.Documents.Document;
+using Version = Lucene.Net.Util.Version;
 
 namespace Lucene.Net.Search.Similar
 {
@@ -501,6 +506,16 @@ namespace Lucene.Net.Search.Similar
             return CreateQuery(RetrieveTerms(r));
         }
 
+        /// <summary> Return a query that will return docs like the passed json document.
+        /// 
+        /// </summary>
+        /// <returns> a query that will return docs like the passed json document.
+        /// </returns>
+        internal Query Like(RavenJObject jsonDocument)
+        {
+            return CreateQuery(RetrieveTerms(jsonDocument));
+        }
+
         /// <summary> Create the More like query from a PriorityQueue</summary>
         private Query CreateQuery(PriorityQueue<object[]> q)
         {
@@ -755,6 +770,62 @@ namespace Lucene.Net.Search.Similar
             return false;
         }
 
+        /// <summary> Find words for a more-like-this query former.
+        /// The result is a priority queue of arrays with one entry for <b>every word</b> in the dynamic document.
+        /// Each array has 6 elements.
+        /// The elements are:
+        /// <ol>
+        /// <li> The word (String)</li>
+        /// <li> The top field that this word comes from (String)</li>
+        /// <li> The score for this word (Float)</li>
+        /// <li> The IDF value (Float)</li>
+        /// <li> The frequency of this word in the index (Integer)</li>
+        /// <li> The frequency of this word in the source document (Integer)</li>
+        /// </ol>
+        /// This is a somewhat "advanced" routine, and in general only the 1st entry in the array is of interest.
+        /// This method is exposed so that you can identify the "interesting words" in a document.
+        /// For an easier method to call see <see cref="RetrieveInterestingTerms(System.IO.TextReader)"/>.
+        /// 
+        /// </summary>
+        /// <param name="jsonDocument">the document with the content in the json format
+        /// </param>
+        /// <returns> the most intresting words in the document ordered by score, with the highest scoring, or best entry, first
+        /// 
+        /// </returns>
+        /// <seealso cref="RetrieveInterestingTerms(System.IO.TextReader)">
+        /// </seealso>
+        internal PriorityQueue<object[]> RetrieveTerms(RavenJObject jsonDocument)
+        {
+            IDictionary<string, Int> words = new HashMap<string, Int>();
+            for (int i = 0; i < fieldNames.Length; i++)
+            {
+                var fieldName = fieldNames[i];
+                RavenJToken value;
+                jsonDocument.TryGetValue(fieldName, out value);
+
+                if (value == null) continue;
+
+                switch (value.Type)
+                {
+                    case JTokenType.Array:
+                        foreach (var item in (RavenJArray)value)
+                        {
+                            if (item.Type != JTokenType.String)
+                            {
+                                throw new InvalidOperationException($"The '{fieldName}' array items type '{item.Type}' is not supported on MoreLikeThis queries.");
+                            }
+                            AddTermFrequencies(new StringReader(item.Value<string>()), words, fieldName);
+                        }
+                        break;
+                    case JTokenType.String:
+                        AddTermFrequencies(new StringReader(value.Value<string>()), words, fieldName);
+                        break;
+                    default: throw new InvalidOperationException($"The '{fieldName}' field type '{value.Type}' is not supported on MoreLikeThis queries.");
+                }
+            }
+
+            return CreateQueue(words);
+        }
 
         /// <summary> Find words for a more-like-this query former.
         /// The result is a priority queue of arrays with one entry for <b>every word</b> in the document.

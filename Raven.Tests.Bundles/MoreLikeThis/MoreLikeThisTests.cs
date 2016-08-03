@@ -32,9 +32,9 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             {
                 TransformResults = results => from result in results
                                               select new
-                                                     {
-                                                         TransformedBody = result.Body + "123"
-                                                     };
+                                              {
+                                                  TransformedBody = result.Body + "123"
+                                              };
             }
         }
 
@@ -82,11 +82,9 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
         private static List<Data> GetDataList()
         {
-            var dataQueriedFor = new Data { Body = "This is a test. Isn't it great? I hope I pass my test!" };
-
             var list = new List<Data>
                 {
-                    dataQueriedFor,
+                    new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
                     new Data {Body = "I have a test tomorrow. I hate having a test"},
                     new Data {Body = "Cake is great."},
                     new Data {Body = "This document has the word test only once"},
@@ -306,7 +304,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             {
                 new OtherDataIndex().Execute(store);
 
-                var dataQueriedFor = new DataWithIntegerId {Id = 123, Body = "This is a test. Isn't it great? I hope I pass my test!"};
+                var dataQueriedFor = new DataWithIntegerId { Id = 123, Body = "This is a test. Isn't it great? I hope I pass my test!" };
 
                 var list = new List<DataWithIntegerId>
                 {
@@ -342,17 +340,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             {
                 new DataIndex().Execute(store);
 
-                var list = new List<Data>
-                {
-                    new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                    new Data {Body = "I have a test tomorrow. I hate having a test"},
-                    new Data {Body = "Cake is great."},
-                    new Data {Body = "This document has the word test only once"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"}
-                };
+                var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
                 WaitForIndexing(store);
@@ -370,17 +358,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             {
                 new DataIndex().Execute(store);
 
-                var list = new List<Data>
-                {
-                    new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-                    new Data {Body = "I have a test tomorrow. I hate having a test"},
-                    new Data {Body = "Cake is great."},
-                    new Data {Body = "This document has the word test only once"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"},
-                    new Data {Body = "test"}
-                };
+                var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
                 WaitForIndexing(store);
@@ -391,7 +369,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
                 {
                     DocumentId = key,
-                    Fields = new[] {"Body"}
+                    Fields = new[] { "Body" }
                 });
                 WaitForIndexing(store);
 
@@ -409,7 +387,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
                 for (var i = 0; i < 100; i++)
                 {
-                    var data = new Data {Body = GetLorem(200)};
+                    var data = new Data { Body = GetLorem(200) };
                     session.Store(data);
                 }
                 session.SaveChanges();
@@ -430,7 +408,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
                 for (var i = 0; i < 10; i++)
                 {
-                    var data = new Data {Body = "Body" + i, WhitespaceAnalyzerField = "test test"};
+                    var data = new Data { Body = "Body" + i, WhitespaceAnalyzerField = "test test" };
                     session.Store(data);
                 }
                 session.SaveChanges();
@@ -456,7 +434,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
                 for (var i = 0; i < 10; i++)
                 {
-                    var data = new Data {WhitespaceAnalyzerField = "bob@hotmail.com hotmail"};
+                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com hotmail" };
                     session.Store(data);
                 }
                 session.SaveChanges();
@@ -478,7 +456,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
                 for (var i = 0; i < 10; i++)
                 {
-                    var data = new Data {WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com"};
+                    var data = new Data { WhitespaceAnalyzerField = "bob@hotmail.com bob@hotmail.com" };
                     session.Store(data);
                 }
                 session.SaveChanges();
@@ -522,7 +500,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
                 {
                     DocumentId = key,
-                    Fields = new[] {"Body"},
+                    Fields = new[] { "Body" },
                     MinimumDocumentFrequency = 2
                 });
 
@@ -558,7 +536,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                     new MoreLikeThisQuery
                     {
                         DocumentId = key,
-                        Fields = new[] {"Body"},
+                        Fields = new[] { "Body" },
                         MinimumWordLength = 3,
                         MinimumDocumentFrequency = 1,
                         Boost = true
@@ -591,7 +569,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                 };
                 list.ForEach(session.Store);
 
-                session.Store(new StopWordsSetup {Id = "Config/Stopwords", StopWords = new List<string> {"I", "A", "Be"}});
+                session.Store(new StopWordsSetup { Id = "Config/Stopwords", StopWords = new List<string> { "I", "A", "Be" } });
 
                 session.SaveChanges();
 
@@ -611,6 +589,36 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             }
         }
 
+        [Fact]
+        public void CanMakeDynamicDocumentQueries()
+        {
+            new DataIndex().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                var list = GetDataList();
+                list.ForEach(session.Store);
+
+                session.SaveChanges();
+            }
+
+            WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
+                    new MoreLikeThisQuery
+                    {
+                        Document = "{ \"Body\": \"A test\" }",
+                        Fields = new[] { "Body" },
+                        MinimumTermFrequency = 1,
+                        MinimumDocumentFrequency = 1
+                    });
+
+                Assert.Equal(7, list.Count());
+            }
+        }
+
         private void AssetMoreLikeThisHasMatchesFor<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var session = store.OpenSession())
@@ -618,7 +626,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                 var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQuery
                 {
                     DocumentId = documentKey,
-                    Fields = new[] {"Body"}
+                    Fields = new[] { "Body" }
                 });
 
                 Assert.NotEmpty(list);
@@ -686,7 +694,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
         {
             public DataIndex() : this(true, false)
             {
-                
+
             }
 
             public DataIndex(bool termVector, bool store)
@@ -740,7 +748,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             public OtherDataIndex()
             {
                 Map = docs => from doc in docs
-                              select new {doc.Body};
+                              select new { doc.Body };
 
                 Analyzers = new Dictionary<Expression<Func<DataWithIntegerId, object>>, string>
                 {

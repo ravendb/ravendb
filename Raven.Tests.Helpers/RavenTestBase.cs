@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -339,7 +340,8 @@ namespace Raven.Tests.Helpers
             }
 
             ModifyStore(documentStore);
-
+            // clear the cache from old values
+            ReplicationInformerLocalCache.ClearLocalCache(ServerHash.GetServerHash(documentStore.Url));
             documentStore.Initialize(ensureDatabaseExists);
 
             if (indexes != null)
@@ -748,7 +750,7 @@ namespace Raven.Tests.Helpers
                 // We expect to get the doc from the <system> database
                 var doc = databaseCommands.Get(id);
                 if (afterEtag == null)
-                return doc != null;
+                    return doc != null; 
                 return EtagUtil.IsGreaterThan(doc.Etag, afterEtag);
             }, timeout);
 
@@ -1173,5 +1175,17 @@ namespace Raven.Tests.Helpers
             return new DisposableAction(() => MultiDatabase.ConfigureDatabaseDocument = null);
         }
 
+        protected static int GetCachedItemsCount(DocumentStore store)
+        {
+            var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(null,
+                    store.Url + $"/databases/{store.DefaultDatabase}/debug/cache-details",
+                    HttpMethod.Get,
+                    store.DatabaseCommands.PrimaryCredentials,
+                    store.Conventions));
+
+            var response = request.ReadResponseJson();
+            return response.Value<int>("CachedItems");
+        }
     }
 }

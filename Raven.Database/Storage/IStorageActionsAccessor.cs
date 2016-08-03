@@ -28,9 +28,7 @@ namespace Raven.Database.Storage
         event Action OnStorageCommit;
         event Action BeforeStorageCommit;
         event Action AfterStorageCommit;
-        bool IsWriteConflict(Exception exception);
         T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.DatabaseTask;
         void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit);
     }
-
 }

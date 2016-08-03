@@ -14,7 +14,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
@@ -239,13 +238,6 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, false));
         }
 
-        public string PutIndex(string name, IndexDefinition definition, out Operation precomputeBatchOperation)
-        {
-            var result = AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsyncWithOperation(name, definition, false));
-            precomputeBatchOperation = result.Item2;
-            return result.Item1;
-        }
-
         public string[] PutIndexes(IndexToAdd[] indexesToAdd)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(indexesToAdd));
@@ -331,9 +323,9 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(ids, includes, transformer, transformerParameters, metadataOnly));
         }
 
-        public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
+        public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas, BatchOptions options = null)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas.ToArray()));
+            return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas, options));
         }
 
 #if !DNXCORE50
@@ -399,9 +391,9 @@ namespace Raven.Client.Connection
             return asyncServerClient.ForceReadFromMaster();
         }
 
-        public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
+        public IDatabaseCommands ForDatabase(string database)
         {
-            var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
+            var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database);
             if (asyncServerClient == newAsyncServerClient)
                 return this;
 

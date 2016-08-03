@@ -72,10 +72,10 @@ namespace Raven.Database.Commercial
 
         public void ForceExecute(InMemoryRavenConfiguration config)
         {
-            ExecuteInternal(config);
+            ExecuteInternal(config,forceUpdate:true);
         }
 
-        private void ExecuteInternal(InMemoryRavenConfiguration config, bool firstTime = false)
+        private void ExecuteInternal(InMemoryRavenConfiguration config, bool firstTime = false, bool forceUpdate = false)
         {
             var licensePath = GetLicensePath(config);
             var licenseText = GetLicenseText(config);
@@ -109,7 +109,7 @@ namespace Raven.Database.Commercial
                                 config.Catalog.Catalogs.Remove(catalog);
                             }
                         }
-                    }, config.TurnOffDiscoveryClient,firstTime);
+                    }, config.TurnOffDiscoveryClient,firstTime,forceUpdate);
                 }
                 catch (LicenseExpiredException ex)
                 {

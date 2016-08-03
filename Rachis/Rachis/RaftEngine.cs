@@ -86,6 +86,21 @@ namespace Rachis
 
         }
 
+        /// <summary>
+        /// This method is intended to prevent a node from becoming a leader by registering 
+        /// ProposingCandidacy event and setting the veto result to false
+        /// </summary>
+        /// <returns> The veto result with the reasoning</returns>
+        public ProposingCandidacyResult CheckIfThereIsVetoOnBecomingCandidate()
+        {
+            var candidacyResult = new ProposingCandidacyResult();
+            var onProposingCandidacy = ProposingCandidacy;
+            if (onProposingCandidacy == null)
+                return candidacyResult;            
+            onProposingCandidacy(this, candidacyResult);
+            return candidacyResult;
+        }
+
         private readonly Task _eventLoopTask;
 
         private long _commitIndex;
@@ -98,6 +113,7 @@ namespace Rachis
 
         public CancellationToken CancellationToken { get { return _eventLoopCancellationTokenSource.Token; } }
 
+        public event EventHandler<ProposingCandidacyResult> ProposingCandidacy;
         public event Action<RaftEngineState> StateChanged;
         public event Action<Command> CommitApplied;
         public event Action<long> NewTerm;
@@ -172,13 +188,13 @@ namespace Rachis
                 {
                     MessageContext message;
                     var behavior = StateBehavior;
-                    var lastHeartBeat = (int)(DateTime.UtcNow - behavior.LastHeartbeatTime).TotalMilliseconds;
+                    var lastHeartBeat = (int) (DateTime.UtcNow - behavior.LastHeartbeatTime).TotalMilliseconds;
                     var timeout = behavior.Timeout - lastHeartBeat;
-                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);                    
+                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);
                     var messageBase = message?.Message as BaseMessage;
-                    if(messageBase != null)
+                    if (messageBase != null)
                         EngineStatistics.Messages.LimitedSizeEnqueue(
-                            new MessageWithTimingInformation{Message = messageBase,MessageReceiveTime = DateTime.UtcNow}, 
+                            new MessageWithTimingInformation {Message = messageBase, MessageReceiveTime = DateTime.UtcNow},
                             RaftEngineStatistics.NumberOfMessagesToTrack);
                     if (_eventLoopCancellationTokenSource.IsCancellationRequested)
                     {
@@ -193,8 +209,8 @@ namespace Rachis
                             _log.Debug("State {0} timeout ({1:#,#;;0} ms).", State, behavior.Timeout);
                         EngineStatistics.TimeOuts.LimitedSizeEnqueue(
                             new TimeoutInformation()
-                            { ActualTimeout = lastHeartBeat ,State = State,Timeout = behavior.Timeout,TimeOutTime = DateTime.UtcNow}
-                        ,RaftEngineStatistics.NumberOfTimeoutsToTrack);
+                                {ActualTimeout = lastHeartBeat, State = State, Timeout = behavior.Timeout, TimeOutTime = DateTime.UtcNow}
+                            , RaftEngineStatistics.NumberOfTimeoutsToTrack);
                         behavior.HandleTimeout();
                         OnStateTimeout();
                         continue;
@@ -202,8 +218,8 @@ namespace Rachis
 
                     if (_log.IsDebugEnabled)
                         _log.Debug("{0}: {1} {2}", State,
-                        message.Message.GetType().Name,
-                        message.Message is BaseMessage ? JsonConvert.SerializeObject(message.Message) : string.Empty
+                            message.Message.GetType().Name,
+                            message.Message is BaseMessage ? JsonConvert.SerializeObject(message.Message) : string.Empty
                         );
 
                     behavior.HandleMessage(message);
@@ -330,7 +346,7 @@ namespace Rachis
             return ModifyTopology(requestedTopology);
         }
 
-        public Task AddToClusterAsync(NodeConnectionInfo node, bool nonVoting = false)
+        public Task AddToClusterAsync(NodeConnectionInfo node)
         {
             if (_currentTopology.Contains(node.Name))
                 throw new InvalidOperationException("Node " + node.Name + " is already in the cluster");
@@ -338,13 +354,69 @@ namespace Rachis
             var requestedTopology = new Topology(
                 _currentTopology.TopologyId,
                 _currentTopology.AllVotingNodes,
-                nonVoting ? _currentTopology.NonVotingNodes.Union(new[] { node }) : _currentTopology.NonVotingNodes,
-                nonVoting ? _currentTopology.PromotableNodes : _currentTopology.PromotableNodes.Union(new[] { node })
+                node.IsNoneVoter ? _currentTopology.NonVotingNodes.Union(new[] { node }) : _currentTopology.NonVotingNodes,
+                node.IsNoneVoter ? _currentTopology.PromotableNodes : _currentTopology.PromotableNodes.Union(new[] { node })
                 );
 
             if (_log.IsInfoEnabled)
             {
                 _log.Info("AddToClusterClusterAsync, requestedTopology: {0}", requestedTopology);
+            }
+            return ModifyTopology(requestedTopology);
+        }
+
+        public Task UpdateNodeAsync(NodeConnectionInfo node)
+        {
+            var currentTopology = CurrentTopology;
+
+            var allVotingNodes = currentTopology.AllVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList();
+            var nonVotingNodes = currentTopology.NonVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList();
+            var promotableNodes = currentTopology.PromotableNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList();
+
+            var currentNodeConfiguration = currentTopology.AllNodes.First(x => x.Uri.AbsoluteUri == node.Uri.AbsoluteUri);
+            if (currentNodeConfiguration.IsNoneVoter != node.IsNoneVoter)
+            {
+                if (node.IsNoneVoter)
+                {
+                    // move node from voting -> non-voting
+                    allVotingNodes.Remove(node);
+                    nonVotingNodes.Add(node);
+                    promotableNodes.Remove(node);
+                }
+                else
+                {
+                    // move node from non-voting -> voting
+                    allVotingNodes.Add(node);
+                    nonVotingNodes.Remove(node);
+                    promotableNodes.Add(node);
+                }
+            }
+
+            var requestedTopology = new Topology(
+                currentTopology.TopologyId,
+                allVotingNodes,
+                nonVotingNodes,
+                promotableNodes);
+
+            return ModifyTopology(requestedTopology);
+        }
+
+        public Task ModifyNodeVotingModeAsync(NodeConnectionInfo node, bool votingMode)
+        {
+            if (!_currentTopology.Contains(node.Name))
+                throw new InvalidOperationException("Node " + node.Name + " is not in the cluster");
+            node.IsNoneVoter = !votingMode;
+            var requestedTopology = new Topology(
+                _currentTopology.TopologyId,
+                votingMode ? _currentTopology.AllVotingNodes: _currentTopology.AllVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false),
+                votingMode ? _currentTopology.NonVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false):
+                _currentTopology.NonVotingNodes.Union(new[] { node}),
+                votingMode ? _currentTopology.PromotableNodes.Union(new [] {node}) : _currentTopology.PromotableNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false)
+                );
+
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info("ModifyNodeVotingModeAsync, requestedTopology: {0}", requestedTopology);
             }
             return ModifyTopology(requestedTopology);
         }
@@ -883,5 +955,15 @@ namespace Rachis
             steppingDownCompletionSource.TrySetResult(null);
         }
 
+    }
+
+    public class ProposingCandidacyResult : EventArgs
+    {
+        public bool VetoCandidacy { get; set; }
+        /// <summary>
+        /// for now we support a single veto reasoning, if in the future we will have multiple 
+        /// handlers we should consider chaining this property to a list
+        /// </summary>
+        public string Reason { get; set; }
     }
 }

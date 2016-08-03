@@ -586,8 +586,24 @@ namespace Raven.Database.Actions
                     document = actions.Documents.DocumentByKey(key);
 
                     if (nonAuthoritativeInformationBehavior != null)
-
+                    {
                         document = nonAuthoritativeInformationBehavior(document);
+                    }
+
+                    if (document != null)
+                    {
+                        if (document.Metadata.ContainsKey(Constants.RavenReplicationConflict) &&
+                            !document.Metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+                        {
+                            JsonDocument newDocument;
+                            Database.ResolveConflict(document, actions, out newDocument);
+                            if (newDocument != null)
+                            {
+                                document = newDocument;
+                            }
+                        }
+                   }
+                    
                 });
             }
 
@@ -815,7 +831,7 @@ namespace Raven.Database.Actions
                             DeleteDocumentFromIndexesForCollection(key, collection, actions);
                             if (deletedETag != null)
                                 Database.Prefetcher.AfterDelete(key, deletedETag);
-                            Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
+                            Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null, metadataVar));
                         }
 
                         TransactionalStorage

@@ -30,11 +30,6 @@ class requestsCount extends viewModelBase {
         }
     ];
 
-    activate(args) {
-        super.activate(args);
-        return this.modelPolling();
-    }
-
     modelPolling() {
         var deferred = $.Deferred();
         this.fetchMetrics().then(() => {

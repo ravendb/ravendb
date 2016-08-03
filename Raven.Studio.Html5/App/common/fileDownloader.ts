@@ -5,7 +5,6 @@ class fileDownloader {
         $("#" + domCacheElementName).remove();
     }
 
-
     private static createLinkAndStartDownload(blob: Blob, filename: string, domCacheElementName: string) {
         if (navigator && navigator.msSaveBlob) {
             navigator.msSaveBlob(blob, filename);

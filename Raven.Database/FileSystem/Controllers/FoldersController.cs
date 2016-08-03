@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -13,13 +14,24 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]
         public HttpResponseMessage Subdirectories(string directory = null)
         {
+
+            bool startsWith;
+            bool.TryParse(GetQueryStringValue("startsWith"), out startsWith);
+
             int nesting = 1;
+
             if (directory != null)
             {
-                directory = directory.Trim('/');
+                if (directory.StartsWith("/") == false)
+                    directory = "/" + directory;
 
-                directory = "/" + directory;
-                nesting = directory.Count(ch => ch == '/') + 1;
+                if (startsWith == false && directory.EndsWith("/") == false)
+                {
+                    directory = directory + '/';
+                }
+
+                nesting = directory.Count(ch => ch == '/');
+
             }
             else
             {
@@ -29,6 +41,9 @@ namespace Raven.Database.FileSystem.Controllers
             IEnumerable<string> result = Search.GetTermsFor("__directoryName", directory)
                                             .Where(subDir =>
                                             {
+                                                if (startsWith == false && subDir == directory) // exclude self when searching for children
+                                                    return false;
+
                                                 if (subDir.StartsWith(directory) == false)
                                                     return false;
 

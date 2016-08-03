@@ -35,7 +35,6 @@ using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 using Raven.Unix.Native;
 using Raven.Abstractions;
-using Raven.Abstractions.Threading;
 using Raven.Database.Util;
 using Voron.Impl.Paging;
 
@@ -118,6 +117,66 @@ namespace Raven.Storage.Voron
             }
         }
 
+        public void DropAllIndexingInformation()
+        {
+            Batch(accessor =>
+            {
+                var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
+                var storage = schemaCreator.storage;
+                using (var tx = storage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    //deleting index related trees
+                    storage.Environment.DeleteTree(tx, Tables.IndexingStats.TableName);
+                    storage.Environment.DeleteTree(tx, Tables.LastIndexedEtags.TableName);
+                    storage.Environment.DeleteTree(tx, Tables.DocumentReferences.TableName);
+                    storage.Environment.DeleteTree(tx, storage.DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByRef));
+                    storage.Environment.DeleteTree(tx, storage.DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByView));
+                    storage.Environment.DeleteTree(tx, storage.DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByViewAndKey));
+                    storage.Environment.DeleteTree(tx, storage.DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByKey));
+                    storage.Environment.DeleteTree(tx, Tables.Tasks.TableName);
+                    storage.Environment.DeleteTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndexAndType));
+                    storage.Environment.DeleteTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.ByType));
+                    storage.Environment.DeleteTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndex));
+                    storage.Environment.DeleteTree(tx, Tables.ScheduledReductions.TableName);
+                    storage.Environment.DeleteTree(tx, storage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView));
+                    storage.Environment.DeleteTree(tx, storage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey));
+                    storage.Environment.DeleteTree(tx, Tables.MappedResults.TableName);
+                    storage.Environment.DeleteTree(tx, storage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByView));
+                    storage.Environment.DeleteTree(tx, storage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndDocumentId));
+                    storage.Environment.DeleteTree(tx, storage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKey));
+                    storage.Environment.DeleteTree(tx, storage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket));
+                    storage.Environment.DeleteTree(tx, storage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.Data));
+                    storage.Environment.DeleteTree(tx, Tables.ReduceKeyCounts.TableName);
+                    storage.Environment.DeleteTree(tx, storage.ReduceKeyCounts.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
+                    storage.Environment.DeleteTree(tx, Tables.ReduceKeyTypes.TableName);
+                    storage.Environment.DeleteTree(tx, storage.ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
+                    storage.Environment.DeleteTree(tx, Tables.ReduceResults.TableName);
+                    storage.Environment.DeleteTree(tx, storage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel));
+                    storage.Environment.DeleteTree(tx, storage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket));
+                    storage.Environment.DeleteTree(tx, storage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket));
+                    storage.Environment.DeleteTree(tx, storage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByView));
+                    storage.Environment.DeleteTree(tx, storage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.Data));
+                    storage.Environment.DeleteTree(tx, Tables.ReduceStats.TableName);
+                    storage.Environment.DeleteTree(tx, Tables.IndexingMetadata.TableName);
+                    //creating the new empty indexes trees
+                    SchemaCreator.CreateIndexingStatsSchema(tx, storage);
+                    SchemaCreator.CreateLastIndexedEtagsSchema(tx, storage);
+                    SchemaCreator.CreateDocumentReferencesSchema(tx, storage);
+                    SchemaCreator.CreateTasksSchema(tx, storage);
+                    SchemaCreator.CreateScheduledReductionsSchema(tx, storage);
+                    SchemaCreator.CreateMappedResultsSchema(tx, storage);
+                    SchemaCreator.CreateReduceKeyCountsSchema(tx, storage);
+                    SchemaCreator.CreateReduceKeyTypesSchema(tx, storage);
+                    SchemaCreator.CreateReduceResultsSchema(tx, storage);
+                    SchemaCreator.CreateReduceStatsSchema(tx, storage);
+                    SchemaCreator.CreateIndexingMetadataSchema(tx, storage);
+                    tx.Commit();
+                }
+                accessor.Lists.RemoveAllOlderThan("Raven/Indexes/QueryTime", DateTime.MinValue);
+                accessor.Lists.RemoveAllOlderThan("Raven/Indexes/PendingDeletion", DateTime.MinValue);
+            });
+        }
+         
         public ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel()
         {
             return configuration.Indexing.DisableMapReduceInMemoryTracking?null: scheduledReductionsPerViewAndLevel.Value;
@@ -282,18 +341,23 @@ namespace Raven.Storage.Voron
         {
             var snapshotRef = new Reference<SnapshotReader>();
             var writeBatchRef = new Reference<WriteBatch>();
+
+            var errorInUserAction = false;
             try
             {
                 snapshotRef.Value = tableStorage.CreateSnapshot();
-                writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false }; // prevent from disposing after write to allow read from batch OnStorageCommit
+                writeBatchRef.Value = new WriteBatch {DisposeAfterWrite = false}; // prevent from disposing after write to allow read from batch OnStorageCommit
                 var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-                                                                        documentCacher, writeBatchRef, snapshotRef,
-                                                                        tableStorage, this, bufferPool);
+                    documentCacher, writeBatchRef, snapshotRef,
+                    tableStorage, this, bufferPool);
 
                 if (disableBatchNesting.Value == null)
                     current.Value = storageActionsAccessor;
 
+                errorInUserAction = true;
                 action(storageActionsAccessor);
+                errorInUserAction = false;
+
                 storageActionsAccessor.SaveAllTasks();
                 storageActionsAccessor.ExecuteBeforeStorageCommit();
 
@@ -307,6 +371,25 @@ namespace Raven.Storage.Voron
                 {
                     storageActionsAccessor.ExecuteAfterStorageCommit();
                 }
+            }
+            catch (Exception e)
+            {
+                var exception = e;
+                var ae = e as AggregateException;
+                if (ae != null)
+                    exception = ae.ExtractSingleInnerException();
+
+                Exception _;
+                if (TransactionalStorageHelper.IsVoronOutOfMemoryException(exception) ||
+                    TransactionalStorageHelper.IsWriteConflict(e, out _))
+                {
+                    throw;
+                }
+
+                if (errorInUserAction == false)
+                    Log.ErrorException("Failed to execute transaction. Most likely something is really wrong here.", e);
+
+                throw;
             }
             finally
             {
@@ -634,11 +717,11 @@ namespace Raven.Storage.Voron
             return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
         }
 
-        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false)
+        public IList<string> ComputeDetailedStorageInformation(bool computeExactSizes, Action<string> progress, CancellationToken token)
         {
             var seperator = new String('#', 80);
             var padding = new String('\t', 1);
-            var report = tableStorage.GenerateReportOnStorage(computeExactSizes);
+            var report = tableStorage.GenerateReportOnStorage(computeExactSizes, progress, token);
             var reportAsList = new List<string>();
             reportAsList.Add(string.Format("Total allocated db size: {0}", SizeHelper.Humane(report.DataFile.AllocatedSpaceInBytes)));
             reportAsList.Add(string.Format("Total used db size: {0}", SizeHelper.Humane(report.DataFile.SpaceInUseInBytes)));

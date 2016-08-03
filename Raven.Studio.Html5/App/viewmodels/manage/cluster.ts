@@ -20,6 +20,7 @@ import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import license = require("models/auth/license");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
 
 class cluster extends viewModelBase {
 
@@ -58,6 +59,12 @@ class cluster extends viewModelBase {
         }
 
         return deferred;
+    }
+
+    activate(args) {
+        super.activate(args);
+
+        this.updateHelpLink("11HBHO");
     }
 
     refresh() {
@@ -161,8 +168,8 @@ class cluster extends viewModelBase {
     editNode(node: nodeConnectionInfo) {
         var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
-            .done(nci => {
-                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
+            .done((nci: nodeConnectionInfo) => {
+                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
             });
@@ -174,6 +181,17 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
             .done(() => {
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
+                    .execute()
+                    .done(() => setTimeout(() => this.refresh(), 500));
+        });
+    }
+
+    promoteNodeToVoter(node: nodeConnectionInfo) {
+        var nodeAsDto = node.toDto();
+        nodeAsDto.IsNoneVoter = false;
+        this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter.")
+            .done(() => {
+                new changeNodeVotingModeCommand(appUrl.getSystemDatabase(), nodeAsDto)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });

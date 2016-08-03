@@ -66,11 +66,11 @@ namespace Raven.Database.Storage.Voron.Impl
             Initialize();
         }
 
-        internal StorageReport GenerateReportOnStorage(bool computeExactSizes = false)
+        internal StorageReport GenerateReportOnStorage(bool computeExactSizes, Action<string> progress, CancellationToken token)
         {
             using (var tran = env.NewTransaction(TransactionFlags.Read))
             {
-                return env.GenerateReport(tran, computeExactSizes);
+                return env.GenerateReport(tran, computeExactSizes, progress, token);
             }
         }
 

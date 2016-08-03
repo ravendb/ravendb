@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Xunit;
 using Xunit.Extensions;
 
@@ -146,7 +147,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                         x.WriteByte(i);
                 });
 
-                await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                await AssertAsync.Throws<ErrorResponseException>(() => session.SaveChangesAsync());
             }
         }
 
@@ -541,7 +542,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                     });
                     session.RegisterRename("test2.file", "test3.file");
 
-                    await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                    await AssertAsync.Throws<ErrorResponseException>(() => session.SaveChangesAsync());
 
                     var shouldExist = await session.LoadFileAsync("test2.file");
                     Assert.NotNull(shouldExist);
@@ -865,6 +866,20 @@ namespace Raven.Tests.FileSystem.ClientApi
                     Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
                 }
             }
+        }
+
+        [Fact]
+        public void DefaultFileSystemCannotBeEmptyOrNull()
+        {
+            Assert.Throws<ArgumentException>(() => new FilesStore
+            {
+                DefaultFileSystem = null
+            });
+
+            Assert.Throws<ArgumentException>(() => new FilesStore
+            {
+                DefaultFileSystem = ""
+            });
         }
     }
 }

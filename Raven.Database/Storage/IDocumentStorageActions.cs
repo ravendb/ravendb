@@ -6,8 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
-using Jint.Runtime.References;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -35,6 +33,11 @@ namespace Raven.Database.Storage
             Reference<bool> earlyExit = null);
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
         Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped);
+        IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
+            Func<string, RavenJObject, Func<JsonDocument>, bool> filterDocument, 
+            Reference<bool> earlyExit, CancellationToken cancellationToken);
+
+        IEnumerable<JsonDocument> GetDocuments(int start);
 
         long GetDocumentsCount();
 
@@ -52,7 +55,7 @@ namespace Raven.Database.Storage
 
         void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
         Etag GetBestNextDocumentEtag(Etag etag);
-        DebugDocumentStats GetDocumentStatsVerySlowly();
+        DebugDocumentStats GetDocumentStatsVerySlowly(Action<string> progress, CancellationToken token);
     }
 
     public class CollectionDetails
@@ -107,6 +110,11 @@ namespace Raven.Database.Storage
     {
         public string DocId { get; set; }
         public int Size { get; set; }
+    }
+
+    public class DebugDocumentStatsState : OperationStateBase
+    {
+        public DebugDocumentStats Stats { get; set; }
     }
 
     public class DebugDocumentStats

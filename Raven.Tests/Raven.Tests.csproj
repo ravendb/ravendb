@@ -264,6 +264,7 @@
     <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="Bugs\SortingAsMaxInt.cs" />
     <Compile Include="Conflicts\ConflictDocumentResolverTest.cs" />
+    <Compile Include="Conflicts\ShouldntCreateConflictIfIdentical.cs" />
     <Compile Include="DistinctFacets\DistinctAndFacets.cs" />
     <Compile Include="DistinctFacets\FromUser.cs" />
     <Compile Include="Faceted\LargeFacets.cs" />
@@ -293,7 +294,9 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Issues\RavenDB-3539.cs" />
     <Compile Include="Issues\RavenDB-3691.cs" />
+    <Compile Include="Issues\RavenDB-4580.cs" />
     <Compile Include="Issues\RavenDB_3435.cs" />
     <Compile Include="Json\JsonCodeGeneratorTests.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
@@ -651,6 +654,7 @@
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Shard\Async\ShardedDeleteByIndexAsync.cs" />
     <Compile Include="Shard\ShardedDeleteByIndex.cs" />
+    <Compile Include="Shard\ShardedTransformed.cs" />
     <Compile Include="Smuggler\SmugglerBetweenFromEmbeddedTests_RavenDB_3318.cs" />
     <Compile Include="Shard\ShardedSessionInclude.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
@@ -1018,7 +1022,7 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
-      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
@@ -1043,7 +1047,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
-    <EmbeddedResource Include="Patching\failingdump11.ravendump" />
+    <EmbeddedResource Include="Patching\failingdump11.ravendbdump" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

@@ -66,8 +66,9 @@ namespace Raven.Client.Connection.Async
         ///     to share same transaction
         /// </summary>
         /// <param name="commandDatas">Commands to process</param>
+        /// <param name="options">Options to send to the server</param>
         /// <param name="token">The cancellation token.</param>
-        Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken));
+        Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas,  BatchOptions options = null, CancellationToken token = default (CancellationToken));
 
 #if !DNXCORE50
         /// <summary>
@@ -134,7 +135,7 @@ namespace Raven.Client.Connection.Async
         ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
         ///     with the specified database
         /// </summary>
-        IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
+        IAsyncDatabaseCommands ForDatabase(string database);
 
         /// <summary>
         ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts

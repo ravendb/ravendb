@@ -23,6 +23,7 @@ class filesystemEditFile extends viewModelBase {
     fileMetadataText = ko.observable<string>();
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
+    isSaveEnabled: KnockoutComputed<boolean>;
 
     static editFileSelector = "#editFileContainer";
     static recentDocumentsInFilesystem = ko.observableArray<{ filesystemName: string; recentFiles: KnockoutObservableArray<string> }>();
@@ -31,16 +32,19 @@ class filesystemEditFile extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         this.fileName.subscribe(x => this.loadFile(x));
+        this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty());
     }
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink("RJBNGR");
         this.metadata = ko.computed(() => this.file() ? this.file().__metadata : null);
         this.filesystemForEditedFile = appUrl.getFileSystem();
         if (args.id != null) {
             this.appendRecentFile(args.id);
             this.fileName(args.id);
         }
+        this.dirtyFlag = new ko.DirtyFlag([this.fileMetadataText]);
 
         this.metadata.subscribe((meta: fileMetadata) => this.metadataChanged(meta));
     }
@@ -63,16 +67,19 @@ class filesystemEditFile extends viewModelBase {
 
     setupKeyboardShortcuts() {
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteFile(), filesystemEditFile.editFileSelector);
-        }
+    }
 
     focusOnEditor() {
         this.metadataEditor.focus();
-        }
+    }
 
     loadFile(fileName: string) {
         new getFileCommand(this.activeFilesystem(), fileName)
             .execute()
-            .done((result: file) => this.file(result));
+            .done((result: file) => {
+                this.file(result);
+                this.dirtyFlag().reset();
+            });
     }
 
     navigateToFiles() {
@@ -83,15 +90,12 @@ class filesystemEditFile extends viewModelBase {
     saveFileMetadata() {
         //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.fileMetadataText());
-        var currentDocumentId = this.fileName();
 
         this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
 
         var saveCommand = new updateFileMetadataCommand(this.fileName(), meta, this.activeFilesystem(), true);
         var saveTask = saveCommand.execute();
         saveTask.done(() => {
-            this.dirtyFlag().reset(); // Resync Changes
-
             this.loadFile(this.fileName());
         });
     }
@@ -190,11 +194,11 @@ class filesystemEditFile extends viewModelBase {
     }
 
     appendRecentFile(fileId: string) {
-        var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName == this.filesystemForEditedFile.name);
+        var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName === this.filesystemForEditedFile.name);
         if (existingRecentFilesStore) {
             var existingDocumentInStore = existingRecentFilesStore.recentFiles.first(x=> x === fileId);
             if (!existingDocumentInStore) {
-                if (existingRecentFilesStore.recentFiles().length == 5) {
+                if (existingRecentFilesStore.recentFiles().length === 5) {
                     existingRecentFilesStore.recentFiles.pop();
                 }
                 existingRecentFilesStore.recentFiles.unshift(fileId);

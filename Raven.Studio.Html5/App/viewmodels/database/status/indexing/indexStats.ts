@@ -3,7 +3,6 @@ import generalUtils = require("common/generalUtils");
 import getIndexingPerfStatsCommand = require("commands/database/debug/getIndexingPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
-import shell = require("viewmodels/shell");
 import changesContext = require("common/changesContext");
 import changeSubscription = require('common/changeSubscription');
 
@@ -364,6 +363,9 @@ class indexStats extends viewModelBase {
                 var leftScroll = $("#indexStatsContainer").scrollLeft();
                 var containerOffset = $("#indexStatsContainer").offset();
                 nv.tooltip.show([offset.left - containerOffset.left + leftScroll + self.barWidth, offset.top - containerOffset.top], self.getTooltip(d), 's', 5, document.getElementById("indexStatsContainer"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings(self, elem);
+                });
             })
             .transition()
             .attr("height", d => self.height - self.yScale(d.InputCount))
@@ -396,6 +398,9 @@ class indexStats extends viewModelBase {
                 var leftScroll = $("#indexStatsContainer").scrollLeft();
                 var containerOffset = $("#indexStatsContainer").offset();
                 nv.tooltip.show([offset.left - containerOffset.left + leftScroll + self.barWidth, offset.top - containerOffset.top], self.getTooltip(d), 's', 5, document.getElementById("indexStatsContainer"), "selectable-tooltip");
+                $(".nvtooltip").each((i, elem) => {
+                    ko.applyBindings(self, elem);
+                });
             })
             .transition()
             .attr("y", d => self.yScale(d.OutputCount))
@@ -452,7 +457,8 @@ class indexStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return "<strong>Index:</strong> <span>" + d.Index + "</span><br />"
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>'
+            + "<strong>Index:</strong> <span>" + d.Index + "</span><br />"
             + "<strong>Duration milliseconds:</strong> <span>" + d.DurationMilliseconds + "</span><br />"
             + "<strong>Input count:</strong> <span>" + d.InputCount + "</span><br />"
             + "<strong>Output count:</strong> <span>" + d.OutputCount + "</span><br />"
@@ -468,6 +474,10 @@ class indexStats extends viewModelBase {
         if (this.refreshSubscription != null) {
             this.refreshSubscription.dispose();
         }
+    }
+
+    tooltipClose() {
+        nv.tooltip.cleanup();
     }
 
     findIndexNames(jsonData) {
