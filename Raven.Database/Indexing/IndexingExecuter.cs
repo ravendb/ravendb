@@ -456,7 +456,6 @@ namespace Raven.Database.Indexing
             {
                 context.MetricsCounters.IndexedPerSecond.Mark(indexBatchOperations.Keys.Count);
 
-                long executedPartially = 0;
                 context.Database.MappingThreadPool.ExecuteBatch(indexBatchOperations.Keys.ToList(),
                     indexBatchOperation =>
                     {
@@ -468,15 +467,10 @@ namespace Raven.Database.Indexing
                             if (performance != null)
                                 indexBatchOperation.IndexingBatchInfo.PerformanceStats.TryAdd(indexBatchOperation.IndexingBatch.Index.PublicName, performance);
 
-                            if (Interlocked.Read(ref executedPartially) == 1)
-                            {
-                                context.NotifyAboutWork();
-                            }
+                            context.NotifyAboutWork();
                         }
                     }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5*context.Configuration.MemoryLimitForProcessingInMb,
                     description: $"Performing indexing on index batches for a total of {indexBatchOperations.Count} indexes");
-
-                Interlocked.Increment(ref executedPartially);
             }
             catch (OperationCanceledException)
             {
@@ -499,7 +493,8 @@ namespace Raven.Database.Indexing
             context.Database.MappingThreadPool.ExecuteBatch(groupedIndexes,
                 indexingGroup =>
                 {
-                    bool operationAdded = false;
+                    var operationAdded = false;
+                    var operationFaulted = false;
                     try
                     {
                         indexingGroup.PrefetchDocuments();
@@ -551,12 +546,15 @@ namespace Raven.Database.Indexing
                     }
                     catch (Exception e)
                     {
+                        operationFaulted = true;
+
                         //this is a precaution, no exception should happen at this point
                         var indexes = indexingGroup.Indexes.Select(x => x.IndexId).ToList();
+                        var currentlyIndexingString = string.Join(", ", currentlyProcessedIndexes.Keys);
                         var indexesString = string.Join(", ", indexes);
                         var message = $"Unexpected exception happened during execution of indexing... " +
                                       $"This is not supposed to happen. Reason: {e}. " +
-                                      $"Currently indexing: {currentlyProcessedIndexes.Keys}, " +
+                                      $"Currently indexing: {currentlyIndexingString}, " +
                                       $"indexing group that failed: {indexesString}";
 
                         Log.ErrorException(message, e);
@@ -566,7 +564,7 @@ namespace Raven.Database.Indexing
                     }
                     finally
                     {
-                        if (operationAdded == false)
+                        if (operationAdded == false || operationWasCancelled || operationFaulted)
                         {
                             indexingGroup.Indexes.ForEach(x =>
                             {

@@ -170,6 +170,8 @@ namespace Raven.Database.Indexing
                     HandleRavenOutOfMemoryException(exception, details);
                     return true;
                 }
+
+                return false;
             }
 
             var isSystemOutOfMemory = false;
