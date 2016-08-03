@@ -3,35 +3,36 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.NestedIndexing
+namespace SlowTests.Tests.NestedIndexing
 {
-    public class WithMapReduce : RavenTest
+    public class WithMapReduce : RavenTestBase
     {
-        public class Product
+        private class Product
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string CustomerId { get; set; }
             public string[] ProductIds { get; set; }
         }
-        public class Customer
+        private class Customer
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string ZipCode { get; set; }
         }
 
-        public class ProductSalesByZip : AbstractIndexCreationTask<Order, ProductSalesByZip.Result>
+        private class ProductSalesByZip : AbstractIndexCreationTask<Order, ProductSalesByZip.Result>
         {
             public class Result
             {
@@ -56,19 +57,19 @@ namespace Raven.Tests.NestedIndexing
                          from result in results
                          group result by new { result.Zip, result.ProductId }
                              into g
-                             select new
-                             {
-                                 g.Key.Zip,
-                                 g.Key.ProductId,
-                                 Count = g.Sum(x => x.Count)
-                             };
+                         select new
+                         {
+                             g.Key.Zip,
+                             g.Key.ProductId,
+                             Count = g.Sum(x => x.Count)
+                         };
             }
         }
 
         [Fact]
-        public void CanUseReferencesFromMapReduceMap()
+        public async Task CanUseReferencesFromMapReduceMap()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ProductSalesByZip().Execute(store);
 

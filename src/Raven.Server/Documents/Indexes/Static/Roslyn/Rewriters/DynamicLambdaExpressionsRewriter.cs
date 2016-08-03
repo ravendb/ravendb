@@ -31,9 +31,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (invocation == null)
                 return base.VisitSimpleLambdaExpression(node);
 
-            if (invocation.Parent == null) // root?
-                return base.VisitSimpleLambdaExpression(node);
-
             var identifier = invocation.Expression
                 .DescendantNodes(descendIntoChildren: syntaxNode => true)
                 .LastOrDefault(x => x.IsKind(SyntaxKind.IdentifierName)) as IdentifierNameSyntax;
@@ -46,12 +43,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             switch (method)
             {
                 case "Select":
-                    return ModifyLambdaForSelect(node, invocation);
+                    return Visit(ModifyLambdaForSelect(node, invocation));
                 case "SelectMany":
-                    return ModifyLambdaForSelectMany(node);
+                    return Visit(ModifyLambdaForSelectMany(node));
                 case "Sum":
                 case "Average":
-                    return ModifyLambdaForNumerics(node);
+                    return Visit(ModifyLambdaForNumerics(node));
             }
 
             return base.VisitSimpleLambdaExpression(node);

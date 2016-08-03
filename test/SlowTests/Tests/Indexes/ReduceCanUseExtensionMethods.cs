@@ -22,7 +22,7 @@ namespace SlowTests.Tests.Indexes
 #pragma warning restore 649
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public async Task CanUseExtensionMethods()
         {
             using (var store = await GetDocumentStore())
