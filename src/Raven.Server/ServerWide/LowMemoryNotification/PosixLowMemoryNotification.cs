@@ -8,6 +8,7 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Voron.Platform.Posix;
+using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {
@@ -15,12 +16,13 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
     {
         private readonly CancellationToken _shutdownNotification;
         private readonly RavenConfiguration _configuration;
-        private static readonly ILog Log = LogManager.GetLogger(typeof(PosixLowMemoryNotification));
+        private static Logger _logger;
 
         public PosixLowMemoryNotification(CancellationToken shutdownNotification, RavenConfiguration configuration)
         {
             _shutdownNotification = shutdownNotification;
             _configuration = configuration;
+            _logger = configuration.LoggerSetup.GetLogger<PosixLowMemoryNotification>(configuration.DatabaseName);
             new Thread(Poll)
             {
                 IsBackground = true,
@@ -45,11 +47,12 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                     continue;
                 }
 
-                var availableMem = MemoryInformation.GetMemoryInfo().AvailableMemory;
+                var availableMem = MemoryInformation.GetMemoryInfo(_configuration).AvailableMemory;
                 if (availableMem < _configuration.Memory.LowMemoryForLinuxDetection)
                 {
                     clearInactiveHandlersCounter = 0;
-                    Log.Warn("Low memory detected, will try to reduce memory usage...");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Low memory detected, will try to reduce memory usage...");
                     RunLowMemoryHandlers();
                     Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
                 }

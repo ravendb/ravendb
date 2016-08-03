@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
 
-            return new IndexWriteOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _converter, writeTransaction, this); // TODO arek - 'this' :/
+            return new IndexWriteOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _converter, writeTransaction, this, _index._indexStorage.DocumentDatabase); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
 
-            return new IndexReadOperation(_index.Definition.Name, _index.Type, _index.MaxNumberOfIndexOutputs, _index.ActualMaxNumberOfIndexOutputs, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
+            return new IndexReadOperation(_index.Definition.Name, _index.Type, _index.MaxNumberOfIndexOutputs, _index.ActualMaxNumberOfIndexOutputs, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
         internal void RecreateSearcher()
@@ -141,7 +141,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                 // TODO [ppekrol] support for IndexReaderWarmer?
-                return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, null);
+                return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, 
+                    IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase);
             }
             catch (Exception e)
             {

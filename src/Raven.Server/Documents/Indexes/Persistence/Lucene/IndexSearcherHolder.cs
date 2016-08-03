@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-
+using Sparrow.Logging;
 using Lucene.Net.Search;
 
 using Raven.Abstractions.Logging;
@@ -11,8 +11,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly Func<IndexSearcher> _recreateSearcher;
 
-        private static readonly ILog Log = LogManager.GetLogger(typeof(IndexSearcherHolder));
-
+        private Logger _logger;
         private volatile IndexSearcherHoldingState _current;
 
         public IndexSearcherHolder(Func<IndexSearcher> recreateSearcher)
@@ -38,8 +37,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IDisposable GetSearcher(out IndexSearcher searcher)
+        public IDisposable GetSearcher(out IndexSearcher searcher, DocumentDatabase documentDatabase)
         {
+            _logger = documentDatabase.LoggerSetup.GetLogger<IndexSearcherHolder>(documentDatabase.Name);
             var indexSearcherHoldingState = GetCurrentStateHolder();
             try
             {
@@ -48,7 +48,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                Log.ErrorException("Failed to get the index searcher.", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failed to get the index searcher.", e);
                 indexSearcherHoldingState.Dispose();
                 throw;
             }

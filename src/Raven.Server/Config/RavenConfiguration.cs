@@ -8,6 +8,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.Config
 {
@@ -53,6 +54,8 @@ namespace Raven.Server.Config
 
         public TombstoneConfiguration Tombstones { get; }
 
+        public LoggerSetup LoggerSetup { get; }
+
         protected IConfigurationRoot Settings { get; set; }
 
         public RavenConfiguration()
@@ -75,9 +78,10 @@ namespace Raven.Server.Config
             Queries = new QueryConfiguration();
             Patching = new PatchingConfiguration();
             DebugLog = new DebugLoggingConfiguration();
+            LoggerSetup = new LoggerSetup(DebugLog.Path, DebugLog.LogMode, DebugLog.RetentionTime.AsTimeSpan);
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
-            Memory = new MemoryConfiguration();
+            Memory = new MemoryConfiguration(this);
             Expiration = new ExpirationBundleConfiguration();
             Studio = new StudioConfiguration();
             Databases = new DatabaseConfiguration();

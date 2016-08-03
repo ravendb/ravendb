@@ -12,12 +12,15 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 
 using Raven.Abstractions.Logging;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexWriter : IDisposable
     {
-        private static readonly ILog LogIndexing = LogManager.GetLogger(typeof(Field.Index).FullName + ".Indexing");
+        private static Logger _logger;
+
+        private static DocumentDatabase _documentDatabase;
 
         private IndexWriter indexWriter;
 
@@ -35,14 +38,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Analyzer Analyzer => indexWriter?.Analyzer;
 
-        public LuceneIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer)
+        public LuceneIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, 
+            IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase)
         {
             directory = d;
             analyzer = a;
             indexDeletionPolicy = deletionPolicy;
             maxFieldLength = mfl;
             _indexReaderWarmer = indexReaderWarmer;
-
+            _documentDatabase = documentDatabase;
+            _logger = _documentDatabase.LoggerSetup.GetLogger<LuceneIndexWriter>(documentDatabase.Name);
             RecreateIndexWriter();
         }
 
@@ -127,7 +132,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                LogIndexing.ErrorException("Error while closing the index (closing the analyzer failed)", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error while closing the index (closing the analyzer failed)", e);
             }
 
             try
@@ -136,7 +142,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                LogIndexing.ErrorException("Error when closing the index", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error when closing the index", e);
             }
         }
 
@@ -157,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
             }
-            return new LuceneIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, _indexReaderWarmer);
+            return new LuceneIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, _indexReaderWarmer, _documentDatabase);
         }
 
         public void AddIndexesNoOptimize(Directory[] directories, int count)

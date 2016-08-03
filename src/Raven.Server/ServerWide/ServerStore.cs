@@ -74,7 +74,7 @@ namespace Raven.Server.ServerWide
         {
             shutdownNotification = new CancellationTokenSource();
 
-            AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
+            AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration, _loggerSetup);
 
             if (_logger.IsInfoEnabled)
                 _logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory));

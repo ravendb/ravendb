@@ -22,7 +22,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Indexing;
-
+using Sparrow.Logging;
 using Voron.Impl;
 
 using Constants = Raven.Abstractions.Data.Constants;
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private const string _Range = "_Range";
 
-        private static readonly ILog Log = LogManager.GetLogger(typeof(IndexReadOperation).FullName);
+        private static Logger _logger;
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
         private readonly string _indexName;
@@ -49,7 +49,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
 
-        public IndexReadOperation(string indexName, IndexType indexType, int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public IndexReadOperation(string indexName, IndexType indexType,
+            int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument,
+            Dictionary<string, IndexField> fields, LuceneVoronDirectory directory,
+            IndexSearcherHolder searcherHolder, Transaction readTransaction, DocumentDatabase documentDatabase)
         {
             _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
             _indexName = indexName;
@@ -57,7 +60,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _actualMaxIndexOutputsPerDocument = actualMaxIndexOutputsPerDocument;
             _maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
-            _releaseSearcher = searcherHolder.GetSearcher(out _searcher);
+            _releaseSearcher = searcherHolder.GetSearcher(out _searcher, documentDatabase);
+            _logger = documentDatabase.LoggerSetup.GetLogger<IndexReadOperation>(documentDatabase.Name);
         }
 
         public int EntriesCount()
@@ -233,15 +237,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (string.IsNullOrEmpty(q))
             {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Issuing query on index {_indexName} for all documents");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Issuing query on index {_indexName} for all documents");
 
                 documentQuery = new MatchAllDocsQuery();
             }
             else
             {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Issuing query on index {_indexName} for: {q}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Issuing query on index {_indexName} for: {q}");
 
                 // RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
                 try

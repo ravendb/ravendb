@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Raven.Abstractions.Logging;
+using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Voron;
 using Voron.Platform.Posix;
+using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {
     public static class MemoryInformation
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(MemoryInformation));
+        private static Logger _logger;
 
         private static int memoryLimit;
         private static bool failedToGetAvailablePhysicalMemory;
@@ -52,11 +54,13 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             }
         }
 
-        public static unsafe MemoryInfoResult GetMemoryInfo()
+        public static unsafe MemoryInfoResult GetMemoryInfo(RavenConfiguration configuration)
         {
+            _logger = configuration.LoggerSetup.GetLogger<MemoryInfoResult>(configuration.DatabaseName);
             if (failedToGetAvailablePhysicalMemory)
             {
-                Log.Info("Because of a previous error in getting available memory, we are now lying and saying we have 256MB free");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Because of a previous error in getting available memory, we are now lying and saying we have 256MB free");
                 return failedResult;
             }
 
@@ -67,7 +71,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                     sysinfo_t info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
                     {
-                        Log.Warn("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
                         return failedResult;
                     }
 
@@ -87,7 +92,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                 var result = GlobalMemoryStatusEx(&memoryStatus);
                 if (result == false)
                 {
-                    Log.Warn("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
                     return failedResult;
                 }
 
@@ -99,7 +105,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             }
             catch (Exception e)
             {
-                Log.ErrorException("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                 failedToGetAvailablePhysicalMemory = true;
                 return failedResult;
             }

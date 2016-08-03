@@ -52,7 +52,7 @@ namespace Raven.Server
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
-            LoggerSetup = new LoggerSetup(Configuration.DebugLog.Path, Configuration.DebugLog.LogMode, Configuration.DebugLog.RetentionTime.AsTimeSpan);
+            LoggerSetup = configuration.LoggerSetup;
             ServerStore = new ServerStore(Configuration, LoggerSetup);
             Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
             Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
