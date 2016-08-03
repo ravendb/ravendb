@@ -1,6 +1,6 @@
 using System;
 using System.Diagnostics;
-
+using Raven.Tests.Raft.Client;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -19,12 +19,15 @@ namespace Raven.Tryouts
         {
 #if !DNXCORE50
 
-            using (var x = new AlphaNumericSorting())
+            for (int i = 0; i < 100; i++)
             {
-                x.dynamic_query_should_work();
+                Console.WriteLine(i);
+                using (var x = new WithFailovers())
+                {
+                    x.ReadFromLeaderWriteToLeaderWithFailoversShouldWork(5);
+                }
             }
 
-            Console.ReadLine();
 #endif
         }
     }
