@@ -3,164 +3,145 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using Raven.Tests.Common;
 
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Abstractions;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Xunit;
 
 /*
  * Different test using where clause
  */
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class UsingWhereConditions : RavenTest
+    public class UsingWhereConditions : RavenTestBase
     {
         [Fact]
-        public void Can_Use_Where()
+        public async Task Can_Use_Where()
         {
-            using (var db = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 const string indexName = "CommitByRevision";
-                using (var session = db.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    AddData(session);                    
+                    AddData(session);
 
-                    db.DatabaseCommands.DeleteIndex(indexName);
-                    var result = db.DatabaseCommands.PutIndex(indexName,
-                            new IndexDefinitionBuilder<CommitInfo, CommitInfo>
-                            {
-                                Map = docs => from doc in docs
-                                              select new { doc.Revision},
-                            }, true);                    
+                    store.DatabaseCommands.PutIndex(indexName,
+                        new IndexDefinitionBuilder<CommitInfo, CommitInfo>
+                        {
+                            Map = docs => from doc in docs
+                                          select new { doc.Revision },
+                        }, true);
 
-                    WaitForQueryToComplete(session, indexName);
+                    WaitForIndexing(store);
 
-                    var Results = session.Query<CommitInfo>(indexName)
+                    var results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision == 1);
                     //There is one CommitInfo with Revision == 1
-                    Assert.Equal(1, Results.ToArray().Count());
+                    Assert.Equal(1, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision == 0);
                     //There is not CommitInfo with Revision = 0 so hopefully we do not get any result
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
-                                            .Where(x => x.Revision < 1 );
+                    results = session.Query<CommitInfo>(indexName)
+                                            .Where(x => x.Revision < 1);
                     //There are 0 CommitInfos which has Revision <1 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
-                                            .Where(x => x.Revision <  2);
+                    results = session.Query<CommitInfo>(indexName)
+                                            .Where(x => x.Revision < 2);
                     //There is one CommitInfo with Revision < 2
-                    Assert.Equal(1, Results.ToArray().Count());
+                    Assert.Equal(1, results.ToArray().Count());
                     //Revision of resulted CommitInfo has to be 1
-                    var cinfo = Results.ToArray()[0];
+                    var cinfo = results.ToArray()[0];
                     Assert.Equal(1, cinfo.Revision);
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision <= 2);
                     //There are 2 CommitInfos which has Revision <=2 
-                    Assert.Equal(2, Results.ToArray().Count());
+                    Assert.Equal(2, results.ToArray().Count());
 
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision > 7);
                     //There are 0 CommitInfos which has Revision >7 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision > 6);
                     //There are 1 CommitInfos which has Revision >6 
-                    Assert.Equal(1, Results.ToArray().Count());
+                    Assert.Equal(1, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision >= 6);
                     //There are 2 CommitInfos which has Revision >=6 
-                    Assert.Equal(2, Results.ToArray().Count());
+                    Assert.Equal(2, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision > 6 && x.Revision < 6);
                     //There are 0 CommitInfos which has Revision >6 && <6 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision >= 6 && x.Revision <= 6);
                     //There are 1 CommitInfos which has Revision >=6 && <=6 
-                    Assert.Equal(1, Results.ToArray().Count());
+                    Assert.Equal(1, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision >= 6 && x.Revision < 6);
                     //There are 0 CommitInfos which has Revision >=6 && <6 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision > 6 && x.Revision <= 6);
                     //There are 0 CommitInfos which has Revision >6 && <=6 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision >= 7 && x.Revision <= 1);
                     //There are 0 CommitInfos which has Revision >=7  && <= 1 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision > 7 && x.Revision < 1);
                     //There are 0 CommitInfos which has Revision >7  && < 1 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision > 7 || x.Revision < 1);
                     //There are 0 CommitInfos which has Revision >7  || < 1 
-                    Assert.Equal(0, Results.ToArray().Count());
+                    Assert.Equal(0, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision >= 7 || x.Revision < 1);
                     //There are 1 CommitInfos which has Revision >=7  || < 1 
-                    Assert.Equal(1, Results.ToArray().Count());
+                    Assert.Equal(1, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision > 7 || x.Revision <= 1);
                     //There are 1 CommitInfos which has Revision >7  || <= 1 
-                    Assert.Equal(1, Results.ToArray().Count());
+                    Assert.Equal(1, results.ToArray().Count());
 
-                    Results = session.Query<CommitInfo>(indexName)
+                    results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision >= 7 || x.Revision <= 1);
                     //There are 2 CommitInfos which has Revision >=7  || <= 1 
-                    Assert.Equal(2, Results.ToArray().Count());
+                    Assert.Equal(2, results.ToArray().Count());
                 }
             }
         }
 
         private static string Repo = "/svn/repo/";
-        private static void WaitForQueryToComplete(IDocumentSession session, string indexName)
-        {            
-            QueryResult results;
-            do
-            {
-                //doesn't matter what the query is here, just want to see if it's stale or not
-                results = session.Advanced.DocumentQuery<CommitInfo>(indexName)                              
-                              .Where("") 
-                              .QueryResult;   
-
-                if (results.IsStale)
-                    Thread.Sleep(1000);
-            } while (results.IsStale);            
-        }
 
         private void AddData(IDocumentSession documentSession)
         {
-            documentSession.Store(new CommitInfo { Author="kenny", PathInRepo="/src/test/", Repository=Repo, Revision=1, Date= SystemTime.UtcNow, CommitMessage="First commit" });
+            documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/", Repository = Repo, Revision = 1, Date = SystemTime.UtcNow, CommitMessage = "First commit" });
             documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/FirstTest/", Repository = Repo, Revision = 2, Date = SystemTime.UtcNow, CommitMessage = "Second commit" });
             documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/FirstTest/test.txt", Repository = Repo, Revision = 3, Date = SystemTime.UtcNow, CommitMessage = "Third commit" });
             documentSession.Store(new CommitInfo { Author = "john", PathInRepo = "/src/test/SecondTest/", Repository = Repo, Revision = 4, Date = SystemTime.UtcNow, CommitMessage = "Fourth commit" });
@@ -170,7 +151,7 @@ namespace Raven.Tests.Linq
             documentSession.SaveChanges();
         }
 
-        public class CommitInfo
+        private class CommitInfo
         {
             public string Id { get; set; }
             public string Author { get; set; }
