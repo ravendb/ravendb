@@ -340,7 +340,8 @@ namespace Raven.Tests.Helpers
             }
 
             ModifyStore(documentStore);
-
+            // clear the cache from old values
+            ReplicationInformerLocalCache.ClearLocalCache(ServerHash.GetServerHash(documentStore.Url));
             documentStore.Initialize(ensureDatabaseExists);
 
             if (indexes != null)

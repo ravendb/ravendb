@@ -31,7 +31,7 @@ using Voron.Impl.Compaction;
 using VoronConstants = Voron.Impl.Constants;
 using Constants = Raven.Abstractions.Data.Constants;
 using VoronExceptions = Voron.Exceptions;
-using Raven.Abstractions.Threading;
+using Raven.Database.Storage;
 
 namespace Raven.Database.FileSystem.Storage.Voron
 {
@@ -227,8 +227,21 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
             catch (Exception e)
             {
+                var exception = e;
+                var ae = e as AggregateException;
+                if (ae != null)
+                    exception = ae.ExtractSingleInnerException();
+
+                Exception _;
+                if (TransactionalStorageHelper.IsVoronOutOfMemoryException(exception) ||
+                    TransactionalStorageHelper.IsWriteConflict(e, out _))
+                {
+                    throw;
+                }
+
                 if (errorInUserAction == false)
-                    Log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                    Log.ErrorException("Failed to execute transaction. Most likely something is really wrong here.", e);
+
                 throw;
             }
             finally

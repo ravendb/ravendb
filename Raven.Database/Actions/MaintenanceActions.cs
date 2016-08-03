@@ -4,7 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -13,6 +16,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -26,7 +30,10 @@ namespace Raven.Database.Actions
 {
     public class MaintenanceActions : ActionsBase
     {
-        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+        private readonly ConcurrentQueue<DeleteIndexTask> pendingDeletions = new ConcurrentQueue<DeleteIndexTask>();
+        private int lockStatus = 0;
+        private const int Locked = 1;
+        private const int UnLocked = 0;
 
         public MaintenanceActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
             : base(database, recentTouches, uuidGenerator, log)
@@ -156,19 +163,20 @@ namespace Raven.Database.Actions
                 TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(name, olderThan));
             }
         }
+
         public void DeleteRemovedIndexes(Dictionary<int, DocumentDatabase.IndexFailDetails> reason)
         {
-            var pendingDeletions = new List<RavenJObject>();
+            var pendingDeletionData = new List<RavenJObject>();
             var idsOfLostIndexes = new List<int>();
 
             TransactionalStorage.Batch(actions =>
             {
                 foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
                 {
-                    pendingDeletions.Add(result.Data);
+                    pendingDeletionData.Add(result.Data);
                 }
 
-                List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
+                var indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
                 foreach (int id in indexIds)
                 {
                     var index = IndexDefinitionStorage.GetIndexDefinition(id);
@@ -179,9 +187,9 @@ namespace Raven.Database.Actions
                 }
             });
 
-            foreach (var pendingDeletion in pendingDeletions)
+            foreach (var indexDeletion in pendingDeletionData)
             {
-                Database.Indexes.StartDeletingIndexDataAsync(pendingDeletion.Value<int>("IndexId"), pendingDeletion.Value<string>("IndexName"));
+                StartDeletingIndexDataAsync(indexDeletion.Value<int>("IndexId"), indexDeletion.Value<string>("IndexName"));
             }
 
             Task.Factory.StartNew(() =>
@@ -241,6 +249,125 @@ namespace Raven.Database.Actions
                     }
                 }
             }, TaskCreationOptions.LongRunning);
+        }
+
+        public void StartDeletingIndexDataAsync(int indexId, string indexName)
+        {
+            pendingDeletions.Enqueue(new DeleteIndexTask
+            {
+                IndexId = indexId,
+                IndexName = indexName
+            });
+
+            TryCreateIndexesDeletionTask();
+        }
+
+        private void TryCreateIndexesDeletionTask()
+        {
+            if (Interlocked.CompareExchange(ref lockStatus, Locked, UnLocked) == Locked)
+                return;
+
+            if (pendingDeletions.IsEmpty)
+            {
+                Interlocked.Exchange(ref lockStatus, UnLocked);
+                return;
+            }
+
+            var status = new OperationStateBase();
+            var deleteIndexesTask = Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    var success = new List<string>();
+                    var failed = new List<string>();
+                    var sp = Stopwatch.StartNew();
+
+                    while (true)
+                    {
+                        DeleteIndexTask pendingDeletion;
+                        if (pendingDeletions.TryDequeue(out pendingDeletion) == false)
+                            break;
+
+                        var result = DeleteIndex(pendingDeletion, status.MarkProgress);
+                        if (result)
+                            success.Add(pendingDeletion.IndexName);
+                        else
+                            failed.Add(pendingDeletion.IndexName);
+                    }
+
+                    var message = $"Finished the deletion of {success.Count + failed.Count} indexes in {sp.Elapsed}";
+                    if (success.Count > 0)
+                        message += $", {success.Count} successful ({string.Join(", ", success)})";
+                    if (failed.Count > 0)
+                        message += $", {failed.Count} failed ({string.Join(", ", success)})";
+                    status.MarkCompleted(message);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref lockStatus, UnLocked);
+
+                    if (pendingDeletions.IsEmpty == false)
+                    {
+                        //handling a race condition where we get a new deletion
+                        //and exiting while thinking that the deletion will be handled
+                        TryCreateIndexesDeletionTask();
+                    }
+                }
+            }, TaskCreationOptions.LongRunning);
+
+            long taskId;
+            Database.Tasks.AddTask(deleteIndexesTask, status, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.IndexDeleteOperation,
+                Description = "Deleting indexes"
+            }, out taskId);
+        }
+
+        private class DeleteIndexTask
+        {
+            public int IndexId { get; set; }
+
+            public string IndexName { get; set; }
+        }
+
+        private bool DeleteIndex(DeleteIndexTask pendingDeletion, Action<string> markProgress)
+        {
+            try
+            {
+                var sp = Stopwatch.StartNew();
+                var message = $"Starting deletion of index {pendingDeletion.IndexName}";
+                markProgress(message);
+                Log.Info(message);
+
+                var indexId = pendingDeletion.IndexId;
+                TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(indexId));
+
+                Debug.Assert(Database.IndexStorage != null);
+                Database.IndexStorage.DeleteIndexData(indexId); //data can take a while
+                markProgress($"Finished the deletion of index {pendingDeletion.IndexName} " +
+                             $"from disk in {sp.Elapsed}, starting the deletion from internal storage");
+
+                TransactionalStorage.Batch(actions =>
+                {
+                    //and esent data can take a while too
+                    actions.Indexing.DeleteIndex(indexId, WorkContext.CancellationToken);
+                    if (WorkContext.CancellationToken.IsCancellationRequested)
+                        return;
+
+                    actions.Lists.Remove("Raven/Indexes/PendingDeletion", indexId.ToString(CultureInfo.InvariantCulture));
+                });
+
+                message = $"The deletion of index {pendingDeletion.IndexName} was completed in {sp.Elapsed}";
+                Log.Info(message);
+                markProgress(message);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Failure when deleting index " + pendingDeletion.IndexName, e);
+                return false;
+            }
         }
     }
 }

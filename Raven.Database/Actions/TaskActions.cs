@@ -251,7 +251,7 @@ namespace Raven.Database.Actions
 
             SlowDocCounts,
 
-            ExportDocumentsLeftToReplicate
+            ExportDocumentsLeftToReplicate,
         }
     }
 }

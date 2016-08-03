@@ -29,9 +29,9 @@ namespace Raven.Client.Connection.Request
 {
     public class ClusterAwareRequestExecuter : IRequestExecuter
     {
-        private const int WaitForLeaderTimeoutInSeconds = 5;
+        public TimeSpan WaitForLeaderTimeout { get; set; }= TimeSpan.FromSeconds(5);
 
-        private const int GetReplicationDestinationsTimeoutInSeconds = 2;
+        public TimeSpan ReplicationDestinationsTopologyTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
         private readonly ManualResetEventSlim leaderNodeSelected = new ManualResetEventSlim();
 
@@ -52,7 +52,7 @@ namespace Raven.Client.Connection.Request
                 return leaderNode;
             }
 
-            private set
+            set
             {
                 if (value == null)
                 {
@@ -106,7 +106,7 @@ namespace Raven.Client.Connection.Request
             LeaderNode = null;
             return UpdateReplicationInformationForCluster(serverClient, new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
             {
-                return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, null, timeout: TimeSpan.FromSeconds(GetReplicationDestinationsTimeoutInSeconds)).ContinueWith(t =>
+                return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, null, timeout: ReplicationDestinationsTopologyTimeout).ContinueWith(t =>
                 {
                     if (t.IsFaulted || t.IsCanceled)
                         return null;
@@ -147,11 +147,11 @@ namespace Raven.Client.Connection.Request
                 {
                     case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
-                        leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds));
+                        leaderNodeSelected.Wait(WaitForLeaderTimeout);
                         break;
                     default:
-                        if (leaderNodeSelected.Wait(TimeSpan.FromSeconds(WaitForLeaderTimeoutInSeconds)) == false)
-                            throw new InvalidOperationException("Cluster is not reachable. No leader was selected, aborting.");
+                        if (leaderNodeSelected.Wait(WaitForLeaderTimeout) == false)
+                            throw new InvalidOperationException($"Cluster is not in a stable state. No leader was selected, but we require one for making a request using {serverClient.convention.FailoverBehavior}.");
                         break;
                 }
 
@@ -289,8 +289,25 @@ namespace Raven.Client.Connection.Request
                     else
                         errorResponseException = e as ErrorResponseException;
 
-                    if (errorResponseException != null && (errorResponseException.StatusCode == HttpStatusCode.Redirect || errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed))
-                        shouldRetry = true;
+                    if (errorResponseException != null)
+                    {
+                        if (errorResponseException.StatusCode == HttpStatusCode.Redirect)
+                        {
+                            IEnumerable<string> values;
+                            if (errorResponseException.Response.Headers.TryGetValues("Raven-Leader-Redirect", out values) == false
+                                && values.Contains("true") == false)
+                            {
+                                throw new InvalidOperationException("Got 302 Redirect, but without Raven-Leader-Redirect: true header, maybe there is a proxy in the middle", e);
+                            }
+                            var redirectUrl = errorResponseException.Response.Headers.Location.ToString();
+                            node = new OperationMetadata(redirectUrl, node.Credentials, node.ClusterInformation);
+                            LeaderNode = node;
+                            return await TryClusterOperationAsync(node, operation, avoidThrowing, token).ConfigureAwait(false);
+                        }
+
+                        if (errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
+                            shouldRetry = true;
+                    }
                 }
 
                 if (shouldRetry == false && avoidThrowing == false)
@@ -367,21 +384,19 @@ namespace Raven.Client.Connection.Request
                             .ToArray();
 
                         var tasks = replicationDocuments
-                            .Select(x => x.Task)
+                            .Select(x => (Task)x.Task)
                             .ToArray();
 
-                        Task.WaitAll(tasks);
+                        Task.WaitAll(tasks, ReplicationDestinationsTopologyTimeout);
 
                         replicationDocuments.ForEach(x =>
                         {
-                            if (x.Task.Result == null)
-                                return;
-
-                            FailureCounters.ResetFailureCount(x.Node.Url);
+                            if (x.Task.IsCompleted && x.Task.Result != null)
+                                FailureCounters.ResetFailureCount(x.Node.Url);
                         });
 
                         var newestTopology = replicationDocuments
-                            .Where(x => x.Task.Result != null)
+                            .Where(x => x.Task.IsCompleted && x.Task.Result != null)
                             .OrderByDescending(x => x.Task.Result.Term)
                             .ThenByDescending(x =>
                             {
@@ -397,10 +412,12 @@ namespace Raven.Client.Connection.Request
                         if (newestTopology == null && triedFailoverServers)
                         {
                             LeaderNode = primaryNode;
-                            Nodes = new List<OperationMetadata>
-                            {
-                                primaryNode
-                            };
+                            //yes this happens
+                            if(Nodes.Count == 0)
+                                Nodes = new List<OperationMetadata>
+                                {
+                                    primaryNode
+                                };
                             return;
                         }
 
@@ -414,7 +431,8 @@ namespace Raven.Client.Connection.Request
 
                             if (newestTopology.Task.Result.ClientConfiguration != null)
                             {
-                                newestTopology.Task.Result.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
+                                if (newestTopology.Task.Result.ClientConfiguration.FailoverBehavior == null)
+                                    newestTopology.Task.Result.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
                                 serverClient.convention.UpdateFrom(newestTopology.Task.Result.ClientConfiguration);
                             }
 

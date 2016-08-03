@@ -174,6 +174,12 @@ namespace Raven.Client
         /// <summary>
         /// SaveChanges will wait for the changes made to be replicates to `replicas` nodes
         /// </summary>
-        void OnSaveChangesWaitForReplication(int replicas = 1, TimeSpan? timeout = null);
+        void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1);
+
+        /// <summary>
+        /// SaveChanges will wait for the indexes to catch up with the saved changes
+        /// </summary>
+        void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null);
+
     }
 }

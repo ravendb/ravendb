@@ -62,8 +62,8 @@ namespace Raven.Client.Connection
         ///     to share same transaction
         /// </summary>
         /// <param name="commandDatas">Commands to process</param>
-        /// <param name="writeAssurance">Configuration string for server side write assurance</param>
-        BatchResult[] Batch(IEnumerable<ICommandData> commandDatas, string writeAssurance = null);
+        /// <param name="options">Options to send to the server</param>
+        BatchResult[] Batch(IEnumerable<ICommandData> commandDatas, BatchOptions options = null);
 
 #if !DNXCORE50
         /// <summary>
@@ -794,4 +794,19 @@ namespace Raven.Client.Connection
         /// </summary>
         ReplicationStatistics GetReplicationInfo();
     }
+
+
+    public class BatchOptions
+    {
+        public bool WaitForReplicas { get; set; }
+        public int NumberOfReplicasToWaitFor { get; set; }
+        public TimeSpan WaitForReplicasTimout { get; set; }
+        public bool ThrowOnTimeoutInWaitForReplicas { get; set; }
+
+        public bool WaitForIndexes { get; set; }
+        public TimeSpan WaitForIndexesTimeout { get; set; }
+        public bool ThrowOnTimeoutInWaitForIndexes { get; set; }
+        public string[] WaitForSpecificIndexes { get; set; }
+    }
+
 }

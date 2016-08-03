@@ -744,7 +744,7 @@ namespace Raven.Client.Document
                 IncrementRequestCount();
                 LogBatch(data);
 
-                var batchResults = DatabaseCommands.Batch(data.Commands, data.WaitForWriteAssurance);
+                var batchResults = DatabaseCommands.Batch(data.Commands, data.Options);
                 if (batchResults == null)
                     throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");
                 UpdateBatchResults(batchResults, data);

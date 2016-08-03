@@ -1557,7 +1557,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, string writeAssurance = null, CancellationToken token = default(CancellationToken))
+        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, BatchOptions options = null, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async (operationMetadata, requestTimeMetric) =>
             {
@@ -1568,8 +1568,17 @@ namespace Raven.Client.Connection.Async
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
-                    if (string.IsNullOrEmpty(writeAssurance) == false)
-                        request.AddHeader("Raven-Write-Assurance", writeAssurance);
+                    if (options?.WaitForReplicas == true)
+                        request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout+";" + 
+                            options.ThrowOnTimeoutInWaitForReplicas);
+
+                    if (options?.WaitForIndexes == true)
+                    {
+                        var headerVal = options.ThrowOnTimeoutInWaitForIndexes + ";" + options.WaitForIndexesTimeout +
+                                  ";" + string.Join(";", options.WaitForSpecificIndexes ?? new string[0]);
+                        request.AddHeader("Raven-Wait-Indexes", headerVal);
+                    }
+
 
                     var serializedData = commandDatas.Select(x => x.ToJson()).ToList();
                     var jArray = new RavenJArray(serializedData);
@@ -2673,6 +2682,22 @@ namespace Raven.Client.Connection.Async
         internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
         {
             return new AsyncServerClient(Url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false);
+        }
+
+        internal async Task WithWriteAssurance(OperationMetadata operationMetadata,
+            IRequestTimeMetric requestTimeMetric, Etag etag, TimeSpan? timeout = null, int replicas = 1)
+        {
+            var sb = new StringBuilder(operationMetadata.Url + "/replication/writeAssurance?");
+            sb.Append("etag=").Append(etag).Append("&");
+            sb.Append("replicas=").Append(replicas).Append("&");
+            sb.Append("timeout=").Append(timeout);
+
+
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric);
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader))
+            {
+                await request.ReadResponseJsonAsync().ConfigureAwait(false);
+            }   
         }
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, TimeSpan? timeout = null)

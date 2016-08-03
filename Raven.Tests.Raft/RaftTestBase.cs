@@ -26,12 +26,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
+using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.Raft
 {
-    public class RaftTestBase : RavenTestBase
+    public class RaftTestBase : RavenTest
     {
         private const int PortRangeStart = 9000;
 
@@ -77,10 +79,18 @@ namespace Raven.Tests.Raft
                 throw new Exception("WaitFor failed");
         }
 
-        public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
+        private Action<DocumentStore> defaultConfigureStore = store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
+        public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true, bool fiddler = false)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var nodes = Enumerable.Range(0, numberOfNodes)
-                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
+                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory, 
+                configureConfig: configuration =>
+                {
+                    configuration.Cluster.ElectionTimeout *= 10;
+                    configuration.Cluster.HeartbeatTimeout *= 10;
+                }))
                 .ToList();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -130,18 +140,30 @@ namespace Raven.Tests.Raft
                 ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
             }
 
-            return nodes
-                .Select(node => NewRemoteDocumentStore(ravenDbServer: node, activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
+            var documentStores = nodes
+                .Select(node => NewRemoteDocumentStore(ravenDbServer: node, fiddler: fiddler,activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
                 .ToList();
+            foreach (var documentStore in documentStores)
+            {
+                ((ClusterAwareRequestExecuter)((ServerClient)documentStore.DatabaseCommands).RequestExecuter).WaitForLeaderTimeout = TimeSpan.FromSeconds(30);
+            }
+            return documentStores;
         }
 
         public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
             Assert.NotNull(leader);
 
             var nodes = Enumerable.Range(0, numberOfExtraNodes)
-                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
+                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory,
+                configureConfig: configuration =>
+                {
+                    configuration.Cluster.ElectionTimeout *= 10;
+                    configuration.Cluster.HeartbeatTimeout *= 10;
+                }))
                 .ToList();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -258,6 +280,11 @@ namespace Raven.Tests.Raft
                     }
                 }));
             }
+        }
+
+        protected void UpdateTopologyForAllClients(IEnumerable<DocumentStore> clusterStores)
+        {
+            clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
         }
     }
 }

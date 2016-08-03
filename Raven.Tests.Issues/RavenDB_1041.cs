@@ -5,8 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
@@ -44,13 +45,11 @@ namespace Raven.Tests.Issues
             using (var session = store1.OpenSession(DatabaseName))
             {
                 session.Store(new ReplicatedItem { Id = "Replicated/1" });
-
                 session.SaveChanges();
             }
-
-            var i = await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
-            Assert.Equal(2, i);
-
+            
+          
+            await store1.Replication.WaitAsync(replicas:2);
 
             Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
             Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
@@ -70,14 +69,13 @@ namespace Raven.Tests.Issues
             var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
             var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
 
-            var i = await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
-            Assert.Equal(2, i);
+            await store1.Replication.WaitAsync(putResult.ETag);
 
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
             Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
 
-            i = await ((DocumentStore)store1).Replication.WaitAsync(putResult2.ETag);
-            Assert.Equal(2, i);
+            await store1.Replication.WaitAsync(putResult2.ETag);
+
 
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/2"));
             Assert.NotNull(store3.DatabaseCommands.Get("Replicated/2"));
@@ -100,7 +98,7 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
+            await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10),replicas:2);
 
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
             Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -125,25 +123,7 @@ namespace Raven.Tests.Issues
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
         }
 
-        [Fact]
-        public void ShouldThrowTimeoutException()
-        {
-            var store1 = CreateStore(requestedStorageType: "esent");
-            var store2 = CreateStore(requestedStorageType: "esent");
-
-            SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
-
-            using (var session = store1.OpenSession())
-            {
-                session.Store(new ReplicatedItem { Id = "Replicated/1" });
-                session.SaveChanges();
-            }
-
-            Assert.Throws<TimeoutException>(() => 
-                // ReSharper disable once RedundantArgumentDefaultValue
-                AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
-        }
-
+      
         [Fact]
         public async Task ShouldThrowIfCannotReachEnoughDestinationServers()
         {
@@ -159,8 +139,8 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
-            Assert.Contains("Could only confirm that the specified Etag", exception.Message);
+            var exception = await AssertAsync.Throws<AggregateException>(async () => await store1.Replication.WaitAsync(timeout:TimeSpan.FromSeconds(15),replicas: 3));
+            Assert.Contains("Could not verify that etag", exception.InnerExceptions.First()?.Message);
         }
 
         [Fact]

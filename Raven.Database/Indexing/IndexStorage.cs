@@ -1643,6 +1643,11 @@ namespace Raven.Database.Indexing
             return TryIndexByName(indexName);
         }
 
+        public IEnumerable<Index> GetAllIndexes()
+        {
+            return indexes.Values;
+        }
+
         public Index GetIndexInstance(int indexId)
         {
             Index value;
@@ -1728,7 +1733,16 @@ namespace Raven.Database.Indexing
                 }
             }
 
-            var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
+            var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName, () =>
+            {
+                //replace the index errors with the new index errors
+                int? indexToReplaceId = null;
+                if (indexToReplace != null)
+                    indexToReplaceId = indexToReplace.IndexId;
+                documentDatabase.WorkContext.ReplaceIndexingErrors(indexToReplaceName,
+                    indexToReplaceId, indexName, indexDefinition.IndexId);
+            });
+
             if (success == false)
                 return false;
 

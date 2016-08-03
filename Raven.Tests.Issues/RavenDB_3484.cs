@@ -180,48 +180,58 @@ namespace Raven.Tests.Issues
                 const int numberOfClients = 4;
 
                 var subscriptions = new Subscription<User>[numberOfClients];
-                var items = new BlockingCollection<User>[numberOfClients];
-
-                for (int i = 0; i < numberOfClients; i++)
+                try
                 {
-                    subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    var items = new BlockingCollection<User>[numberOfClients];
+
+                    for (int i = 0; i < numberOfClients; i++)
                     {
-                        Strategy = SubscriptionOpeningStrategy.ForceAndKeep
-                    });
+                        subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                        {
+                            Strategy = SubscriptionOpeningStrategy.ForceAndKeep
+                        });
 
-                    store.Changes().WaitForAllPendingSubscriptions();
+                        store.Changes().WaitForAllPendingSubscriptions();
 
-                    items[i] = new BlockingCollection<User>();
+                        items[i] = new BlockingCollection<User>();
 
-                    subscriptions[i].Subscribe(items[i].Add);
+                        subscriptions[i].Subscribe(items[i].Add);
 
-                    bool batchAcknowledged = false;
+                        bool batchAcknowledged = false;
 
-                    subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
+                        subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
 
-                    using (var s = store.OpenSession())
-                    {
-                        s.Store(new User());
-                        s.Store(new User());
+                        using (var s = store.OpenSession())
+                        {
+                            s.Store(new User());
+                            s.Store(new User());
 
-                        s.SaveChanges();
+                            s.SaveChanges();
+                        }
+
+                        User user;
+
+                        Assert.True(items[i].TryTake(out user, waitForDocTimeout), $"Waited for {waitForDocTimeout.TotalSeconds} seconds to get notified about a user, giving up... ");
+                        Assert.True(items[i].TryTake(out user, waitForDocTimeout), $"Waited for {waitForDocTimeout.TotalSeconds} seconds to get notified about a user, giving up... ");
+
+                        SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
+                        Assert.True(batchAcknowledged, "Wait for 5 seconds for batch to be acknoeledged, giving up...");
+                        if (i > 0)
+                        {
+                            Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)),
+                                "Was able to take a connection to subscription even though a new connection was opened with ForceAndKeep strategy.");
+                            Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)),
+                                "Previous connection to subscription was not closed even though a new connection was opened with ForceAndKeep strategy.");
+                            Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException,
+                                "SubscriptionConnectionException is not set to expected type, SubscriptionInUseException.");
+                        }
                     }
-
-                    User user;
-
-                    Assert.True(items[i].TryTake(out user, waitForDocTimeout),$"Waited for {waitForDocTimeout.TotalSeconds} seconds to get notified about a user, giving up... ");
-                    Assert.True(items[i].TryTake(out user, waitForDocTimeout), $"Waited for {waitForDocTimeout.TotalSeconds} seconds to get notified about a user, giving up... ");
-
-                    SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
-                    Assert.True(batchAcknowledged,"Wait for 5 seconds for batch to be acknoeledged, giving up...");
-                    if (i > 0)
+                }
+                finally
+                {
+                    foreach (var subscription in subscriptions)
                     {
-                        Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)),
-                            "Was able to take a connection to subscription even though a new connection was opened with ForceAndKeep strategy.");
-                        Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)),
-                            "Previous connection to subscription was not closed even though a new connection was opened with ForceAndKeep strategy.");
-                        Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException,
-                            "SubscriptionConnectionException is not set to expected type, SubscriptionInUseException.");
+                        subscription?.Dispose();
                     }
                 }
             }
