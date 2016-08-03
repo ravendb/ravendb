@@ -262,9 +262,6 @@ namespace Raven.Client.TimeSeries.Replication
                     bool wasTimeout;
                     var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
 
-                    if (avoidThrowing == false)
-                        throw;
-
                     if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
                     {
                         return new AsyncOperationResult<T>

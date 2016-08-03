@@ -161,9 +161,6 @@ namespace Raven.Database.Extensions
             if (count == 0)
                 return String.Empty;
 
-            if (bytes == null)
-                throw new ArgumentNullException("bytes");
-
             if (offset < 0 || offset > bytes.Length)
                 throw new ArgumentOutOfRangeException("offset");
 
