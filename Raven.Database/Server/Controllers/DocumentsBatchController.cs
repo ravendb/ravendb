@@ -110,9 +110,10 @@ namespace Raven.Database.Server.Controllers
 
         private async Task WaitForIndexesAsync(string waitIndexes, BatchResult[] results)
         {
-            var parts = waitIndexes.Split(';');
+            var parts = waitIndexes.Split(new [] {';'},StringSplitOptions.RemoveEmptyEntries);
             var throwOnTimeout = bool.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
+            var specificIndexes = new HashSet<string>(parts.Skip(2));
 
             Etag lastEtag = null;
             var allIndexes = false;
@@ -138,15 +139,21 @@ namespace Raven.Database.Server.Controllers
             var indexes = new List<Index>();
             foreach (var index in Database.IndexStorage.GetAllIndexes())
             {
-                if(allIndexes)
+                if (specificIndexes.Count > 0)
+                {
+                    if(specificIndexes.Contains(index.PublicName) == false)
+                        continue;
+                }
+
+                if (allIndexes && index.ViewGenerator.ForEntityNames.Count == 0)
                     indexes.Add(index);
-                else if (index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
+                if (index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
                     indexes.Add(index);
             }
 
             var sp = Stopwatch.StartNew();
             var needToWait = true;
-            var tasks = new Task[indexes.Count +1];
+            var tasks = new Task[indexes.Count + 1];
             do
             {
                 needToWait = false;
@@ -202,7 +209,7 @@ namespace Raven.Database.Server.Controllers
             var parts = writeAssurance.Split(';');
             var replicas = int.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
-
+            var throwOnTimeout = bool.Parse(parts[2]);
             var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
             if (replicationTask == null)
             {
@@ -214,7 +221,7 @@ namespace Raven.Database.Server.Controllers
             }
             if (lastResultWithEtag != null)
             {
-                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas).ConfigureAwait(false);
+                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas,throwOnTimeout).ConfigureAwait(false);
             }
         }
 

@@ -997,7 +997,7 @@ more responsive application.
             }
         }
 
-        public void OnSaveChangesWaitForReplication(int replicas = 1, TimeSpan? timeout = null)
+        public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1)
         {
             var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
             if (saveChangesOptions == null)
@@ -1005,9 +1005,10 @@ more responsive application.
             saveChangesOptions.WaitForReplicas = true;
             saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
             saveChangesOptions.WaitForReplicasTimout = realTimeout;
+            saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;
         }
 
-        public void OnSaveChangesWaitForIndexes(TimeSpan? timeout = null, bool throwOnTimeout = false)
+        public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null)
         {
             var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
             if (saveChangesOptions == null)
@@ -1015,6 +1016,7 @@ more responsive application.
             saveChangesOptions.WaitForIndexes = true;
             saveChangesOptions.WaitForIndexesTimeout = realTimeout;
             saveChangesOptions.ThrowOnTimeoutInWaitForIndexes = throwOnTimeout;
+            saveChangesOptions.WaitForSpecificIndexes = indexes;
         }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)

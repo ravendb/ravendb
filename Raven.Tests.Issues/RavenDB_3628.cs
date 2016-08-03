@@ -108,13 +108,21 @@ namespace Raven.Tests.Issues
                     var stats = store.DatabaseCommands.GetStatistics();
                     var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                     return indexStats.Priority == IndexingPriority.Disabled;
-                }, TimeSpan.FromSeconds(30));
+                }, TimeSpan.FromSeconds(120));
+
+                Assert.True(result);
+
+                result = SpinWait.SpinUntil(() =>
+                {
+                    var doc = store.DatabaseCommands.Get(Constants.RavenAlerts);
+                    return doc != null;
+                }, TimeSpan.FromSeconds(10));
 
                 Assert.True(result);
 
                 var alertsJson = store.DatabaseCommands.Get(Constants.RavenAlerts);
                 var alerts = alertsJson.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
-                var alert = alerts.Alerts.FirstOrDefault(x => x.Title == string.Format("Index '{0}' was disabled", index.IndexName));
+                var alert = alerts.Alerts.FirstOrDefault(x => x.Title == $"Index '{index.IndexName}' marked as disabled due to out of memory exception");
                 Assert.NotNull(alert);
             }
         }

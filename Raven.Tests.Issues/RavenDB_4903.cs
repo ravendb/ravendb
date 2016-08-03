@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Tests.Common;
 using Xunit;
@@ -18,6 +19,39 @@ namespace Raven.Tests.Issues
             public string Name { get; set; }
         }
 
+        public class UserByReverseName : AbstractIndexCreationTask<User>
+        {
+            public UserByReverseName()
+            {
+                Map = users => from user in users
+                    select new {Name = user.Name.Reverse()};
+            }
+        }
+
+        [Fact]
+        public void CanAutomaticallyWaitForIndexes_ForSpecificIndex()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var userByReverseName = new UserByReverseName();
+                userByReverseName.Execute(store);
+                using (var s = store.OpenSession())
+                {
+                    s.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), indexes:new [] {userByReverseName.IndexName});
+
+                    s.Store(new User { Name = "Oren" });
+
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    Assert.NotEmpty(s.Query<User, UserByReverseName>().Where(x => x.Name == "nerO").ToList());
+                }
+            }
+        }
+
+
         [Fact]
         public void CanAutomaticallyWaitForIndexes()
         {
@@ -30,7 +64,7 @@ namespace Raven.Tests.Issues
                 }
                 using (var s = store.OpenSession())
                 {
-                    s.Advanced.OnSaveChangesWaitForIndexes(timeout: TimeSpan.FromSeconds(30));
+                    s.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(30));
 
                     s.Store(new User {Name = "Oren"});
 

@@ -625,7 +625,7 @@ public bool Contains(string indexName)
             return true;
         }
 
-        internal bool ReplaceIndex(string indexName, string indexToSwapName)
+        internal bool ReplaceIndex(string indexName, string indexToSwapName, Action replaceIndexingErrors)
         {
             var index = GetIndexDefinition(indexName);
             if (index == null)
@@ -636,6 +636,7 @@ public bool Contains(string indexName)
             index.IsSideBySideIndex = false;
 
             var indexToReplace = GetIndexDefinition(indexToSwapName);
+            replaceIndexingErrors();
             index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;
             CreateAndPersistIndex(index);
             AddIndex(index.IndexId, index);

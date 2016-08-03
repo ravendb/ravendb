@@ -20,7 +20,7 @@ namespace Raven.Database.Indexing
             metricCounters.AddGauge(typeof(ReduceBatchSizeAutoTuner), "CurrentNumberOfItems", () => CurrentNumberOfItems);
         }
 
-        protected override int InitialNumberOfItems
+        public override int InitialNumberOfItems
         {
             get { return context.Configuration.InitialNumberOfItemsToReduceInSingleBatch; }
         }

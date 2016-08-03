@@ -281,15 +281,26 @@ namespace Raven.Database.Indexing
             return true;
         }
 
+        /// <summary>
+        /// This let us know that an esent/voron out of memory exception has happened.
+        /// We need to decrease the batch size.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public void DecreaseBatchSize()
+        {
+            var prev = NumberOfItemsToProcessInSingleBatch;
+            NumberOfItemsToProcessInSingleBatch = CalculateReductionOfItemsInSingleBatch();
+            var reason = $"Number of items per batch was reset from {prev} to {NumberOfItemsToProcessInSingleBatch} due to esent/voron OOME";
+            context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
+        }
+
         private int CalculateReductionOfItemsInSingleBatch()
         {
             var minNumberOfItemsToProcess = InitialNumberOfItems;
             if (IsProcessingUsingTooMuchMemory)
             {
-
                 minNumberOfItemsToProcess /= 4;
             }
-
 
             // we have had a couple of times were we didn't get to the current max, so we can probably
             // reduce the max again now, this will reduce the memory consumption eventually, and will cause 
@@ -309,18 +320,16 @@ namespace Raven.Database.Indexing
             {
                 var prevNum = newNumberOfItemsToProcess;
                 newNumberOfItemsToProcess /= 4;
-                var reason = string.Format("Using too much memory, NumberOfItemsToProcess was decreased from {0} to {1}", prevNum, newNumberOfItemsToProcess);
+                var reason = $"Using too much memory, NumberOfItemsToProcess was decreased from {prevNum} to {newNumberOfItemsToProcess}";
                 context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
             }
-
             else
             {
                 var preNum = newNumberOfItemsToProcess;
                 newNumberOfItemsToProcess /= 2; // we hit OOME so we should rapidly decrease batch size even when process is not using too much memory
-                var reason = string.Format("we hit OOME so we should decrease batch size even when process is not using too much memory. NumberOfItemsToProcess was decreased from {0} to {1}", preNum, newNumberOfItemsToProcess);
+                var reason = $"we hit OOME so we should decrease batch size even when process is not using too much memory. NumberOfItemsToProcess was decreased from {preNum} to {newNumberOfItemsToProcess}";
                 context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
             }
-
 
             // first thing to do, reset the number of items per batch
             var prev = NumberOfItemsToProcessInSingleBatch;
@@ -334,7 +343,7 @@ namespace Raven.Database.Indexing
         }
 
         // The following methods and properties are wrappers around members of the context which are different for the different indexes
-        protected abstract int InitialNumberOfItems { get; }
+        public abstract int InitialNumberOfItems { get; }
         protected abstract int MaxNumberOfItems { get; }
         protected abstract int CurrentNumberOfItems { get; set; }
         protected abstract int LastAmountOfItemsToRemember { get; set; }

@@ -70,7 +70,7 @@ namespace Raven.Tests.Issues
                 tp.Start();
                 var range = Enumerable.Range(0, 3).ToList();
 
-                Assert.Throws(typeof(AggregateException), () =>
+                Assert.Throws(typeof(DivideByZeroException), () =>
                 {
                     tp.ExecuteBatch(range, (int input) =>
                     {
@@ -91,7 +91,7 @@ namespace Raven.Tests.Issues
                 tp.Start();
                 var range = Enumerable.Range(0, 10000).ToList();
 
-                Assert.Throws(typeof(AggregateException), () =>
+                Assert.Throws(typeof(DivideByZeroException), () =>
                 {
                     tp.ExecuteBatch(range, (IEnumerator<int> input) =>
                     {
@@ -115,7 +115,7 @@ namespace Raven.Tests.Issues
                 tp.Start();
                 var range = Enumerable.Range(0, 3).ToList();
 
-                Assert.Throws(typeof(AggregateException), () =>
+                Assert.Throws(typeof(DivideByZeroException), () =>
                 {
                     tp.ExecuteBatch(range, (int input) =>
                     {
@@ -140,7 +140,7 @@ namespace Raven.Tests.Issues
                 tp.Start();
                 var range = Enumerable.Range(0, 10000).ToList();
 
-                Assert.Throws(typeof(AggregateException), () =>
+                Assert.Throws(typeof(DivideByZeroException), () =>
                 {
                     tp.ExecuteBatch(range, (IEnumerator<int> input) =>
                     {
