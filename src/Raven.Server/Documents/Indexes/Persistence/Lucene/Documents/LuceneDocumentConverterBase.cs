@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Lucene.Net.Documents;
 
 using Raven.Abstractions.Data;
@@ -14,7 +13,10 @@ using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Sparrow.Json;
-using DynamicBlittableJson = Raven.Server.Documents.Indexes.Static.DynamicBlittableJson;
+
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions;
+using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -25,6 +27,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         internal const string ConvertToJsonSuffix = "_ConvertToJson";
 
         private const string TrueString = "true";
+
+        private const string FalseString = "false";
 
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
 
@@ -79,9 +83,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var valueType = GetValueType(value);
 
-            var defaultIndexing = valueType == ValueType.LazyCompressedString || valueType == ValueType.LazyString || valueType == ValueType.String
-                                      ? Field.Index.ANALYZED
-                                      : Field.Index.ANALYZED_NO_NORMS;
+            Field.Index defaultIndexing;
+            switch (valueType)
+            {
+                case ValueType.LazyString:
+                case ValueType.LazyCompressedString:
+                case ValueType.String:
+                    defaultIndexing = Field.Index.ANALYZED;
+                    break;
+                case ValueType.DateTime:
+                case ValueType.DateTimeOffset:
+                case ValueType.Boolean:
+                case ValueType.Double:
+                case ValueType.Null:
+                case ValueType.EmptyString:
+                case ValueType.Numeric:
+                    defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS;
+                    break;
+                default:
+                    defaultIndexing = Field.Index.ANALYZED_NO_NORMS;
+                    break;
+            }
 
             var indexing = field.Indexing.GetLuceneValue(field.Analyzer, @default: defaultIndexing);
             var storage = field.Storage.GetLuceneValue();
@@ -117,6 +139,32 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
+            if (valueType == ValueType.Boolean)
+            {
+                yield return GetOrCreateField(path, (bool)value ? TrueString : FalseString, null, null, storage, indexing, termVector);
+                yield break;
+            }
+
+            if (valueType == ValueType.DateTime)
+            {
+                var dateTime = (DateTime)value;
+                var dateAsString = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
+                yield return GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector);
+                yield break;
+            }
+
+            if (valueType == ValueType.DateTimeOffset)
+            {
+                var dateTimeOffset = (DateTimeOffset)value;
+                string dateAsString;
+                if (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS)
+                    dateAsString = dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
+                else
+                    dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
+
+                yield return GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector);
+                yield break;
+            }
 
             if (valueType == ValueType.BoostedValue)
             {
@@ -211,6 +259,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var valueString = value as string;
             if (valueString != null)
                 return valueString.Length == 0 ? ValueType.EmptyString : ValueType.String;
+
+            if (value is bool) return ValueType.Boolean;
+
+            if (value is DateTime) return ValueType.DateTime;
+
+            if (value is DateTimeOffset) return ValueType.DateTimeOffset;
 
             if (value is BoostedValue) return ValueType.BoostedValue;
 
@@ -391,6 +445,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             DynamicJsonObject,
 
             BlittableJsonObject,
+
+            Boolean,
+
+            DateTime,
+
+            DateTimeOffset
         }
     }
 }

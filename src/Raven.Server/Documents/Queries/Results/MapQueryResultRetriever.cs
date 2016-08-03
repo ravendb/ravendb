@@ -81,6 +81,14 @@ namespace Raven.Server.Documents.Queries.Results
                 TryExtractValueFromDocument(fieldToFetch, doc, result);
             }
 
+            if (doc == null)
+            {
+                doc = new Document
+                {
+                    Key = _context.GetLazyString(id)
+                };
+            }
+
             return ReturnProjection(result, doc, _context);
         }
 
@@ -103,7 +111,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             try
             {
-                doc.Data.Dispose();
+                doc.Data?.Dispose();
             }
             catch (Exception)
             {
