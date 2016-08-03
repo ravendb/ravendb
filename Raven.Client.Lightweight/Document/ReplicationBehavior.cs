@@ -50,6 +50,8 @@ namespace Raven.Client.Document
             if (etag == Etag.Empty || etag == null)
                 return; // if the etag is empty, nothing to do
 
+            timeout = timeout ?? TimeSpan.FromSeconds(60);
+
             var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
             database = database ?? documentStore.DefaultDatabase;
             asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);

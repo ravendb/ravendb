@@ -2690,10 +2690,6 @@ namespace Raven.Client.Connection.Async
             var sb = new StringBuilder(operationMetadata.Url + "/replication/writeAssurance?");
             sb.Append("etag=").Append(etag).Append("&");
             sb.Append("replicas=").Append(replicas).Append("&");
-            if (timeout == null)
-            {
-                timeout = TimeSpan.FromSeconds(60);
-            }
             sb.Append("timeout=").Append(timeout);
 
 
