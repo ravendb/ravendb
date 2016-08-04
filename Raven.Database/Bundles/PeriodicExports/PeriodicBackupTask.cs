@@ -403,6 +403,10 @@ namespace Raven.Database.Bundles.PeriodicExports
                         {
                             // shutting down, probably
                         }
+                        catch (OperationCanceledException)
+                        {
+                            // shutting down, probably
+                        }
                         catch (Exception e)
                         {
                             backupLimit = 100;
