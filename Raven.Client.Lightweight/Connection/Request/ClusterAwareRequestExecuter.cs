@@ -18,6 +18,7 @@ using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
@@ -45,6 +46,8 @@ namespace Raven.Client.Connection.Request
 
         private int readStripingBase;
 
+        private static readonly ILog Log = LogManager.GetLogger(typeof(ClusterAwareRequestExecuter));
+
         public OperationMetadata LeaderNode
         {
             get
@@ -54,6 +57,9 @@ namespace Raven.Client.Connection.Request
 
             set
             {
+                if(Log.IsDebugEnabled)
+                    Log.Debug($"Leader node is changing from {leaderNode} to {value}");
+
                 if (value == null)
                 {
                     leaderNodeSelected.Reset();
@@ -100,8 +106,13 @@ namespace Raven.Client.Connection.Request
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
         {
-            if (force == false && lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
+            var updateRecently = lastUpdate.AddMinutes(5) > SystemTime.UtcNow;
+            if (force == false && updateRecently && LeaderNode != null)
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Will not update replication information because we have a leader:{LeaderNode} and we recently updated the topology.");                
                 return new CompletedTask();
+            }
 
             LeaderNode = null;
             return UpdateReplicationInformationForCluster(serverClient, new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
@@ -147,11 +158,17 @@ namespace Raven.Client.Connection.Request
                 {
                     case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
-                        leaderNodeSelected.Wait(WaitForLeaderTimeout);
+                        var waitResult = leaderNodeSelected.Wait(WaitForLeaderTimeout);
+                        if(Log.IsDebugEnabled && waitResult == false)
+                            Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
                         break;
                     default:
                         if (leaderNodeSelected.Wait(WaitForLeaderTimeout) == false)
+                        {
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
                             throw new InvalidOperationException($"Cluster is not in a stable state. No leader was selected, but we require one for making a request using {serverClient.convention.FailoverBehavior}.");
+                        }
                         break;
                 }
 
@@ -188,7 +205,8 @@ namespace Raven.Client.Connection.Request
             {
                 return operationResult.Result;
             }
-            
+            if(Log.IsDebugEnabled)
+                Log.Debug($"Faield executing operation on node {node.Url} number of remaining retries: {numberOfRetries}.");
 
             LeaderNode = null;
             FailureCounters.IncrementFailureCount(node.Url);
@@ -243,7 +261,8 @@ namespace Raven.Client.Connection.Request
                 var result = await TryClusterOperationAsync(n, operation, hasMoreNodes, token).ConfigureAwait(false);
                 if (result.Success)
                     return result.Result;
-
+                if(Log.IsDebugEnabled)
+                    Log.Debug($"Tried executing operation on failover server {n.Url} with no success.");
                 FailureCounters.IncrementFailureCount(n.Url);
             }
  
@@ -279,6 +298,8 @@ namespace Raven.Client.Connection.Request
                 {
                     shouldRetry = true;
                     operationResult.WasTimeout = wasTimeout;
+                    if(Log.IsDebugEnabled)
+                        Log.Debug($"Operation failed because server {node.Url} is down.");
                 }
                 else
                 {
@@ -302,11 +323,17 @@ namespace Raven.Client.Connection.Request
                             var redirectUrl = errorResponseException.Response.Headers.Location.ToString();
                             node = new OperationMetadata(redirectUrl, node.Credentials, node.ClusterInformation);
                             LeaderNode = node;
+                            if(Log.IsDebugEnabled)
+                                Log.Debug($"Redirecting to {redirectUrl} because {node.Url} responded with 302-redirect.");
                             return await TryClusterOperationAsync(node, operation, avoidThrowing, token).ConfigureAwait(false);
                         }
 
                         if (errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
+                        {
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Operation failed with status code {HttpStatusCode.ExpectationFailed}, will retry.");
                             shouldRetry = true;
+                        }
                     }
                 }
 
@@ -342,7 +369,10 @@ namespace Raven.Client.Connection.Request
                     {
                         Nodes = nodes;
                         LeaderNode = GetLeaderNode(Nodes);
-
+                        if (Log.IsDebugEnabled)
+                        {
+                            Log.Debug($"Fetched topology from cache, Leader is {LeaderNode}\n Nodes:" + string.Join(",", Nodes.Select(n => n.Url)));
+                        }
                         if (LeaderNode != null)
                             return new CompletedTask();
                     }
@@ -387,8 +417,11 @@ namespace Raven.Client.Connection.Request
                             .Select(x => (Task)x.Task)
                             .ToArray();
 
-                        Task.WaitAll(tasks, ReplicationDestinationsTopologyTimeout);
-
+                        var tasksCompleted = Task.WaitAll(tasks, ReplicationDestinationsTopologyTimeout);
+                        if (Log.IsDebugEnabled && tasksCompleted == false)
+                        {
+                            Log.Debug($"During fetch topology {tasks.Count(t=>t.IsCompleted)} servers have responded out of {tasks.Length}");
+                        }
                         replicationDocuments.ForEach(x =>
                         {
                             if (x.Task.IsCompleted && x.Task.Result != null)
@@ -411,6 +444,9 @@ namespace Raven.Client.Connection.Request
 
                         if (newestTopology == null && triedFailoverServers)
                         {
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Fetching topology resulted with no topology, tried failoever servers, setting leader node to primary node ({primaryNode}).");
+                            
                             LeaderNode = primaryNode;
                             //yes this happens
                             if(Nodes.Count == 0)
@@ -432,7 +468,15 @@ namespace Raven.Client.Connection.Request
                             if (newestTopology.Task.Result.ClientConfiguration != null)
                             {
                                 if (newestTopology.Task.Result.ClientConfiguration.FailoverBehavior == null)
+                                {
+                                    if(Log.IsDebugEnabled)
+                                        Log.Debug($"Server side failoever configuration is set to let client decide, client decided on {serverClient.convention.FailoverBehavior}. ");
                                     newestTopology.Task.Result.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
+                                }
+                                else if (Log.IsDebugEnabled)
+                                {
+                                    Log.Debug($"Server enforced failoever behavior {newestTopology.Task.Result.ClientConfiguration.FailoverBehavior}. ");
+                                }
                                 serverClient.convention.UpdateFrom(newestTopology.Task.Result.ClientConfiguration);
                             }
 
