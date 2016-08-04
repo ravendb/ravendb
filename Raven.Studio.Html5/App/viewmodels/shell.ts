@@ -441,7 +441,8 @@ class shell extends viewModelBase {
         var changeSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
             changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
-            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
+            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db)),
+            changesContext.currentResourceChangesApi().watchDocument("Raven/Alerts", () => this.fetchDbStats(db))
         ];
         var isNotADatabase = this.currentConnectedResource instanceof database === false;
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);

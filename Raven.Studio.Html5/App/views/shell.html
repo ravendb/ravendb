@@ -293,7 +293,7 @@
                 <li><a class="navbar-link" data-bind="text: countOfFilteredIndexesText, attr: { href: $parents[1].appUrls.indexes, title: 'Total indexes including disabled and abandoned: ' + countOfIndexesText() }"></a></li>
                 <li><a class="navbar-link" data-bind="text: staleFilteredIndexesCountText, attr: { href: $parents[1].appUrls.status, title: 'Total stale indexes including disabled and abandoned: ' + staleIndexesCountText() }"></a></li>
                 <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
-                <!--<li><a class="navbar-link" data-bind="text: tasksCountText, attr: { href: $parents[1].appUrls.status }"></a></li>-->
+                <li><a class="navbar-link" data-bind="text: alertsCountText, attr: { href: $parents[1].appUrls.alerts }"></a></li>
                 <li class="raw-url hidden-sm" data-bind="visible: $root.rawUrlIsVisible">
                     <a class="navbar-link" href="#" target="_blank" data-bind="text: $root.currentRawUrl, attr: { href: $root.currentRawUrl, title: $root.currentRawUrl }" style="max-width: 180px; -ms-text-overflow: ellipsis; -o-text-overflow: ellipsis; text-overflow: ellipsis; overflow-x: hidden; white-space: nowrap;"></a>
                 </li>

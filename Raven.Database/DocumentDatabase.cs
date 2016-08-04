@@ -631,7 +631,8 @@ namespace Raven.Database
                     DatabaseId = TransactionalStorage.Id,
                     CountOfErrors = WorkContext.Errors.Length,
                     CountOfIndexes = IndexStorage.Indexes.Length,
-                    CountOfStaleIndexes = IndexStorage.Indexes.Count(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
+                    CountOfStaleIndexes = IndexStorage.Indexes.Count(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags)),
+                    CountOfAlerts = GetNumberOfAlerts()
                 };
 
                 TransactionalStorage.Batch(actions =>
@@ -670,6 +671,23 @@ namespace Raven.Database
             }
         }
 
+        private int GetNumberOfAlerts()
+        {
+            var alertsDoc = Documents.Get(Constants.RavenAlerts, null);
+            if (alertsDoc == null)
+                return 0;
+
+            try
+            {
+                var alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>();
+                return alertsDocument.Alerts.Count;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
         public class ReducedDatabaseStatistics
         {
             public Guid DatabaseId { get; set; }
@@ -685,6 +703,8 @@ namespace Raven.Database
             public int CountOfIndexes { get; set; }
 
             public int CountOfStaleIndexes { get; set; }
+
+            public int CountOfAlerts { get; set; }
 
             public long ApproximateTaskCount { get; set; }
 

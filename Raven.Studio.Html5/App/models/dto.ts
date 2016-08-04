@@ -106,6 +106,7 @@ interface reducedDatabaseStatisticsDto {
     CountOfErrors: number;
     CountOfIndexes: number;
     CountOfStaleIndexes: number;
+    CountOfAlerts: number;
     ApproximateTaskCount: number;
     CountOfAttachments: number;
 }
