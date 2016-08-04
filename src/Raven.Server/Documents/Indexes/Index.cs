@@ -796,7 +796,7 @@ namespace Raven.Server.Documents.Indexes
                                     throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
                             }
 
-                            using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, DocumentDatabase.DocumentsStorage, documentsContext))
+                            using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, DocumentDatabase.DocumentsStorage, DocumentDatabase.TransformerStore, documentsContext))
                             {
                                 var results = scope != null ? scope.Transform(documents) : documents;
 

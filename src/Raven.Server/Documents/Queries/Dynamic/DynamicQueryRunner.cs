@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
                 }
 
-                using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _context))
+                using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _transformerStore, _context))
                 {
                     var fieldsToFetch = new FieldsToFetch(query, null);
                     var documents = _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize);

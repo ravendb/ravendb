@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Sparrow.Json
@@ -369,6 +371,11 @@ namespace Sparrow.Json
         public string TrimStart(params char[] trimChars)
         {
             return ToString().TrimStart(trimChars);
+        }
+
+        public IEnumerable<char> Reverse()
+        {
+            return ToString().Reverse();
         }
     }
 }

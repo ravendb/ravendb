@@ -128,9 +128,9 @@ namespace Raven.Server.Documents.Transformers
             return path;
         }
 
-        public virtual TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, DocumentsOperationContext context)
+        public virtual TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested = false)
         {
-            return new TransformationScope(_transformer.TransformResults, parameters, include, documentsStorage, context);
+            return new TransformationScope(_transformer.TransformResults, parameters, include, documentsStorage, transformerStore, context, nested);
         }
 
         public static bool TryReadIdFromFile(string name, out int transformerId)

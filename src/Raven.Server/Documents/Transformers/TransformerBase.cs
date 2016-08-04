@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -68,6 +69,19 @@ namespace Raven.Server.Documents.Transformers
                 throw new InvalidOperationException("Transformation scope was not initialized.");
 
             return CurrentTransformationScope.Current.ParameterOrDefault(key, val);
+        }
+
+        public IEnumerable<dynamic> TransformWith(IEnumerable<string> transformers, dynamic maybeItems)
+        {
+            return Enumerable.Aggregate(transformers, maybeItems, (Func<dynamic, string, dynamic>)((items, transformer) => TransformWith(transformer, items)));
+        }
+
+        public IEnumerable<dynamic> TransformWith(string transformer, dynamic maybeItems)
+        {
+            if (CurrentTransformationScope.Current == null)
+                throw new InvalidOperationException("TransformWith was accessed without CurrentTransformationScope.Current being set");
+
+            return CurrentTransformationScope.Current.TransformWith(transformer, maybeItems);
         }
     }
 }
