@@ -1,15 +1,14 @@
 using System;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Querying
+namespace SlowTests.Tests.Querying
 {
-    public class UsingStronglyTypedDocumentQuery : NoDisposalNeeded
+    public class UsingStronglyTypedDocumentQuery : RavenTestBase
     {
-        private IDocumentQuery<IndexedUser> CreateUserQuery()
+        private static IDocumentQuery<IndexedUser> CreateUserQuery()
         {
             return new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false);
         }
@@ -17,7 +16,7 @@ namespace Raven.Tests.Querying
         [Fact]
         public void WhereEqualsSameAsUntypedCounterpart()
         {
-            Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende", false).ToString(), 
+            Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende", false).ToString(),
                 CreateUserQuery().WhereEquals(x => x.Name, "ayende", false).ToString());
             Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende").ToString(), CreateUserQuery()
                 .WhereEquals(x => x.Name, "ayende").ToString());
@@ -29,7 +28,7 @@ namespace Raven.Tests.Querying
             Assert.Equal(CreateUserQuery().WhereIn("Name", new[] { "ayende", "tobias" }).ToString(),
                 CreateUserQuery().WhereIn(x => x.Name, new[] { "ayende", "tobias" }).ToString());
         }
-        
+
         [Fact]
         public void WhereStartsWithSameAsUntypedCounterpart()
         {
@@ -61,10 +60,10 @@ namespace Raven.Tests.Querying
         [Fact]
         public void WhereGreaterThanSameAsUntypedCounterpart()
         {
-            Assert.Equal(CreateUserQuery().WhereGreaterThan("Birthday", new DateTime(1970,01,01)).ToString(),
+            Assert.Equal(CreateUserQuery().WhereGreaterThan("Birthday", new DateTime(1970, 01, 01)).ToString(),
                 CreateUserQuery().WhereGreaterThan(x => x.Birthday, new DateTime(1970, 01, 01)).ToString());
         }
-        
+
         [Fact]
         public void WhereGreaterThanOrEqualSameAsUntypedCounterpart()
         {
@@ -92,7 +91,7 @@ namespace Raven.Tests.Querying
             Assert.Equal(CreateUserQuery().Search("Name", "ayende").ToString(),
                 CreateUserQuery().Search(x => x.Name, "ayende").ToString());
         }
-    
+
         [Fact]
         public void CanUseStronglyTypedAddOrder()
         {
@@ -110,10 +109,18 @@ namespace Raven.Tests.Querying
         {
             CreateUserQuery().Search(x => x.Birthday, "1975");
         }
-    
+
         [Fact]
         public void CanUseStronglyTypedGroupBy()
         {
+        }
+
+        private class IndexedUser
+        {
+            public int Age { get; set; }
+            public DateTime Birthday { get; set; }
+            public string Name { get; set; }
+            public string Email { get; set; }
         }
     }
 }

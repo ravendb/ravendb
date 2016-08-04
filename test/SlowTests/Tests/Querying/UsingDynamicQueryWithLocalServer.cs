@@ -3,26 +3,29 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Tests.Common;
-
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.Querying
+namespace SlowTests.Tests.Querying
 {
-    public class UsingDynamicQueryWithLocalServer : RavenTest
+    public class UsingDynamicQueryWithLocalServer : RavenTestBase
     {
         [Fact]
-        public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
+        public async Task CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
         {
             var blogOne = new Blog
             {
                 Title = "one",
                 Category = "Ravens",
-                 Tags = new BlogTag[]{
+                Tags = new[]{
                      new BlogTag(){ Name = "Birds" }
                  }
             };
@@ -30,7 +33,7 @@ namespace Raven.Tests.Querying
             {
                 Title = "two",
                 Category = "Rhinos",
-                Tags = new BlogTag[]{
+                Tags = new[]{
                      new BlogTag(){ Name = "Mammals" }
                  }
             };
@@ -38,13 +41,13 @@ namespace Raven.Tests.Querying
             {
                 Title = "three",
                 Category = "Rhinos",
-                Tags = new BlogTag[]{
+                Tags = new[]{
                      new BlogTag(){ Name = "Mammals" }
                  }
             };
 
-            using(var store = this.NewDocumentStore())
-            {               
+            using (var store = await GetDocumentStore())
+            {
                 using (var s = store.OpenSession())
                 {
                     s.Store(blogOne);
@@ -57,7 +60,7 @@ namespace Raven.Tests.Querying
                 {
                     var results = s.Query<Blog>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
-                        .Where(x => x.Tags.Any(y=>y.Name == "Birds"))
+                        .Where(x => x.Tags.Any(y => y.Name == "Birds"))
                         .ToArray();
 
                     Assert.Equal(1, results.Length);
@@ -68,7 +71,7 @@ namespace Raven.Tests.Querying
         }
 
         [Fact]
-        public void CanPerformDynamicQueryUsingClientLinqQuery()
+        public async Task CanPerformDynamicQueryUsingClientLinqQuery()
         {
             var blogOne = new Blog
             {
@@ -86,8 +89,8 @@ namespace Raven.Tests.Querying
                 Category = "Rhinos"
             };
 
-            using(var store = this.NewDocumentStore())
-            {               
+            using (var store = await GetDocumentStore())
+            {
                 using (var s = store.OpenSession())
                 {
                     s.Store(blogOne);
@@ -111,9 +114,9 @@ namespace Raven.Tests.Querying
         }
 
         [Fact]
-        public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
+        public async Task QueryForASpecificTypeDoesNotBringBackOtherTypes()
         {
-            using (var store = this.NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -124,7 +127,7 @@ namespace Raven.Tests.Querying
                 using (var s = store.OpenSession())
                 {
                     var results = s.Query<Blog>()
-                        .Select(b=> new { b.Category})
+                        .Select(b => new { b.Category })
                         .ToArray();
                     Assert.Equal(0, results.Length);
                 }
@@ -132,7 +135,7 @@ namespace Raven.Tests.Querying
         }
 
         [Fact]
-        public void CanPerformDynamicQueryUsingClientLuceneQuery()
+        public async Task CanPerformDynamicQueryUsingClientLuceneQuery()
         {
             var blogOne = new Blog
             {
@@ -150,8 +153,8 @@ namespace Raven.Tests.Querying
                 Category = "Rhinos"
             };
 
-            using (var store = this.NewDocumentStore())
-            {       
+            using (var store = await GetDocumentStore())
+            {
                 using (var s = store.OpenSession())
                 {
                     s.Store(blogOne);
@@ -173,8 +176,8 @@ namespace Raven.Tests.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
+        [Fact(Skip = "Missing feature: Highlighting")]
+        public async Task CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
         {
             var blogOne = new Blog
             {
@@ -192,7 +195,7 @@ namespace Raven.Tests.Querying
                 Category = "Los Rhinos"
             };
 
-            using (var store = this.NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 string blogOneId;
                 string blogTwoId;
@@ -215,7 +218,7 @@ namespace Raven.Tests.Querying
                     var results = s.Advanced.DocumentQuery<Blog>()
                         .Highlight("Title", 18, 2, out titleHighlightings)
                         .Highlight("Category", 18, 2, out categoryHighlightings)
-                        .SetHighlighterTags("*","*")
+                        .SetHighlighterTags("*", "*")
                         .Where("Title:(target word) OR Category:rhinos")
                         .WaitForNonStaleResultsAsOfNow()
                         .ToArray();
@@ -230,8 +233,8 @@ namespace Raven.Tests.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicQueryWithHighlighting()
+        [Fact(Skip = "Missing feature: Highlighting")]
+        public async Task CanPerformDynamicQueryWithHighlighting()
         {
             var blogOne = new Blog
             {
@@ -249,7 +252,7 @@ namespace Raven.Tests.Querying
                 Category = "Los Rhinos"
             };
 
-            using (var store = this.NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 string blogOneId;
                 string blogTwoId;
@@ -290,30 +293,20 @@ namespace Raven.Tests.Querying
             }
         }
 
-        [Fact]
-        public void ExecutesQueryWithHighlightingsAgainstSimpleIndex()
+        [Fact(Skip = "Missing feature: Highlighting")]
+        public async Task ExecutesQueryWithHighlightingsAgainstSimpleIndex()
         {
-            using (var store = this.NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
                 store.DatabaseCommands.PutIndex(indexName,
                     new IndexDefinition
                     {
-                        Map = "from blog in docs.Blogs select new { blog.Title, blog.Category }",
-                        Stores =
+                        Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Fields = new Dictionary<string, IndexFieldOptions>
                         {
-                            {"Title", FieldStorage.Yes},
-                            {"Category", FieldStorage.Yes}
-                        },
-                        Indexes =
-                        {
-                            {"Title", FieldIndexing.Analyzed},
-                            {"Category", FieldIndexing.Analyzed}
-                        },
-                        TermVectors =
-                        {
-                            {"Title", FieldTermVector.WithPositionsAndOffsets},
-                            {"Category", FieldTermVector.WithPositionsAndOffsets}							
+                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
                     });
 
@@ -373,33 +366,23 @@ namespace Raven.Tests.Querying
             }
         }
 
-        [Fact]
-        public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
+        [Fact(Skip = "Missing feature: Highlighting")]
+        public async Task ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
         {
-            using (var store = this.NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
                 store.DatabaseCommands.PutIndex(indexName,
                     new IndexDefinition
                     {
-                        Map = "from blog in docs.Blogs select new { blog.Title, blog.Category }",
+                        Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
                         Reduce = @"from result in results 
                                    group result by result.Category into g
                                    select new { Category = g.Key, Title = g.Select(x=>x.Title).Aggregate(string.Concat) }",
-                        Stores =
+                        Fields = new Dictionary<string, IndexFieldOptions>
                         {
-                            {"Title", FieldStorage.Yes},
-                            {"Category", FieldStorage.Yes}
-                        },
-                        Indexes =
-                        {
-                            {"Title", FieldIndexing.Analyzed},
-                            {"Category", FieldIndexing.Analyzed}
-                        },
-                        TermVectors =
-                        {
-                            {"Title", FieldTermVector.WithPositionsAndOffsets},
-                            {"Category", FieldTermVector.WithPositionsAndOffsets}							
+                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
                     });
 
@@ -453,30 +436,20 @@ namespace Raven.Tests.Querying
             }
         }
 
-        [Fact]
-        public void ExecutesQueryWithHighlightingsAndProjections()
+        [Fact(Skip = "Missing feature: Highlighting")]
+        public async Task ExecutesQueryWithHighlightingsAndProjections()
         {
-            using (var store = this.NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
                 store.DatabaseCommands.PutIndex(indexName,
                     new IndexDefinition
                     {
-                        Map = "from blog in docs.Blogs select new { blog.Title, blog.Category }",
-                        Stores =
+                        Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Fields = new Dictionary<string, IndexFieldOptions>
                         {
-                            {"Title", FieldStorage.Yes},
-                            {"Category", FieldStorage.Yes}
-                        },
-                        Indexes =
-                        {
-                            {"Title", FieldIndexing.Analyzed},
-                            {"Category", FieldIndexing.Analyzed}
-                        },
-                        TermVectors =
-                        {
-                            {"Title", FieldTermVector.WithPositionsAndOffsets},
-                            {"Category", FieldTermVector.WithPositionsAndOffsets}							
+                            {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
+                            {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
                     });
 
@@ -524,8 +497,8 @@ namespace Raven.Tests.Querying
                 }
             }
         }
-       
-        public class Blog
+
+        private class Blog
         {
             public string Title
             {
@@ -546,7 +519,7 @@ namespace Raven.Tests.Querying
             }
         }
 
-        public class BlogTag
+        private class BlogTag
         {
             public string Name { get; set; }
         }
