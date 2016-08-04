@@ -179,7 +179,7 @@ namespace Raven.Traffic
                         Interlocked.Increment(ref skippedRequestsCounter);
                         if (queue != null)
                         {
-                            queue.Enqueue(string.Format("{0} out of {1}, failed",
+                            queue.Enqueue(string.Format("{0} out of {1}, failed, took {2} ms. Total Time: {3} ms",
                                 curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
                         }
                     }
