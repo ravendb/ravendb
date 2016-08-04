@@ -34,8 +34,7 @@ namespace Raven.Server.Json
             if (value == null)
                 return null;
 
-            _reader.DiscardBufferedData();
-            _mmapStream.Set(value.Buffer, value.Size);
+            GetTextReaderFor(value);
 
             if (_readBuffer == null)
                 _readBuffer = new char[128];

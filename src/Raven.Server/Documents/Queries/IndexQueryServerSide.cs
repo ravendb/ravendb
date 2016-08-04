@@ -11,6 +11,8 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
+using TransformerParameter = Raven.Client.Data.Transformers.TransformerParameter;
+
 namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
@@ -72,14 +74,16 @@ namespace Raven.Server.Documents.Queries
                         case "transformer":
                             result.Transformer = item.Value[0];
                             break;
+                        case "skipDuplicateChecking":
+                            result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
+                            break;
                         default:
-                            const string TransformerParameterPrefix = "tp-";
-                            if (item.Key.StartsWith(TransformerParameterPrefix, StringComparison.OrdinalIgnoreCase))
+                            if (item.Key.StartsWith(TransformerParameter.Prefix, StringComparison.OrdinalIgnoreCase))
                             {
                                 if (transformerParameters == null)
                                     transformerParameters = new DynamicJsonValue();
 
-                                transformerParameters[item.Key.Substring(TransformerParameterPrefix.Length)] = item.Value[0];
+                                transformerParameters[item.Key.Substring(TransformerParameter.Prefix.Length)] = item.Value[0];
                             }
                             break;
                             // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
@@ -107,11 +111,6 @@ namespace Raven.Server.Documents.Queries
             }
 
             return result;
-        }
-
-        private static BlittableJsonReaderObject ParseTransformerParameters(StringValues item)
-        {
-            throw new NotImplementedException();
         }
 
         private static DynamicMapReduceField[] ParseDynamicMapReduceFields(StringValues item)

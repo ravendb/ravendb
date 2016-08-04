@@ -1,12 +1,11 @@
+using System.Threading.Tasks;
+using FastTests;
+using Xunit;
 using System.Linq;
 
-using Raven.Tests.Common;
-
-using Xunit;
-
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class IsNullOrEmpty : RavenTest
+    public class IsNullOrEmpty : RavenTestBase
     {
         private class TestDoc
         {
@@ -14,9 +13,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void IsNullOrEmptyEqTrue()
+        public async Task IsNullOrEmptyEqTrue()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -36,9 +35,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void IsNullOrEmptyEqFalse()
+        public async Task IsNullOrEmptyEqFalse()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -56,9 +55,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void IsNullOrEmptyNegated()
+        public async Task IsNullOrEmptyNegated()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -67,7 +66,7 @@ namespace Raven.Tests.Linq
                     session.Store(new TestDoc { SomeProperty = null });
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     Assert.Equal(1, session.Query<TestDoc>().Count(p => !string.IsNullOrEmpty(p.SomeProperty)));
@@ -76,9 +75,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void WithAny()
+        public async Task WithAny()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -96,9 +95,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void WithAnyEqFalse()
+        public async Task WithAnyEqFalse()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

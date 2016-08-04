@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
@@ -19,16 +20,30 @@ namespace Raven.Server.Documents.Transformers
         private readonly IndexingFunc _transformer;
         private readonly DocumentsOperationContext _context;
 
-        public TransformationScope(IndexingFunc transformer, BlittableJsonReaderObject transformerParameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, DocumentsOperationContext context)
+        public TransformationScope(IndexingFunc transformer, BlittableJsonReaderObject transformerParameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested)
         {
             _transformer = transformer;
             _context = context;
-            CurrentTransformationScope.Current = new CurrentTransformationScope(transformerParameters, include, documentsStorage, context);
+            if (nested == false)
+            {
+                Debug.Assert(CurrentTransformationScope.Current == null);
+                CurrentTransformationScope.Current = new CurrentTransformationScope(transformerParameters, include, documentsStorage, transformerStore, context);
+            }
+            else
+                Debug.Assert(CurrentTransformationScope.Current != null);
         }
 
         public void Dispose()
         {
             CurrentTransformationScope.Current = null;
+        }
+
+        public IEnumerable<dynamic> Transform(IEnumerable<dynamic> items)
+        {
+            foreach (var item in _transformer(items))
+            {
+                yield return item;
+            }
         }
 
         public IEnumerable<Document> Transform(IEnumerable<Document> documents)
@@ -59,11 +74,11 @@ namespace Raven.Server.Documents.Transformers
                             var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                             if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
                             {
-                                value[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(ConvertType));
+                                value[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ConvertType(x, _context)));
                                 continue;
                             }
 
-                            value[property.Key] = ConvertType(propertyValue);
+                            value[property.Key] = ConvertType(propertyValue, _context);
                         }
 
                         values.Add(value);
@@ -82,7 +97,7 @@ namespace Raven.Server.Documents.Transformers
             }
         }
 
-        private static object ConvertType(object value)
+        private static object ConvertType(object value, JsonOperationContext context)
         {
             if (value == null)
                 return null;
@@ -104,6 +119,13 @@ namespace Raven.Server.Documents.Transformers
             if (value is DateTime)
                 return value;
 
+            var charEnumerable = value as IEnumerable<char>;
+            if (charEnumerable != null)
+            {
+                var charArray = charEnumerable.ToArray();
+                return context.GetLazyString(charArray, 0, charArray.Length);
+            }
+
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);
 
@@ -113,17 +135,17 @@ namespace Raven.Server.Documents.Transformers
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(ConvertType));
+                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ConvertType(x, context)));
                     continue;
                 }
 
-                inner[property.Key] = ConvertType(propertyValue);
+                inner[property.Key] = ConvertType(propertyValue, context);
             }
 
             return inner;
         }
 
-        private static PropertyAccessor GetPropertyAccessor(object value)
+        internal static PropertyAccessor GetPropertyAccessor(object value)
         {
             var type = value.GetType();
             return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);

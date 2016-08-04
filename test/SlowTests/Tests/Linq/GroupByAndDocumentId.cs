@@ -15,6 +15,7 @@ using Raven.Client.Linq;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes.Static.Linq;
 using Xunit;
+using SlowTests.Utils;
 
 namespace SlowTests.Tests.Linq
 {
@@ -156,7 +157,7 @@ namespace SlowTests.Tests.Linq
 
                 WaitForIndexing(store);
 
-                AssertNoIndexErrors(store);
+                TestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -176,10 +177,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        private void AssertNoIndexErrors(DocumentStore store)
-        {
-            Assert.Empty(store.DatabaseCommands.GetIndexErrors().SelectMany(x => x.Errors));
-        }
+        
 
         // Pass
         public class Client_ImportSummaryByDate_1 : AbstractIndexCreationTask<Client, ImportSummary>

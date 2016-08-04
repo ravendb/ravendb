@@ -1,12 +1,11 @@
+using System.Threading.Tasks;
+using FastTests;
+using Xunit;
 using System.Linq;
 
-using Raven.Tests.Common;
-
-using Xunit;
-
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class CanQueryWithSavedKeywords : RavenTest
+    public class CanQueryWithSavedKeywords : RavenTestBase
     {
         private class TestDoc
         {
@@ -14,13 +13,13 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanQueryWithNot()
+        public async Task CanQueryWithNot()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new TestDoc {SomeProperty = "NOT"});
+                    session.Store(new TestDoc { SomeProperty = "NOT" });
                     session.SaveChanges();
                 }
 
@@ -32,9 +31,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanQueryWithOr()
+        public async Task CanQueryWithOr()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -52,9 +51,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanQueryWithAnd()
+        public async Task CanQueryWithAnd()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

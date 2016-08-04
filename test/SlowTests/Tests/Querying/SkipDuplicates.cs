@@ -1,36 +1,33 @@
 using System.Linq;
-using System.Threading;
-
-using Raven.Abstractions.Data;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
-using Raven.Tests.Bugs.QueryOptimizer;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Querying
+namespace SlowTests.Tests.Querying
 {
-    public class SkipDuplicates : RavenTest
+    public class SkipDuplicates : RavenTestBase
     {
         [Fact]
-        public void WillSkipDuplicates()
+        public async Task WillSkipDuplicates()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex(
                     "BlogPosts/PostsCountByTag",
                     new IndexDefinitionBuilder<BlogPost>()
                     {
                         Map = posts => from post in posts
-                            from tag in post.Tags
-                            select new {Tag = tag}
+                                       from tag in post.Tags
+                                       select new { Tag = tag }
                     });
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new BlogPost
                     {
-                        Tags = new []{"Daniel", "Oren"}
+                        Tags = new[] { "Daniel", "Oren" }
                     });
                     session.SaveChanges();
 
@@ -43,9 +40,9 @@ namespace Raven.Tests.Querying
         }
 
         [Fact]
-        public void WillNotSkipDuplicates()
+        public async Task WillNotSkipDuplicates()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex(
                     "BlogPosts/PostsCountByTag",
@@ -66,10 +63,17 @@ namespace Raven.Tests.Querying
 
                     WaitForIndexing(store);
 
-                    var result = store.SystemDatabase.Queries.Query("BlogPosts/PostsCountByTag", new IndexQuery{SkipDuplicateChecking = true}, CancellationToken.None);
+                    var result = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery { SkipDuplicateChecking = true });
                     Assert.Equal(2, result.Results.Count);
                 }
             }
+        }
+
+        private class BlogPost
+        {
+            public string[] Tags { get; set; }
+            public string Title { get; set; }
+            public string BodyText { get; set; }
         }
     }
 }

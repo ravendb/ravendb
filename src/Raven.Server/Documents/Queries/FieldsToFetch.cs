@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Server.Documents.Indexes;
 
 using Sparrow;
@@ -20,9 +19,8 @@ namespace Raven.Server.Documents.Queries
         public readonly bool IsDistinct;
 
         public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
+            : this(query.FieldsToFetch, indexDefinition)
         {
-            Fields = GetFieldsToFetch(query.FieldsToFetch, indexDefinition, out AnyExtractableFromIndex);
-            IsProjection = Fields != null && Fields.Count > 0;
             IsDistinct = query.IsDistinct && IsProjection;
         }
 
@@ -46,7 +44,7 @@ namespace Raven.Server.Documents.Queries
                 var fieldToFetch = fieldsToFetch[i];
 
                 IndexField value;
-                var extract = indexDefinition.TryGetField(fieldToFetch, out value) && value.Storage == FieldStorage.Yes;
+                var extract = indexDefinition != null && indexDefinition.TryGetField(fieldToFetch, out value) && value.Storage == FieldStorage.Yes;
                 if (extract)
                     anyExtractableFromIndex = true;
 

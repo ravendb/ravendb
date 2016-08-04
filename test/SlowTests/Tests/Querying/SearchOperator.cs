@@ -1,43 +1,43 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Querying
+namespace SlowTests.Tests.Querying
 {
-    public class SearchOperator : RavenTest
+    public class SearchOperator : RavenTestBase
     {
-        public class Something
+        private class Something
         {
             public int Id { get; set; }
             public string MyProp { get; set; }
         }
 
-        public class FTSIndex : AbstractIndexCreationTask<Something>
+        private class FTSIndex : AbstractIndexCreationTask<Something>
         {
             public FTSIndex()
             {
                 Map = docs => from doc in docs
-                              select new {doc.MyProp};
+                              select new { doc.MyProp };
 
                 Indexes.Add(x => x.MyProp, FieldIndexing.Analyzed);
             }
         }
 
         [Fact]
-        public void DynamicLuceneQuery()
+        public async Task DynamicLuceneQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new FTSIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
                     // insert two test documents
-                    session.Store(new Something {Id = 23, MyProp = "the first string contains misspelled word sofware"});
-                    session.Store(new Something {Id = 34, MyProp = "the second string contains the word software"});
+                    session.Store(new Something { Id = 23, MyProp = "the first string contains misspelled word sofware" });
+                    session.Store(new Something { Id = 34, MyProp = "the second string contains the word software" });
                     session.SaveChanges();
 
                     // search for the keyword software

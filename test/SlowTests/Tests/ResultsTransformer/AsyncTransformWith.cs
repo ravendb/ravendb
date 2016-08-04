@@ -3,24 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-
-using Raven.Tests.Common;
-
-using Xunit;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Xunit;
 
-namespace Raven.Tests.ResultsTransformer
+namespace SlowTests.Tests.ResultsTransformer
 {
-    public class AsyncTransformWith : RavenTest
+    public class AsyncTransformWith : RavenTestBase
     {
         [Fact] // Passes on build 2550
-        public void CanRunTransformerOnSession()
+        public async Task CanRunTransformerOnSession()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.ExecuteTransformer(new MyTransformer());
 
@@ -51,7 +50,7 @@ namespace Raven.Tests.ResultsTransformer
         [Fact] // Fails on build 2550        
         public async Task CanRunTransformerOnAsyncSession()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.ExecuteTransformer(new MyTransformer());
 
@@ -79,7 +78,7 @@ namespace Raven.Tests.ResultsTransformer
             }
         }
 
-        public class MyModel
+        private class MyModel
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -87,14 +86,14 @@ namespace Raven.Tests.ResultsTransformer
             public string City { get; set; }
         }
 
-        public class MyModelProjection
+        private class MyModelProjection
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string CountryAndCity { get; set; }
         }
 
-        public class MyTransformer : AbstractTransformerCreationTask<MyModel>
+        private class MyTransformer : AbstractTransformerCreationTask<MyModel>
         {
             public MyTransformer()
             {
@@ -103,7 +102,7 @@ namespace Raven.Tests.ResultsTransformer
                                             {
                                                 d.Id,
                                                 d.Name,
-                                                CountryAndCity = String.Join(",", d.Country, d.City)
+                                                CountryAndCity = string.Join(",", d.Country, d.City)
                                             };
             }
         }

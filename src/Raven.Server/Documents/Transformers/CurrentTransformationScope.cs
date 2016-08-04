@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using System.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Transformers
 {
@@ -13,22 +18,25 @@ namespace Raven.Server.Documents.Transformers
         private readonly BlittableJsonReaderObject _parameters;
         private readonly IncludeDocumentsCommand _include;
         private readonly DocumentsStorage _documentsStorage;
+        private readonly TransformerStore _transformerStore;
         private readonly DocumentsOperationContext _documentsContext;
 
         [ThreadStatic]
         public static CurrentTransformationScope Current;
 
-        public CurrentTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext)
+        public CurrentTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext documentsContext)
         {
             _parameters = parameters;
             _include = include;
             _documentsStorage = documentsStorage;
+            _transformerStore = transformerStore;
             _documentsContext = documentsContext;
         }
 
         public dynamic Source;
 
         private DynamicBlittableJson _document;
+        private HashSet<string> _nested;
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString)
         {
@@ -132,6 +140,74 @@ namespace Raven.Server.Documents.Transformers
 
             parameter = new TransformerParameter(value);
             return true;
+        }
+
+        public IEnumerable<dynamic> TransformWith(string transformer, dynamic maybeItems)
+        {
+            if (_nested == null)
+                _nested = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (_nested.Add(transformer) == false)
+                throw new InvalidOperationException("Cannot call transformer " + transformer + " because it was already called, recursive transformers are not allowed. Current transformers are: " + string.Join(", ", _nested));
+
+            try
+            {
+                var t = _transformerStore.GetTransformer(transformer);
+                if (t == null)
+                    throw new InvalidOperationException("No transformer with the name: " + transformer);
+
+                using (var scope = t.OpenTransformationScope(_parameters, _include, _documentsStorage, _transformerStore, _documentsContext, nested: true))
+                {
+                    var enumerable = maybeItems as IEnumerable;
+                    var dynamicEnumerable = enumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(enumerable) ?
+                        enumerable.Cast<dynamic>() : new[] { maybeItems };
+
+                    foreach (var item in scope.Transform(dynamicEnumerable.Select(x => ConvertType(x, _documentsContext))))
+                    {
+                        yield return item;
+                    }
+                }
+            }
+            finally
+            {
+                _nested.Remove(transformer);
+            }
+        }
+
+        private static object ConvertType(object value, JsonOperationContext context)
+        {
+            if (value == null)
+                return null;
+
+            if (value is DynamicBlittableJson)
+                return value;
+
+            if (value is string)
+                return value;
+
+            if (value is LazyStringValue || value is LazyCompressedStringValue)
+                return value;
+
+            if (value is LazyDoubleValue)
+                return value;
+
+            var inner = new DynamicJsonValue();
+            var accessor = TransformationScope.GetPropertyAccessor(value);
+
+            foreach (var property in accessor.Properties)
+            {
+                var propertyValue = property.Value(value);
+                var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
+                if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
+                {
+                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ConvertType(x, context)));
+                    continue;
+                }
+
+                inner[property.Key] = ConvertType(propertyValue, context);
+            }
+
+            return new DynamicBlittableJson(context.ReadObject(inner, "transformer/inner"));
         }
     }
 }

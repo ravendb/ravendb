@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Lucene.Net.Documents;
 
 using Raven.Abstractions.Data;
@@ -14,7 +13,10 @@ using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Sparrow.Json;
-using DynamicBlittableJson = Raven.Server.Documents.Indexes.Static.DynamicBlittableJson;
+
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions;
+using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -26,13 +28,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private const string TrueString = "true";
 
+        private const string FalseString = "false";
+
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
 
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<Field>> _fieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<Field>>(Comparer);
 
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<NumericField>>(Comparer);
-
-        private readonly Dictionary<string, StreamReader> _complexInMemoryObjects = new Dictionary<string, StreamReader>();
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
 
@@ -81,9 +83,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var valueType = GetValueType(value);
 
-            var defaultIndexing = valueType == ValueType.LazyCompressedString || valueType == ValueType.LazyString || valueType == ValueType.String
-                                      ? Field.Index.ANALYZED
-                                      : Field.Index.ANALYZED_NO_NORMS;
+            Field.Index defaultIndexing;
+            switch (valueType)
+            {
+                case ValueType.LazyString:
+                case ValueType.LazyCompressedString:
+                case ValueType.String:
+                    defaultIndexing = Field.Index.ANALYZED;
+                    break;
+                case ValueType.DateTime:
+                case ValueType.DateTimeOffset:
+                case ValueType.Boolean:
+                case ValueType.Double:
+                case ValueType.Null:
+                case ValueType.EmptyString:
+                case ValueType.Numeric:
+                    defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS;
+                    break;
+                default:
+                    defaultIndexing = Field.Index.ANALYZED_NO_NORMS;
+                    break;
+            }
 
             var indexing = field.Indexing.GetLuceneValue(field.Analyzer, @default: defaultIndexing);
             var storage = field.Storage.GetLuceneValue();
@@ -119,6 +139,32 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
+            if (valueType == ValueType.Boolean)
+            {
+                yield return GetOrCreateField(path, (bool)value ? TrueString : FalseString, null, null, storage, indexing, termVector);
+                yield break;
+            }
+
+            if (valueType == ValueType.DateTime)
+            {
+                var dateTime = (DateTime)value;
+                var dateAsString = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
+                yield return GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector);
+                yield break;
+            }
+
+            if (valueType == ValueType.DateTimeOffset)
+            {
+                var dateTimeOffset = (DateTimeOffset)value;
+                string dateAsString;
+                if (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS)
+                    dateAsString = dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
+                else
+                    dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
+
+                yield return GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector);
+                yield break;
+            }
 
             if (valueType == ValueType.BoostedValue)
             {
@@ -135,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.Enumerable)
             {
-                var itemsToIndex = value as IEnumerable;
+                var itemsToIndex = (IEnumerable)value;
                 int count = 1;
 
                 if (nestedArray == false)
@@ -161,7 +207,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var dynamicJson = (DynamicBlittableJson)value;
 
-                foreach (var complexObjectField in GetComplexObjectFields(path, storage, dynamicJson.BlittableJson, indexing, termVector))
+                foreach (var complexObjectField in GetComplexObjectFields(path, dynamicJson.BlittableJson, storage, indexing, termVector))
                     yield return complexObjectField;
 
                 yield break;
@@ -171,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var val = (BlittableJsonReaderObject)value;
 
-                foreach (var complexObjectField in GetComplexObjectFields(path, storage, val, indexing, termVector))
+                foreach (var complexObjectField in GetComplexObjectFields(path, val, storage, indexing, termVector))
                     yield return complexObjectField;
 
                 yield break;
@@ -190,24 +236,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield return numericField;
         }
 
-        private IEnumerable<AbstractField> GetComplexObjectFields(string path, Field.Store storage, BlittableJsonReaderObject val, Field.Index indexing, Field.TermVector termVector)
+        private IEnumerable<AbstractField> GetComplexObjectFields(string path, BlittableJsonReaderObject val, Field.Store storage, Field.Index indexing, Field.TermVector termVector)
         {
-            yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            if (_multipleItemsSameFieldCount.Count == 0 || _multipleItemsSameFieldCount[0] == 1)
+                yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
-            StreamReader inMemoryComplexObject;
-            if (_complexInMemoryObjects.TryGetValue(path, out inMemoryComplexObject) == false)
-            {
-                _complexInMemoryObjects[path] = inMemoryComplexObject = new StreamReader(new MemoryStream(), Encoding.UTF8, true, 1024, leaveOpen: true);  
-            }
-
-            var ms = inMemoryComplexObject.BaseStream;
-
-            ms.Position = 0;
-            val.WriteJsonTo(ms);
-            ms.SetLength(ms.Position);
-            ms.Position = 0;            
-
-            yield return GetOrCreateField(path, null, null, inMemoryComplexObject, storage, indexing, termVector);
+            yield return GetOrCreateField(path, null, null, val, storage, indexing, termVector);
         }
 
         private static ValueType GetValueType(object value)
@@ -225,6 +259,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var valueString = value as string;
             if (valueString != null)
                 return valueString.Length == 0 ? ValueType.EmptyString : ValueType.String;
+
+            if (value is bool) return ValueType.Boolean;
+
+            if (value is DateTime) return ValueType.DateTime;
+
+            if (value is DateTimeOffset) return ValueType.DateTimeOffset;
 
             if (value is BoostedValue) return ValueType.BoostedValue;
 
@@ -249,7 +289,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return GetOrCreateField(Constants.ReduceKeyFieldName, null, key, null, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
-        protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, TextReader textReaderValue, Field.Store store, Field.Index index, Field.TermVector termVector)
+        protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
             var cacheKey = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray());
 
@@ -258,20 +298,35 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (_fieldsCache.TryGetValue(cacheKey, out cached) == false)
             {
-                LazyStringReader reader = null;
+                LazyStringReader stringReader = null;
+                BlittableObjectReader blittableReader = null;
 
-                if ((lazyValue != null || textReaderValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
+                if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
                 {
-                    reader = new LazyStringReader();
+                    TextReader reader;
+                    if (lazyValue != null)
+                    {
+                        stringReader = new LazyStringReader();
+                        reader = stringReader.GetTextReaderFor(lazyValue);
+                    }
+                    else
+                    {
+                        blittableReader = new BlittableObjectReader();
+                        reader = blittableReader.GetTextReaderFor(blittableValue);
+                    }
 
-                    field = new Field(CreateFieldName(name), textReaderValue ?? reader.GetTextReaderFor(lazyValue), termVector);
+                    field = new Field(CreateFieldName(name), reader, termVector);
                 }
                 else
                 {
-                    if (value == null && textReaderValue == null)
-                        reader = new LazyStringReader();
+                    if (value == null && blittableValue == null)
+                        stringReader = new LazyStringReader();
+                    else if (value == null && lazyValue == null)
+                        blittableReader = new BlittableObjectReader();
 
-                    field = new Field(CreateFieldName(name), value ?? textReaderValue?.ReadToEnd() ?? reader.GetStringFor(lazyValue), store, index, termVector);
+                    field = new Field(CreateFieldName(name),
+                        value ?? stringReader?.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue),
+                        store, index, termVector);
                 }
 
                 field.Boost = 1;
@@ -280,17 +335,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 _fieldsCache[cacheKey] = new CachedFieldItem<Field>
                 {
                     Field = field,
-                    LazyStringReader = reader
+                    LazyStringReader = stringReader,
+                    BlittableObjectReader = blittableReader
                 };
             }
             else
             {
                 field = cached.Field;
 
-                if ((lazyValue != null || textReaderValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
-                    field.SetValue(textReaderValue ?? cached.LazyStringReader.GetTextReaderFor(lazyValue));
+                if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
+                {
+                    field.SetValue(cached.LazyStringReader?.GetTextReaderFor(lazyValue) ?? cached.BlittableObjectReader.GetTextReaderFor(blittableValue));
+                }
                 else
-                    field.SetValue(value ?? textReaderValue?.ReadToEnd() ?? cached.LazyStringReader.GetStringFor(lazyValue));
+                {
+                    field.SetValue(value ?? cached.LazyStringReader?.GetStringFor(lazyValue) ?? cached.BlittableObjectReader.GetStringFor(blittableValue));
+                }
             }
 
             return field;
@@ -346,7 +406,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (index.IsAnalyzed() == false)
                 return true;
 
-            if (value == null)
+            if (value == null || value is DynamicNullObject)
                 return false;
 
             return true;
@@ -385,6 +445,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             DynamicJsonObject,
 
             BlittableJsonObject,
+
+            Boolean,
+
+            DateTime,
+
+            DateTimeOffset
         }
     }
 }

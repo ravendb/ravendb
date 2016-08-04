@@ -3,43 +3,43 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class OfTypeSupport : RavenTest
+    public class OfTypeSupport : RavenTestBase
     {
         [Fact]
-        public void OfTypeWillBeConvertedToWhere()
+        public async Task OfTypeWillBeConvertedToWhere()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new TagSummaryIndex().Execute(store);
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Tag { get; set; }
             public List<Bar> Bars { get; set; }
         }
 
-        public abstract class Bar
+        private abstract class Bar
         {
             public int Weight { get; set; }
         }
 
-        public class IronBar : Bar { }
+        private class IronBar : Bar { }
 
-        public class ChocolateBar : Bar { }
+        private class ChocolateBar : Bar { }
 
-        public class TagSummary
+        private class TagSummary
         {
             public string Tag { get; set; }
             public int Count { get; set; }
@@ -47,7 +47,7 @@ namespace Raven.Tests.Linq
             public int TotalIronBarWeight { get; set; }
         }
 
-        public class TagSummaryIndex : AbstractIndexCreationTask<Foo, TagSummary>
+        private class TagSummaryIndex : AbstractIndexCreationTask<Foo, TagSummary>
         {
             public TagSummaryIndex()
             {
@@ -70,11 +70,6 @@ namespace Raven.Tests.Linq
                                         TotalIronBarWeight = g.Sum(x => x.TotalIronBarWeight)
                                     };
             }
-        }
-
-        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-        {
-            
         }
     }
 }

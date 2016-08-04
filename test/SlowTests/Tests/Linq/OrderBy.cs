@@ -1,14 +1,13 @@
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class OrderBy : RavenTest
+    public class OrderBy : RavenTestBase
     {
-        public class Section
+        private class Section
         {
             public string Id { get; set; }
             public int Position { get; set; }
@@ -22,9 +21,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanDescOrderBy_AProjection()
+        public async Task CanDescOrderBy_AProjection()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -46,9 +45,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void CanAscOrderBy_AProjection()
+        public async Task CanAscOrderBy_AProjection()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

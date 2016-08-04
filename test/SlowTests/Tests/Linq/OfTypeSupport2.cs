@@ -3,26 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class OfTypeSupport2 : RavenTest
+    public class OfTypeSupport2 : RavenTestBase
     {
         [Fact]
-        public void ShouldCorrectlyMatchTheTypeName()
+        public async Task ShouldCorrectlyMatchTheTypeName()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Foo {Values = new[] {new Bar()}});
+                    session.Store(new Foo { Values = new[] { new Bar() } });
                     session.SaveChanges();
                 }
 

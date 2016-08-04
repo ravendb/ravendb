@@ -1,30 +1,34 @@
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.NestedIndexing
+namespace SlowTests.Tests.NestedIndexing
 {
-    public class CanIndexReferencedEntity : RavenTest
+    public class CanIndexReferencedEntity : RavenTestBase
     {
-        protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
+        private class Item
         {
+            public string Id { get; set; }
+            public string Ref { get; set; }
+            public string Name { get; set; }
         }
 
         [Fact]
-        public void Simple()
+        public async Task Simple()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"
+                    Maps = {
+                        @"
                         from i in docs.Items
                         select new
                         {
-                            RefName = LoadDocument(i.Ref).Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
+                    }
                 });
 
                 using (var session = store.OpenSession())
@@ -46,18 +50,20 @@ namespace Raven.Tests.NestedIndexing
         }
 
         [Fact]
-        public void WhenReferencedItemChanges()
+        public async Task WhenReferencedItemChanges()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"
+                    Maps = {
+                        @"
                         from i in docs.Items
                         select new
                         {
-                            RefName = LoadDocument(i.Ref).Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
+                    }
                 });
 
                 using (var session = store.OpenSession())
@@ -87,18 +93,20 @@ namespace Raven.Tests.NestedIndexing
         }
 
         [Fact]
-        public void WhenReferencedItemChangesInBatch()
+        public async Task WhenReferencedItemChangesInBatch()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"
+                    Maps = {
+                        @"
                         from i in docs.Items
                         select new
                         {
-                            RefName = LoadDocument(i.Ref).Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
+                    }
                 });
 
                 using (var session = store.OpenSession())
@@ -128,19 +136,21 @@ namespace Raven.Tests.NestedIndexing
             }
         }
 
-        [Fact]
-        public void WhenReferencedItemDeleted()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task WhenReferencedItemDeleted()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"
+                    Maps = {
+                        @"
                         from i in docs.Items
                         select new
                         {
-                            RefNameNotNull = LoadDocument(i.Ref).Name != null
+                            RefNameNotNull = LoadDocument(i.Ref, ""Items"").Name != null
                         }"
+                    }
                 });
 
                 using (var session = store.OpenSession())
@@ -170,18 +180,20 @@ namespace Raven.Tests.NestedIndexing
         }
 
         [Fact]
-        public void NightOfTheLivingDead()
+        public async Task NightOfTheLivingDead()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"
+                    Maps = {
+                        @"
                         from i in docs.Items
                         select new
                         {
-                            RefName = LoadDocument(i.Ref).Name 
+                            RefName = LoadDocument(i.Ref, ""Items"").Name 
                         }"
+                    }
                 });
 
                 using (var session = store.OpenSession())
@@ -219,18 +231,20 @@ namespace Raven.Tests.NestedIndexing
         }
 
         [Fact]
-        public void SelfReferencing()
+        public async Task SelfReferencing()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"
+                    Maps = {
+                        @"
                         from i in docs.Items
                         select new
                         {
-                            RefName = LoadDocument(i.Ref).Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
+                    }
                 });
 
                 using (var session = store.OpenSession())
@@ -259,18 +273,20 @@ namespace Raven.Tests.NestedIndexing
         }
 
         [Fact]
-        public void Loops()
+        public async Task Loops()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"
+                    Maps = {
+                        @"
                         from i in docs.Items
                         select new
                         {
-                            RefName = LoadDocument(i.Ref).Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
+                    }
                 });
 
                 using (var session = store.OpenSession())

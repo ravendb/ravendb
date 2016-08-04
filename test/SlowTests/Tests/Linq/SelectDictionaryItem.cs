@@ -3,21 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class SelectDictionaryItem :RavenTest
+    public class SelectDictionaryItem : RavenTestBase
     {
         [Fact]
-        public void SupportProjectionOnDictionaryField()
+        public async Task SupportProjectionOnDictionaryField()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -30,20 +31,23 @@ namespace Raven.Tests.Linq
                     });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
-                    var vendor = session.Query<Product>().Select(product => product.Properties["Vendor"]).FirstOrDefault();
+                    var vendor = session.Query<Product>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Select(product => product.Properties["Vendor"])
+                        .FirstOrDefault();
+
                     Assert.Equal("Hibernating Rhinos", vendor);
-                    
                 }
             }
         }
 
-        public class Product
+        private class Product
         {
             public int Id { get; set; }
             public Dictionary<string, string> Properties { get; set; }
-        } 
+        }
     }
 }

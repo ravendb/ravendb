@@ -3,24 +3,24 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Tests.Common;
-
-using Xunit;
 using Raven.Client.Document;
+using Xunit;
 
-namespace Raven.Tests.Querying
+namespace SlowTests.Tests.Querying
 {
-    public class UsingDocumentQuery : NoDisposalNeeded
+    public class UsingDocumentQuery : RavenTestBase
     {
         [Fact]
         public void CanUnderstandSimpleEquality()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
-                .WhereEquals("Name", "ayende",false);
+                .WhereEquals("Name", "ayende", false);
 
             Assert.Equal("Name:[[ayende]]", q.ToString());
         }
@@ -53,7 +53,7 @@ namespace Raven.Tests.Querying
         [Fact]
         public void CanUnderstandArrayContains()
         {
-            var array = new[] {"ryan", "heath"};
+            var array = new[] { "ryan", "heath" };
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
                 .WhereIn("Name", array);
             Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
@@ -71,7 +71,7 @@ namespace Raven.Tests.Querying
         [Fact]
         public void CanUnderstandArrayContainsWithOneElement()
         {
-            var array = new[] { "ryan"};
+            var array = new[] { "ryan" };
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
                 .WhereIn("Name", array);
             Assert.Equal("@in<Name>:(ryan)", q.ToString());
@@ -207,7 +207,15 @@ namespace Raven.Tests.Querying
             // should DocumentQuery<T> understand how to generate range field names?
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
                 .WhereGreaterThan("Age_Range", 3);
-            Assert.Equal("Age_Range:{Ix3 TO NULL}", q.ToString());
+            Assert.Equal("Age_Range:{Lx3 TO NULL}", q.ToString());
+        }
+
+        private class IndexedUser
+        {
+            public int Age { get; set; }
+            public DateTime Birthday { get; set; }
+            public string Name { get; set; }
+            public string Email { get; set; }
         }
     }
 }

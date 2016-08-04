@@ -39,6 +39,7 @@ namespace SlowTests.Core.Querying
                     RavenQueryStatistics stats;
 
                     var companies = session.Query<Company>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Where(c => c.Name.StartsWith("Company"))
                         .Select(c => c.Name)
@@ -56,6 +57,7 @@ namespace SlowTests.Core.Querying
 
                     var skipped = stats.SkippedResults;
                     companies = session.Query<Company>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Where(c => c.Name.StartsWith("Company"))
                         .Select(c => c.Name)

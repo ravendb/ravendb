@@ -3,36 +3,48 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using Raven.Database.Indexing;
-using Raven.Tests.Common;
-
-using Xunit;
-using Raven.Database.Data;
-using Raven.Client;
-using System.IO;
-using Raven.Client.Document;
-using Raven.Client.Linq;
 using System.Threading;
-using System.Diagnostics;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Abstractions;
+using Raven.Abstractions.Indexing;
+using Raven.Client;
+using Raven.Client.Data.Queries;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.Linq
+namespace SlowTests.Tests.Linq
 {
-    public class UsingRavenQueryProvider : RavenTest
+    public class UsingRavenQueryProvider : RavenTestBase
     {
-        [Fact]
-        public void Can_perform_Skip_Take_Query()
+        private class User
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public int Age { get; set; }
+            public string Info { get; set; }
+            public bool Active { get; set; }
+            public DateTime Created { get; set; }
+
+            public User()
+            {
+                Name = String.Empty;
+                Age = default(int);
+                Info = String.Empty;
+                Active = false;
+            }
+        }
+
+        [Fact]
+        public async Task Can_perform_Skip_Take_Query()
+        {
+            using (var db = await GetDocumentStore())
             {
                 db.Initialize();
 
@@ -41,7 +53,6 @@ namespace Raven.Tests.Linq
                 {
                     AddData(session);
 
-                    db.DatabaseCommands.DeleteIndex(indexName);
                     db.DatabaseCommands.PutIndex<User, User>(indexName,
                             new IndexDefinitionBuilder<User, User>()
                             {
@@ -82,9 +93,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void Can_perform_First_and_FirstOrDefault_Query()
+        public async Task Can_perform_First_and_FirstOrDefault_Query()
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var db = await GetDocumentStore())
             {
                 db.Initialize();
 
@@ -93,7 +104,6 @@ namespace Raven.Tests.Linq
                 {
                     AddData(session);
 
-                    db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
                             new IndexDefinitionBuilder<User, User>()
                             {
@@ -122,9 +132,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void Can_perform_Single_and_SingleOrDefault_Query()
+        public async Task Can_perform_Single_and_SingleOrDefault_Query()
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var db = await GetDocumentStore())
             {
                 db.Initialize();
 
@@ -133,7 +143,6 @@ namespace Raven.Tests.Linq
                 {
                     AddData(session);
 
-                    db.DatabaseCommands.DeleteIndex(indexName);
                     var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
                             new IndexDefinitionBuilder<User, User>()
                             {
@@ -166,30 +175,33 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void Can_perform_Boolean_Queries()
+        public async Task Can_perform_Boolean_Queries()
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
-                db.Initialize();
-
                 string indexName = "UserIndex";
-                using (var session = db.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User() { Name = "Matt", Info = "Male Age 25" }); //Active = false by default
                     session.Store(new User() { Name = "Matt", Info = "Male Age 28", Active = true });
                     session.Store(new User() { Name = "Matt", Info = "Male Age 35", Active = false });
                     session.SaveChanges();
 
-                    db.DatabaseCommands.DeleteIndex(indexName);
-                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinitionBuilder<User, User>()
-                            {
-                                Map = docs => from doc in docs
-                                              select new { doc.Name, doc.Age, doc.Info, doc.Active },
-                                Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
-                            }, true);
+                    store.DatabaseCommands.PutIndex<User, User>(indexName,
+                        new IndexDefinitionBuilder<User, User>()
+                        {
+                            Map = docs => from doc in docs
+                                          select new
+                                          {
+                                              doc.Name,
+                                              doc.Age,
+                                              doc.Info,
+                                              doc.Active
+                                          },
+                            Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
+                        }, true);
 
-                    WaitForQueryToComplete(session, indexName);
+                    WaitForIndexing(store);
 
                     var testQuery = session.Query<User>(indexName)
                                         .Where(x => x.Name == ("Matt") && x.Active);
@@ -207,34 +219,34 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void Can_perform_DateTime_Comparison_Queries()
+        public async Task Can_perform_DateTime_Comparison_Queries()
         {
-
             DateTime firstTime = SystemTime.UtcNow;
             DateTime secondTime = firstTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
             DateTime thirdTime = secondTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
 
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
-                db.Initialize();
-
                 string indexName = "UserIndex";
-                using (var session = db.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "First", Created = firstTime });
                     session.Store(new User { Name = "Second", Created = secondTime });
                     session.Store(new User { Name = "Third", Created = thirdTime });
                     session.SaveChanges();
 
-                    db.DatabaseCommands.DeleteIndex(indexName);
-                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinitionBuilder<User, User>()
-                            {
-                                Map = docs => from doc in docs
-                                              select new { doc.Name, doc.Created },
-                            }, true);
+                    store.DatabaseCommands.PutIndex<User, User>(indexName,
+                        new IndexDefinitionBuilder<User, User>()
+                        {
+                            Map = docs => from doc in docs
+                                          select new
+                                          {
+                                              doc.Name,
+                                              doc.Created
+                                          },
+                        }, true);
 
-                    WaitForQueryToComplete(session, indexName);
+                    WaitForIndexing(store);
 
                     Assert.Equal(3, session.Query<User>(indexName).ToArray().Length);
 
@@ -274,9 +286,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact] // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/105)
-        public void Does_Not_Ignore_Expressions_Before_Where()
+        public async Task Does_Not_Ignore_Expressions_Before_Where()
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var db = await GetDocumentStore())
             {
                 db.Initialize();
 
@@ -288,7 +300,6 @@ namespace Raven.Tests.Linq
                     session.Store(new User() { Name = "Second", Age = 20 });
                     session.SaveChanges();
 
-                    db.DatabaseCommands.DeleteIndex(indexName);
                     db.DatabaseCommands.PutIndex<User, User>(indexName,
                             new IndexDefinitionBuilder<User, User>()
                             {
@@ -308,17 +319,17 @@ namespace Raven.Tests.Linq
         }
 
         [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
-        public void Can_Use_Static_Fields_In_Where_Clauses()
+        public async Task Can_Use_Static_Fields_In_Where_Clauses()
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var db = await GetDocumentStore())
             {
                 db.Initialize();
 
                 db.DatabaseCommands.PutIndex("DateTime",
                         new IndexDefinition
                         {
-                            Map = @"from info in docs.DateTimeInfos                                    
-                                    select new { info.TimeOfDay }",
+                            Maps = { @"from info in docs.DateTimeInfos                                    
+                                    select new { info.TimeOfDay }" }
                         });
 
                 var currentTime = SystemTime.UtcNow;
@@ -340,11 +351,8 @@ namespace Raven.Tests.Linq
                                 .Where(x => x.TimeOfDay > currentTime)
                                 .ToArray();
 
-                    IQueryable<DateTimeInfo> testFail = null;
-                    Assert.DoesNotThrow(() =>
-                        {
-                            testFail = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > DateTime.MinValue); // =====> Throws an exception
-                        });
+                    IQueryable<DateTimeInfo> testFail = s.Query<DateTimeInfo>("DateTime").Where(x => x.TimeOfDay > DateTime.MinValue);
+
                     Assert.NotEqual(null, testFail);
 
                     var dt = DateTime.MinValue;
@@ -355,17 +363,17 @@ namespace Raven.Tests.Linq
             }
         }
 
-        public void Can_Use_Static_Properties_In_Where_Clauses()
+        public async Task Can_Use_Static_Properties_In_Where_Clauses()
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var db = await GetDocumentStore())
             {
                 db.Initialize();
 
                 db.DatabaseCommands.PutIndex("DateTime",
                         new IndexDefinition
                         {
-                            Map = @"from info in docs.DateTimeInfos                                    
-                                    select new { info.TimeOfDay }",
+                            Maps = { @"from info in docs.DateTimeInfos                                    
+                                    select new { info.TimeOfDay }" }
                         });
 
                 using (var s = db.OpenSession())
@@ -389,17 +397,17 @@ namespace Raven.Tests.Linq
         }
 
         [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
-        public void Can_use_inequality_to_compare_dates()
+        public async Task Can_use_inequality_to_compare_dates()
         {
-            using (var db = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var db = await GetDocumentStore())
             {
                 db.Initialize();
 
                 db.DatabaseCommands.PutIndex("DateTime",
                         new IndexDefinition
                         {
-                            Map = @"from info in docs.DateTimeInfos                                    
-                                    select new { info.TimeOfDay }",
+                            Maps = { @"from info in docs.DateTimeInfos                                    
+                                    select new { info.TimeOfDay }" }
                         });
 
                 var currentTime = SystemTime.UtcNow;
@@ -429,20 +437,22 @@ namespace Raven.Tests.Linq
 
         [Fact] // See issue #91 http://github.com/ravendb/ravendb/issues/issue/91 and 
         //discussion here http://groups.google.com/group/ravendb/browse_thread/thread/3df57d19d41fc21
-        public void Can_do_projection_in_query_result()
+        public async Task Can_do_projection_in_query_result()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
                 store.DatabaseCommands.PutIndex("ByLineCost",
                         new IndexDefinition
                         {
-                            Map = @"from order in docs.Orders
+                            Maps = { @"from order in docs.Orders
                                     from line in order.Lines
-                                    select new { Cost = line.Cost }",
-
-                            Stores = { { "Cost", FieldStorage.Yes } }
+                                    select new { Cost = line.Cost }" },
+                            Fields = new Dictionary<string, IndexFieldOptions>
+                            {
+                                { "Cost", new IndexFieldOptions { Storage = FieldStorage.Yes } }
+                            }
                         });
 
                 using (var s = store.OpenSession())
@@ -459,7 +469,7 @@ namespace Raven.Tests.Linq
                     {
                         Lines = new List<OrderItem>
                         {
-                            new OrderItem { Cost = 0.59m, Quantity = 9 },                            
+                            new OrderItem { Cost = 0.59m, Quantity = 9 },
                         },
                     });
 
@@ -494,9 +504,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void Throws_exception_when_overloaded_distinct_called()
+        public async Task Throws_exception_when_overloaded_distinct_called()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -514,7 +524,8 @@ namespace Raven.Tests.Linq
                     Assert.Throws<NotSupportedException>(() => shouldThrow.ToArray());
 
                     var shouldNotThrow = s.Query<OrderItem>().Distinct();
-                    Assert.DoesNotThrow(() => shouldNotThrow.ToArray());
+
+                    shouldNotThrow.ToArray();
                 }
             }
         }
@@ -593,10 +604,10 @@ namespace Raven.Tests.Linq
             documentSession.SaveChanges();
         }
 
-        [Fact]
-        public void Can_Use_In_Array_In_Where_Clause()
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        public async Task Can_Use_In_Array_In_Where_Clause()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -611,7 +622,7 @@ namespace Raven.Tests.Linq
 
                 using (var s = store.OpenSession())
                 {
-                    var items = (from item in s.Query<OrderItem>()
+                    var items = (from item in s.Query<OrderItem>().Customize(x => x.WaitForNonStaleResults())
                                  where item.Quantity.In(new[] { 3m, 5m })
                                  select item
                                      ).ToArray();
@@ -622,9 +633,9 @@ namespace Raven.Tests.Linq
         }
 
         [Fact]
-        public void Can_Use_Strings_In_Array_In_Where_Clause()
+        public async Task Can_Use_Strings_In_Array_In_Where_Clause()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -641,7 +652,7 @@ namespace Raven.Tests.Linq
                 {
                     var ravenQueryable = (from item in s.Query<OrderItem>()
                                               .Customize(x => x.WaitForNonStaleResults())
-                                          where item.Description.In(new[] {"", "First"})
+                                          where item.Description.In(new[] { "", "First" })
                                           select item
                                          );
                     var items = ravenQueryable.ToArray();
@@ -655,8 +666,8 @@ namespace Raven.Tests.Linq
                 {
                     var ravenQueryable2 = (from item in s2.Query<OrderItem>()
                                           .Customize(x => x.WaitForNonStaleResults())
-                                          where item.Description.In(new[] { "First", "" })
-                                          select item
+                                           where item.Description.In(new[] { "First", "" })
+                                           select item
                                          );
                     var items2 = ravenQueryable2.ToArray();
 
@@ -668,9 +679,9 @@ namespace Raven.Tests.Linq
 
 
         [Fact]
-        public void Can_Use_Enums_In_Array_In_Where_Clause()
+        public async Task Can_Use_Enums_In_Array_In_Where_Clause()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -695,9 +706,9 @@ namespace Raven.Tests.Linq
             }
         }
         [Fact]
-        public void Can_Use_Enums_In_IEnumerable_In_Where_Clause()
+        public async Task Can_Use_Enums_In_IEnumerable_In_Where_Clause()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -724,10 +735,10 @@ namespace Raven.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        public async Task Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -754,10 +765,10 @@ namespace Raven.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Can_Use_In_Params_In_Where_Clause()
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        public async Task Can_Use_In_Params_In_Where_Clause()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -781,10 +792,11 @@ namespace Raven.Tests.Linq
                 }
             }
         }
-        [Fact]
-        public void Can_Use_In_IEnumerable_In_Where_Clause()
+
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        public async Task Can_Use_In_IEnumerable_In_Where_Clause()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
 
@@ -811,9 +823,9 @@ namespace Raven.Tests.Linq
             }
         }
         [Fact]
-        public void Can_Use_In_IEnumerable_Not_In_Where_Clause_on_Id()
+        public async Task Can_Use_In_IEnumerable_Not_In_Where_Clause_on_Id()
         {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            using (var store = await GetDocumentStore())
             {
                 store.Initialize();
                 var guid1 = Guid.NewGuid();
@@ -842,6 +854,5 @@ namespace Raven.Tests.Linq
                 }
             }
         }
-
     }
 }
