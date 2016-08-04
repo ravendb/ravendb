@@ -146,8 +146,8 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                 Assert.Throws<ErrorResponseException>(() => session.Advanced.MoreLikeThis<IndexDocument, MapReduceIndex>(
                     new MoreLikeThisQuery
                     {
-                        Document = "{ \"ComplexObj\": { \"Something\": \"some value\" } }",
-                        Fields = new[] { "ComplexObj" },
+                        Document = "{ \"BooleanObj\": true } }",
+                        Fields = new[] { "BooleanObj" },
                         MinimumTermFrequency = 1,
                         MinimumDocumentFrequency = 1
                     }));

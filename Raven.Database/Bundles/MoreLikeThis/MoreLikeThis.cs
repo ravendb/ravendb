@@ -797,6 +797,13 @@ namespace Lucene.Net.Search.Similar
         internal PriorityQueue<object[]> RetrieveTerms(RavenJObject jsonDocument)
         {
             IDictionary<string, Int> words = new HashMap<string, Int>();
+            RetrieveTerms(jsonDocument, words);
+
+            return CreateQueue(words);
+        }
+
+        private void RetrieveTerms(RavenJObject jsonDocument, IDictionary<string, Int> words)
+        {
             for (int i = 0; i < fieldNames.Length; i++)
             {
                 var fieldName = fieldNames[i];
@@ -808,7 +815,7 @@ namespace Lucene.Net.Search.Similar
                 switch (value.Type)
                 {
                     case JTokenType.Array:
-                        foreach (var item in (RavenJArray)value)
+                        foreach (var item in (RavenJArray) value)
                         {
                             if (item.Type != JTokenType.String)
                             {
@@ -820,11 +827,13 @@ namespace Lucene.Net.Search.Similar
                     case JTokenType.String:
                         AddTermFrequencies(new StringReader(value.Value<string>()), words, fieldName);
                         break;
-                    default: throw new InvalidOperationException($"The '{fieldName}' field type '{value.Type}' is not supported on MoreLikeThis queries.");
+                    case JTokenType.Object:
+                        RetrieveTerms(value as RavenJObject, words);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"The '{fieldName}' field type '{value.Type}' is not supported on MoreLikeThis queries.");
                 }
             }
-
-            return CreateQueue(words);
         }
 
         /// <summary> Find words for a more-like-this query former.
