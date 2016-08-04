@@ -3,54 +3,51 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
-using Xunit;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
+using Raven.Client;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.Queries
-{   
-    public class IntersectionQuery : RavenTest
+namespace SlowTests.Tests.Queries
+{
+    public class IntersectionQuery : RavenTestBase
     {
         [Fact]
-        public void CanPerformIntersectionQuery_Remotely()
+        public async Task CanPerformIntersectionQuery_Remotely()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 ExecuteTest(store);
             }
         }
 
         [Fact]
-        public void CanPerformIntersectionQuery_Embedded()
+        public async Task CanPerformIntersectionQuery_Embedded()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 ExecuteTest(store);
             }
         }
 
         [Fact]
-        public void CanPerformIntersectionQuery_Linq()
+        public async Task CanPerformIntersectionQuery_Linq()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 CreateIndexAndSampleData(store);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var shirts = session.Query<TShirt>("TShirtNested")
-                        .OrderBy(x=>x.BarcodeNumber)
+                        .OrderBy(x => x.BarcodeNumber)
                         .Where(x => x.Name == "Wolf")
                         .Intersect()
                         .Where(x => x.Types.Any(t => t.Color == "Blue" && t.Size == "Small"))
@@ -60,7 +57,7 @@ namespace Raven.Tests.Queries
 
                     Assert.Equal(6, shirts.Count);
                     Assert.True(shirts.All(x => x.Name == "Wolf"));
-                    Assert.Equal(new[] { -999, 10001, 10002, 10003, 10004, 10006 }, shirts.Select(x=>x.BarcodeNumber));
+                    Assert.Equal(new[] { -999, 10001, 10002, 10003, 10004, 10006 }, shirts.Select(x => x.BarcodeNumber));
                 }
             }
         }
@@ -127,12 +124,16 @@ namespace Raven.Tests.Queries
                 store.DatabaseCommands.PutIndex("TShirtNested",
                                                 new IndexDefinition
                                                 {
-                                                    Map =
-                                                    @"from s in docs.TShirts
+                                                    Maps =
+                                                    {
+                                                        @"from s in docs.TShirts
                                                             from t in s.Types
-                                                            select new { s.Name, Types_Color = t.Color, Types_Size = t.Size, s.BarcodeNumber }",
-                                                    SortOptions =
-                                                    new Dictionary<String, SortOptions> {{"BarcodeNumber", SortOptions.Int}}
+                                                            select new { s.Name, Types_Color = t.Color, Types_Size = t.Size, s.BarcodeNumber }"
+                                                    },
+                                                    Fields = new Dictionary<string, IndexFieldOptions>
+                                                    {
+                                                        { "BarcodeNumber", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
+                                                    }
                                                 });
 
                 foreach (var sample in GetSampleData())
@@ -165,7 +166,7 @@ namespace Raven.Tests.Queries
                 BarcodeNumber = 1,
                 Types = new List<TShirtType>
                                 {
-                                    new TShirtType { Color = "Blue",  Size = "Small" },                                    
+                                    new TShirtType { Color = "Blue",  Size = "Small" },
                                     new TShirtType { Color = "Black", Size = "Large" },
                                     new TShirtType { Color = "Gray",  Size = "Medium" }
                                 }
@@ -256,7 +257,7 @@ namespace Raven.Tests.Queries
             yield return tShirt9;
         }
 
-        public class TShirt
+        private class TShirt
         {
             public String Id { get; set; }
             public String Name { get; set; }
@@ -264,7 +265,7 @@ namespace Raven.Tests.Queries
             public List<TShirtType> Types { get; set; }
         }
 
-        public class TShirtType
+        private class TShirtType
         {
             public String Color { get; set; }
             public String Size { get; set; }

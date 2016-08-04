@@ -1,19 +1,17 @@
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Queries
+namespace SlowTests.Tests.Queries
 {
     public class RavenDb_2239 : RavenTestBase
     {
-        public class Document
+        private class Document
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -22,7 +20,7 @@ namespace Raven.Tests.Queries
 
         }
 
-        public class DocumentName
+        private class DocumentName
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -30,7 +28,7 @@ namespace Raven.Tests.Queries
 
         }
 
-        public class Document_Index : AbstractIndexCreationTask<Document>
+        private class Document_Index : AbstractIndexCreationTask<Document>
         {
             public Document_Index()
             {
@@ -42,7 +40,7 @@ namespace Raven.Tests.Queries
                               };
             }
         }
-        public class TestDocument_Index : AbstractIndexCreationTask<Document>
+        private class TestDocument_Index : AbstractIndexCreationTask<Document>
         {
             public TestDocument_Index()
             {
@@ -55,7 +53,7 @@ namespace Raven.Tests.Queries
                               };
             }
         }
-        public class TestDocumentNameTransformer : AbstractTransformerCreationTask<Document>
+        private class TestDocumentNameTransformer : AbstractTransformerCreationTask<Document>
         {
             public TestDocumentNameTransformer()
             {
@@ -64,7 +62,7 @@ namespace Raven.Tests.Queries
             }
         }
 
-        public void TestSetupData(IDocumentStore store)
+        private static void TestSetupData(IDocumentStore store)
         {
             new Document_Index().Execute(store);
             new TestDocumentNameTransformer().Execute(store);
@@ -89,7 +87,7 @@ namespace Raven.Tests.Queries
 
             WaitForIndexing(store);
         }
-        public class DocumentNameTransformer : AbstractTransformerCreationTask<Document>
+        private class DocumentNameTransformer : AbstractTransformerCreationTask<Document>
         {
             public DocumentNameTransformer()
             {
@@ -104,8 +102,8 @@ namespace Raven.Tests.Queries
             new Document_Index().Execute(store);
             new DocumentNameTransformer().Execute(store);
 
-        
-            var docsToCreate = Enumerable.Range(1, 50000); 
+
+            var docsToCreate = Enumerable.Range(1, 50000);
             var skip = 0;
 
             while (true)
@@ -132,10 +130,11 @@ namespace Raven.Tests.Queries
 
             WaitForIndexing(store);
         }
-        [Fact]
-        public void SmallLogTransformerTest()
+
+        [Fact(Skip = "Missing feature: query streaming")]
+        public async Task SmallLogTransformerTest()
         {
-            using (var store = NewDocumentStore()) 
+            using (var store = await GetDocumentStore())
             {
                 var sw = new Stopwatch();
                 sw.Restart();
@@ -164,29 +163,26 @@ namespace Raven.Tests.Queries
                             }
                         }
                     });
-                    Assert.True(cntr== 10);
+                    Assert.True(cntr == 10);
 
-               }
+                }
 
             }
         }
-        
 
-        
-        [Fact]
-        public void FullLogTransformerDelay()
+        [Fact(Skip = "Missing feature: query streaming")]
+        public async Task FullLogTransformerDelay()
         {
-  
-            using (var store = NewDocumentStore()) 
+            using (var store = await GetDocumentStore())
             {
                 var withTransformer = new Stopwatch();
-                var withoutTransformer =new  Stopwatch(); 
+                var withoutTransformer = new Stopwatch();
 
                 var sw = new Stopwatch();
                 sw.Restart();
                 SetupData(store);
                 Trace.WriteLine(" fill db finished " + sw.Elapsed);
-                 for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     using (var session = store.OpenSession())
                     {
@@ -225,10 +221,8 @@ namespace Raven.Tests.Queries
                         withoutTransformer = sw;
                     }
                 }
-                Assert.True(withTransformer.Elapsed.TotalMilliseconds <= withoutTransformer.Elapsed.TotalMilliseconds*1.3);
+                Assert.True(withTransformer.Elapsed.TotalMilliseconds <= withoutTransformer.Elapsed.TotalMilliseconds * 1.3);
             }
         }
-       
-      
     }
 }

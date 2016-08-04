@@ -72,6 +72,9 @@ namespace Raven.Server.Documents.Queries
                         case "transformer":
                             result.Transformer = item.Value[0];
                             break;
+                        case "skipDuplicateChecking":
+                            result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
+                            break;
                         default:
                             const string TransformerParameterPrefix = "tp-";
                             if (item.Key.StartsWith(TransformerParameterPrefix, StringComparison.OrdinalIgnoreCase))
