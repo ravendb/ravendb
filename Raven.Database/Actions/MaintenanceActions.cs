@@ -189,8 +189,15 @@ namespace Raven.Database.Actions
 
             foreach (var indexDeletion in pendingDeletionData)
             {
-                StartDeletingIndexDataAsync(indexDeletion.Value<int>("IndexId"), indexDeletion.Value<string>("IndexName"));
+                var indexId = indexDeletion.Value<int>("IndexId");
+                StartDeletingIndexDataAsync(indexId, indexDeletion.Value<string>("IndexName"));
+
+                //we already started deleting those indexes
+                idsOfLostIndexes.Remove(indexId);
             }
+
+            if (idsOfLostIndexes.Count == 0)
+                return;
 
             Task.Factory.StartNew(() =>
             {
