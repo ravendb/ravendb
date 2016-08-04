@@ -27,7 +27,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
     public abstract class AbstractLowMemoryNotification
     {
         private static Logger _logger;
-        protected static LoggerSetup _loggerSetup;
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
         private static AbstractLowMemoryNotification _instance;
 
@@ -83,13 +82,12 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             get { return _instance; }
         }
 
-        public static void Initialize(CancellationToken shutdownNotification, RavenConfiguration configuration, LoggerSetup loggerSetup)
+        public static void Initialize(CancellationToken shutdownNotification, RavenConfiguration configuration)
         {
             _instance = Platform.RunningOnPosix
                 ? new PosixLowMemoryNotification(shutdownNotification, configuration) as AbstractLowMemoryNotification
                 : new WinLowMemoryNotification(shutdownNotification, configuration);
-            _logger = loggerSetup.GetLogger<AbstractLowMemoryNotification>("AbstractLowMemoryNotification");
-            _loggerSetup = loggerSetup;
+            _logger = configuration.LoggerSetup.GetLogger<AbstractLowMemoryNotification>("Raven/Server");
         }
     }
 }
