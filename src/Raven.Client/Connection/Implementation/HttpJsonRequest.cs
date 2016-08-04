@@ -232,11 +232,19 @@ namespace Raven.Client.Connection.Implementation
                 {
                     var requestMessage = getRequestMessage();
                     CopyHeadersToHttpRequestMessage(requestMessage);
-                    Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+                    try
+                    {
+                        Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        throw new TimeoutException("Request for " + requestMessage.RequestUri + " timed out", e);
+                    }
                     SetResponseHeaders(Response);
                     AssertServerVersionSupported();
                     ResponseStatusCode = Response.StatusCode;
                 }
+               
                 catch (HttpRequestException e)
                 {
                     if (Response == null) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
