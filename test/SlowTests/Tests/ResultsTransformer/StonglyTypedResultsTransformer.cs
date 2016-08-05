@@ -1,35 +1,36 @@
 using System;
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
-using Xunit;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
+using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.ResultsTransformer
+namespace SlowTests.Tests.ResultsTransformer
 {
-    public class StronglyTypedResultsTransformer : RavenTest
+    public class StronglyTypedResultsTransformer : RavenTestBase
     {
-        public class Product
+        private class Product
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string CustomerId { get; set; }
             public string[] ProductIds { get; set; }
         }
-        public class Customer
+
+        private class Customer
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string ZipCode { get; set; }
         }
 
-        public class OrderWithProductInformationMultipleReturns : AbstractTransformerCreationTask<Order>
+        private class OrderWithProductInformationMultipleReturns : AbstractTransformerCreationTask<Order>
         {
             public class Result
             {
@@ -50,7 +51,7 @@ namespace Raven.Tests.ResultsTransformer
                                              };
             }
         }
-        public class OrderWithProductInformation : AbstractTransformerCreationTask<Order>
+        private class OrderWithProductInformation : AbstractTransformerCreationTask<Order>
         {
             public class Result
             {
@@ -58,7 +59,7 @@ namespace Raven.Tests.ResultsTransformer
                 public string CustomerId { get; set; }
                 public ResultProduct[] Products { get; set; }
             }
-            
+
             public class ResultProduct
             {
                 public string ProductId { get; set; }
@@ -74,53 +75,53 @@ namespace Raven.Tests.ResultsTransformer
                                                             let product = LoadDocument<Product>(productid)
                                                             select new
                                                             {
-                                                                 ProductId = product.Id,
-                                                                 ProductName = product.Name
+                                                                ProductId = product.Id,
+                                                                ProductName = product.Name
                                                             }
                                              };
             }
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithRemoteDatabase()
+        public async Task CanUseResultsTransformerOnLoadWithRemoteDatabase()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 PerformLoadingTest(store);
             }
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithLocalDatabase()
+        public async Task CanUseResultsTransformerOnLoadWithLocalDatabase()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 PerformLoadingTest(store);
             }
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabase()
+        public async Task CanUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabase()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 PerformLoadingTestArray(store);
             }
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabase()
+        public async Task CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabase()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 PerformLoadingTestArray(store);
             }
         }
 
         [Fact]
-        public void CannotUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabaseWithSingleExpectation()
+        public async Task CannotUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabaseWithSingleExpectation()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 Assert.Throws<InvalidOperationException>(() =>
                 {
@@ -130,9 +131,9 @@ namespace Raven.Tests.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabaseWithSingleExpectation()
+        public async Task CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabaseWithSingleExpectation()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 Assert.Throws<InvalidOperationException>(() =>
                 {
@@ -143,41 +144,41 @@ namespace Raven.Tests.ResultsTransformer
 
 
         [Fact]
-        public void CanUseResultsTransformerOnDynamicQueryWithRemoteDatabase()
+        public async Task CanUseResultsTransformerOnDynamicQueryWithRemoteDatabase()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 PerformBasicTestWithDynamicQuery(store);
             }
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnDynamicQueryWithInMemoryDatabase()
+        public async Task CanUseResultsTransformerOnDynamicQueryWithInMemoryDatabase()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                 PerformBasicTestWithDynamicQuery(store);
+                PerformBasicTestWithDynamicQuery(store);
             }
         }
 
         private void PerformLoadingTestArrayWithSingleExpectation(IDocumentStore store)
         {
             new OrderWithProductInformationMultipleReturns().Execute(store);
-            
+
             using (var session = store.OpenSession())
             {
                 session.Store(new Product { Name = "Milk", Id = "products/milk" });
                 session.Store(new Product { Name = "Bear", Id = "products/bear" });
-            
-            session.Store(new Order
-            {
-            Id = "orders/1",
-            CustomerId = "customers/ayende",
+
+                session.Store(new Order
+                {
+                    Id = "orders/1",
+                    CustomerId = "customers/ayende",
                     ProductIds = new[] { "products/milk", "products/bear" }
-            });
-            session.SaveChanges();
+                });
+                session.SaveChanges();
             }
-            
+
             using (var session = store.OpenSession())
             {
                 var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result>("orders/1");
@@ -187,28 +188,28 @@ namespace Raven.Tests.ResultsTransformer
         private void PerformLoadingTestArray(IDocumentStore store)
         {
             new OrderWithProductInformationMultipleReturns().Execute(store);
-            
+
             using (var session = store.OpenSession())
             {
                 session.Store(new Product { Name = "Milk", Id = "products/milk" });
                 session.Store(new Product { Name = "Bear", Id = "products/bear" });
-            
-            session.Store(new Order
-            {
-            Id = "orders/1",
-            CustomerId = "customers/ayende",
+
+                session.Store(new Order
+                {
+                    Id = "orders/1",
+                    CustomerId = "customers/ayende",
                     ProductIds = new[] { "products/milk", "products/bear" }
-            });
-            session.SaveChanges();
+                });
+                session.SaveChanges();
             }
-            
+
             using (var session = store.OpenSession())
             {
-            var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result[]>("orders/1");
-            products = products.OrderBy(x => x.ProductId).ToArray();
-            
-            Assert.Equal("products/bear", products[0].ProductId);
-            Assert.Equal("products/milk", products[1].ProductId);
+                var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result[]>("orders/1");
+                products = products.OrderBy(x => x.ProductId).ToArray();
+
+                Assert.Equal("products/bear", products[0].ProductId);
+                Assert.Equal("products/milk", products[1].ProductId);
             }
         }
 
@@ -239,7 +240,7 @@ namespace Raven.Tests.ResultsTransformer
 
                 Assert.Equal("Milk", order.Products[0].ProductName);
                 Assert.Equal("products/milk", order.Products[0].ProductId);
-         }
+            }
         }
 
         private void PerformBasicTestWithDynamicQuery(IDocumentStore store)

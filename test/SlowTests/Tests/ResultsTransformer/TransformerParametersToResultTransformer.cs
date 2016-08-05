@@ -1,31 +1,27 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Client.Document;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.ResultsTransformer
+namespace SlowTests.Tests.ResultsTransformer
 {
-    public class TransformerParametersToResultTransformer : RavenTest
+    public class TransformerParametersToResultTransformer : RavenTestBase
     {
-        public class Product
+        private class Product
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string CategoryId { get; set; }
         }
 
-        public class Category
+        private class Category
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class ProductWithParameter: AbstractTransformerCreationTask<Product>
+        private class ProductWithParameter : AbstractTransformerCreationTask<Product>
         {
             public class Result
             {
@@ -36,16 +32,16 @@ namespace Raven.Tests.ResultsTransformer
             public ProductWithParameter()
             {
                 TransformResults = docs => from product in docs
-                                             select new
-                                             {
-                                                 ProductId = product.Id,
-                                                 ProductName = product.Name,
-                                                 Input = Parameter("input")
-                                             };
+                                           select new
+                                           {
+                                               ProductId = product.Id,
+                                               ProductName = product.Name,
+                                               Input = Parameter("input")
+                                           };
             }
         }
 
-        public class ProductWithParametersAndInclude : AbstractTransformerCreationTask<Product>
+        private class ProductWithParametersAndInclude : AbstractTransformerCreationTask<Product>
         {
             public class Result
             {
@@ -67,31 +63,9 @@ namespace Raven.Tests.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerWithQueryOnLoad()
+        public async Task CanUseResultsTransformerWithQueryOnLoad()
         {
-            using (var store = NewRemoteDocumentStore())
-            {
-                new ProductWithParameter().Execute(store);
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Product() { Id="products/1", Name = "Irrelevant"});
-                    session.SaveChanges();
-                }
-                using (var session = store.OpenSession())
-                {
-                    var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1", 
-                        configure => configure.AddTransformerParameter("input", "Foo"));
-                    Assert.Equal("Foo", result.Input);
-                }
-            }
-            
-        }
-
-
-        [Fact]
-        public void CanUseResultsTransformerWithQueryOnLoadWithRemoteClient()
-        {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -101,7 +75,29 @@ namespace Raven.Tests.ResultsTransformer
                 }
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1", 
+                    var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1",
+                        configure => configure.AddTransformerParameter("input", "Foo"));
+                    Assert.Equal("Foo", result.Input);
+                }
+            }
+
+        }
+
+
+        [Fact]
+        public async Task CanUseResultsTransformerWithQueryOnLoadWithRemoteClient()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                new ProductWithParameter().Execute(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Product() { Id = "products/1", Name = "Irrelevant" });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1",
                         configure => configure.AddTransformerParameter("input", "Foo"));
                     Assert.Equal("Foo", result.Input);
                 }
@@ -110,9 +106,9 @@ namespace Raven.Tests.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerWithQueryWithRemoteDatabase()
+        public async Task CanUseResultsTransformerWithQueryWithRemoteDatabase()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -135,9 +131,9 @@ namespace Raven.Tests.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
+        public async Task CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -160,11 +156,11 @@ namespace Raven.Tests.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerWithQuery()
+        public async Task CanUseResultsTransformerWithQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-               new ProductWithParameter().Execute(store);
+                new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Name = "Irrelevant" });
@@ -173,7 +169,7 @@ namespace Raven.Tests.ResultsTransformer
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Product>()
-                                .Customize(x=> x.WaitForNonStaleResults())
+                                .Customize(x => x.WaitForNonStaleResults())
                                 .TransformWith<ProductWithParameter, ProductWithParameter.Result>()
                                 .AddTransformerParameter("input", "Foo")
                                 .Single();
@@ -185,15 +181,15 @@ namespace Raven.Tests.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerWithInclude()
+        public async Task CanUseResultsTransformerWithInclude()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ProductWithParametersAndInclude().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Product { Name = "Irrelevant", CategoryId = "Category/1"});
-                    session.Store(new Category{Id = "Category/1", Name = "don't know"});
+                    session.Store(new Product { Name = "Irrelevant", CategoryId = "Category/1" });
+                    session.Store(new Category { Id = "Category/1", Name = "don't know" });
                     session.SaveChanges();
                 }
                 using (var session = store.OpenSession())
