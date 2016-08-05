@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
-    public class LazyStringValueReaderTests : IDisposable
+    public class LazyStringValueReaderTests : RavenLowLevelTestBase
     {
         private readonly LazyStringReader _sut = new LazyStringReader();
         private readonly UnmanagedBuffersPool _pool;
@@ -73,10 +73,12 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _ctx.Dispose();
             _pool.Dispose();
+
+            base.Dispose();
         }
     }
 }

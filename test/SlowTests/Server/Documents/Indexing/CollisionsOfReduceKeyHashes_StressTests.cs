@@ -1,10 +1,11 @@
 ﻿using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Documents.Indexing.Static;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing
 {
-    public class CollisionsOfReduceKeyHashes_StressTests
+    public class CollisionsOfReduceKeyHashes_StressTests : NoDisposalNeeded
     {
         [Theory]
         [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3

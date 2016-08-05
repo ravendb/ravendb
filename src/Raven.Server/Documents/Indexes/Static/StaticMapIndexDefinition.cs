@@ -27,7 +27,9 @@ namespace Raven.Server.Documents.Indexes.Static
             IndexFieldOptions allFields;
             definition.Fields.TryGetValue(Constants.AllFields, out allFields);
 
-            var result = definition.Fields.Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
+            var result = definition.Fields
+                .Where(x => x.Key != Constants.AllFields)
+                .Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
 
             if (definition.Fields.Count < outputFields.Length)
             {
@@ -39,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields));
                 }
             }
-            
+
             return result.ToArray();
         }
 

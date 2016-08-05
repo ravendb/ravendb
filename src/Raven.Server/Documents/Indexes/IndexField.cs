@@ -84,17 +84,17 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Sort.HasValue)
                 field.SortOption = options.Sort.Value;
-            else if (allFields != null && allFields.Sort.HasValue)
+            else if (allFields?.Sort != null)
                 field.SortOption = allFields.Sort.Value;
 
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;
-            else if (allFields != null && allFields.Storage.HasValue)
+            else if (allFields?.Storage != null)
                 field.Storage = allFields.Storage.Value;
 
             if (options.TermVector.HasValue)
                 field.TermVector = options.TermVector.Value;
-            else if (allFields != null && allFields.TermVector.HasValue)
+            else if (allFields?.TermVector != null)
                 field.TermVector = allFields.TermVector.Value;
 
             // options.Suggestions // TODO [ppekrol]

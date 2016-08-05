@@ -3,32 +3,33 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests
+namespace SlowTests.Tests
 {
-    public class ClientProjectionShouldWork : RavenTest
+    public class ClientProjectionShouldWork : RavenTestBase
     {
-        public class Employee
+        private class Employee
         {
             public string Id { get; set; }
 
             public string FirstName { get; set; }
         }
 
-        public class EmployeeCount
+        private class EmployeeCount
         {
             public string FirstName { get; set; }
 
             public int Count { get; set; }
         }
 
-        public class SimpleMapReduceIndex : AbstractIndexCreationTask<Employee, SimpleMapReduceIndex.Result>
+        private class SimpleMapReduceIndex : AbstractIndexCreationTask<Employee, SimpleMapReduceIndex.Result>
         {
             public class Result
             {
@@ -41,26 +42,26 @@ namespace Raven.Tests
             {
                 Map = employees => from employee in employees
                                    select new
-                                          {
-                                              employee.FirstName,
-                                              Count = 1
-                                          };
+                                   {
+                                       employee.FirstName,
+                                       Count = 1
+                                   };
 
                 Reduce = results => from result in results
                                     group result by result.FirstName into g
                                     select new
-                                           {
-                                               FirstName = g.Key,
-                                               Count = g.Sum(x => x.Count)
-                                           };
+                                    {
+                                        FirstName = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
                 StoreAllFields(FieldStorage.Yes);
             }
         }
 
         [Fact]
-        public void ShouldWork()
+        private async Task ShouldWork()
         {
-            using (var store = this.NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new SimpleMapReduceIndex().Execute(store);
 
@@ -96,10 +97,10 @@ namespace Raven.Tests
                     var results2 = session
                         .Query<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
                         .Select(x => new EmployeeCount
-                                     {
-                                         Count = x.Count,
-                                         FirstName = x.FirstName
-                                     })
+                        {
+                            Count = x.Count,
+                            FirstName = x.FirstName
+                        })
                         .ToList();
 
                     Assert.Equal(1, results2.Count);

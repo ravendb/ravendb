@@ -724,6 +724,27 @@ namespace Raven.Server.Json
             writer.WriteInteger(stats.MapSuccesses);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(stats.ReduceAttempts));
+            if (stats.ReduceAttempts.HasValue)
+                writer.WriteInteger(stats.ReduceAttempts.Value);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.ReduceErrors));
+            if (stats.ReduceErrors.HasValue)
+                writer.WriteInteger(stats.ReduceErrors.Value);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.ReduceSuccesses));
+            if (stats.ReduceSuccesses.HasValue)
+                writer.WriteInteger(stats.ReduceSuccesses.Value);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(stats.ErrorsCount)));
             writer.WriteInteger(stats.ErrorsCount);
             writer.WriteComma();

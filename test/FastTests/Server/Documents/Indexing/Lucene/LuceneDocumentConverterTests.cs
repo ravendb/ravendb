@@ -16,7 +16,7 @@ using Document = Raven.Server.Documents.Document;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
-    public class LuceneDocumentConverterTests : IDisposable
+    public class LuceneDocumentConverterTests : RavenLowLevelTestBase
     {
         private LuceneDocumentConverter _sut;
 
@@ -507,7 +507,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             };
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             foreach (var docReader in _docs)
             {
@@ -516,6 +516,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             _ctx.Dispose();
             _pool.Dispose();
+
+            base.Dispose();
         }
     }
 }

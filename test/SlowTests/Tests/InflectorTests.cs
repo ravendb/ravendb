@@ -3,15 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using FastTests;
 using Raven.Client.Util;
-using Raven.Tests.Common;
-
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests
+namespace SlowTests.Tests
 {
-    public class InflectorTests : NoDisposalNeeded
+    public class InflectorTests : RavenTestBase
     {
         [Theory]
         [InlineData("User", "Users")]
