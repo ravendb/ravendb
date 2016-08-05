@@ -1,11 +1,11 @@
 {
-    "$type": "Raven.Tests.MailingList.Everett.CanReadBytes+DesignResources, Raven.Tests.MailingList",
+    "$type": "SlowTests.MailingList.Everett.CanReadBytes+DesignResources, SlowTests",
     "DesignId": "designs/1205",
     "Entries": {
-        "$type": "System.Collections.Generic.List`1[[Raven.Tests.MailingList.Everett.CanReadBytes+Resource, Raven.Tests.MailingList]], mscorlib",
+        "$type": "System.Collections.Generic.List`1[[SlowTests.MailingList.Everett.CanReadBytes+Resource, SlowTests]], mscorlib",
         "$values": [
             {
-                "$type": "Raven.Tests.MailingList.Everett.CanReadBytes+Resource, Raven.Tests.MailingList",
+                "$type": "SlowTests.MailingList.Everett.CanReadBytes+Resource, SlowTests",
                 "Id": "1fe6b313-08a4-431f-bfd8-736fd53783e2",
                 "Data": {
                     "$type": "System.Byte[], mscorlib",

@@ -1,19 +1,18 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Linq;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList.Jabber
+namespace SlowTests.MailingList.Jabber
 {
-    public class Games : RavenTest
+    public class Games : RavenTestBase
     {
-        public class GameServer
+        private class GameServer
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -22,14 +21,13 @@ namespace Raven.Tests.MailingList.Jabber
             public IList<ConnectedPlayer> ConnectedPlayers { get; set; }
         }
 
-        public class ConnectedPlayer
+        private class ConnectedPlayer
         {
             public string PlayerName { get; set; }
             public string ConnectedOn { get; set; }
         }
 
-
-        public class GameServers_ConnectedPlayers :
+        private class GameServers_ConnectedPlayers :
             AbstractIndexCreationTask<GameServer, GameServers_ConnectedPlayers.IndexQuery>
         {
             public GameServers_ConnectedPlayers()
@@ -37,12 +35,12 @@ namespace Raven.Tests.MailingList.Jabber
                 Map = x => from s in x
                            from y in s.ConnectedPlayers
                            select new
-                                      {
-                                          ServerName = s.Name,
-                                          y.ConnectedOn,
-                                          y.PlayerName,
-                                          s.Id
-                                      };
+                           {
+                               ServerName = s.Name,
+                               y.ConnectedOn,
+                               y.PlayerName,
+                               s.Id
+                           };
 
                 Store(x => x.ServerName, FieldStorage.Yes);
                 Store(x => x.ConnectedOn, FieldStorage.Yes);
@@ -63,9 +61,9 @@ namespace Raven.Tests.MailingList.Jabber
         }
 
         [Fact]
-        public void CanUseTransformResults()
+        public async Task CanUseTransformResults()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 SetupTestGameData(store);
                 new GameServers_ConnectedPlayers().Execute(store);
@@ -76,7 +74,7 @@ namespace Raven.Tests.MailingList.Jabber
                         session.Query<GameServers_ConnectedPlayers.IndexQuery, GameServers_ConnectedPlayers>()
                             .Customize(x => x.WaitForNonStaleResultsAsOfNow())
                             .Where(x => x.PlayerName.StartsWith("p"))
-                            .OrderBy(x => x.Id).ThenBy(x=>x.PlayerName)
+                            .OrderBy(x => x.Id).ThenBy(x => x.PlayerName)
                             .ProjectFromIndexFieldsInto<GameServers_ConnectedPlayers.IndexQuery>()
                             .ToList();
 
@@ -102,7 +100,7 @@ namespace Raven.Tests.MailingList.Jabber
 
         public static void SetupTestGameData(IDocumentStore store)
         {
-            using (IDocumentSession session = store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 var gameServer = session.Load<GameServer>(1);
                 if (gameServer != null)

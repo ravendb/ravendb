@@ -3,62 +3,34 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Raven.Imports.Newtonsoft.Json;
+using System.Reflection;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Document;
-using Raven.Tests.Common;
-
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
-namespace Raven.Tests.MailingList.Everett
+namespace SlowTests.MailingList.Everett
 {
-    public class CanReadBytes : RavenTest
+    public class CanReadBytes : RavenTestBase
     {
         [Fact]
-        public void query_for_object_with_byte_array_with_TypeNameHandling_All()
+        public async Task query_for_object_with_byte_array_with_TypeNameHandling_All()
         {
-            using (var store = NewRemoteDocumentStore(configureStore: documentStore =>
+            using (var store = await GetDocumentStore())
             {
-                documentStore.Conventions = new DocumentConvention
+                store.Conventions = new DocumentConvention
                 {
                     CustomizeJsonSerializer = serializer =>
                     {
                         serializer.TypeNameHandling = TypeNameHandling.All;
                     },
                 };
-            }))
-            {
-                var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = new DocumentConvention().CreateSerializer();
-                var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
-
-                using (var session = store.OpenSession())
-                {
-                    item.Id = "resources/123";
-                    item.DesignId = "designs/123";
-                    session.Store(item);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    session
-                        .Query<DesignResources>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                        .Where(x => x.DesignId == "designs/123")
-                        .ToList();
-                }
-            }
-        }
-
-        [Fact]
-        public void query_for_object_with_byte_array_with_default_TypeNameHandling()
-        {
-            using (var store = NewRemoteDocumentStore())
-            {
 
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = new DocumentConvention().CreateSerializer();
@@ -84,19 +56,46 @@ namespace Raven.Tests.MailingList.Everett
         }
 
         [Fact]
-        public void load_object_with_byte_array_with_TypeNameHandling_All()
+        public async Task query_for_object_with_byte_array_with_default_TypeNameHandling()
         {
-            using (var store = NewRemoteDocumentStore(configureStore: documentStore =>
+            using (var store = await GetDocumentStore())
             {
-                documentStore.Conventions = new DocumentConvention
+                var json = GetResourceText("DocumentWithBytes.txt");
+                var jsonSerializer = new DocumentConvention().CreateSerializer();
+                var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
+
+                using (var session = store.OpenSession())
+                {
+                    item.Id = "resources/123";
+                    item.DesignId = "designs/123";
+                    session.Store(item);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session
+                        .Query<DesignResources>()
+                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Where(x => x.DesignId == "designs/123")
+                        .ToList();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task load_object_with_byte_array_with_TypeNameHandling_All()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                store.Conventions = new DocumentConvention
                 {
                     CustomizeJsonSerializer = serializer =>
                     {
                         serializer.TypeNameHandling = TypeNameHandling.All;
                     },
-                };				
-            }))
-            {
+                };
+
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = new DocumentConvention().CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
@@ -115,9 +114,9 @@ namespace Raven.Tests.MailingList.Everett
         }
 
         [Fact]
-        public void load_object_with_byte_array_with_default_TypeNameHandling()
+        public async Task load_object_with_byte_array_with_default_TypeNameHandling()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = new DocumentConvention().CreateSerializer();
@@ -146,10 +145,10 @@ namespace Raven.Tests.MailingList.Everett
             var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
         }
 
-        private string GetResourceText(string name)
+        private static string GetResourceText(string name)
         {
             name = typeof(CanReadBytes).Namespace + "." + name;
-            using (var stream = typeof(CanReadBytes).Assembly.GetManifestResourceStream(name))
+            using (var stream = typeof(CanReadBytes).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             {
                 if (stream == null)
                     throw new InvalidOperationException("Could not find the following resource: " + name);
@@ -157,7 +156,7 @@ namespace Raven.Tests.MailingList.Everett
             }
         }
 
-        public class DesignResources
+        private class DesignResources
         {
             private List<Resource> _entries = new List<Resource>();
 
@@ -167,7 +166,7 @@ namespace Raven.Tests.MailingList.Everett
 
             public DateTime LastSavedDate { get; set; }
 
-            public String LastSavedUser { get; set; }
+            public string LastSavedUser { get; set; }
 
             public Guid SourceId { get; set; }
 
@@ -184,11 +183,10 @@ namespace Raven.Tests.MailingList.Everett
             }
         }
 
-        public class Resource
+        private class Resource
         {
             public Guid Id { get; set; }
             public byte[] Data { get; set; }
         }
     }
-
 }
