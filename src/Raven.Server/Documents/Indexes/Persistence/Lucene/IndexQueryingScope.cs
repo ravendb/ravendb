@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Lucene.Net.Search;
 
 using Raven.Abstractions.Data;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -116,13 +115,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public bool ShouldIncludeInResults(Document document)
+        public bool WillProbablyIncludeInResults(string key)
         {
-            //if (shouldIncludeInResults(indexQueryResult) == false)
-            //    return false;
-
             if (_fieldsToFetch.IsDistinct)
-                return _alreadySeenProjections.Add(document.DataHash);
+                return true;
 
             if (_indexType.IsMapReduce())
                 return true;
@@ -130,17 +126,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_query.SkipDuplicateChecking)
                 return true;
 
-            if (_fieldsToFetch.IsProjection && _alreadySeenDocumentKeysInPreviousPage.Contains(document.Key))
+            if (_fieldsToFetch.IsProjection && _alreadySeenDocumentKeysInPreviousPage.Contains(key))
             {
                 HasMultipleIndexOutputs = true;
                 return false;
             }
 
-            if (_fieldsToFetch.IsProjection == false && _alreadySeenDocumentKeysInPreviousPage.Add(document.Key) == false)
+            if (_fieldsToFetch.IsProjection == false && _alreadySeenDocumentKeysInPreviousPage.Add(key) == false)
             {
                 HasMultipleIndexOutputs = true;
                 return false;
             }
+
+            return true;
+        }
+
+        public bool TryIncludeInResults(Document document)
+        {
+            //if (shouldIncludeInResults(indexQueryResult) == false)
+            //    return false;
+
+            if (_fieldsToFetch.IsDistinct)
+                return _alreadySeenProjections.Add(document.DataHash);
 
             return true;
         }

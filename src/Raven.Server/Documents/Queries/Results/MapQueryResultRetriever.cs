@@ -27,12 +27,20 @@ namespace Raven.Server.Documents.Queries.Results
 
         public Document Get(Lucene.Net.Documents.Document input)
         {
-            var id = input.Get(Constants.DocumentIdFieldName);
+            string id;
+            if (TryGetKey(input, out id) == false)
+                throw new InvalidOperationException($"Could not extract '{Constants.DocumentIdFieldName}' from index.");
 
             if (_fieldsToFetch.IsProjection)
                 return GetProjection(input, id);
 
             return DirectGet(id);
+        }
+
+        public bool TryGetKey(Lucene.Net.Documents.Document input, out string key)
+        {
+            key = input.Get(Constants.DocumentIdFieldName);
+            return key != null;
         }
 
         private Document DirectGet(string id)

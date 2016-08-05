@@ -97,8 +97,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var scoreDoc = search.ScoreDocs[position];
                         var document = _searcher.Doc(scoreDoc.Doc);
 
+                        string key;
+                        if (retriever.TryGetKey(document, out key) && scope.WillProbablyIncludeInResults(key) == false)
+                        {
+                            skippedResults.Value++;
+                            continue;
+                        }
+
                         var result = retriever.Get(document);
-                        if (scope.ShouldIncludeInResults(result) == false)
+                        if (scope.TryIncludeInResults(result) == false)
                         {
                             skippedResults.Value++;
                             continue;
@@ -185,9 +192,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 int returnedResults = 0;
                 for (int i = query.Start; i < intersectResults.Count && (i - query.Start) < pageSizeBestGuess; i++)
                 {
-                    var document = retriever.Get(_searcher.Doc(intersectResults[i].LuceneId));
+                    var document = _searcher.Doc(intersectResults[i].LuceneId);
 
-                    if (scope.ShouldIncludeInResults(document) == false)
+                    string key;
+                    if (retriever.TryGetKey(document, out key) && scope.WillProbablyIncludeInResults(key) == false)
+                    {
+                        skippedResults.Value++;
+                        skippedResultsInCurrentLoop++;
+                        continue;
+                    }
+
+                    var result = retriever.Get(document);
+                    if (scope.TryIncludeInResults(result) == false)
                     {
                         skippedResults.Value++;
                         skippedResultsInCurrentLoop++;
@@ -195,7 +211,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
 
                     returnedResults++;
-                    yield return document;
+                    yield return result;
                     if (returnedResults == query.PageSize)
                         yield break;
                 }
