@@ -4,7 +4,6 @@ using System.Linq;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow;
@@ -27,7 +26,7 @@ namespace FastTests.Server.Documents
             _configuration.Core.RunInMemory = true;
             _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
 
-            _documentDatabase = new DocumentDatabase("foo", _configuration, new MetricsScheduler(), new IoMetrics(256, 256));
+            _documentDatabase = new DocumentDatabase("foo", _configuration, new IoMetrics(256, 256));
             _documentDatabase.Initialize();
 
             _unmanagedBuffersPool = new UnmanagedBuffersPool("test");
@@ -275,7 +274,7 @@ namespace FastTests.Server.Documents
             _configuration.Initialize();
             _configuration.Core.RunInMemory = true;
 
-            _documentDatabase = new DocumentDatabase("test", _configuration, new MetricsScheduler(), new IoMetrics(256, 256));
+            _documentDatabase = new DocumentDatabase("test", _configuration, new IoMetrics(256, 256));
             _documentDatabase.Initialize(options);
         }
 

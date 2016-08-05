@@ -49,8 +49,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
         public SubscriptionConnection(Stream networkStream, EndPoint clientEndpoint, DocumentDatabase database, 
-            JsonOperationContext context,JsonOperationContext.MultiDocumentParser multiDocumentParser, 
-            MetricsScheduler metricsScheduler)
+            JsonOperationContext context,JsonOperationContext.MultiDocumentParser multiDocumentParser)
         {
             _networkStream = networkStream;
             _database = database;
@@ -63,7 +62,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
-            Stats = new SubscriptionConnectionStats(metricsScheduler);
+            Stats = new SubscriptionConnectionStats();
         }
 
         private async Task<bool> ParseSubscriptionOptionsAsync()
@@ -183,11 +182,11 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        public static void SendSubscriptionDocuments(DocumentDatabase database, JsonOperationContext context, NetworkStream stream, EndPoint clientEndpoint, JsonOperationContext.MultiDocumentParser multiDocumentParser, MetricsScheduler metricsScheduler)
+        public static void SendSubscriptionDocuments(DocumentDatabase database, JsonOperationContext context, NetworkStream stream, EndPoint clientEndpoint, JsonOperationContext.MultiDocumentParser multiDocumentParser)
         {
             Task.Run(async () =>
             {
-                var connection = new SubscriptionConnection(stream, clientEndpoint, database, context, multiDocumentParser,metricsScheduler);
+                var connection = new SubscriptionConnection(stream, clientEndpoint, database, context, multiDocumentParser);
                 try
                 {
                     if (await connection.InitAsync() == false)

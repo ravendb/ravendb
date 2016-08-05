@@ -22,7 +22,6 @@ using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -43,7 +42,7 @@ namespace Raven.Server.Documents
         private Task _transformerStoreTask;
         public TransactionOperationsMerger TxMerger;
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler, IoMetrics ioMetrics)
+        public DocumentDatabase(string name, RavenConfiguration configuration, IoMetrics ioMetrics)
         {
             Name = name;
             Configuration = configuration;
@@ -52,11 +51,11 @@ namespace Raven.Server.Documents
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
             TransformerStore = new TransformerStore(this);
-            SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
+            SqlReplicationLoader = new SqlReplicationLoader(this);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this, metricsScheduler);
-            Metrics = new MetricsCountersManager(metricsScheduler);
+            SubscriptionStorage = new SubscriptionStorage(this);
+            Metrics = new MetricsCountersManager();
             IoMetrics = ioMetrics;
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);

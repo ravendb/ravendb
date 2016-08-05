@@ -10,7 +10,6 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -27,12 +26,12 @@ namespace Raven.Server.Documents.SqlReplication
         private PredefinedSqlConnection _predefinedSqlConnection;
         public readonly SqlReplicationMetricsCountersManager MetricsCountersManager;
 
-        public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration, MetricsScheduler metricsScheduler)
+        public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration)
             : base(database)
         {
             Configuration = configuration;
             Statistics = new SqlReplicationStatistics(configuration.Name);
-            MetricsCountersManager = new SqlReplicationMetricsCountersManager(metricsScheduler);
+            MetricsCountersManager = new SqlReplicationMetricsCountersManager();
         }
       
         private void LoadLastEtag(DocumentsOperationContext context)

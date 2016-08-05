@@ -14,8 +14,6 @@ namespace Raven.Server.Utils
 {
     public class MetricsCountersManager : IDisposable
     {
-        private readonly MetricsScheduler _metricsScheduler;
-
         public MeterMetric RequestsMeter { get; private set; }
 
         public MeterMetric RequestsPerSecondCounter { get; private set; }
@@ -30,9 +28,8 @@ namespace Raven.Server.Utils
 
         public long ConcurrentRequestsCount;
 
-        public MetricsCountersManager(MetricsScheduler metricsScheduler)
+        public MetricsCountersManager()
         {
-            _metricsScheduler = metricsScheduler;
             CreateNew();
         }
 
@@ -55,13 +52,13 @@ namespace Raven.Server.Utils
 
         private void CreateNew()
         {
-            RequestsMeter = new MeterMetric(_metricsScheduler);
-            RequestsPerSecondCounter = new MeterMetric(_metricsScheduler);
-            DocPutsPerSecond = new MeterMetric(_metricsScheduler);
-            IndexedPerSecond = new MeterMetric(_metricsScheduler);
-            MapReduceMappedPerSecond = new MeterMetric(_metricsScheduler);
-            MapReduceReducedPerSecond = new MeterMetric(_metricsScheduler);
-            SqlReplicationBatchSizeMeter = new MeterMetric(_metricsScheduler);
+            RequestsMeter = new MeterMetric();
+            RequestsPerSecondCounter = new MeterMetric();
+            DocPutsPerSecond = new MeterMetric();
+            IndexedPerSecond = new MeterMetric();
+            MapReduceMappedPerSecond = new MeterMetric();
+            MapReduceReducedPerSecond = new MeterMetric();
+            SqlReplicationBatchSizeMeter = new MeterMetric();
         }
     }
 

@@ -11,22 +11,20 @@ namespace Raven.Server.Documents.SqlReplication
 {
     public class SqlReplicationMetricsCountersManager
     {
-        private readonly MetricsScheduler _metricsScheduler;
         public MeterMetric SqlReplicationBatchSizeMeter { get; private set; }
         public ConcurrentDictionary<string, SqlReplicationTableMetrics> TablesMetrics { get; set; }
         public ConcurrentQueue<SqlReplicationPerformanceStats> ReplicationPerformanceStats { get; set; }
 
-        public SqlReplicationMetricsCountersManager(MetricsScheduler metricsScheduler)
+        public SqlReplicationMetricsCountersManager()
         {
-            _metricsScheduler = metricsScheduler;
-            SqlReplicationBatchSizeMeter = new MeterMetric(metricsScheduler);
+            SqlReplicationBatchSizeMeter = new MeterMetric();
             TablesMetrics = new ConcurrentDictionary<string, SqlReplicationTableMetrics>();
             ReplicationPerformanceStats = new ConcurrentQueue<SqlReplicationPerformanceStats>();
         }
 
         public SqlReplicationTableMetrics GetTableMetrics(string tableName)
         {
-            return TablesMetrics.GetOrAdd(tableName, name => new SqlReplicationTableMetrics(_metricsScheduler, name));
+            return TablesMetrics.GetOrAdd(tableName, name => new SqlReplicationTableMetrics(name));
         }
 
         public DynamicJsonValue ToSqlReplicationMetricsData()

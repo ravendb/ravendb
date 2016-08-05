@@ -24,9 +24,11 @@ namespace Raven.Server.Utils.Metrics
         private readonly ConcurrentSet<MeterMetric> _scheduledActions =
             new ConcurrentSet<MeterMetric>();
 
-        private Logger _logger;
+        private readonly Logger _logger;
 
-        public MetricsScheduler()
+        public static MetricsScheduler Instance = new MetricsScheduler();
+
+        private MetricsScheduler()
         {
             _logger = LoggerSetup.Instance.GetLogger<MetricsScheduler>("MetricsScheduler");
             _tickIntervalInNanoseconds = Clock.NanosecondsInSecond;

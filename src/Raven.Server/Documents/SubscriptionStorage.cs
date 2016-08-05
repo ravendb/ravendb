@@ -38,16 +38,14 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<long, SubscriptionState> _subscriptionStates = new ConcurrentDictionary<long, SubscriptionState>();
         private readonly TableSchema _subscriptionsSchema = new TableSchema();
         private readonly DocumentDatabase _db;
-        private readonly MetricsScheduler _metricsScheduler;
         private readonly StorageEnvironment _environment;
         private Sparrow.Logging.Logger _logger; //todo: add logging
 
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
-        public SubscriptionStorage(DocumentDatabase db, MetricsScheduler metricsScheduler)
+        public SubscriptionStorage(DocumentDatabase db)
         {
             _db = db;
-            _metricsScheduler = metricsScheduler;
             //TODO: You aren't copying all the other details from the configuration
             var options = _db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()

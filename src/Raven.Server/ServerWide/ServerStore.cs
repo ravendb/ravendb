@@ -40,7 +40,6 @@ namespace Raven.Server.ServerWide
 
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         public readonly RavenConfiguration Configuration;
-        public readonly MetricsScheduler MetricsScheduler;
         public readonly IoMetrics IoMetrics;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
@@ -48,7 +47,6 @@ namespace Raven.Server.ServerWide
         public ServerStore(RavenConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            MetricsScheduler = new MetricsScheduler();
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
             _logger = LoggerSetup.Instance.GetLogger<ServerStore>("ServerStore");
@@ -183,7 +181,6 @@ namespace Raven.Server.ServerWide
             toDispose.Add(_pool);
             toDispose.Add(_env);
             toDispose.Add(DatabasesLandlord);
-            toDispose.Add(MetricsScheduler);
 
             var errors = new List<Exception>();
             foreach (var disposable in toDispose)

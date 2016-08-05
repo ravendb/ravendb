@@ -15,14 +15,12 @@ namespace Raven.Server.Utils.Metrics
         private readonly Ewma _m5Rate = Ewma.FiveMinuteEwma();
         private readonly Ewma _s1Rate = Ewma.OneSecondEwma();
 
-        private readonly MetricsScheduler _tickScheduler;
-        private long _startTime;
+        private readonly long _startTime;
 
 
-        public MeterMetric(MetricsScheduler scheduler)
+        public MeterMetric()
         {
-            _tickScheduler = scheduler;
-            _tickScheduler.StartTickingMetric(TickInterval, this);
+            MetricsScheduler.Instance.StartTickingMetric(TickInterval, this);
             _startTime = Clock.Nanoseconds;
         }
 
@@ -36,7 +34,7 @@ namespace Raven.Server.Utils.Metrics
 
         public void Dispose()
         {
-            _tickScheduler.StopTickingMetric(this);
+            MetricsScheduler.Instance.StopTickingMetric(this);
         }
 
         public void Tick()

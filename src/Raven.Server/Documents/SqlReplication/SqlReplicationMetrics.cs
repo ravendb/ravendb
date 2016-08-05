@@ -11,11 +11,11 @@ namespace Raven.Server.Documents.SqlReplication
         public readonly MeterMetric SqlReplicationDeleteActionsMeter;
         public readonly MeterMetric SqlReplicationInsertActionsMeter;
 
-        public SqlReplicationTableMetrics(MetricsScheduler metricsScheduler, string tableName)
+        public SqlReplicationTableMetrics(string tableName)
         {
             TableName = tableName;
-            SqlReplicationDeleteActionsMeter = new MeterMetric(metricsScheduler);
-            SqlReplicationInsertActionsMeter = new MeterMetric(metricsScheduler);
+            SqlReplicationDeleteActionsMeter = new MeterMetric();
+            SqlReplicationInsertActionsMeter = new MeterMetric();
         }
 
         public DynamicJsonValue ToSqlReplicationTableMetricsDataDictionary()

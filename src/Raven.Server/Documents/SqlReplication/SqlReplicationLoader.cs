@@ -14,17 +14,15 @@ namespace Raven.Server.Documents.SqlReplication
 {
     public class SqlReplicationLoader : BaseReplicationLoader
     {
-        private readonly MetricsScheduler _metricsScheduler;
         private const int MaxSupportedSqlReplication = int.MaxValue; // TODO: Maybe this should be 128, 1024 or configurable?
 
         private BlittableJsonReaderObject _connections;
 
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
 
-        public SqlReplicationLoader(DocumentDatabase database, MetricsScheduler metricsScheduler)
+        public SqlReplicationLoader(DocumentDatabase database)
             : base(database)
         {
-            _metricsScheduler = metricsScheduler;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -57,7 +55,7 @@ namespace Raven.Server.Documents.SqlReplication
                 foreach (var document in documents)
                 {
                     var configuration = JsonDeserialization.SqlReplicationConfiguration(document.Data);
-                    var sqlReplication = new SqlReplication(_database, configuration, _metricsScheduler);
+                    var sqlReplication = new SqlReplication(_database, configuration);
                     Replications.Add(sqlReplication);
                     if (sqlReplication.ValidateName() == false ||
                         sqlReplication.PrepareSqlReplicationConfig(_connections) == false)
@@ -72,7 +70,7 @@ namespace Raven.Server.Documents.SqlReplication
             try
             {
                 var document = _database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
-                var sqlReplication = new SqlReplication(_database, simulateSqlReplication.Configuration, _metricsScheduler);
+                var sqlReplication = new SqlReplication(_database, simulateSqlReplication.Configuration);
 
                 var result = sqlReplication.ApplyConversionScript(new List<Document> { document }, context);
 

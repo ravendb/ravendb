@@ -52,7 +52,7 @@ namespace Raven.Server
                 throw new InvalidOperationException("Configuration must be initialized");
 
             ServerStore = new ServerStore(Configuration);
-            Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
+            Metrics = new MetricsCountersManager();
             Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             _logger = LoggerSetup.Instance.GetLogger<RavenServer>("Raven/Server");
             _tcpLogger = LoggerSetup.Instance.GetLogger<RavenServer>("<TcpServer>");
@@ -265,7 +265,7 @@ namespace Raven.Server
                                 BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-								SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient.Client.RemoteEndPoint, multiDocumentParser, ServerStore.MetricsScheduler);
+								SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient.Client.RemoteEndPoint, multiDocumentParser);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
                                 documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(context, stream, tcpClient, multiDocumentParser);

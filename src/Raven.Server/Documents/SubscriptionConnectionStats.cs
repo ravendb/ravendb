@@ -9,11 +9,11 @@ namespace Raven.Server.Documents
 {
     public class SubscriptionConnectionStats:IDisposable
     {
-        public SubscriptionConnectionStats(MetricsScheduler scheduler)
+        public SubscriptionConnectionStats()
         {
-            DocsRate = new MeterMetric(scheduler);
-            BytesRate = new MeterMetric(scheduler);
-            AckRate = new MeterMetric(scheduler);
+            DocsRate = new MeterMetric();
+            BytesRate = new MeterMetric();
+            AckRate = new MeterMetric();
         }
         public long WaitedForConnection;
         public long ConnectedAt;
