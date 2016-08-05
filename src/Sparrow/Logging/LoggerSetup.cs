@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Abstractions.Extensions;
 
@@ -14,18 +15,18 @@ namespace Sparrow.Logging
     ///     It is intended to be high performance logging framework, but it should be reviewed
     ///     for missing log entries, etc.
     /// </summary>
-    public class LoggerSetup : IDisposable
+    public class LoggerSetup
     {
         [ThreadStatic] private static string _currentThreadId;
 
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ThreadLocal<LocalThreadWriterState> _localState;
-        private readonly Thread _loggingThread;
+        private Thread _loggingThread;
 
         private readonly ConcurrentQueue<WeakReference<LocalThreadWriterState>> _newThreadStates =
             new ConcurrentQueue<WeakReference<LocalThreadWriterState>>();
 
-        private readonly string _path;
+        private string _path;
         private readonly TimeSpan _retentionTime;
         private string _dateString;
         private volatile bool _keepLogging = true;
@@ -33,6 +34,8 @@ namespace Sparrow.Logging
         private DateTime _today;
         public bool IsInfoEnabled;
         public bool IsOperationsEnabled;
+
+        public static LoggerSetup Instance = new LoggerSetup(Path.GetTempPath(), LogMode.None);
 
         public LoggerSetup(string path, LogMode logMode = LogMode.Information, TimeSpan retentionTime = default(TimeSpan))
         {
@@ -42,42 +45,55 @@ namespace Sparrow.Logging
 
             _retentionTime = retentionTime;
             _localState = new ThreadLocal<LocalThreadWriterState>(GenerateThreadWriterState);
+            
+            SetupLogMode(logMode, path);
+        }
+
+        public void SetupLogMode(LogMode logMode, string path)
+        {
+            lock (this)
+            {
+                IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
+                IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
+
+                _path = path;
+
+                Directory.CreateDirectory(_path);
+                if (_loggingThread == null)
+                {
+                    StartNewLoggingThread();
+                }
+                else
+                {
+                    _keepLogging = false;
+                    _hasEntries.Set();
+                    _loggingThread.Join();
+                    StartNewLoggingThread();
+                }
+            }
+        }
+
+        private void StartNewLoggingThread()
+        {
+            if (IsInfoEnabled == false &&
+                IsOperationsEnabled == false)
+                return;
+
+            _keepLogging = true;
             _loggingThread = new Thread(BackgroundLogger)
             {
                 IsBackground = true,
                 Name = "Logging Thread"
             };
-            SetupLogMode(logMode);
-        }
-
-        public void Dispose()
-        {
-            _keepLogging = false;
-            _hasEntries.Set();
-            _hasEntries.Dispose();
-            if ((_loggingThread.ThreadState & ThreadState.Unstarted) != ThreadState.Unstarted)
-                _loggingThread.Join();
-        }
-
-        public void SetupLogMode(LogMode logMode)
-        {
-            IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
-            IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
-
-            if (logMode == LogMode.None)
-                return;
-
-            Directory.CreateDirectory(_path);
-            if ((_loggingThread.ThreadState & ThreadState.Unstarted) == ThreadState.Unstarted)
-                _loggingThread.Start();
+            _loggingThread.Start();
         }
 
 
-        private Stream GetNewStream()
+        private Stream GetNewStream(long maxFileSize)
         {
             if (DateTime.Today != _today)
             {
-                lock (typeof (LoggerSetup))
+                lock (this)
                 {
                     if (DateTime.Today != _today)
                     {
@@ -94,7 +110,7 @@ namespace Sparrow.Logging
                 var nextLogNumber = Interlocked.Increment(ref _logNumber);
                 var fileName = Path.Combine(_path, _dateString) + "." +
                                nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
-                if (File.Exists(fileName))
+                if (File.Exists(fileName) && new FileInfo(fileName).Length >= maxFileSize)
                     continue;
                 // TODO: If avialable file size on the disk is too small, emit a warning, and return a Null Stream, instead
                 // TODO: We don't want to have the debug log kill us
@@ -108,7 +124,7 @@ namespace Sparrow.Logging
             try
             {
                 // we use GetFiles because we don't expect to have a massive amount of files, and it is 
-                // not sure what kind of iteration we get if we run and modify using Enumerate
+                // not sure what kind of iteration order we get if we run and modify using Enumerate
                 existingLogFiles = Directory.GetFiles(_path, "*.log"); 
             }
             catch (Exception)
@@ -215,9 +231,9 @@ namespace Sparrow.Logging
                 var threadStates = new List<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
-                    using (var currentFile = GetNewStream())
+                    const int maxFileSize = 1024*1024*256;
+                    using (var currentFile = GetNewStream(maxFileSize))
                     {
-                        const int maxFileSize = 1024*1024*256;
                         var sizeWritten = 0;
 
                         var foundEntry = true;
