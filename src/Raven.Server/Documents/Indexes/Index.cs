@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 options.SchemaVersion = 1;
 
-                environment = new StorageEnvironment(options, documentDatabase.LoggerSetup);
+                environment = new StorageEnvironment(options);
                 var type = IndexStorage.ReadIndexType(indexId, environment);
 
                 switch (type)
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
-            _logger = documentDatabase.LoggerSetup.GetLogger<Index>(documentDatabase.Name);
+            _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
             lock (_locker)
             {
                 if (_initialized)
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaVersion = 1;
                 try
                 {
-                    Initialize(new StorageEnvironment(options, documentDatabase.LoggerSetup), documentDatabase);
+                    Initialize(new StorageEnvironment(options), documentDatabase);
                 }
                 catch (Exception)
                 {
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Indexes
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-                    _logger = documentDatabase.LoggerSetup.GetLogger<Index>(documentDatabase.Name);
+                    _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 

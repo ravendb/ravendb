@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
-using Sparrow.Logging;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -24,13 +23,12 @@ namespace Voron.Impl.Compaction
         public long TotalTreeRecordsCount;
     }
 
-    public unsafe static class StorageCompaction
+    public static unsafe class StorageCompaction
     {
         public const string CannotCompactBecauseOfIncrementalBackup = "Cannot compact a storage that supports incremental backups. The compact operation changes internal data structures on which the incremental backup relays.";
 
         public static void Execute(StorageEnvironmentOptions srcOptions, 
-            StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions, 
-            LoggerSetup loggerSetup,
+            StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions,
             Action<CompactionProgress> progressReport = null)
         {
             if (srcOptions.IncrementalBackupEnabled)
@@ -41,8 +39,8 @@ namespace Voron.Impl.Compaction
             srcOptions.ManualFlushing = true; // prevent from flushing during compaction - we shouldn't touch any source files
             compactOptions.ManualFlushing = true; // let us flush manually during data copy
 
-            using (var existingEnv = new StorageEnvironment(srcOptions, loggerSetup))
-            using (var compactedEnv = new StorageEnvironment(compactOptions, loggerSetup))
+            using (var existingEnv = new StorageEnvironment(srcOptions))
+            using (var compactedEnv = new StorageEnvironment(compactOptions))
             {
                 CopyTrees(existingEnv, compactedEnv, progressReport);
 

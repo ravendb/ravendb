@@ -26,7 +26,7 @@ namespace FastTests.Voron.Storage
             var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = null;
 
-            using (new StorageEnvironment(options, NullLoggerSetup))
+            using (new StorageEnvironment(options))
             {
                 var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
@@ -42,7 +42,7 @@ namespace FastTests.Voron.Storage
             var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = GetExpectedInitialSize()* 2;
 
-            using (new StorageEnvironment(options, NullLoggerSetup))
+            using (new StorageEnvironment(options))
             {
                 var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
@@ -58,7 +58,7 @@ namespace FastTests.Voron.Storage
             var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = GetExpectedInitialSize() * 2 + 1;
 
-            using (new StorageEnvironment(options, NullLoggerSetup))
+            using (new StorageEnvironment(options))
             {
                 var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));

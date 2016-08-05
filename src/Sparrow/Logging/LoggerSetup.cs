@@ -37,7 +37,7 @@ namespace Sparrow.Logging
 
         public static LoggerSetup Instance = new LoggerSetup(Path.GetTempPath(), LogMode.None);
 
-        public LoggerSetup(string path, LogMode logMode = LogMode.Information, TimeSpan retentionTime = default(TimeSpan))
+        private LoggerSetup(string path, LogMode logMode = LogMode.Information, TimeSpan retentionTime = default(TimeSpan))
         {
             _path = path;
             if (retentionTime == default(TimeSpan))

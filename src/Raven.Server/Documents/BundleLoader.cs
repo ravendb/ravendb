@@ -22,7 +22,7 @@ namespace Raven.Server.Documents
         {
             _database = database;
             _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
-            _logger = _database.LoggerSetup.GetLogger<BundleLoader>(_database.Name);
+            _logger = LoggerSetup.Instance.GetLogger<BundleLoader>(_database.Name);
         }
 
         public void HandleSystemDocumentChange(DocumentChangeNotification notification)

@@ -19,7 +19,7 @@ namespace SlowTests.Voron
             var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.ManualFlushing = true;
 
-            using (var env = new StorageEnvironment(options, NullLoggerSetup))
+            using (var env = new StorageEnvironment(options))
             {
                 for (var transactions = 0; transactions < 100; transactions++)
                 {
@@ -46,7 +46,7 @@ namespace SlowTests.Voron
             options = StorageEnvironmentOptions.ForPath(DataDir);
             options.ManualFlushing = true;
 
-            using (var env = new StorageEnvironment(options, NullLoggerSetup))
+            using (var env = new StorageEnvironment(options))
             {
                 ValidateRecords(env, new List<string> { "foo" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
             }

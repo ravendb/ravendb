@@ -53,11 +53,11 @@ namespace Raven.Server.Documents
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"));
 
-            _environment = new StorageEnvironment(options, db.LoggerSetup);
+            _environment = new StorageEnvironment(options);
             _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");
 
             var databaseName = db.Name;
-            _logger = db.LoggerSetup.GetLogger<SubscriptionStorage>(databaseName);
+            _logger = LoggerSetup.Instance.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,

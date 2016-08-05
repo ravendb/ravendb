@@ -12,6 +12,8 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
+            LoggerSetup.Instance.SetupLogMode(LogMode.Operations, "Logs");
+
             WelcomeMessage.Print();
 
             var configuration = new RavenConfiguration();
@@ -26,7 +28,7 @@ namespace Raven.Server
                 try
                 {
                     server.Initialize();
-                    _logger = server.LoggerSetup.GetLogger<Program>("Raven/Server");
+                    _logger = LoggerSetup.Instance.GetLogger<Program>("Raven/Server");
                     Console.WriteLine($"Listening to: {string.Join(", ", configuration.Core.ServerUrl)}");
                     Console.WriteLine("Server started, listening to requests...");
 

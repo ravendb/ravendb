@@ -42,7 +42,6 @@ namespace Raven.Server
         private Task<List<TcpListener>> _tcpListenerTask;
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool = new UnmanagedBuffersPool("TcpConnectionPool");
         private readonly Logger _tcpLogger;
-        public LoggerSetup LoggerSetup { get; }
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -52,12 +51,11 @@ namespace Raven.Server
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
-            LoggerSetup = configuration.LoggerSetup;
-            ServerStore = new ServerStore(Configuration, LoggerSetup);
+            ServerStore = new ServerStore(Configuration);
             Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
             Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-            _logger = LoggerSetup.GetLogger<RavenServer>("Raven/Server");
-            _tcpLogger = LoggerSetup.GetLogger<RavenServer>("<TcpServer>");
+            _logger = LoggerSetup.Instance.GetLogger<RavenServer>("Raven/Server");
+            _tcpLogger = LoggerSetup.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
 
         public async Task<int> GetTcpServerPortAsync()
@@ -349,7 +347,6 @@ namespace Raven.Server
         public void Dispose()
         {
             Metrics?.Dispose();
-            LoggerSetup?.Dispose();
             _webHost?.Dispose();
             if (_tcpListenerTask != null)
             {

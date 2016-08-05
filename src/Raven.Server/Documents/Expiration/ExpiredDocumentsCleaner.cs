@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Expiration
         private ExpiredDocumentsCleaner(DocumentDatabase database, ExpirationConfiguration configuration)
         {
             _database = database;
-            _logger = database.LoggerSetup.GetLogger<ExpiredDocumentsCleaner>(database.Name);
+            _logger = LoggerSetup.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
             var deleteFrequencyInSeconds = configuration.DeleteFrequencySeconds ?? 60;
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Initialized expired document cleaner, will check for expired documents every {deleteFrequencyInSeconds} seconds");

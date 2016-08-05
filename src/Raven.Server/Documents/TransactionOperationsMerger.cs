@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
             _parent = parent;
-            _log = _parent.LoggerSetup.GetLogger<TransactionOperationsMerger>(_parent.Name);
+            _log = LoggerSetup.Instance.GetLogger<TransactionOperationsMerger>(_parent.Name);
             _shutdown = shutdown;
         }
 

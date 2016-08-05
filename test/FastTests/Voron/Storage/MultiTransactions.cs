@@ -8,12 +8,10 @@ namespace FastTests.Voron.Storage
 {
     public class MultiTransactions
     {
-        private static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(System.IO.Path.GetTempPath(), LogMode.None);
-
         [Fact]
         public void ShouldWork()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly(), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
                 for (int x = 0; x < 10; x++)
                 {

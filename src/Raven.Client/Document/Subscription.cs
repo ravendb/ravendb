@@ -338,7 +338,7 @@ namespace Raven.Client.Document
                     }
                 }
             }
-            catch (OperationCanceledException e)
+            catch (OperationCanceledException)
             {
                 
             }

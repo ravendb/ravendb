@@ -21,8 +21,6 @@ namespace Raven.Server.Web
 
         public const string PageSizeParameter = "pageSize";
 
-        protected static Logger _logger;
-
         private RequestHandlerContext _context;
 
         protected HttpContext HttpContext

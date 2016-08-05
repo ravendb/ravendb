@@ -100,11 +100,11 @@ namespace Voron
         public StorageEnvironmentState State { get; private set; }
 
 
-        public StorageEnvironment(StorageEnvironmentOptions options, LoggerSetup loggerSetup)
+        public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
             {
-                _log = loggerSetup.GetLogger<StorageEnvironment>(options.BasePath);
+                _log = LoggerSetup.Instance.GetLogger<StorageEnvironment>(options.BasePath);
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();

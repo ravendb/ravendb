@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _multiDocumentParser = multiDocumentParser;
             _bufferedWriter = new BlittableJsonTextWriter(context, _buffer);
             _unbufferedWriter = new BlittableJsonTextWriter(context, networkStream);
-            _logger = database.LoggerSetup.GetLogger<SubscriptionConnection>(database.Name);
+            _logger = LoggerSetup.Instance.GetLogger<SubscriptionConnection>(database.Name);
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -16,14 +15,13 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Xunit;
 
 namespace FastTests
 {
     public abstract class RavenLowLevelTestBase : IDisposable
     {
-        private MetricsScheduler _metricsScheduler = new MetricsScheduler(new LoggerSetup(Path.GetTempFileName(), LogMode.None));
+        private MetricsScheduler _metricsScheduler = new MetricsScheduler();
 
         private readonly ConcurrentSet<string> _pathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -50,7 +48,7 @@ namespace FastTests
 
             modifyConfiguration?.Invoke(configuration);
 
-            var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler, new IoMetrics(256, 256), new LoggerSetup(Path.GetTempFileName(), LogMode.None));
+            var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler, new IoMetrics(256, 256));
             documentDatabase.Initialize();
 
             return documentDatabase;

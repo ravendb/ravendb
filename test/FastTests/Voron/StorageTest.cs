@@ -20,8 +20,6 @@ namespace FastTests.Voron
 
         private ByteStringContext _allocator = new ByteStringContext();
 
-        protected static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(Path.GetTempPath(), LogMode.None);
-
         public static string GenerateDataDir()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -38,7 +36,7 @@ namespace FastTests.Voron
                     lock (this)
                     {
                         if (_storageEnvironment == null)
-                            _storageEnvironment = new StorageEnvironment(_options, NullLoggerSetup);
+                            _storageEnvironment = new StorageEnvironment(_options);
                     }
                 }
                 return _storageEnvironment;
@@ -83,7 +81,7 @@ namespace FastTests.Voron
 
         protected void StartDatabase()
         {
-            _storageEnvironment = new StorageEnvironment(_options, NullLoggerSetup);
+            _storageEnvironment = new StorageEnvironment(_options);
         }
 
         protected void StopDatabase()

@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.SqlReplication
             _context = context;
             _predefinedSqlConnection = predefinedSqlConnection;
             _sqlReplication = sqlReplication;
-            _logger = _database.LoggerSetup.GetLogger<RelationalDatabaseWriter>(_database.Name);
+            _logger = LoggerSetup.Instance.GetLogger<RelationalDatabaseWriter>(_database.Name);
             _providerFactory = GetDbProviderFactory(_sqlReplication.Configuration);
             _commandBuilder = _providerFactory.CreateCommandBuilder();
             _connection = _providerFactory.CreateConnection();

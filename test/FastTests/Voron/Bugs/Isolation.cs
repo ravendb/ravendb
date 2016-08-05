@@ -15,7 +15,7 @@ namespace FastTests.Voron.Bugs
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
 
-            using (var env = new StorageEnvironment(options, NullLoggerSetup))
+            using (var env = new StorageEnvironment(options))
             {
                 CreateTrees(env, 1, "tree");
 
@@ -54,7 +54,7 @@ namespace FastTests.Voron.Bugs
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
 
-            using (var env = new StorageEnvironment(options, NullLoggerSetup))
+            using (var env = new StorageEnvironment(options))
             {
                 CreateTrees(env, 1, "tree");
 
@@ -116,7 +116,7 @@ namespace FastTests.Voron.Bugs
             var options = StorageEnvironmentOptions.ForPath(DataDir);
 
             options.ManualFlushing = true;
-            using (var env = new StorageEnvironment(options, NullLoggerSetup))
+            using (var env = new StorageEnvironment(options))
             {
                 CreateTrees(env, 2, "tree");
                 for (int a = 0; a < 3; a++)

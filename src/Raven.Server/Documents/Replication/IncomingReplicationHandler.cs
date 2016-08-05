@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication
                                           .ContextPool
                                           .AllocateOperationContext(out _context);
 
-            _log = _database.LoggerSetup.GetLogger<IncomingReplicationHandler>(_database.Name);
+            _log = LoggerSetup.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 

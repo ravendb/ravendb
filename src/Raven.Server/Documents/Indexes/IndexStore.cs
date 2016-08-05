@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
-            _logger = _documentDatabase.LoggerSetup.GetLogger<IndexStore>(_documentDatabase.Name);
+            _logger = LoggerSetup.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
         }
 
         public Task InitializeAsync()

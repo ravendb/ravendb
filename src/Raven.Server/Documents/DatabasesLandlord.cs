@@ -93,7 +93,7 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, ServerStore.IoMetrics, LoggerSetup);
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler, ServerStore.IoMetrics);
                 documentDatabase.Initialize();
 
                 if (_logger.IsInfoEnabled)
@@ -207,7 +207,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DatabasesLandlord(ServerStore serverStore, LoggerSetup loggerSetup) : base(serverStore, loggerSetup)
+        public DatabasesLandlord(ServerStore serverStore) : base(serverStore)
         {
 
         }

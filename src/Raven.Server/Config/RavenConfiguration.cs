@@ -54,8 +54,6 @@ namespace Raven.Server.Config
 
         public TombstoneConfiguration Tombstones { get; }
 
-        public LoggerSetup LoggerSetup { get; }
-
         protected IConfigurationRoot Settings { get; set; }
 
         public RavenConfiguration()
@@ -78,7 +76,6 @@ namespace Raven.Server.Config
             Queries = new QueryConfiguration();
             Patching = new PatchingConfiguration();
             DebugLog = new DebugLoggingConfiguration();
-            LoggerSetup = new LoggerSetup(DebugLog.Path, DebugLog.LogMode, DebugLog.RetentionTime.AsTimeSpan);
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
             Memory = new MemoryConfiguration(this);

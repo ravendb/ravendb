@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IDisposable GetSearcher(out IndexSearcher searcher, DocumentDatabase documentDatabase)
         {
-            _logger = documentDatabase.LoggerSetup.GetLogger<IndexSearcherHolder>(documentDatabase.Name);
+            _logger = LoggerSetup.Instance.GetLogger<IndexSearcherHolder>(documentDatabase.Name);
             var indexSearcherHoldingState = GetCurrentStateHolder();
             try
             {

@@ -32,7 +32,7 @@ namespace FastTests.Voron.Bugs
             using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
             {
                 options.OwnsPagers = false;
-                using (var env = new StorageEnvironment(options, NullLoggerSetup))
+                using (var env = new StorageEnvironment(options))
                 {
                     using (var tx = env.WriteTransaction())
                     {
@@ -49,7 +49,7 @@ namespace FastTests.Voron.Bugs
                     }
                 }
 
-                using (var env = new StorageEnvironment(options, NullLoggerSetup))
+                using (var env = new StorageEnvironment(options))
                 {
                     using (var tx = env.WriteTransaction())
                     {

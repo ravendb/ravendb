@@ -40,21 +40,19 @@ namespace Raven.Server.ServerWide
 
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         public readonly RavenConfiguration Configuration;
-        private readonly LoggerSetup _loggerSetup;
         public readonly MetricsScheduler MetricsScheduler;
         public readonly IoMetrics IoMetrics;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
-        public ServerStore(RavenConfiguration configuration, LoggerSetup loggerSetup)
+        public ServerStore(RavenConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            MetricsScheduler = new MetricsScheduler(loggerSetup);
+            MetricsScheduler = new MetricsScheduler();
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
-            _loggerSetup = loggerSetup;
-            _logger = _loggerSetup.GetLogger<ServerStore>("ServerStore");
-            DatabasesLandlord = new DatabasesLandlord(this, _loggerSetup);
+            _logger = LoggerSetup.Instance.GetLogger<ServerStore>("ServerStore");
+            DatabasesLandlord = new DatabasesLandlord(this);
 
             // We use the follow format for the items data
             // { lowered key, key, data }
@@ -87,7 +85,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                _env = new StorageEnvironment(options, _loggerSetup);
+                _env = new StorageEnvironment(options);
                 using (var tx = _env.WriteTransaction())
                 {
                     tx.DeleteTree("items");// note the different casing, we remove the old items tree 

@@ -22,7 +22,7 @@ namespace FastTests.Voron.Backups
             const int UserCount = 5000;
             var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
             storageEnvironmentOptions.IncrementalBackupEnabled = true;
-            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
+            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
             {
                 int index = 0;
                 for (int xi = 0; xi < 10; xi++)
@@ -48,9 +48,9 @@ namespace FastTests.Voron.Backups
             var incremental = new IncrementalBackup();
 
             var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
-            incremental.Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.snapshot") }, NullLoggerSetup);
+            incremental.Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.snapshot") });
 
-            using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions, NullLoggerSetup))
+            using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
             {
                 using (var tx = snapshotRestoreEnv.ReadTransaction())
                 {
@@ -72,7 +72,7 @@ namespace FastTests.Voron.Backups
         {
             var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
             storageEnvironmentOptions.IncrementalBackupEnabled = true;
-            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
+            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
             {
                 using (var tx = envToSnapshot.WriteTransaction())
                 {
@@ -110,9 +110,9 @@ namespace FastTests.Voron.Backups
 
             new FullBackup().Restore(Path.Combine(DataDir, "full.backup"), Path.Combine(DataDir, "restored"));
             var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
-            new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.backup") }, NullLoggerSetup);
+            new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.backup") });
 
-            using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions, NullLoggerSetup))
+            using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
             {
                 using (var tx = snapshotRestoreEnv.ReadTransaction())
                 {
@@ -148,7 +148,7 @@ namespace FastTests.Voron.Backups
             const int UserCount = 5000;
             var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
             storageEnvironmentOptions.IncrementalBackupEnabled = true;
-            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
+            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
             {
                 int index = 0;
                 for (int xi = 0; xi < 5; xi++)
@@ -176,9 +176,9 @@ namespace FastTests.Voron.Backups
             var incremental = new IncrementalBackup();
 
             var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
-            incremental.Restore(restoredOptions, Enumerable.Range(0, 5).Select(i => Path.Combine(DataDir, i + ".snapshot")), NullLoggerSetup);
+            incremental.Restore(restoredOptions, Enumerable.Range(0, 5).Select(i => Path.Combine(DataDir, i + ".snapshot")));
 
-            using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions, NullLoggerSetup))
+            using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
             {
                 using (var tx = snapshotRestoreEnv.ReadTransaction())
                 {
@@ -201,7 +201,7 @@ namespace FastTests.Voron.Backups
             const int UserCount = 5000;
             var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
             storageEnvironmentOptions.IncrementalBackupEnabled = true;
-            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
+            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
             {
                 for (int xi = 0; xi < 10; xi++)
                 {
@@ -244,7 +244,7 @@ namespace FastTests.Voron.Backups
             var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
             storageEnvironmentOptions.IncrementalBackupEnabled = true;
             storageEnvironmentOptions.MaxNumberOfPagesInMergedTransaction = 8;
-            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
+            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
             {
                 for (int xi = 0; xi < 100; xi++)
                 {
@@ -278,7 +278,7 @@ namespace FastTests.Voron.Backups
         {
             var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
             storageEnvironmentOptions.IncrementalBackupEnabled = true;
-            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
+            using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
             {
                 using (var tx = envToSnapshot.WriteTransaction())
                 {
@@ -302,9 +302,9 @@ namespace FastTests.Voron.Backups
                 snapshotWriter.ToFile(envToSnapshot, Path.Combine(DataDir, "1.snapshot"));
 
                 var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
-                new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.snapshot") }, NullLoggerSetup);
+                new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.snapshot") });
 
-                using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions, NullLoggerSetup))
+                using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
                 {
                     using (var tx = snapshotRestoreEnv.ReadTransaction())
                     {

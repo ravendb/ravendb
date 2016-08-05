@@ -58,7 +58,7 @@ namespace SlowTests.Voron
             var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "backup-test.data"));
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            using (var env = new StorageEnvironment(options, NullLoggerSetup))
+            using (var env = new StorageEnvironment(options))
             {
                 using (var tx = env.ReadTransaction())
                 {

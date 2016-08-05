@@ -16,7 +16,6 @@ namespace Voron.Benchmark
 {
     public unsafe class TableBench : IHasStorageLocation
     {
-        private static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(System.IO.Path.GetTempPath(), LogMode.None);
         public string Path 
         {
             get
@@ -139,7 +138,7 @@ namespace Voron.Benchmark
 
         private void InsertRandomMultipleTransactionAfterFill(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 
@@ -173,7 +172,7 @@ namespace Voron.Benchmark
 
         private void FillRandomOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 
@@ -208,7 +207,7 @@ namespace Voron.Benchmark
 
         private void FillSeqOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 
@@ -241,7 +240,7 @@ namespace Voron.Benchmark
 
         private void FillRandomMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 
@@ -282,7 +281,7 @@ namespace Voron.Benchmark
 
         private void FillSeqMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 
@@ -323,7 +322,7 @@ namespace Voron.Benchmark
 
         private void ReadOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 
@@ -377,7 +376,7 @@ namespace Voron.Benchmark
 
         private void IterateAllKeysInOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 
@@ -415,7 +414,7 @@ namespace Voron.Benchmark
 
         private void ReadOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var docsSchema = Configure(env);
 

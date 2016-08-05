@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Replication
         public DocumentReplicationLoader(DocumentDatabase database)
         {
             _database = database;
-            _log = _database.LoggerSetup.GetLogger<DocumentReplicationLoader>(_database.Name);
+            _log = LoggerSetup.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.Zero, TimeSpan.FromMilliseconds(45000));
         }

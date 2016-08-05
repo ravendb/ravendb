@@ -87,7 +87,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             _instance = Platform.RunningOnPosix
                 ? new PosixLowMemoryNotification(shutdownNotification, configuration) as AbstractLowMemoryNotification
                 : new WinLowMemoryNotification(shutdownNotification, configuration);
-            _logger = configuration.LoggerSetup.GetLogger<AbstractLowMemoryNotification>("Raven/Server");
+            _logger = LoggerSetup.Instance.GetLogger<AbstractLowMemoryNotification>("Raven/Server");
         }
     }
 }

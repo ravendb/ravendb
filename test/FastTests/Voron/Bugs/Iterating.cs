@@ -15,7 +15,7 @@ namespace FastTests.Voron.Bugs
         [Fact]
         public void IterationShouldNotFindAnyRecordsAndShouldNotThrowWhenNumberOfEntriesOnPageIs1AndKeyDoesNotMatch()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly(), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
                 using (var tx = env.WriteTransaction())
                 {

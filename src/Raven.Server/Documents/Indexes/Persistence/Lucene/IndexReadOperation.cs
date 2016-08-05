@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher, documentDatabase);
-            _logger = documentDatabase.LoggerSetup.GetLogger<IndexReadOperation>(documentDatabase.Name);
+            _logger = LoggerSetup.Instance.GetLogger<IndexReadOperation>(documentDatabase.Name);
         }
 
         public int EntriesCount()

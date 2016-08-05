@@ -30,7 +30,7 @@ namespace FastTests.Voron.Compaction
         public void ShouldOccupyLessSpace()
         {
             var r = new Random();
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -64,8 +64,7 @@ namespace FastTests.Voron.Compaction
 
             var compactedData = Path.Combine(DataDir, "Compacted");
             StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(compactedData),
-                NullLoggerSetup);
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(compactedData));
 
             var newSize = GetDirSize(new DirectoryInfo(compactedData));
 
@@ -77,7 +76,7 @@ namespace FastTests.Voron.Compaction
         {
             var envOptions = StorageEnvironmentOptions.ForPath(DataDir);
             envOptions.IncrementalBackupEnabled = true;
-            using (var env = new StorageEnvironment(envOptions, NullLoggerSetup))
+            using (var env = new StorageEnvironment(envOptions))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -94,8 +93,7 @@ namespace FastTests.Voron.Compaction
             srcOptions.IncrementalBackupEnabled = true;
 
             var invalidOperationException = Assert.Throws<InvalidOperationException>(() => StorageCompaction.Execute(srcOptions,
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "Compacted")), 
-                NullLoggerSetup));
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "Compacted"))));
 
             Assert.Equal(StorageCompaction.CannotCompactBecauseOfIncrementalBackup, invalidOperationException.Message);
         }
@@ -103,7 +101,7 @@ namespace FastTests.Voron.Compaction
         [Fact]
         public void ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -118,8 +116,7 @@ namespace FastTests.Voron.Compaction
 
             var compactedData = Path.Combine(DataDir, "Compacted");
             StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), 
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData),
-                NullLoggerSetup);
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
 
             var compactedDir = new DirectoryInfo(compactedData);
 
@@ -129,7 +126,7 @@ namespace FastTests.Voron.Compaction
 
             // ensure it can write more data
 
-            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData), NullLoggerSetup))
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
             {
                 using (var tx = compacted.WriteTransaction())
                 {
@@ -143,7 +140,7 @@ namespace FastTests.Voron.Compaction
         [Fact]
         public void ShouldReportProgress()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -174,7 +171,6 @@ namespace FastTests.Voron.Compaction
 
             StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), 
                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "Compacted")),
-                NullLoggerSetup,
                 x => progressReport.Add(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
 
             Assert.NotEmpty(progressReport);

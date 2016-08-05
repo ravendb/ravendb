@@ -13,7 +13,7 @@ namespace FastTests.Voron.Bugs
         {
             var addedIds = new Dictionary<string, string>();
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly(), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
                 var multiTrees = CreateTrees(env, 1, "multiTree");
                 using (var tx = env.WriteTransaction())

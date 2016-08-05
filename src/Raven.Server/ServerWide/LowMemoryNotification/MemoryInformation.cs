@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
         public static unsafe MemoryInfoResult GetMemoryInfo(RavenConfiguration configuration)
         {
-            _logger = configuration.LoggerSetup.GetLogger<MemoryInfoResult>(configuration.DatabaseName);
+            _logger = LoggerSetup.Instance.GetLogger<MemoryInfoResult>(configuration.DatabaseName);
             if (failedToGetAvailablePhysicalMemory)
             {
                 if (_logger.IsInfoEnabled)

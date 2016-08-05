@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
-            _logger = indexStorage.DocumentDatabase.LoggerSetup
+            _logger = LoggerSetup.Instance
                 .GetLogger<CleanupDeletedDocuments>(indexStorage.DocumentDatabase.Name);
         }
 

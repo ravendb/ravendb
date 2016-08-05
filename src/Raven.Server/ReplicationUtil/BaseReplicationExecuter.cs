@@ -25,7 +25,7 @@ namespace Raven.Server.ReplicationUtil
 
         protected BaseReplicationExecuter(DocumentDatabase database)
         {
-            _logger = database.LoggerSetup.GetLogger<BaseReplicationExecuter>(database.Name);
+            _logger = LoggerSetup.Instance.GetLogger(database.Name, GetType().FullName);
             _database = database;
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             WaitForChanges = new AsyncManualResetEvent(_cancellationTokenSource.Token);

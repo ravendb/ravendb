@@ -48,7 +48,7 @@ namespace Raven.Server.Documents
         {
             _documentDatabase = documentDatabase;
             _name = _documentDatabase.Name;
-            _logger = documentDatabase.LoggerSetup.GetLogger<DocumentsStorage>(documentDatabase.Name);
+            _logger = LoggerSetup.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
 
             // The documents schema is as follows
             // 4 fields (lowered key, etag, lazy string key, document)
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents
             options.SchemaVersion = 1;
             try
             {
-                Environment = new StorageEnvironment(options, _documentDatabase.LoggerSetup);
+                Environment = new StorageEnvironment(options);
                 _unmanagedBuffersPool = new UnmanagedBuffersPool(_name);
                 ContextPool = new DocumentsContextPool(_unmanagedBuffersPool, _documentDatabase);
 

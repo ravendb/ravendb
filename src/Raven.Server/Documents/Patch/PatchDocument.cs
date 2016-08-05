@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Patch
         public PatchDocument(DocumentDatabase database)
         {
             _database = database;
-            _logger = database.LoggerSetup.GetLogger<PatchDocument>(database.Name);
+            _logger = LoggerSetup.Instance.GetLogger<PatchDocument>(database.Name);
             maxSteps = database.Configuration.Patching.MaxStepsForScript;
             additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;

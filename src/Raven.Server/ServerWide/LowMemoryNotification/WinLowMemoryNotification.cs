@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
         public WinLowMemoryNotification(CancellationToken shutdownNotification, RavenConfiguration configuration)
         {
-            _logger = configuration.LoggerSetup.GetLogger<WinLowMemoryNotification>(configuration.DatabaseName);
+            _logger = LoggerSetup.Instance.GetLogger<WinLowMemoryNotification>(configuration.DatabaseName);
             lowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
             lowMemoryNotificationHandle = CreateMemoryResourceNotification(LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
 

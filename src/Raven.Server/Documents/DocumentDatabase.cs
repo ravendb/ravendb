@@ -43,13 +43,11 @@ namespace Raven.Server.Documents
         private Task _transformerStoreTask;
         public TransactionOperationsMerger TxMerger;
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler, IoMetrics ioMetrics,
-            LoggerSetup loggerSetup)
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler, IoMetrics ioMetrics)
         {
             Name = name;
             Configuration = configuration;
-            LoggerSetup = loggerSetup;
-            _logger = loggerSetup.GetLogger<DocumentDatabase>(Name);
+            _logger = LoggerSetup.Instance.GetLogger<DocumentDatabase>(Name);
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
@@ -76,7 +74,6 @@ namespace Raven.Server.Documents
         public string ResourceName => $"db/{Name}";
 
         public RavenConfiguration Configuration { get; }
-        public LoggerSetup LoggerSetup { get; set; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 

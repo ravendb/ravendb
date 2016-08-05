@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Replication
         {
             _database = database;
             _destination = destination;
-            _log = _database.LoggerSetup.GetLogger<OutgoingReplicationHandler>(_database.Name);
+            _log = LoggerSetup.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _database.Notifications.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 

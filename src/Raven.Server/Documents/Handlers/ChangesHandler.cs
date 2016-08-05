@@ -28,7 +28,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 //TODO: select small context size (maybe pool just for them?)
                 JsonOperationContext context;
-                _logger = Database.LoggerSetup.GetLogger<ChangesHandler>(Database.Name);
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     try
@@ -37,8 +36,8 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (Exception ex)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Error encountered in changes handler", ex);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Error encountered in changes handler", ex);
 
                         try
                         {
@@ -59,8 +58,8 @@ namespace Raven.Server.Documents.Handlers
                         }
                         catch (Exception)
                         {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Failed to send the error in changes handler to the client", ex);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Failed to send the error in changes handler to the client", ex);
                         }
                     }
                 }
@@ -152,8 +151,8 @@ namespace Raven.Server.Documents.Handlers
             catch (IOException ex)
             {
                 /* Client was disconnected, write to log */
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Client was disconnected", ex);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Client was disconnected", ex);
             }
             finally
             {

@@ -9,9 +9,6 @@ namespace FastTests.Voron.Bugs
 {
     public class MultiAdds
     {
-
-        private static readonly LoggerSetup NullLoggerSetup = new LoggerSetup(System.IO.Path.GetTempPath(), LogMode.None);
-
         readonly Random _random = new Random(1234);
 
         private string RandomString(int size)
@@ -30,7 +27,7 @@ namespace FastTests.Voron.Bugs
         {
             const int DocumentCount = 10;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly(), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
                 var rand = new Random();
                 var testBuffer = new byte[168];
@@ -52,7 +49,7 @@ namespace FastTests.Voron.Bugs
         {
             var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
             storageEnvironmentOptions.ManualFlushing = true;
-            using (var env = new StorageEnvironment(storageEnvironmentOptions, NullLoggerSetup))
+            using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -130,7 +127,7 @@ namespace FastTests.Voron.Bugs
         [Fact]
         public void CanAddMultiValuesUnderTheSameKeyToBatch()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly(), NullLoggerSetup))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
                 var rand = new Random();
                 var testBuffer = new byte[168];
