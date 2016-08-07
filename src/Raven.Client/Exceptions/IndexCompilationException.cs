@@ -24,12 +24,12 @@ namespace Raven.Client.Exceptions
         /// <summary>
         /// Indicates which property caused error (Maps, Reduce).
         /// </summary>
-        public string IndexDefinitionProperty { get; set; }
+        public string IndexDefinitionProperty;
 
         /// <summary>
         /// Value of a problematic property.
         /// </summary>
-        public string ProblematicText { get; set; }
+        public string ProblematicText;
 
         public override string ToString()
         {

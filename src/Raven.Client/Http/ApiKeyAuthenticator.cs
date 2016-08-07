@@ -38,18 +38,18 @@ namespace Raven.Client.Http
                         throw new InvalidOperationException($"Cannot connect using WebSocket to {uri} for authentication", webSocketException);
                     }
 
-                    AuthenticatorChallenge authenticatorChallenge = null;
-                    await Recieve(webSocket, context, reader =>
+                    AuthenticatorChallenge authenticatorChallenge;
+                    using (var result = await Recieve(webSocket, context))
                     {
-                        if (reader == null)
-                            throw new InvalidDataException("Got null in ComputeChallenge");
-                        authenticatorChallenge = JsonDeserialization.AuthenticatorChallenge(reader);
-                    });
+                        if (result == null)
+                            throw new InvalidDataException("Got null authtication challenge");
+                        authenticatorChallenge = JsonDeserialization.AuthenticatorChallenge(result);
+                    }
                     var challenge = ComputeChallenge(authenticatorChallenge, apiKey);
                     await Send(webSocket, context, "ChallengeResponse", challenge);
 
                     string currentToken = null;
-                    await Recieve(webSocket, context, reader =>
+                    using (var reader = await Recieve(webSocket, context))
                     {
                         string error;
                         if (reader.TryGet("Error", out error))
@@ -67,7 +67,7 @@ namespace Raven.Client.Http
                             throw new InvalidOperationException("Missing 'CurrentToken' in response message");
 
                         currentToken = currentOauthToken;
-                    });
+                    }
 
                     try
                     {
@@ -75,7 +75,8 @@ namespace Raven.Client.Http
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.ToString());
+                        //TODO: Log me!
+                        
                     }
 
                     return currentToken;
@@ -169,8 +170,9 @@ namespace Raven.Client.Http
             return apiKeyParts;
         }
 
-        private async Task Recieve(RavenClientWebSocket webSocket, JsonOperationContext context, Action<BlittableJsonReaderObject> handleResponse)
+        private async Task<BlittableJsonReaderObject> Recieve(RavenClientWebSocket webSocket, JsonOperationContext context)
         {
+            BlittableJsonDocumentBuilder builder = null;
             try
             {
                 if (webSocket.State != WebSocketState.Open)
@@ -179,10 +181,10 @@ namespace Raven.Client.Http
 
                 var state = new JsonParserState();
                 var buffer = context.GetParsingBuffer();
-                using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
-                using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, nameof(ApiKeyAuthenticator) + "." + nameof(Recieve), parser, state))
+                using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
                 {
-                    builder.ReadNestedObject();
+                    builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, nameof(ApiKeyAuthenticator) + "." + nameof(Recieve), parser, state);
+                    builder.ReadObject();
                     while (builder.Read() == false)
                     {
                         var arraySegment = new ArraySegment<byte>(buffer, 0, buffer.Length);
@@ -193,32 +195,26 @@ namespace Raven.Client.Http
                             if (Logger.IsDebugEnabled)
                                 Logger.Debug("Client got close message from server and is closing connection");
 
+                            builder.Dispose();
                             // actual socket close from dispose
-                            handleResponse(null);
-                            return;
+                            return null;
                         }
 
                         if (result.EndOfMessage == false)
                         {
-                            // throw new EndOfStreamException("Stream ended without reaching end of json content");
-                            var err = $"In Recieve got response longer then {buffer.Length}";
-                            var ex = new InvalidOperationException(err);
-                            Logger.DebugException(err, ex);
-                            throw ex;
+                             throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         }
 
                         parser.SetBuffer(arraySegment);
                     }
                     builder.FinalizeDocument();
 
-                    using (var reader = builder.CreateReader())
-                    {
-                        handleResponse(reader);
-                    }
+                    return builder.CreateReader();
                 }
             }
             catch (WebSocketException ex)
             {
+                builder?.Dispose();
                 Logger.DebugException("Failed to receive a message, client was probably disconnected", ex);
                 throw;
             }

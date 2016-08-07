@@ -22,6 +22,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
+using Raven.Client.Http;
 using Raven.Client.Metrics;
 using Raven.Client.Smuggler;
 using Raven.Client.Util;
@@ -129,7 +130,10 @@ namespace Raven.Client.Document
             Credentials = CredentialCache.DefaultNetworkCredentials;
             SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
             Conventions = new DocumentConvention();
+            RequestExecuter = new RequestExecuter(this);
         }
+
+        public readonly RequestExecuter RequestExecuter;
 
         private string identifier;
 

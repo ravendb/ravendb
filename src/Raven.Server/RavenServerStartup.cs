@@ -17,14 +17,6 @@ namespace Raven.Server
 {
     public class RavenServerStartup
     {
-        static RavenServerStartup()
-        {
-            SetupLoggingIfNeeded();
-        }
-
-        public void ConfigureServices(IServiceCollection services)
-        {
-        }
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
@@ -75,16 +67,6 @@ namespace Raven.Server
                     await response.WriteAsync(errorString);
                 }
             });
-        }
-
-        private static void SetupLoggingIfNeeded()
-        {
-            if (File.Exists("NLog.config"))
-            {
-                var reader = XmlReader.Create("NLog.config");
-                var config = new XmlLoggingConfiguration(reader, null); 
-                LogManager.Configuration = config;
-            }
         }
     }
 }

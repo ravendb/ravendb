@@ -9,23 +9,15 @@ namespace Raven.Client.Documents.Commands
 {
     public abstract class RavenCommand<TResult>
     {
-        public readonly string ServerUrl;
-        public readonly string Database;
-
         public CancellationToken CancellationToken = CancellationToken.None;
-
-        protected RavenCommand(string serverUrl, string database)
-        {
-            ServerUrl = serverUrl;
-            Database = database;
-        }
 
         public JsonOperationContext Context;
 
         public TResult Result;
         public int AuthenticationRetries;
+        public bool IsReadRequest = true;
 
-        public abstract HttpRequestMessage CreateRequest();
+        public abstract HttpRequestMessage CreateRequest(out string url);
         public abstract void SetResponse(BlittableJsonReaderObject response);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

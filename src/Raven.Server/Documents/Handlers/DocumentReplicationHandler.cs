@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/topology", "GET")]
         public Task GetReplicationTopology()
         {
+            // TODO: Remove this, use "/databases/*/topology" isntead
             HttpContext.Response.StatusCode = 404;
             return Task.CompletedTask;
         }
@@ -20,7 +21,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/active-connections", "GET")]
         public Task GetReplicationActiveConnections()
         {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -63,7 +63,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET")]
         public Task GetReplicationOugoingFailureStats()
         {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -98,7 +97,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET")]
         public Task GetReplicationIncomingActivityTimes()
         {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -127,7 +125,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET")]
         public Task GetReplicationIncomingRejectionInfo()
         {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -161,7 +158,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET")]
         public Task GetReplicationReconnectionQueue()
         {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -184,7 +180,5 @@ namespace Raven.Server.Documents.Handlers
             }
             return Task.CompletedTask;
         }
-
-        
     }
 }
