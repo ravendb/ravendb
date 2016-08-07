@@ -189,6 +189,11 @@ namespace Sparrow.Json
             return value;
         }
 
+        public unsafe LazyStringValue GetLazyString(DateTime field)
+        {
+            return GetLazyString(field.ToString("O"));
+        }
+
         public unsafe LazyStringValue GetLazyString(string field)
         {
             var state = new JsonParserState();

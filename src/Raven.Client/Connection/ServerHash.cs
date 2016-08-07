@@ -1,7 +1,3 @@
-using System;
-using System.Text;
-
-using Raven.Abstractions.Util.Encryptors;
 using Sparrow;
 
 namespace Raven.Client.Connection
@@ -12,6 +8,12 @@ namespace Raven.Client.Connection
         {			
             var hash = Hashing.XXHash64.CalculateRaw(url);
             return hash.ToString("X");
+        }
+
+        internal static string GetServerHash(string url, string database)
+        {
+            // TODO: avoid string allocation
+            return GetServerHash(url + database);
         }
     }
 }

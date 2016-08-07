@@ -62,12 +62,15 @@ namespace Raven.Client.Http
             if (_store.Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
                 return;
 
+            var url = _topology?.LeaderNode?.Url ?? _store.Url;
+            var database = _topology?.LeaderNode?.Database ?? _store.DefaultDatabase;
+            var serverHash = ServerHash.GetServerHash(url, database);
+
             if (_firstTimeTryLoadFromTopologyCache)
             {
                 _firstTimeTryLoadFromTopologyCache = false;
 
                 // TODO: Avoid string allocation
-                var serverHash = ServerHash.GetServerHash(_store.Url + "/databases/" + _store.DefaultDatabase);
                 _topology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, _context);
                 if (_topology != null)
                 {
@@ -76,14 +79,14 @@ namespace Raven.Client.Http
                 }
             }
 
-            /*var command = new GetTopologyCommand();
-            ExecuteAsync(serverUrl, database, _context, command)
-                .ContinueWith((task, o) =>
+            var command = new GetTopologyCommand();
+            ExecuteAsync(url, database, _context, command)
+                .ContinueWith(task =>
                 {
                     _topology = command.Result;
-
+                    TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, _context);
                     _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
-                });*/
+                });
         }
 
         public async Task ExecuteAsync<TResult>(string serverUrl, string database, JsonOperationContext context, RavenCommand<TResult> command)

@@ -1,11 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Client.Connection;
-using Raven.Client.Data;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -60,20 +55,48 @@ namespace Raven.Client.Http
             }
         }
 
-        public static void TrySavingTopologyToLocalCache(string serverHash, JsonDocument document)
+        public static void TrySavingTopologyToLocalCache(string serverHash, Topology topology, JsonOperationContext context)
         {
             try
             {
                 var path = GetTopologyPath(serverHash);
                 using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
+                using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
-                    document.ToJson().WriteTo(stream);
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.LeaderNode)));
+                    WriteNode(writer, topology.LeaderNode, context);
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.Nodes)));
+                    writer.WriteStartArray();
+                    foreach (var node in topology.Nodes)
+                    {
+                        WriteNode(writer, node, context);
+                    }
+                    writer.WriteEndArray();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.ReadBehavior)));
+                    writer.WriteString(context.GetLazyString(topology.ReadBehavior.ToString()));
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.WriteBehavior)));
+                    writer.WriteString(context.GetLazyString(topology.WriteBehavior.ToString()));
                 }
             }
             catch (Exception e)
             {
                 Log.ErrorException("Could not persist the replication information", e);
             }
+        }
+
+        private static void WriteNode(BlittableJsonTextWriter writer, ServerNode node, JsonOperationContext context)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.Url)));
+            writer.WriteString(context.GetLazyString(node.Url));
+            writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.Database)));
+            writer.WriteString(context.GetLazyString(node.Database));
+            writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.LastFailure)));
+            writer.WriteString(context.GetLazyString(node.LastFailure));
+            writer.WriteEndObject();
         }
     }
 }
