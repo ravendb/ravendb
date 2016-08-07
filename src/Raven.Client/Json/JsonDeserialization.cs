@@ -20,7 +20,7 @@ namespace Raven.Client.Json
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
 
-        public static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
+        protected static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try
             {
