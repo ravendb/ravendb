@@ -96,7 +96,7 @@ namespace Raven.Server.Smuggler
                             if (operateOnType == "Docs" && OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
                                 result.DocumentsCount++;
-                                _batchPutCommand.Add(builder);
+                                _batchPutCommand.Documents.Add(builder.CreateReader());
                                 await HandleBatchOfDocuments();
                             }
                             else if (operateOnType == "RevisionDocuments" && OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
@@ -105,7 +105,7 @@ namespace Raven.Server.Smuggler
                                     break;
 
                                 result.RevisionDocumentsCount++;
-                                _batchPutCommand.Add(builder);
+                                _batchPutCommand.Documents.Add(builder.CreateReader());
                                 await HandleBatchOfDocuments();
                             }
                             else
@@ -231,7 +231,7 @@ namespace Raven.Server.Smuggler
                 _prevCommand = null;
             }
 
-            if (_batchPutCommand.Count > 0)
+            if (_batchPutCommand.Documents.Count > 0)
             {
                 using (_batchPutCommand)
                 {
@@ -243,7 +243,7 @@ namespace Raven.Server.Smuggler
 
         private async Task HandleBatchOfDocuments()
         {
-            if (_batchPutCommand.Count >= 16)
+            if (_batchPutCommand.Documents.Count >= 16)
             {
                 if (_prevCommand != null)
                 {
@@ -264,24 +264,17 @@ namespace Raven.Server.Smuggler
             public bool IsRevision;
 
             private readonly DocumentDatabase _database;
-            private readonly List<BlittableJsonDocumentBuilder> _buildersToDispose = new List<BlittableJsonDocumentBuilder>();
-            private readonly List<BlittableJsonReaderObject> _documents = new List<BlittableJsonReaderObject>();
+
+            public readonly List<BlittableJsonReaderObject> Documents = new List<BlittableJsonReaderObject>();
 
             public MergedBatchPutCommand(DocumentDatabase database)
             {
                 _database = database;
             }
 
-            public int Count
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get { return _documents.Count; }
-            }
-
-
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
-                foreach (var document in _documents)
+                foreach (var document in Documents)
                 {
                     BlittableJsonReaderObject metadata;
                     if (document.TryGet(Constants.Metadata, out metadata) == false)
@@ -324,21 +317,10 @@ namespace Raven.Server.Smuggler
 
             public void Dispose()
             {
-                foreach (var documentBuilder in _buildersToDispose)
+                foreach (var documentBuilder in Documents)
                 {
                     documentBuilder.Dispose();
                 }
-                foreach (var documentBuilder in _documents)
-                {
-                    documentBuilder.Dispose();
-                }
-            }
-
-            public void Add(BlittableJsonDocumentBuilder documentBuilder)
-            {
-                _buildersToDispose.Add(documentBuilder);
-                var reader = documentBuilder.CreateReader();
-                _documents.Add(reader);
             }
         }
     }
