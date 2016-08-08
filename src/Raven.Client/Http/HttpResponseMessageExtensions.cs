@@ -1,27 +1,32 @@
 ﻿using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
-using Raven.Abstractions.Connection;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace Raven.Client.Http
 {
     public static class HttpResponseMessageExtensions
     {
-        public static string ReadErrorResponse(this HttpResponseMessage response)
+        public static string ReadToEnd(this Stream stream)
         {
-            if (response.Content == null)
-                return null;
-            
-            var readAsStringAsync = response.GetResponseStreamWithHttpDecompression();
-            if (readAsStringAsync.IsCompleted)
+            stream.Position = 0;
+            using (var streamReader = new StreamReader(stream))
             {
-                using (var streamReader = new StreamReader(readAsStringAsync.Result))
-                {
-                    return streamReader.ReadToEnd();
-                }
+                return streamReader.ReadToEnd();
             }
+        }
 
-            // TODO: Log this?
-            return null;
+        public static async Task<Stream> ReadAsStreamUncompressedAsync(this HttpResponseMessage response)
+        {
+            var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+
+            var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
+            if (encoding != null && encoding.Contains("gzip"))
+                stream = new GZipStream(stream, CompressionMode.Decompress);
+            else if (encoding != null && encoding.Contains("deflate"))
+                stream = new DeflateStream(stream, CompressionMode.Decompress);
+            return stream;
         }
     }
 }

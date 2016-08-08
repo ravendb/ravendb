@@ -60,12 +60,18 @@ namespace Raven.Abstractions.Connection
             var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
 
             string responseString = null;
-            if (readErrorString)
+            if (readErrorString && response.Content != null)
             {
-                responseString = response.ReadErrorResponse();
-                sb.AppendLine(responseString);
+                var readAsStringAsync = response.GetResponseStreamWithHttpDecompression();
+                if (readAsStringAsync.IsCompleted)
+                {
+                    using (var streamReader = new StreamReader(readAsStringAsync.Result))
+                    {
+                        responseString = streamReader.ReadToEnd();
+                        sb.AppendLine(responseString);
+                    }
+                }
             }
-
             return new ErrorResponseException(response, sb.ToString())
             {
                 ResponseString = responseString

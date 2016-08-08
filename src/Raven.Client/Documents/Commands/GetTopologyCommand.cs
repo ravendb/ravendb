@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response)
         {
-            Result = JsonDeserialization.ClusterTopology(response);
+            Result = JsonDeserializationClient.ClusterTopology(response);
         }
     }
 }

@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response)
         {
-            Result = JsonDeserialization.PutResult(response);
+            Result = JsonDeserializationClient.PutResult(response);
         }
     }
 }

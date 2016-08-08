@@ -43,7 +43,7 @@ namespace Raven.Client.Http
                     {
                         if (result == null)
                             throw new InvalidDataException("Got null authtication challenge");
-                        authenticatorChallenge = JsonDeserialization.AuthenticatorChallenge(result);
+                        authenticatorChallenge = JsonDeserializationClient.AuthenticatorChallenge(result);
                     }
                     var challenge = ComputeChallenge(authenticatorChallenge, apiKey);
                     await Send(webSocket, context, "ChallengeResponse", challenge);

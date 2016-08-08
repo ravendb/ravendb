@@ -249,7 +249,7 @@ namespace Raven.Server
                     multiDocumentParser = context.ParseMultiFrom(stream);
                     try
                     {
-                        var header = JsonDeserialization.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
+                        var header = JsonDeserializationClient.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
 
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)

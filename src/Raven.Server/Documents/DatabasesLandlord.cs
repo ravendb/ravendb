@@ -194,7 +194,7 @@ namespace Raven.Server.Documents
                 if (jsonReaderObject == null)
                     return null;
 
-                var document = JsonDeserialization.DatabaseDocument(jsonReaderObject);
+                var document = JsonDeserializationClient.DatabaseDocument(jsonReaderObject);
 
                 var dataDirectoryKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
                 string dataDirectory;

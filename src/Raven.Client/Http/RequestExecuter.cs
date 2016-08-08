@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -48,7 +49,7 @@ namespace Raven.Client.Http
             _store = store;
             var handler = new HttpClientHandler
             {
-                
+
             };
             _httpClient = new HttpClient(handler);
 
@@ -87,8 +88,12 @@ namespace Raven.Client.Http
             ExecuteAsync(url, database, _context, command)
                 .ContinueWith(task =>
                 {
-                    _topology = command.Result;
-                    TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, _context);
+                    if (task.IsFaulted == false)
+                    {
+                        _topology = command.Result;
+                        TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, _context);
+                    }
+
                     _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
                 });
         }
@@ -181,27 +186,35 @@ namespace Raven.Client.Http
                                 // TODO: Conflict resolution
                                 break;
                             default:
-                                using (var stream = await response.Content.ReadAsStreamAsync())
+                                using (var stream = await response.ReadAsStreamUncompressedAsync())
                                 {
-                                    using (var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "ErrorResponse"))
+                                    try
                                     {
-                                        string error;
-                                        if (blittableJsonReaderObject.TryGet("Error", out error) == false)
-                                            throw new InvalidOperationException($"Doesn't know how to handle error: {response.StatusCode}, response: {response.ReadErrorResponse()}");
-
-                                        if (response.StatusCode == HttpStatusCode.BadRequest)
-                                            throw new BadRequestException(error + ". Response: " + blittableJsonReaderObject);
-
-                                        string indexDefinitionProperty;
-                                        if (blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.IndexDefinitionProperty), out indexDefinitionProperty))
+                                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "ErrorResponse");
+                                        using (blittableJsonReaderObject)
                                         {
-                                            var indexCompilationException = new IndexCompilationException(error);
-                                            blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.IndexDefinitionProperty), out indexCompilationException.IndexDefinitionProperty);
-                                            blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.ProblematicText), out indexCompilationException.ProblematicText);
-                                            throw indexCompilationException;
-                                        }
+                                            string error;
+                                            if (blittableJsonReaderObject.TryGet("Error", out error) == false)
+                                                throw new InvalidOperationException($"Doesn't know how to handle error: {response.StatusCode}, response: {stream.ReadToEnd()}");
 
-                                        throw new InternalServerErrorException(error + ". Response: " + blittableJsonReaderObject);
+                                            if (response.StatusCode == HttpStatusCode.BadRequest)
+                                                throw new BadRequestException(error + ". Response: " + blittableJsonReaderObject);
+
+                                            string indexDefinitionProperty;
+                                            if (blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.IndexDefinitionProperty), out indexDefinitionProperty))
+                                            {
+                                                var indexCompilationException = new IndexCompilationException(error);
+                                                blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.IndexDefinitionProperty), out indexCompilationException.IndexDefinitionProperty);
+                                                blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.ProblematicText), out indexCompilationException.ProblematicText);
+                                                throw indexCompilationException;
+                                            }
+
+                                            throw new InternalServerErrorException(error + ". Response: " + blittableJsonReaderObject);
+                                        }
+                                    }
+                                    catch (InvalidDataException e)
+                                    {
+                                        throw new InvalidOperationException($"Cannot parse the {response.StatusCode} response: {stream.ReadToEnd()}", e);
                                     }
                                 }
                         }
