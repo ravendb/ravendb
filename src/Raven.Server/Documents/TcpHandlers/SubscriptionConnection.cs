@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 subscriptionCommandOptions = await _multiDocumentParser.ParseToMemoryAsync("subscription options");
 
-                _options = JsonDeserialization.SubscriptionConnectionOptions(subscriptionCommandOptions);
+                _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
             }
             catch (Exception ex)
             {
@@ -384,7 +384,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     using (var reply = await replyFromClientTask)
                                     {
-                                        clientReply = JsonDeserialization.SubscriptionConnectionClientMessage(reply);
+                                        clientReply = JsonDeserializationServer.SubscriptionConnectionClientMessage(reply);
                                     }
                                     replyFromClientTask = _multiDocumentParser.ParseToMemoryAsync("client reply");
                                     break;

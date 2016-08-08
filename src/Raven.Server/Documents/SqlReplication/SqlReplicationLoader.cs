@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.SqlReplication
                 var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.SqlReplication.SqlReplicationConfigurationPrefix, null, null, 0, MaxSupportedSqlReplication);
                 foreach (var document in documents)
                 {
-                    var configuration = JsonDeserialization.SqlReplicationConfiguration(document.Data);
+                    var configuration = JsonDeserializationServer.SqlReplicationConfiguration(document.Data);
                     var sqlReplication = new SqlReplication(_database, configuration);
                     Replications.Add(sqlReplication);
                     if (sqlReplication.ValidateName() == false ||

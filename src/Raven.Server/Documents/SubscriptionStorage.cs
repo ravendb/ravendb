@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
 
             // Validate that this can be properly parsed into a criteria object
             // and doing that without holding the tx lock
-            JsonDeserialization.SubscriptionCriteria(criteria);
+            JsonDeserializationServer.SubscriptionCriteria(criteria);
 
             using (var tx = _environment.WriteTransaction())
             {
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents
                 int criteriaSize;
                 var criteriaPtr = config.Read(Schema.SubscriptionTable.CriteriaIndex, out criteriaSize);
                 var criteriaBlittable = new BlittableJsonReaderObject(criteriaPtr, criteriaSize, context);
-                criteria = JsonDeserialization.SubscriptionCriteria(criteriaBlittable);
+                criteria = JsonDeserializationServer.SubscriptionCriteria(criteriaBlittable);
                 startEtag = *(long*)config.Read(Schema.SubscriptionTable.AckEtagIndex, out criteriaSize);
             }
         }
