@@ -29,6 +29,9 @@ namespace Raven.Client
             get { return FailoverBehavior & (~FailoverBehavior.ReadFromAllServers); }
         }
 
+        /// <summary>
+        /// Gets or sets the default sla threshold
+        /// </summary>
         public double RequestTimeSlaThresholdInMilliseconds { get; set; }
 
         public string AuthenticationScheme { get; set; }
