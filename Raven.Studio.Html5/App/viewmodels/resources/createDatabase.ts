@@ -64,6 +64,10 @@ class createDatabase extends createResourceBase {
         this.fetchClusterWideConfig();
     }
 
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
+
     fetchClusterWideConfig() {
         new getClusterTopologyCommand(appUrl.getSystemDatabase())
             .execute()

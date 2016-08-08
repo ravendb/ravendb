@@ -34,6 +34,9 @@ class transformerShell extends viewModelBase {
         });
     }
 
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = transformerShell;

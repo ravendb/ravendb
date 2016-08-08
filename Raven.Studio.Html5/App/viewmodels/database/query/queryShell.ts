@@ -15,6 +15,10 @@ class queryShell {
 
         appUrl.mapUnknownRoutes(this.router);
     }
+
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = queryShell;
