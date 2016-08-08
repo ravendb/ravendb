@@ -22,7 +22,9 @@ namespace Rachis.Messages
                 PrevLogIndex = message.PrevLogIndex,
                 PrevLogTerm = message.PrevLogTerm,
                 Entries = message.Entries,
-                LeaderCommit = message.LeaderCommit
+                LeaderCommit = message.LeaderCommit,
+                From = message.From,
+                ClusterTopologyId = message.ClusterTopologyId
             };
         }
         public long Term { get; set; }
