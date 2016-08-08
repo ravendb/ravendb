@@ -7,7 +7,7 @@ import topology = require("models/database/replication/topology");
 import nodeConnectionInfo = require("models/database/cluster/nodeConnectionInfo");
 import editNodeConnectionInfoDialog = require("viewmodels/manage/editNodeConnectionInfoDialog");
 import app = require("durandal/app");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getReducedDatabaseStatsCommand = require("commands/resources/getReducedDatabaseStatsCommand");
 import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import extendRaftClusterCommand = require("commands/database/cluster/extendRaftClusterCommand");
 import initializeNewClusterCommand = require("commands/database/cluster/initializeNewClusterCommand");
@@ -82,9 +82,9 @@ class cluster extends viewModelBase {
     }
 
     fetchDatabaseId(db: database): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(db)
+        return new getReducedDatabaseStatsCommand(db)
             .execute()
-            .done((stats: databaseStatisticsDto) => {
+            .done((stats: reducedDatabaseStatisticsDto) => {
                 this.systemDatabaseId(stats.DatabaseId);
             });
     }

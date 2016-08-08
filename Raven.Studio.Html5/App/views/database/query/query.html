@@ -22,7 +22,7 @@
                 </button>
                 <ul class="dropdown-menu" role="menu" style="max-height: 300px; overflow-x: hidden;">
                     <!-- ko foreach: indexesExceptCurrent -->
-                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.Name)"><a href="#" data-bind="text: $data.Name"></a></li>
                     <!-- /ko -->
                     <li class="divider" data-bind="visible: collectionNamesExceptCurrent().length"></li>
                     <!-- ko foreach: collectionNamesExceptCurrent -->

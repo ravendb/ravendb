@@ -36,10 +36,14 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage IndexesGet()
         {
             var namesOnlyString = GetQueryStringValue("namesOnly");
-            bool namesOnly;
+            var namesWithTypeOnlyString = GetQueryStringValue("namesWithTypeOnly");
+
+            bool result;
             RavenJArray indexes;
-            if (bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
+            if (bool.TryParse(namesOnlyString, out result) && result)
                 indexes = Database.Indexes.GetIndexNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+            else if (bool.TryParse(namesWithTypeOnlyString, out result) && result)
+                indexes = Database.Indexes.GetIndexNamesWithType(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
             else
                 indexes = Database.Indexes.GetIndexes(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 

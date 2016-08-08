@@ -40,14 +40,6 @@ namespace Raven.Database.Server.Controllers
     public class StudioTasksController : BaseDatabaseApiController
     {
         [HttpGet]
-        [RavenRoute("studio-tasks/reduced-database-stats")]
-        [RavenRoute("databases/{databaseName}/studio-tasks/reduced-database-stats")]
-        public HttpResponseMessage ReducedDatabaseStats()
-        {
-            return GetMessageWithObject(Database.ReducedStatistics);
-        }
-
-        [HttpGet]
         [RavenRoute("studio-tasks/config")]
         [RavenRoute("databases/{databaseName}/studio-tasks/config")]
         public HttpResponseMessage StudioConfig()

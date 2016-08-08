@@ -433,6 +433,11 @@ interface indexDefinitionContainerDto {
     Index: indexDefinitionDto;
 }
 
+interface indexDataDto {
+    Name: string;
+    IsMapReduce: boolean;
+}
+
 interface indexDefinitionDto {
     Name: string;
     LockMode: string;
@@ -664,11 +669,6 @@ interface storedQueryDto {
 
 interface storedPatchDto extends patchDto {
     Hash: number;
-}
-
-interface indexDataDto {
-    name: string;
-    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {

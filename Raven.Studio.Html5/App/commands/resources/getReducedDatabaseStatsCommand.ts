@@ -18,7 +18,7 @@ class getReducedDatabaseStatsCommand extends commandBase {
     }
 
     private getQueryUrlFragment(): string {
-        return "/studio-tasks/reduced-database-stats";
+        return "/reduced-database-stats";
     }
 }
 

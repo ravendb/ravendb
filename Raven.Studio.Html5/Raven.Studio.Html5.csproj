@@ -39,6 +39,8 @@
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getDocumentsPreviewCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\index\getIndexesStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\index\getIndexNamesCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\renameIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\startReducingCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\stopReducingCommand.ts" />

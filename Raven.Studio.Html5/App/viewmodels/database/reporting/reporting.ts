@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import facet = require("models/database/query/facet");
 import queryFacetsCommand = require("commands/database/query/queryFacetsCommand");
@@ -98,9 +98,9 @@ class reporting extends viewModelBase {
     }
 
     fetchIndexes(): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(this.activeDatabase())
+        return new getIndexNamesCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.Name)));
+            .done((results: string[]) => this.indexNames(results));
     }
 
     fetchIndexDefinition(indexName: string) {

@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/database/replication/replicationsSetup");
 import replicationDestination = require("models/database/replication/replicationDestination");
 import collection = require("models/database/documents/collection");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
 import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -161,14 +160,8 @@ class etl extends viewModelBase {
             if (this.replicationsSetup().source()) {
                 this.saveReplicationSetup();
             } else {
-                var db = this.activeDatabase();
-                if (db) {
-                    new getDatabaseStatsCommand(db)
-                        .execute()
-                        .done(result=> {
-                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                        });
-                }
+                var db: database = this.activeDatabase();
+                this.prepareAndSaveReplicationSetup(db.statistics().databaseId());
             }
         }
     }

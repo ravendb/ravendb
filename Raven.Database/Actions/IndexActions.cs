@@ -818,6 +818,18 @@ namespace Raven.Database.Actions
                 );
         }
 
+        public RavenJArray GetIndexNamesWithType(int start, int pageSize)
+        {
+            return new RavenJArray(
+                from indexName in IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
+                let indexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexName)
+                select new RavenJObject
+                {
+                    {"Name", new RavenJValue(indexName)},
+                    {"IsMapReduce", indexDefinition?.IsMapReduce ?? false},
+                });
+        }
+
         public RavenJArray GetIndexes(int start, int pageSize)
         {
             return new RavenJArray(

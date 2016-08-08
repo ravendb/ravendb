@@ -8,19 +8,19 @@ import generalUtils = require("common/generalUtils");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import messagePublisher = require("common/messagePublisher");
-
 import chunkFetcher = require("common/chunkFetcher");
 
 import router = require("plugins/router");
 import visualizerKeys = require("viewmodels/database/status/visualizerKeys");
 import visualizerImport = require("viewmodels/database/status/visualizerImport");
 import viewModelBase = require("viewmodels/viewModelBase");
+import database = require("models/resources/database");
 
 import queryIndexDebugDocsCommand = require("commands/database/debug/queryIndexDebugDocsCommand");
 import queryIndexDebugMapCommand = require("commands/database/debug/queryIndexDebugMapCommand");
 import queryIndexDebugReduceCommand = require("commands/database/debug/queryIndexDebugReduceCommand");
 import queryIndexDebugAfterReduceCommand = require("commands/database/debug/queryIndexDebugAfterReduceCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 
@@ -96,12 +96,13 @@ class visualizer extends viewModelBase {
 
         this.updateHelpLink('RNXYCB');
 
+        var db = this.activeDatabase();
         this.editIndexUrl = ko.computed(() => {
-            return appUrl.forEditIndex(this.indexName(), this.activeDatabase());
+            return appUrl.forEditIndex(this.indexName(), db);
         });
 
         this.runQueryUrl = ko.computed(() => {
-            return appUrl.forQuery(this.activeDatabase(), this.indexName());
+            return appUrl.forQuery(db, this.indexName());
         });
 
         this.hasFocusDocKey.subscribe(value => {
@@ -130,7 +131,7 @@ class visualizer extends viewModelBase {
             }
         });
 
-        return this.fetchAllIndexes();
+        return this.fetchAllIndexes(db);
     }
 
     attached() {
@@ -328,15 +329,10 @@ class visualizer extends viewModelBase {
         this.updateGraph();
     }
 
-    fetchAllIndexes(): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(this.activeDatabase())
+    fetchAllIndexes(db: database): JQueryPromise<any> {
+        return new getIndexNamesCommand(this.activeDatabase(), true)
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
-                return {
-                    name: i.Name,
-                    hasReduce: !!i.LastReducedTimestamp
-                };
-            }).filter(i => i.hasReduce)));
+            .done((results: indexDataDto[]) => this.indexes(results.filter(i => i.IsMapReduce)));
     }
 
     static makeLinkId(link: graphLinkDto) {

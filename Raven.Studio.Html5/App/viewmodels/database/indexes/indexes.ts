@@ -1,4 +1,4 @@
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
@@ -177,16 +177,15 @@ class indexes extends viewModelBase {
 
     private fetchIndexes() {
         var deferred = $.Deferred();
+        var db = this.activeDatabase();
 
-        var statsTask = new getDatabaseStatsCommand(this.activeDatabase())
-            .execute();
-
-        var replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute();
+        var statsTask = new getIndexesStatsCommand(db).execute();
+        var replacementTask = new getPendingIndexReplacementsCommand(db).execute();
 
         $.when(statsTask, replacementTask)
             .done((statsTaskResult, replacements: indexReplaceDocument[]) => {
 
-                var stats: databaseStatisticsDto = statsTaskResult[0];
+                var stats = statsTaskResult[0];
                 this.processData(stats, replacements);
 
                 deferred.resolve(stats);
@@ -242,7 +241,7 @@ class indexes extends viewModelBase {
         return "";
     }
 
-    processData(stats: databaseStatisticsDto, replacements: indexReplaceDocument[]) {
+    processData(stats: indexStatisticsDto[], replacements: indexReplaceDocument[]) {
         var willReplaceMap = d3.map([]);
         var willBeReplacedMap = d3.map([]);
         replacements.forEach(r => {
@@ -250,8 +249,7 @@ class indexes extends viewModelBase {
             willReplaceMap.set(r.extractReplaceWithIndexName(), r.indexToReplace);
         });
 
-        stats.Indexes
-            .map(i => {
+        stats.map(i => {
                 var idx = new index(i);
                 if (willBeReplacedMap.has(idx.name)) {
                     idx.willBeReplacedByIndex(willBeReplacedMap.get(idx.name));

@@ -573,17 +573,7 @@ namespace Raven.Database
                         return index == null ? null : index.PublicName;
                     }).ToArray();
 
-                    result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-                    {
-                        Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-                        if (indexInstance == null)
-                            return null;
-                        x.Name = indexInstance.PublicName;
-                        x.SetLastDocumentEtag(result.LastDocEtag);
-                        return x;
-                    })
-                        .Where(x => x != null)
-                        .ToArray();
+                    result.Indexes = GetIndexesStats(actions, result.LastDocEtag);
 
                     result.CountOfIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
                     result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx =>
@@ -592,31 +582,7 @@ namespace Raven.Database
                         && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
                 });
 
-                if (result.Indexes != null)
-                {
-                    foreach (IndexStats index in result.Indexes)
-                    {
-                        try
-                        {
-                            IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
-                            index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
-                            index.IsTestIndex = indexDefinition.IsTestIndex;
-                            index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
-                            index.LockMode = indexDefinition.LockMode;
-                            index.IsMapReduce = indexDefinition.IsMapReduce;
-
-                            index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
-                            IndexSearcher searcher;
-                            using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
-                                index.DocsCount = searcher.IndexReader.NumDocs();
-                        }
-                        catch (Exception)
-                        {
-                            // might happen if the index was deleted mid operation
-                            // we don't really care for that, so we ignore this
-                        }
-                    }
-                }
+                GetMoreIndexesStats(result.Indexes);
 
                 return result;
             }
@@ -640,19 +606,7 @@ namespace Raven.Database
                     result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 
                     var lastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
-                    var indexes = actions.Indexing.GetIndexesStats()
-                        .Where(x => x != null).Select(x =>
-                        {
-                            var indexInstance = IndexStorage.GetIndexInstance(x.Id);
-                            if (indexInstance == null)
-                                return null;
-                            x.Name = indexInstance.PublicName;
-                            x.SetLastDocumentEtag(lastDocEtag);
-                            return x;
-                        })
-                        .Where(x => x != null)
-                        .ToList();
-
+                    var indexes = GetIndexesStats(actions, lastDocEtag);
 
                     result.CountOfIndexesExcludingDisabledAndAbandoned = indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
                     result.CountOfStaleIndexesExcludingDisabledAndAbandoned = IndexStorage.Indexes
@@ -669,6 +623,69 @@ namespace Raven.Database
 
                 return result;
             }
+        }
+
+        public IndexStats[] IndexesStatistics
+        {
+            get
+            {
+                IndexStats[] indexes = null;
+
+                TransactionalStorage.Batch(actions =>
+                {
+                    var lastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
+                    indexes = GetIndexesStats(actions, lastDocEtag);
+                });
+
+                GetMoreIndexesStats(indexes);
+
+                return indexes;
+            }
+        }
+
+        private void GetMoreIndexesStats(IndexStats[] indexes)
+        {
+            if (indexes == null)
+                return;
+
+            foreach (IndexStats index in indexes)
+            {
+                try
+                {
+                    IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
+                    index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
+                    index.IsTestIndex = indexDefinition.IsTestIndex;
+                    index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
+                    index.LockMode = indexDefinition.LockMode;
+                    index.IsMapReduce = indexDefinition.IsMapReduce;
+
+                    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
+                    IndexSearcher searcher;
+                    using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
+                        index.DocsCount = searcher.IndexReader.NumDocs();
+                }
+                catch (Exception)
+                {
+                    // might happen if the index was deleted mid operation
+                    // we don't really care for that, so we ignore this
+                }
+            }
+        }
+
+        private IndexStats[] GetIndexesStats(IStorageActionsAccessor actions, Etag lastDocEtag)
+        {
+            return actions.Indexing.GetIndexesStats()
+                .Where(x => x != null).Select(x =>
+                {
+                    Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+                    if (indexInstance == null)
+                        return null;
+                    x.Name = indexInstance.PublicName;
+                    x.SetLastDocumentEtag(lastDocEtag);
+                    return x;
+                })
+                .Where(x => x != null)
+                .ToArray();
         }
 
         private int GetNumberOfAlerts()

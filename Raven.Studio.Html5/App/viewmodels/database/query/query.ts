@@ -6,7 +6,7 @@ import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -125,11 +125,11 @@ class query extends viewModelBase {
             var allIndexesCopy: Array<indexDataDto>;
 
             if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) === -1) {
-                allIndexesCopy = allIndexes.filter((indexDto: indexDataDto) => indexDto.name !== selectedIndex);
+                allIndexesCopy = allIndexes.filter((indexDto: indexDataDto) => indexDto.Name !== selectedIndex);
             } else {
                 allIndexesCopy = allIndexes.slice(0); // make copy as sort works in situ
             }
-            allIndexesCopy.sort((l: indexDataDto, r: indexDataDto) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1);
+            allIndexesCopy.sort((l: indexDataDto, r: indexDataDto) => l.Name.toLowerCase() > r.Name.toLowerCase() ? 1 : -1);
             return allIndexesCopy;
         });
 
@@ -152,24 +152,24 @@ class query extends viewModelBase {
             if (this.queryStats()) {
                 var recievedIndex = this.queryStats().IndexName;
                 var selectedIndex = this.selectedIndex();
-                return selectedIndex.indexOf(this.dynamicPrefix) === 0 && this.indexes()[0].name !== recievedIndex;
+                return selectedIndex.indexOf(this.dynamicPrefix) === 0 && this.indexes()[0].Name !== recievedIndex;
             } else {
                 return false;
             }
         });
 
         this.isIndexMapReduce = ko.computed(() => {
-            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
-            return !!currentIndex && currentIndex.hasReduce;
+            var currentIndex = this.indexes.first(i=> i.Name == this.selectedIndex());
+            return !!currentIndex && currentIndex.IsMapReduce;
         });
 
         this.isDynamicIndex = ko.computed(() => {
-            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
-            return !!currentIndex && currentIndex.name.startsWith("Auto/");
+            var currentIndex = this.indexes.first(i=> i.Name == this.selectedIndex());
+            return !!currentIndex && currentIndex.Name.startsWith("Auto/");
         });
 
         this.enableDeleteButton = ko.computed(() => {
-            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+            var currentIndex = this.indexes.first(i=> i.Name == this.selectedIndex());
             var isMapReduce = this.isIndexMapReduce();
             var isDynamic = this.isDynamicIndex();
             return !!currentIndex && !isMapReduce && !isDynamic;
@@ -195,7 +195,7 @@ class query extends viewModelBase {
         var db = this.activeDatabase();
         if (!!db) {
             this.fetchRecentQueries();
-            $.when(this.fetchCustomFunctions(db), this.fetchAllTransformers(db))
+            $.when(this.fetchCustomFunctions(db), this.fetchAllTransformers(db), this.fetchAllIndexes(db))
                 .done(() => deferred.resolve({ can: true }));
         } else {
             deferred.resolve({ redirect: "#resources" });
@@ -207,10 +207,10 @@ class query extends viewModelBase {
     activate(indexNameOrRecentQueryHash?: string) {
         super.activate(indexNameOrRecentQueryHash);
 
-        this.updateHelpLink('KCIMJK');
+        this.updateHelpLink("KCIMJK");
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
         var db = this.activeDatabase();
-        return $.when(this.fetchAllCollections(db), this.fetchAllIndexes(db))
+        return $.when(this.fetchAllCollections(db))
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
@@ -292,15 +292,10 @@ class query extends viewModelBase {
     private fetchAllIndexes(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        new getDatabaseStatsCommand(db)
+        new getIndexNamesCommand(db, true)
             .execute()
-            .done((results: databaseStatisticsDto) => {
-                this.indexes(results.Indexes.map(i => {
-                    return {
-                        name: i.Name,
-                        hasReduce: !!i.LastReducedTimestamp
-                    };
-                }));
+            .done((results: indexDataDto[]) => {
+                this.indexes(results);
                 deferred.resolve();
             });
 
@@ -340,9 +335,9 @@ class query extends viewModelBase {
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
-            var firstIndexName = this.indexes.first().name;
+            var firstIndexName = this.indexes.first().Name;
             this.setSelectedIndex(firstIndexName);
-        } else if (this.indexes.first(i => i.name === indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf(this.dynamicPrefix) === 0 || indexNameOrRecentQueryHash === "dynamic") {
+        } else if (this.indexes.first(i => i.Name === indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf(this.dynamicPrefix) === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
