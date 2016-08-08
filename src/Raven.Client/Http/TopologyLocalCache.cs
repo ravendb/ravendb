@@ -60,6 +60,12 @@ namespace Raven.Client.Http
             try
             {
                 var path = GetTopologyPath(serverHash);
+                if (topology == null)
+                {
+                    ClearTopologyFromLocalCache(serverHash);
+                    return;
+                }
+
                 using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
