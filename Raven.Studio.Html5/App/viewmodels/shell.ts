@@ -58,6 +58,7 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import getStudioConfig = require("commands/getStudioConfig");
 
 import viewModelBase = require("viewmodels/viewModelBase");
+import eventsCollector = require("common/eventsCollector");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
@@ -154,6 +155,7 @@ class shell extends viewModelBase {
     isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(3);
+    static serverMinorVersion = ko.observable<number>(5);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
    
     windowHeightObservable: KnockoutObservable<number>;
@@ -403,6 +405,7 @@ class shell extends viewModelBase {
         }
 
         shell.saveStudioConfig(configTask, false);
+        return configTask;
     }
 
     private static saveStudioConfig(configTask: JQueryPromise<documentClass>, isHotSpare: boolean) {
@@ -843,17 +846,34 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done((results: database[]) => {
                 this.databasesLoaded(results);
+                var configTask = shell.fetchStudioConfig();
                 this.fetchClusterTopology();
-                this.fetchServerBuildVersion();
+                var studioVersionTask = this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
                 shell.fetchLicenseStatus().always(() => shell.fetchStudioConfig());
                 this.fetchSupportCoverage();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
+
+                $.when(configTask, studioVersionTask).then((configResult: any, buildVersionResult: any) => {
+                    shell.configureAnalytics(configResult, buildVersionResult);
+                });
             })
             .always(() => deferred.resolve());
 
         return deferred;
+    }
+
+    static configureAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+
+        var currentBuildVersion = buildVersionResult[0].BuildVersion;
+        if (currentBuildVersion !== 13) {
+            shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+        }
+
+        var statsEnabled = config != null && config.SendUsageStats;
+
+        eventsCollector.default.initialize(shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, statsEnabled);
     }
 
     private loadFileSystems(): JQueryPromise<any> {
@@ -1094,7 +1114,7 @@ class shell extends viewModelBase {
     }
 
     fetchServerBuildVersion() {
-        new getServerBuildVersionCommand()
+        return new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);

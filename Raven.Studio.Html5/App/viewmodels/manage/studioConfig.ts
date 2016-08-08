@@ -16,6 +16,7 @@ class studioConfig extends viewModelBase {
     systemDatabase: database;
     configDocument = ko.observable<documentClass>();
     warnWhenUsingSystemDatabase = ko.observable<boolean>(true);
+    sendUsageStats = ko.observable<boolean>(false);
     disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
@@ -81,6 +82,7 @@ class studioConfig extends viewModelBase {
                 .done((doc: documentClass) => {
                     this.configDocument(doc);
                     this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
+                    this.sendUsageStats(doc["SendUsageStats"]);
                 })
                 .fail(() => this.configDocument(documentClass.empty()))
                 .always(() => deferred.resolve({ can: true }));
@@ -131,6 +133,16 @@ class studioConfig extends viewModelBase {
             newDocument["WarnWhenUsingSystemDatabase"] = warnSetting;
             var saveTask = this.saveStudioConfig(newDocument);
             saveTask.fail(() => this.warnWhenUsingSystemDatabase(!warnSetting));
+        }
+    }
+
+    setSendUsageStats(setting: boolean) {
+        if (this.sendUsageStats() !== setting) {
+            var newDocument = this.configDocument();
+            this.sendUsageStats(setting);
+            newDocument["SendUsageStats"] = setting;
+            var saveTask = this.saveStudioConfig(newDocument);
+            saveTask.fail(() => this.warnWhenUsingSystemDatabase(!setting));
         }
     }
 

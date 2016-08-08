@@ -110,6 +110,7 @@
     <TypeScriptCompile Include="App\common\awesomeMultiselect.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
+    <TypeScriptCompile Include="App\common\eventsCollector.ts" />
     <TypeScriptCompile Include="App\common\tableNavigationTrait.ts" />
     <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
     <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
@@ -502,6 +503,7 @@
     <Content Include="Scripts\ace\theme-xcode.js" />
     <Content Include="Scripts\ace\worker-json.js" />
     <Content Include="Scripts\almond-custom.js" />
+    <Content Include="Scripts\analytics.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\spin.min.js" />
@@ -1049,6 +1051,7 @@
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\dagre.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\google.analytics\ga.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.blockUI\jquery.blockUI.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.dynatree\jquery.dynatree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
