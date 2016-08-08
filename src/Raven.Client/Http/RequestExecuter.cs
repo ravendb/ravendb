@@ -13,7 +13,6 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
-using System.Linq;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Exceptions;
 
@@ -34,8 +33,6 @@ namespace Raven.Client.Http
 
         public readonly ThreadLocal<AggresiveCacheOptions> AggressiveCaching = new ThreadLocal<AggresiveCacheOptions>();
 
-        public readonly ThreadLocal<string> ApiKey = new ThreadLocal<string>();
-
         private readonly HttpCache _cache = new HttpCache();
 
         private readonly HttpClient _httpClient;
@@ -49,7 +46,7 @@ namespace Raven.Client.Http
             _store = store;
             var handler = new HttpClientHandler
             {
-
+                
             };
             _httpClient = new HttpClient(handler);
 
@@ -66,6 +63,7 @@ namespace Raven.Client.Http
 
             var url = _topology?.LeaderNode?.Url ?? _store.Url;
             var database = _topology?.LeaderNode?.Database ?? _store.DefaultDatabase;
+            var apiKey = _topology?.LeaderNode?.ApiKey ?? _store.ApiKey;
             if (url == null || database == null)
                 return;
 
@@ -85,7 +83,7 @@ namespace Raven.Client.Http
             }
 
             var command = new GetTopologyCommand();
-            ExecuteAsync(url, database, _context, command)
+            ExecuteAsync(url, database, apiKey, _context, command)
                 .ContinueWith(task =>
                 {
                     if (task.IsFaulted == false)
@@ -98,7 +96,7 @@ namespace Raven.Client.Http
                 });
         }
 
-        public async Task ExecuteAsync<TResult>(string serverUrl, string database, JsonOperationContext context, RavenCommand<TResult> command)
+        public async Task ExecuteAsync<TResult>(string serverUrl, string database, string apiKey, JsonOperationContext context, RavenCommand<TResult> command)
         {
             string url;
             var request = command.CreateRequest(out url);
@@ -133,7 +131,7 @@ namespace Raven.Client.Http
 
                     if (_topology.LeaderNode.Match(url, database) == false && _topology.LeaderNode.LastFailure.AddMinutes(5) < SystemTime.UtcNow)
                     {
-                        await ExecuteAsync(_topology.LeaderNode.Url, _topology.LeaderNode.Database, context, command);
+                        await ExecuteAsync(_topology.LeaderNode.Url, _topology.LeaderNode.Database, _topology.LeaderNode.ApiKey, context, command);
                         return;
                     }
 
@@ -141,7 +139,7 @@ namespace Raven.Client.Http
                     {
                         if (node.Match(url, database) == false && node.LastFailure.AddMinutes(5) < SystemTime.UtcNow)
                         {
-                            await ExecuteAsync(_topology.LeaderNode.Url, _topology.LeaderNode.Database, context, command);
+                            await ExecuteAsync(node.Url, node.Database, node.ApiKey, context, command);
                             return;
                         }
                     }
@@ -168,13 +166,12 @@ namespace Raven.Client.Http
                                 return;
                             case HttpStatusCode.Unauthorized:
                             case HttpStatusCode.PreconditionFailed:
-                                var apiKey = ApiKey.Value;
                                 if (string.IsNullOrEmpty(apiKey))
                                     throw new UnauthorizedAccessException($"Got unauthorized response exception for {url}. Please specify an API Key.");
                                 if (++command.AuthenticationRetries > 1)
                                     throw new UnauthorizedAccessException($"Got unauthorized response exception for {url} after trying to authenticate using ApiKey.");
                                 await HandleUnauthorized(response, serverUrl, apiKey, context).ConfigureAwait(false);
-                                await ExecuteAsync(serverUrl, database, context, command).ConfigureAwait(false);
+                                await ExecuteAsync(serverUrl, database, apiKey, context, command).ConfigureAwait(false);
                                 return;
                             case HttpStatusCode.Forbidden:
                                 throw new UnauthorizedAccessException($"Forbidan access to {url}. Make sure you're using the correct ApiKey.");

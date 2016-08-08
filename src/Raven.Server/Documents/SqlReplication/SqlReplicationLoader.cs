@@ -6,7 +6,6 @@ using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
