@@ -8,12 +8,6 @@ var latestFile;
 
 var HANDLER_PATTERN = "Handler.cs";
 
-if (!String.prototype.endsWith) {
-    String.prototype.endsWith = function(suffix) {
-        return this.indexOf(suffix, this.length - suffix.length) !== -1;
-    };
-}
-
 module.exports = function parseHandlers(outputFileName) {
     return through.obj(function (inputFile, encoding, callback) {
         latestFile = inputFile;

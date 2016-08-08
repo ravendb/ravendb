@@ -1,10 +1,12 @@
 ﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile' ProjectOpened='restore' />
+
+require('./gulp/shim');
+
 var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
     del = require('del'),
     Map = require('es6-map'),
-    path = require('path'),
     runSequence = require('run-sequence'),
     exec = require('child_process').exec,
     parseHandlers = require('./gulp/parseHandlers'),
@@ -63,13 +65,13 @@ gulp.task('generate-typings', function(cb) {
 });
 
 gulp.task('compile:test', ['generate-ts'], function() {
-     return gulp.src([PATHS.tsTestSource])
-        .pipe(plugins.changed(PATHS.tsTestOutput, { extension: '.js' }))
+     return gulp.src([PATHS.test.tsSource])
+        .pipe(plugins.changed(PATHS.test.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.typescript(tsCompilerConfig))
         .js
         .pipe(plugins.sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.tsTestOutput));
+        .pipe(gulp.dest(PATHS.test.tsOutput));
 });
 
 gulp.task('compile:app', ['generate-ts'], function () {
@@ -89,14 +91,6 @@ gulp.task('typings', function() {
 
 gulp.task('bower', function () {
     return plugins.bower();
-});
-
-gulp.task('compile', ['less', 'less:old', 'compile:app'], function() { });
-
-gulp.task('watch', ['compile'], function () {
-    gulp.watch(PATHS.tsSource, ['compile:app']);
-    gulp.watch(PATHS.tsTestSource, ['compile:test']);
-    gulp.watch(PATHS.lessSource, ['less']);
 });
 
 gulp.task('release:favicon', function() {
@@ -121,11 +115,11 @@ gulp.task('release:html', function() {
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-/**
- * Due to https://github.com/mariocasciaro/gulp-concat-css/issues/26 we have to process jquery and remove comments
- * to enable parsing
- */
 gulp.task('fix-jquery-ui', function() {
+    /*
+    * Due to https://github.com/mariocasciaro/gulp-concat-css/issues/26 we have to process jquery and remove comments
+    * to enable parsing
+    */
     return gulp.src('./wwwroot/lib/jquery-ui/themes/base/**/*.css')
         .pipe(plugins.stripCssComments())
         .pipe(gulp.dest("./wwwroot/lib/jquery-ui/themes/base-wo-comments/"));
@@ -161,6 +155,33 @@ gulp.task('release:durandal', function() {
         }
     })
    .pipe(gulp.dest(PATHS.releaseTargetApp));
+});
+
+gulp.task('generate-test-list', function () {
+    var reduceFiles = plugins.reduceFile('tests.js',
+        function (file, memo) {
+            memo.push(file.relative.replace(/\\/g, '/'));
+            return memo;
+        }, function (memo) {
+            return 'var tests = ' + JSON.stringify(memo, null , 2) + ';';
+        }, [])
+
+    return gulp.src([
+        '**/*.spec.js'
+    ], {
+        cwd: PATHS.test.tsOutput,
+        base: PATHS.test.dir
+    })
+    .pipe(reduceFiles)
+    .pipe(gulp.dest(PATHS.test.setup));
+});
+
+gulp.task('compile', ['less', 'less:old', 'compile:app'], function() { });
+
+gulp.task('watch', ['compile'], function () {
+    gulp.watch(PATHS.tsSource, ['compile:app']);
+    gulp.watch(PATHS.test.tsSource, ['compile:test']);
+    gulp.watch(PATHS.lessSource, ['less']);
 });
 
 gulp.task('generate-ts', ['parse-handlers', 'generate-typings'], function() {});
