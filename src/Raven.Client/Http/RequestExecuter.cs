@@ -59,11 +59,15 @@ namespace Raven.Client.Http
 
         private void UpdateTopologyCallback(object _)
         {
+            // Use server side conventions
             if (_store.Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
                 return;
 
             var url = _topology?.LeaderNode?.Url ?? _store.Url;
             var database = _topology?.LeaderNode?.Database ?? _store.DefaultDatabase;
+            if (url == null || database == null)
+                return;
+
             var serverHash = ServerHash.GetServerHash(url, database);
 
             if (_firstTimeTryLoadFromTopologyCache)

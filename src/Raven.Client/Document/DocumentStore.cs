@@ -130,10 +130,9 @@ namespace Raven.Client.Document
             Credentials = CredentialCache.DefaultNetworkCredentials;
             SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
             Conventions = new DocumentConvention();
-            RequestExecuter = new RequestExecuter(this);
         }
 
-        public readonly RequestExecuter RequestExecuter;
+        public RequestExecuter RequestExecuter { get; private set; }
 
         private string identifier;
 
@@ -332,6 +331,7 @@ namespace Raven.Client.Document
             AssertValidConfiguration();
 
             jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent, Conventions.AuthenticationScheme);
+            RequestExecuter = new RequestExecuter(this);
 
             try
             {
