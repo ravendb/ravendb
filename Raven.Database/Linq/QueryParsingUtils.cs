@@ -24,6 +24,7 @@ using ICSharpCode.NRefactory.PatternMatching;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -38,7 +39,10 @@ namespace Raven.Database.Linq
 {
 	public static class QueryParsingUtils
 	{
-		[CLSCompliant(false)]
+        private static readonly ConcurrentDictionary<int, object> Locks = new ConcurrentDictionary<int, object>();
+	    private static ILog _logger = LogManager.GetCurrentClassLogger();
+
+        [CLSCompliant(false)]
 		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
 		{
 			var unit = new SyntaxTree();
@@ -284,31 +288,43 @@ namespace Raven.Database.Linq
 				Directory.CreateDirectory(indexCacheDir);
 			}
 
-			var indexFilePath = GetIndexFilePath(source, indexCacheDir);
+            int numberHash;
+            var indexFilePath = GetIndexFilePath(source, indexCacheDir, out numberHash);
 
-			var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
-			if (shouldCachedIndexBeRecompiled == false)
-			{
-				// Look up the index in the in-memory cache.
-				CacheEntry entry;
-				if (cacheEntries.TryGetValue(source, out entry))
-				{
-					Interlocked.Increment(ref entry.Usages);
-					return entry.Type;
-				}
+            var locker = Locks.GetOrAdd(numberHash, s => new object());
 
-				Type type;
+		    lock (locker)
+		    {
+		        var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
+		        if (shouldCachedIndexBeRecompiled == false)
+		        {
+		            // Look up the index in the in-memory cache.
+		            CacheEntry entry;
+		            if (cacheEntries.TryGetValue(source, out entry))
+		            {
+                        _logger.Debug(string.Format("Cache entrie for index {0} in database {1} was found and incremented", name, configuration.DatabaseName));
+		                Interlocked.Increment(ref entry.Usages);
+		                return entry.Type;
+		            }
 
-				if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
-					return type;
-			}
+		            Type type;
 
-			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath);
+		            if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
+		            {
+                        _logger.Debug(string.Format("Definition for index {0} in database {1} was found in compiled cache on disk (at {2}) and loaded to assembly", name, configuration.DatabaseName, configuration.CompiledIndexCacheDirectory));
+                        return type;
+		            }
+		        }
 
-			// ReSharper disable once RedundantArgumentName
-			AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
+		        var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath);
+                
+                // ReSharper disable once RedundantArgumentName
+                AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
 
-			return result;
+                _logger.Debug(string.Format("Index {0} in database {1} was compiled, cached and stored on disk (at {2}) and loaded to assembly", name, configuration.DatabaseName, configuration.CompiledIndexCacheDirectory));
+
+                return result;
+		    }
 		}
 
 		private static bool ShouldIndexCacheBeRecompiled(string indexFilePath)
@@ -334,16 +350,6 @@ namespace Raven.Database.Linq
 				cacheEntries.AddOrUpdate(source, cacheEntry, (key, existingValue) => cacheEntry);
 			else
 				cacheEntries.TryAdd(source, cacheEntry);
-
-			if (cacheEntries.Count > 256)
-			{
-				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
-				if (kvp.Key != null)
-				{
-					CacheEntry _;
-					cacheEntries.TryRemove(kvp.Key, out _);
-				}
-			}
 		}
 
 		private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, string indexFilePath,
@@ -391,7 +397,7 @@ namespace Raven.Database.Linq
 			return false;
 		}
 
-		private static string GetIndexFilePath(string source, string indexCacheDir)
+		private static string GetIndexFilePath(string source, string indexCacheDir, out int numberHash)
 		{
 			string sourceHashed;
 			using (var md5 = MD5.Create())
@@ -399,7 +405,8 @@ namespace Raven.Database.Linq
 				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
 				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
 			}
-			var indexFilePath = Path.Combine(indexCacheDir,
+            numberHash = IndexingUtil.StableInvariantIgnoreCaseStringHash(source);
+            var indexFilePath = Path.Combine(indexCacheDir,
 				IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
 				(Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
 			return indexFilePath;
