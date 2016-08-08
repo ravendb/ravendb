@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -605,7 +606,7 @@ namespace Raven.Database.Server.Controllers
         private HttpResponseMessage WriteFileFromZip(string zipPath, string docPath)
         {
             var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
-            var currentFileEtag = EmbeddedLastChangedDate + docPath;
+            var currentFileEtag = ZipLastChangedDate.GetOrAdd(zipPath, f => File.GetLastWriteTime(f).Ticks.ToString("G")) + docPath;
             if (etagValue == "\"" + currentFileEtag + "\"")
                 return GetEmptyMessage(HttpStatusCode.NotModified);
 
@@ -629,7 +630,6 @@ namespace Raven.Database.Server.Controllers
 
             var type = GetContentType(docPath);
             msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
-
             return msg;
         }
 
@@ -709,6 +709,9 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
         }
 
+        private static readonly ConcurrentDictionary<string, string> ZipLastChangedDate = 
+                new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         private static readonly string EmbeddedLastChangedDate =
             File.GetLastWriteTime(AssemblyHelper.GetAssemblyLocationFor(typeof(HttpExtensions))).Ticks.ToString("G");
 
@@ -745,6 +748,8 @@ namespace Raven.Database.Server.Controllers
                     return "application/font-woff";
                 case ".woff2":
                     return "application/font-woff2";
+                case ".appcache":
+                    return "text/cache-manifest";
                 default:
                     return "text/plain";
             }
