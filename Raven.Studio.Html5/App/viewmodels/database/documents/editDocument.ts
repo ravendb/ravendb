@@ -28,7 +28,7 @@ import generateClassCommand = require("commands/database/documents/generateClass
 import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class editDocument extends viewModelBase {
-
+    documentId = null;
     isConflictDocument = ko.observable<boolean>();
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
@@ -188,14 +188,10 @@ class editDocument extends viewModelBase {
         super.canActivate(args);
         var canActivateResult = $.Deferred();
         if (args && args.id) {
-            
+            this.documentId = args.id;
             this.databaseForEditedDoc = appUrl.getDatabase();
             this.loadDocument(args.id)
-                .done(() => {
-                    this.changeNotification = this.createDocumentChangeNotification(args.id);
-                    this.addNotification(this.changeNotification);
-                    canActivateResult.resolve({ can: true });
-                })
+                .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
                     messagePublisher.reportError("Could not find " + args.id + " document");
                     canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
@@ -316,6 +312,15 @@ class editDocument extends viewModelBase {
         $("#docEditor").on('DynamicHeightSet', () => this.docEditor.resize());
         $("#docEditor").bind("paste", function () { this.text.valueHasMutated() });
         this.focusOnEditor();
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        if (!this.documentId)
+            return [];
+
+        return [
+            this.createDocumentChangeNotification(this.documentId)
+        ];
     }
 
     createDocumentChangeNotification(docId: string) {
