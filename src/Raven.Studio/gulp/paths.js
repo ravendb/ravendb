@@ -16,7 +16,8 @@ var paths = {
         dir: STUDIO_TEST_DIR,
         tsSource: path.join(STUDIO_TEST_DIR, 'typescript/**/*.ts'),
         tsOutput: path.join(STUDIO_TEST_DIR, 'js'),
-        setup: path.join(STUDIO_TEST_DIR, 'setup')
+        setup: path.join(STUDIO_TEST_DIR, 'setup'),
+        html: path.join(STUDIO_TEST_DIR, 'test.html')
     },
 
     lessSource: [

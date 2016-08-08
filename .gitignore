@@ -81,6 +81,7 @@ artifacts/
 
 # DNX Studio
 src/Raven.Studio/node_modules/
+src/Raven.Studio/test.log
 src/Raven.Studio/wwwroot/App/**/*.js
 src/Raven.Studio/wwwroot/App/**/*.js.map
 

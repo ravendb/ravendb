@@ -176,6 +176,24 @@ gulp.task('generate-test-list', function () {
     .pipe(gulp.dest(PATHS.test.setup));
 });
 
+gulp.task('mochaTests', function () {
+    var mocha = plugins.mochaPhantomjs({
+        reporter: 'spec',
+        dump:'test.log'
+    });
+
+    return gulp.src(PATHS.test.html).pipe(mocha);
+});
+
+gulp.task('test', [ 'compile:test' ], function (cb) {
+    return runSequence('generate-test-list', 'mochaTests', cb);
+});
+
+gulp.task('watch:test', ['test'], function () {
+    gulp.watch(PATHS.tsSource, ['mochaTests']);
+    gulp.watch(PATHS.test.tsSource, ['test']);
+});
+
 gulp.task('compile', ['less', 'less:old', 'compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
