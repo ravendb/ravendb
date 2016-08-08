@@ -20,8 +20,11 @@ namespace Raven.Client.Json
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
 
-        protected static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
+        protected static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>(Type deserializorType = null)
         {
+            if (deserializorType == null)
+                deserializorType = typeof(JsonDeserialization);
+
             try
             {
                 var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
@@ -31,13 +34,13 @@ namespace Raven.Client.Json
                 var propInit = new List<MemberBinding>();
                 foreach (var fieldInfo in typeof(T).GetFields())
                 {
-                    propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, json, vars)));
+                    propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, json, vars, deserializorType)));
                 }
                 foreach (var propertyInfo in typeof(T).GetProperties())
                 {
                     if (propertyInfo.CanWrite == false)
                         continue;
-                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, json, vars)));
+                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, json, vars, deserializorType)));
                 }
 
                 var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
@@ -56,7 +59,7 @@ namespace Raven.Client.Json
         //TODO : consider refactoring JsonDeserialization::GetValue() to be more generic
         //since this is understandble and clear code while it is short,
         //when it will become longer, it is likely to cause issues
-        private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
+        private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars, Type deserializorType)
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
             if (type == typeof(string) ||
@@ -79,49 +82,50 @@ namespace Raven.Client.Json
                 return Expression.Condition(tryGet, value, Expression.Default(propertyType));
             }
 
-            if (propertyType.Name == "Dictionary`2")
+            var genericTypeDefinition = propertyType.GetGenericTypeDefinition();
+            if (genericTypeDefinition == typeof(Dictionary<,>))
             {
                 var valueType = propertyType.GenericTypeArguments[1];
                 if (valueType == typeof(string))
                 {
-                    var methodToCall = typeof(JsonDeserialization).GetMethod(nameof(ToDictionaryOfString));
+                    var methodToCall = deserializorType.GetMethod(nameof(ToDictionaryOfString), BindingFlags.NonPublic | BindingFlags.Static);
                     return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                 }
                 else
                 {
                     // TODO: Do not duplicate, use the same as #2
-                    var convert = typeof(JsonDeserialization).GetMethod(nameof(GenerateJsonDeserializationRoutine)).MakeGenericMethod(valueType)
-                        .Invoke(null, null);
+                    var convert = deserializorType.GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
+                        .Invoke(null, new[] { deserializorType });
 
-                    var constantExpression = Expression.Constant(convert);
-                    var methodToCall = typeof(JsonDeserialization).GetMethod(nameof(ToDictionary)).MakeGenericMethod(valueType);
-                    return Expression.Call(methodToCall, json, Expression.Constant(propertyName), constantExpression);
+                    var convertExpression = Expression.Constant(convert);
+                    var methodToCall = deserializorType.GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
+                    return Expression.Call(methodToCall, json, Expression.Constant(propertyName), convertExpression);
                 }
             }
 
-            /*if (propertyInfo.PropertyType == typeof(List<SqlReplicationTable>))
+            if (genericTypeDefinition == typeof(List<>))
             {
-                return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListSqlReplicationTable)), json, Expression.Constant(propertyInfo.Name));
+                var valueType = propertyType.GenericTypeArguments[0];
+                var convert = deserializorType.GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
+                        .Invoke(null, new [] {deserializorType});
+                var convertExpression = Expression.Constant(convert);
+                var methodToCall = deserializorType.GetMethod(nameof(ToList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyName), convertExpression);
             }
-
-            if (propertyInfo.PropertyType == typeof(List<ReplicationDestination>))
-            {
-                return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListReplicationDestination)), json, Expression.Constant(propertyInfo.Name));
-            }*/
 
             if (propertyType == typeof(HashSet<string>))
             {
-                return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToHashSetOfString)), json, Expression.Constant(propertyName));
+                return Expression.Call(deserializorType.GetMethod(nameof(ToHashSetOfString), BindingFlags.NonPublic | BindingFlags.Static), json, Expression.Constant(propertyName));
             }
 
             // TODO: Do not duplicate, use the same as #1
-            var converterField = typeof(JsonDeserialization).GetField(propertyType.Name, BindingFlags.Static | BindingFlags.Public);
+            var converterField = deserializorType.GetField(propertyType.Name, BindingFlags.Public | BindingFlags.Static);
             if (converterField != null)
             {
                 var converter = (Delegate)converterField.GetValue(null);
                 if (converter == null)
                     throw new InvalidOperationException($"{propertyType.Name} field is not initialized yet.");
-                var methodToCall = typeof(JsonDeserialization).GetMethod(nameof(ToObject)).MakeGenericMethod(propertyType);
+                var methodToCall = deserializorType.GetMethod(nameof(ToObject), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
                 var constantExpression = Expression.Constant(converter);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName), constantExpression);
             }
@@ -140,7 +144,7 @@ namespace Raven.Client.Json
             return value;
         }
 
-        public static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        private static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
             var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
 
@@ -159,7 +163,7 @@ namespace Raven.Client.Json
             return dic;
         }
 
-        public static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name)
+        private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -179,7 +183,7 @@ namespace Raven.Client.Json
             return dic;
         }
 
-        public static HashSet<string> ToHashSetOfString(BlittableJsonReaderObject json, string name)
+        private static HashSet<string> ToHashSetOfString(BlittableJsonReaderObject json, string name)
         {
             var hashSet = new HashSet<string>();
 
@@ -193,7 +197,7 @@ namespace Raven.Client.Json
             return hashSet;
         }
 
-        public static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
+        private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
         {
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false || obj == null)
@@ -202,33 +206,18 @@ namespace Raven.Client.Json
             return converter(obj);
         }
 
-        /*public static List<ReplicationDestination> ToListReplicationDestination(BlittableJsonReaderObject json, string name)
+        private static List<T> ToList<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
-            var list = new List<ReplicationDestination>();
+            var list = new List<T>();
 
             BlittableJsonReaderArray array;
             if (json.TryGet(name, out array) == false)
                 return list;
 
             foreach (BlittableJsonReaderObject item in array.Items)
-                list.Add(ReplicationDestination(item));
+                list.Add(converter(item));
 
             return list;
         }
-
-        public static List<SqlReplicationTable> ToListSqlReplicationTable(BlittableJsonReaderObject json, string name)
-        {
-            var list = new List<SqlReplicationTable>();
-
-            BlittableJsonReaderArray array;
-            if (json.TryGet(name, out array) == false)
-                return list;
-
-            foreach (BlittableJsonReaderObject item in array.Items)
-            {
-                list.Add(SqlReplicationTable(item));
-            }
-            return list;
-        }*/
     }
 }
