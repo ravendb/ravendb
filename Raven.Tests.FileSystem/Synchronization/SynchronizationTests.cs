@@ -16,6 +16,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Abstractions.Data;
+using Raven.Database.FileSystem.Extensions;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -765,7 +766,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var synchronizationReport = await source.Synchronization.StartAsync("test.bin", destination);
 
-            Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
+            Assert.Equal(NoSyncReason.NoNeedToDeleteNonExistigFile.GetDescription(), synchronizationReport.Exception.Message);
             Assert.Null(synchronizationReport.Exception);
         }
 
