@@ -84,24 +84,18 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        // TODO: Do not duplicate, use the same as #2
-                        var convert = typeof(JsonDeserializationBase).GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
-                            .Invoke(null, new[] {typeof(JsonDeserializationBase)});
-
-                        var convertExpression = Expression.Constant(convert);
+                        var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), convertExpression);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
                     }
                 }
 
                 if (genericTypeDefinition == typeof(List<>))
                 {
                     var valueType = propertyType.GenericTypeArguments[0];
-                    var convert = typeof(JsonDeserializationBase).GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
-                        .Invoke(null, new object[] {typeof(JsonDeserializationBase)});
-                    var convertExpression = Expression.Constant(convert);
+                    var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
                     var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
-                    return Expression.Call(methodToCall, json, Expression.Constant(propertyName), convertExpression);
+                    return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
                 }
 
                 if (propertyType == typeof(HashSet<string>))
@@ -118,18 +112,25 @@ namespace Sparrow.Json
 
             // ToObject
             {
-                object converter;
-                if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
-                {
-                    DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase).GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType)
-                        .Invoke(null, new object[] {typeof(JsonDeserializationBase)});
-                }
-                var converterExpression = Expression.Constant(converter);
+                var converterExpression = Expression.Constant(GetConverterFromCache(propertyType));
                 var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToObject), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
             }
 
             // throw new InvalidOperationException($"We weren't able to convert the property '{propertyName}' of type '{type}'.");
+        }
+
+        private static object GetConverterFromCache(Type propertyType)
+        {
+            object converter;
+            if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
+            {
+                DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase)
+                    .GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static)
+                    .MakeGenericMethod(propertyType)
+                    .Invoke(null, new object[] { typeof(JsonDeserializationBase) });
+            }
+            return converter;
         }
 
         private static ParameterExpression GetParameter(Type type, Dictionary<Type, ParameterExpression> vars)
