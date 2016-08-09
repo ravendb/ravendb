@@ -27,11 +27,13 @@ namespace Raven.Tests.Raft.Client
             configuration.Replication.ReplicationRequestTimeoutInMilliseconds = 4000;
         }
 
-        [Theory]
+   /*     [Theory]
         [InlineData(3)]
-        [InlineData(5)]
-        public void ReadFromLeaderWriteToLeaderWithFailoversShouldWork(int numberOfNodes)
+        [InlineData(5)]*/
+        [Fact]
+        public void ReadFromLeaderWriteToLeaderWithFailoversShouldWork()
         {
+            int numberOfNodes = 5;
             WithFailoversInternal(numberOfNodes, FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers);
         }
 

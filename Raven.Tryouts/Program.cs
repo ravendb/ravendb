@@ -24,7 +24,7 @@ namespace Raven.Tryouts
                 Console.WriteLine(i);
                 using (var x = new WithFailovers())
                 {
-                    x.ReadFromLeaderWriteToLeaderWithFailoversShouldWork(3);
+                    x.ReadFromLeaderWriteToLeaderWithFailoversShouldWork();
                 }
             }
 
