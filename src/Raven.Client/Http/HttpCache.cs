@@ -6,11 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Client.Http
 {
     public class HttpCache : IDisposable
     {
+        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<ApiKeyAuthenticator>("Client");
+
         private readonly long _maxSize;
         private readonly ConcurrentDictionary<string, HttpCacheItem> _items = new ConcurrentDictionary<string, HttpCacheItem>();
         private long _totalSize;
@@ -53,6 +56,11 @@ namespace Raven.Client.Http
 #if DEBUG
                 GC.SuppressFinalize(this);
 #endif
+
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"Released item from cache. Total cache size: {Cache._totalSize}");
+                }
             }
 
             public void Dispose()
@@ -105,6 +113,9 @@ namespace Raven.Client.Http
 
         private void FreeSpace()
         {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
+
             var sizeCleared = 0L;
             var sizeToClear = _maxSize / 4;
             var start = SystemTime.UtcNow;
@@ -197,6 +208,8 @@ namespace Raven.Client.Http
                     };
                     etag = item.Etag;
                     obj = new BlittableJsonReaderObject(item.Ptr, item.Size, context);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Url returned from the cache with etag: {etag}. {url}.");
                     return releaser;
                 }
             }

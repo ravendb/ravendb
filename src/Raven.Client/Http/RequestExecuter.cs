@@ -42,9 +42,22 @@ namespace Raven.Client.Http
         private readonly Timer _updateTopologyTimer;
         private bool _firstTimeTryLoadFromTopologyCache = true;
 
+        private Timer _updateCurrentTokenTimer;
+
         public RequestExecuter(DocumentStore store)
         {
             _store = store;
+            _topology = new Topology
+            {
+                LeaderNode = new ServerNode
+                {
+                    Database = _store.DefaultDatabase,
+                    ApiKey = _store.ApiKey,
+                    Url = _store.Url,
+                },
+                Etag = int.MinValue
+            };
+
             var handler = new HttpClientHandler();
             _httpClient = new HttpClient(handler);
 
@@ -59,12 +72,7 @@ namespace Raven.Client.Http
             if (_store.Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
                 return;
 
-            var node = _topology?.LeaderNode ?? new ServerNode
-            {
-                Database = _store.DefaultDatabase,
-                ApiKey = _store.ApiKey,
-                Url = _store.Url
-            };
+            var node = _topology.LeaderNode;
 
             var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
 
@@ -72,9 +80,10 @@ namespace Raven.Client.Http
             {
                 _firstTimeTryLoadFromTopologyCache = false;
 
-                _topology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, _context);
-                if (_topology != null)
+                var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, _context);
+                if (cachedTopology != null)
                 {
+                    _topology = cachedTopology;
                     // we have cached topology, but we need to verify it is up to date, we'll check in 
                     // 1 second, and let the rest of the system start
                     _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
@@ -88,7 +97,7 @@ namespace Raven.Client.Http
                 {
                     if (task.IsFaulted == false)
                     {
-                        if (_topology?.Etag != command.Result.Etag)
+                        if (_topology.Etag != command.Result.Etag)
                         {
                             _topology = command.Result;
                             TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, _context);
@@ -105,6 +114,9 @@ namespace Raven.Client.Http
             var request = command.CreateRequest(out url);
             url = $"{node.Url}/databases/{node.Database}/{url}";
             request.RequestUri = new Uri(url);
+
+            if (node.CurrentToken != null)
+                request.Headers.Add("Raven-Authorization", node.CurrentToken);
 
             long cachedEtag;
             BlittableJsonReaderObject cachedValue;
@@ -183,7 +195,16 @@ namespace Raven.Client.Http
                     if (++command.AuthenticationRetries > 1)
                         throw new UnauthorizedAccessException(
                             $"Got unauthorized response exception for {url} after trying to authenticate using ApiKey.");
-                    await HandleUnauthorized(response, node.Url, node.ApiKey, context).ConfigureAwait(false);
+
+                    var oauthSource = response.Headers.GetFirstValue("OAuth-Source");
+
+#if DEBUG && FIDDLER
+                // Make sure to avoid a cross DNS security issue, when running with Fiddler
+                if (string.IsNullOrEmpty(oauthSource) == false)
+                    oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
+#endif
+                    
+                    await HandleUnauthorized(oauthSource, node, context).ConfigureAwait(false);
                     await ExecuteAsync(node, context, command).ConfigureAwait(false);
                     return true;
                 case HttpStatusCode.Forbidden:
@@ -293,8 +314,6 @@ namespace Raven.Client.Http
         {
             //TODO: implement failover policies
             var topology = _topology;
-            if (topology == null)
-                return null;
 
             if (command.FailedNodes == null)
                 command.FailedNodes = new HashSet<ServerNode>();
@@ -311,21 +330,38 @@ namespace Raven.Client.Http
             return null;
         }
 
-        private async Task HandleUnauthorized(HttpResponseMessage response, string serverUrl, string apiKey, JsonOperationContext context)
+        private async Task HandleUnauthorized(string oauthSource, ServerNode node, JsonOperationContext context)
         {
-            var oauthSource = response.Headers.GetFirstValue("OAuth-Source");
-
-#if DEBUG && FIDDLER
-                // Make sure to avoid a cross DNS security issue, when running with Fiddler
-                if (string.IsNullOrEmpty(oauthSource) == false)
-                    oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
-#endif
-
             if (string.IsNullOrEmpty(oauthSource))
-                oauthSource = serverUrl + "/OAuth/API-Key";
+                oauthSource = node.Url + "/OAuth/API-Key";
 
-            var currentToken = await _authenticator.AuthenticateAsync(oauthSource, apiKey, context).ConfigureAwait(false);
-            _httpClient.DefaultRequestHeaders.Add("Raven-Authorization", currentToken);
+            var currentToken = await _authenticator.AuthenticateAsync(oauthSource, node.ApiKey, context).ConfigureAwait(false);
+            node.CurrentToken = currentToken;
+
+            if (_updateCurrentTokenTimer == null)
+            {
+                _updateCurrentTokenTimer = new Timer(UpdateCurrentTokenCallback, null, TimeSpan.FromMinutes(20), TimeSpan.FromMinutes(20));
+            }
+        }
+
+        private void UpdateCurrentTokenCallback(object _)
+        {
+            var topology = _topology;
+
+            var leaderNode = topology.LeaderNode;
+            if (leaderNode != null)
+            {
+#pragma warning disable 4014
+                HandleUnauthorized(null, leaderNode, _context);
+#pragma warning restore 4014
+            }
+
+            foreach (var node in topology.Nodes)
+            {
+#pragma warning disable 4014
+                HandleUnauthorized(null, node, _context);
+#pragma warning restore 4014
+            }
         }
 
         public void Dispose()

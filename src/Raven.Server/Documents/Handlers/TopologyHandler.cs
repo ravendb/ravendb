@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ["RequestTimeThresholdInMilliseconds"] = 100,
                     },
+                    [nameof(Topology.Etag)] = -1,
                 });
             }
             return Task.CompletedTask;
