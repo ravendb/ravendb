@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -179,16 +178,9 @@ namespace Raven.Traffic
                     }
                     try
                     {
-                        if (requestsArray.Length == -1)
-                        {
-                            var request = store.DatabaseCommands.CreateRequest(requestsArray[0].UrlAndQuery,
-                                new HttpMethod(requestsArray[0].Method?.ToUpper()??"GET"));
-                            request.ExecuteRequest();
-                        }
-                        else
-                        {
-                            store.DatabaseCommands.MultiGet(requestsArray);
-                        }
+                        
+                        store.DatabaseCommands.MultiGet(requestsArray);
+                        
                         
                         if (queue != null)
                         {
