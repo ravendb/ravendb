@@ -28,7 +28,7 @@ namespace TrafficRecorder
                     break;
                 case TrafficToolConfiguration.TrafficArgsProcessStatus.ValidConfig:
                     IDocumentStore store;
-                    config.ResourceName = config.ResourceName == "system_database" ? null : config.ResourceName;
+                    config.ResourceName = config.ResourceName == "<system>" ? null : config.ResourceName;
                     try
                     {
                         store = new DocumentStore
@@ -82,7 +82,7 @@ Examples:
   - Replay 'Northwind' database from specified server to the dump.raven file:
     Raven.Traffic play http://localhost:8080/ Northwind recording.json 
 
-* Use system_database to state the system database"
+* Use ""<System>"" to state the system database"
 
 );
 
