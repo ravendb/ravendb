@@ -302,6 +302,9 @@ class editDocument extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        // preload json newline friendly mode to avoid issues with document save
+        (<any>ace).config.loadModule("ace/mode/json_newline_friendly")
+
         this.documentNameElement = $("#documentName");
 
         var editorElement = $("#docEditor");
