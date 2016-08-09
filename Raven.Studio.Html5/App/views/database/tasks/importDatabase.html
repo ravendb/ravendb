@@ -10,7 +10,7 @@
         </p>
         <div data-bind="with: activeDatabase">
             <span class="btn btn-primary btn-file" data-bind="attr: { 'disabled': isImporting() ? 'disabled' : null }">
-                Choose file <input id="importDatabaseFilePicker" type="file" accept=".ravendump, .ravendbdump" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" />
+                Choose file <input id="importDatabaseFilePicker" type="file" accept=".ravendump, .ravendbdump, .ravendb-full-dump" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" />
             </span>
             <button class="btn btn-primary" data-bind="click: $root.importDb.bind($root), disable: !$root.hasFileSelected() || isImporting()">
                 <i class="fa fa-upload"></i>
