@@ -158,6 +158,7 @@ namespace Raven.Server.Documents
                 using (var tx = Environment.WriteTransaction())
                 {
                     tx.CreateTree("Docs");
+                    tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("Tombstones");
                     tx.CreateTree("ChangeVector");
@@ -1054,6 +1055,24 @@ namespace Raven.Server.Documents
             {
                 readTree.AddMax(identity.Key, identity.Value);
             }
+        }
+
+        public long GetLastReplicateEtagFrom(DocumentsOperationContext context, string dbId)
+        {
+            var readTree = context.Transaction.InnerTransaction.ReadTree("LastReplicatedEtags");
+            var readResult = readTree.Read(dbId);
+            if (readResult == null)
+                return 0;
+            return readResult.Reader.ReadLittleEndianInt64();
+        }
+
+        public void SetLastReplicateEtagFrom(DocumentsOperationContext context, string dbId, long etag)
+        {
+            var etagsTree = context.Transaction.InnerTransaction.CreateTree("LastReplicatedEtags");
+            etagsTree.Add(
+                Slice.From(context.Allocator, dbId),
+                Slice.External(context.Allocator, (byte*) &etag, sizeof (long))
+                );
         }
     }
 }

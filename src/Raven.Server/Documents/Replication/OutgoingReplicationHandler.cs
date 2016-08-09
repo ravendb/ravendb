@@ -12,29 +12,28 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using System.Linq;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Replication
 {
     public class OutgoingReplicationHandler : IDisposable
     {
-        private static readonly DocumentConvention _convention = new DocumentConvention();
         private readonly DocumentDatabase _database;
         private readonly ReplicationDestination _destination;
         private readonly Logger _log;
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim(false);
         private readonly CancellationTokenSource _cts;
         private readonly TimeSpan _minimalHeartbeatInterval = TimeSpan.FromSeconds(15);
-        private BlittableJsonReaderObject _heartbeatMessage;
         private Thread _sendingThread;
 
         private long _lastSentEtag;
+        private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
         private TcpClient _tcpClient;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
@@ -65,15 +64,16 @@ namespace Raven.Server.Documents.Replication
 
         private TcpConnectionInfo GetTcpInfo()
         {
+            var convention = new DocumentConvention();
             //since we use it only once when the connection is initialized, no reason to keep requestFactory around for long
             using (var requestFactory = new HttpJsonRequestFactory(1))
             using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
                 MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
                 HttpMethod.Get,
-                new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), _convention)))
+                new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)))
             {
                 var result = request.ReadResponseJson();
-                return _convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+                return convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
             }
         }
 
@@ -92,12 +92,6 @@ namespace Raven.Server.Documents.Replication
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     using (var parser = context.ParseMultiFrom(stream))
                     {
-                        //cache heartbeat msg
-                        _heartbeatMessage = context.ReadObject(new DynamicJsonValue
-                        {
-                            ["Heartbeat"] = true
-                        }, $"heartbeat msg {FromToString}");
-
                         //send initial connection information
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -120,6 +114,11 @@ namespace Raven.Server.Documents.Replication
                         {
                             var replicationEtagReply = JsonDeserializationServer.ReplicationEtagReply(lastEtagMessage);
                             _lastSentEtag = replicationEtagReply.LastSentEtag;
+                            _destinationLastKnownChangeVector.Clear();
+                            foreach (var changeVectorEntry in replicationEtagReply.CurrentChangeVector)
+                            {
+                                _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                            }
                         }
 
                         while (_cts.IsCancellationRequested == false)
@@ -136,7 +135,7 @@ namespace Raven.Server.Documents.Replication
                             //if this returns false, this means either timeout or canceled token is activated                    
                             while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                             {
-                                SendHeartbeat(writer);
+                                SendHeartbeat(context, writer);
                             }
                             _waitForChanges.Reset();
                         }
@@ -160,12 +159,18 @@ namespace Raven.Server.Documents.Replication
 
         public ReplicationDestination Destination => _destination;
 
-        private void SendHeartbeat(BlittableJsonTextWriter writer)
+        private void SendHeartbeat(DocumentsOperationContext context, BlittableJsonTextWriter writer)
         {
             try
             {
-                writer.WriteObjectOrdered(_heartbeatMessage);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Heartbeat"] = true,
+                    ["LastEtag"] = _lastSentEtag
+                });
                 writer.Flush();
+
+                //TODO: Get the reply from the destination and set _destinationLastKnownChangeVector
             }
             catch (Exception e)
             {
@@ -187,23 +192,58 @@ namespace Raven.Server.Documents.Replication
                 //TODO: make replication batch size configurable
                 //also, perhaps there should be timers/heuristics
                 //that would dynamically resize batch size
-                var replicationBatch =
-                    documentStorage
-                        .GetDocumentsAfter(context, _lastSentEtag, 0, 1024)
-                        .Where(x => !x.Key.ToString().StartsWith("Raven/"))
-                        .ToList();
 
-                //the filtering here will need to be reworked -> it is not efficient
-                //TODO: do not forget to make version of GetDocumentsAfter with a prefix filter	
-                //alternatively 1 -> create efficient StartsWith() for LazyString				
-                //alternatively 2 -> create a "filter system" that would abstract the logic -> what documents 
-                //should and should not be replicated
+                var replicationBatch = new List<Document>();
+                var lastEtag = _lastSentEtag;
+
+                // we scan through the documents to send to the other side, we need to be careful about
+                // filtering a lot of documents, because we need to let the other side know about this, and 
+                // at the same time, we need to send a heartbeat to keep the tcp connection alive
+                var sp = Stopwatch.StartNew();
+                while(sp.ElapsedMilliseconds < 500)
+                {
+                    _cts.Token.ThrowIfCancellationRequested();
+                    foreach (var document in documentStorage.GetDocumentsAfter(context, lastEtag, 0, 1024))
+                    {
+                        lastEtag = document.Etag;
+
+                        //TODO: check the lazy string directly
+                        var key = document.Key.ToString();
+                        if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) &&
+                            key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false)
+                        {
+                            continue;
+                        }
+
+                        // destination already has it
+                        if (document.ChangeVector.GreaterThen(_destinationLastKnownChangeVector) == false)
+                            continue;
+
+                        replicationBatch.Add(document);
+                    }
+
+                    if (replicationBatch.Count != 0)
+                        break;
+
+                    // if we are at the end, we are done
+                    if (lastEtag == DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction))
+                        break;
+                }
+
                 if (replicationBatch.Count == 0)
-                    return false;
+                {
+                    var hasModification = lastEtag != _lastSentEtag;
+                    _lastSentEtag = lastEtag;
+                    // ensure that the other server is aware that we skipped 
+                    // on (potentially a lot of) documents to send, and we update
+                    // the last etag they have from us on the other side
+                    SendHeartbeat(context, writer);
+                    return hasModification;
+                }
 
                 _cts.Token.ThrowIfCancellationRequested();
 
-                SendDocuments(context, writer, parser, replicationBatch);
+                SendDocuments(context, writer, parser, replicationBatch, lastEtag);
                 return true;
             }
         }
@@ -213,7 +253,8 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext context,
             BlittableJsonTextWriter writer,
             JsonOperationContext.MultiDocumentParser parser,
-            IEnumerable<Document> docs)
+            List<Document> docs,
+            long lastEtag)
         {
             if (docs == null) //precaution, should never happen
                 throw new ArgumentNullException(nameof(docs));
@@ -226,26 +267,34 @@ namespace Raven.Server.Documents.Replication
 
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Type"));
             writer.WriteString(context.GetLazyStringForFieldWithCaching("ReplicationBatch"));
-
-            writer.WritePropertyName(
-                context.GetLazyStringForFieldWithCaching(
-                    "ReplicationBatch"));
-            var docsArray = docs.ToArray();
-            _lastSentEtag = writer.WriteDocuments(context, docsArray, false);
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("LastEtag"));
+            writer.WriteInteger(lastEtag);
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("ReplicationBatch"));
+            writer.WriteDocuments(context, docs, false);
             writer.WriteEndObject();
             writer.Flush();
             sw.Stop();
 
+            _lastSentEtag = lastEtag;
+
             // number of docs, first / last etag, size, time
             if (_log.IsInfoEnabled)
-                _log.Info($"Finished sending replication batch. Sent {docsArray.Length} documents in {sw.ElapsedMilliseconds} ms. First sent etag = {docsArray[0].Etag}, last sent etag = {_lastSentEtag}", null);
+                _log.Info($"Finished sending replication batch. Sent {docs.Count} documents in {sw.ElapsedMilliseconds} ms. First sent etag = {docs[0].Etag}, last sent etag = {lastEtag}");
 
             using (var replicationBatchReplyMessage = parser.ParseToMemory("replication acknowledge message"))
             {
                 var replicationBatchReply = JsonDeserializationServer.ReplicationBatchReply(replicationBatchReplyMessage);
 
+
                 if (replicationBatchReply.Type == ReplicationBatchReply.ReplyType.Ok)
+                {
+                    _destinationLastKnownChangeVector.Clear();
+                    foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
+                    {
+                        _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                    }
                     OnDocumentsSent();
+                }
 
                 if (_log.IsInfoEnabled)
                 {
@@ -253,13 +302,14 @@ namespace Raven.Server.Documents.Replication
                     {
                         case ReplicationBatchReply.ReplyType.Ok:
                             _log.Info($"Received reply for replication batch from {_destination.Database} at {_destination.Url}. Everything is ok.");
+
                             break;
                         case ReplicationBatchReply.ReplyType.Error:
                             _log.Info(
                                 $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Error}");
                             throw new InvalidOperationException($"Received failure reply for replication batch. Error string received = {replicationBatchReply.Error}");
                         default:
-                            throw new ArgumentOutOfRangeException("replicationBatchReply.Type", "Received reply for replication batch with unrecognized type... got " + replicationBatchReply.Type);
+                            throw new ArgumentOutOfRangeException(nameof(replicationBatchReply), "Received reply for replication batch with unrecognized type... got " + replicationBatchReply.Type);
                     }
                 }
             }

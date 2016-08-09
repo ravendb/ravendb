@@ -62,17 +62,6 @@ namespace Raven.Server.Documents.Replication
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
             }
 
-            DocumentsOperationContext documentsOperationContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
-            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, stream))
-            using (documentsOperationContext.OpenReadTransaction())
-            {
-                documentsOperationContext.Write(writer, new DynamicJsonValue
-                {
-                    ["LastSentEtag"] = GetLastReceivedEtag(Guid.Parse(getLatestEtagMessage.SourceDatabaseId), documentsOperationContext)
-                });
-            }
-
             var connectionInfo = IncomingConnectionInfo.FromGetLatestEtag(getLatestEtagMessage);
             try
             {
@@ -81,7 +70,7 @@ namespace Raven.Server.Documents.Replication
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Connection from [{connectionInfo}] is rejected.",e);
+                    _log.Info($"Connection from [{connectionInfo}] is rejected.", e);
 
                 var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
@@ -89,6 +78,28 @@ namespace Raven.Server.Documents.Replication
 
                 throw;
             }
+
+            DocumentsOperationContext documentsOperationContext;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
+            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, stream))
+            using (documentsOperationContext.OpenReadTransaction())
+            {
+                var changeVector = new DynamicJsonArray();
+                foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
+                {
+                    changeVector.Add(new DynamicJsonValue
+                    {
+                        ["DbId"] = changeVectorEntry.DbId,
+                        ["Etag"] = changeVectorEntry.Etag
+                    });
+                }
+                documentsOperationContext.Write(writer, new DynamicJsonValue
+                {
+                    ["LastSentEtag"] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
+                    ["CurrentChangeVector"] = changeVector
+                });
+            }
+           
 
             var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
             {
@@ -106,6 +117,7 @@ namespace Raven.Server.Documents.Replication
 
             _incoming.Add(lazyIncomingHandler);
 
+            //TODO: Why are we using lazy here?
             lazyIncomingHandler.Value.Start();
 
         }
@@ -248,13 +260,6 @@ namespace Raven.Server.Documents.Replication
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Replication configuration was changed: {notification.Key}");
-        }
-
-        private long GetLastReceivedEtag(Guid srcDbId, DocumentsOperationContext context)
-        {
-            var dbChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(context);
-            var vectorEntry = dbChangeVector.FirstOrDefault(x => x.DbId == srcDbId);
-            return vectorEntry.Etag;
         }
 
         private ReplicationDocument GetReplicationDocument()

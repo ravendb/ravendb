@@ -23,9 +23,9 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var x = new BasicAutoMapReduceIndexing())
+            using (var x = new FastTests.Server.Documents.Queries.Dynamic.Map.BasicDynamicMapQueries())
             {
-                x.CanDelete().Wait();
+                x.Sorting_by_nested_integer_field().Wait();
             }
         }
     }

@@ -6,10 +6,21 @@ namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
     {
-        public static bool UpdateLargerEtagIfRelevant(this ChangeVectorEntry[] changeVector,
-                   Dictionary<Guid, long> maxEtagsPerDbId)
+        public static bool GreaterThen(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
         {
-            var changeVectorUpdated = false;
+            for (int i = 0; i < self.Length; i++)
+            {
+                long otherEtag;
+                if (other.TryGetValue(self[i].DbId, out otherEtag) == false)
+                    return true;
+                if (self[i].Etag > otherEtag)
+                    return true;
+            }
+            return false;
+        }
+
+        public static void UpdateChangeVectorFrom(this ChangeVectorEntry[] changeVector, Dictionary<Guid, long> maxEtagsPerDbId)
+        {
             for (int i = 0; i < changeVector.Length; i++)
             {
                 long dbEtag;
@@ -18,25 +29,13 @@ namespace Raven.Server.Extensions
                 maxEtagsPerDbId.Remove(changeVector[i].DbId);
                 if (dbEtag > changeVector[i].Etag)
                 {
-                    changeVectorUpdated = true;
                     changeVector[i].Etag = dbEtag;
                 }
             }
-
-            return changeVectorUpdated;
-        }
-
-        public static ChangeVectorEntry[] InsertNewEtagsIfRelevant(
-            this ChangeVectorEntry[] changeVector,
-            Dictionary<Guid, long> maxEtagsPerDbId,
-            out bool hasResized)
-        {
-            hasResized = false;
-
+       
             if (maxEtagsPerDbId.Count <= 0)
-                return changeVector;
+                return;
 
-            hasResized = true;
             var oldSize = changeVector.Length;
             Array.Resize(ref changeVector, oldSize + maxEtagsPerDbId.Count);
 
@@ -48,8 +47,6 @@ namespace Raven.Server.Extensions
                     Etag = kvp.Value,
                 };
             }
-
-            return changeVector;
         }
     }
 }

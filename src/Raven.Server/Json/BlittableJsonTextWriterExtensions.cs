@@ -830,12 +830,11 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static long WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
+        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
         {
             writer.WriteStartArray();
 
             var first = true;
-            Document lastDocument = null;
             foreach (var document in documents)
             {
                 if (document == null)
@@ -849,11 +848,9 @@ namespace Raven.Server.Json
 
                     writer.WriteDocument(context, document, metadataOnly);
                 }
-                lastDocument = document;
             }
 
             writer.WriteEndArray();
-            return lastDocument?.Etag ?? 0;
         }
 
         public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, int start, int count)

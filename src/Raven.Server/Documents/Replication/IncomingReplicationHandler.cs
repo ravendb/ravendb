@@ -5,7 +5,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Server.Json;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -81,10 +81,15 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (_log.IsInfoEnabled)
                                     _log.Info($"Incoming replication thread ({FromToString}) received heartbeat.");
+                                SendStatusToSource(writer, -1);
                                 continue;
                             }
 
                             ThrowIfNotReplicationBatch(message);
+
+                            long lastReceivedEtag;
+                            if (message.TryGet("LastEtag", out lastReceivedEtag))
+                                throw new InvalidDataException("The property 'LastEtag' wasn\'t found in replication batch, invalid data");
 
                             BlittableJsonReaderArray replicatedDocs;
                             if (!message.TryGet("ReplicationBatch", out replicatedDocs))
@@ -93,12 +98,11 @@ namespace Raven.Server.Documents.Replication
 
                             try
                             {
-                                //TODO : consider replacing this with pooled stopwatch objects -> reduce allocations								
                                 var sw = Stopwatch.StartNew();
-                                long lastReceivedEtag;
                                 using (_context.OpenWriteTransaction())
                                 {
-                                    lastReceivedEtag = ReceiveDocuments(_context, replicatedDocs);
+                                    ReceiveDocuments(_context, replicatedDocs);
+                                    _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
                                     _context.Transaction.Commit();
                                 }
                                 sw.Stop();
@@ -107,12 +111,8 @@ namespace Raven.Server.Documents.Replication
                                     _log.Info($"Replication connection {FromToString}: received and written {replicatedDocs.Length} documents to database in {sw.ElapsedMilliseconds} ms, with last etag = {lastReceivedEtag}.");
 
                                 //return positive ack
-                                _context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = ReplicationBatchReply.ReplyType.Ok.ToString(),
-                                    ["LastEtagAccepted"] = lastReceivedEtag,
-                                    ["Error"] = null
-                                });
+
+                                SendStatusToSource(writer, lastReceivedEtag);
 
                                 OnDocumentsReceived(this);
                             }
@@ -172,6 +172,26 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void SendStatusToSource(BlittableJsonTextWriter writer, long lastReceivedEtag)
+        {
+            var changeVector = new DynamicJsonArray();
+            foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(_context))
+            {
+                changeVector.Add(new DynamicJsonValue
+                {
+                    ["DbId"] = changeVectorEntry.DbId,
+                    ["Etag"] = changeVectorEntry.Etag
+                });
+            }
+            _context.Write(writer, new DynamicJsonValue
+            {
+                ["Type"] = "Ok",
+                ["LastEtagAccepted"] = lastReceivedEtag,
+                ["Error"] = null,
+                ["CurrentChangeVector"] = changeVector
+            });
+        }
+
         private static void ThrowIfNotReplicationBatch(BlittableJsonReaderObject message)
         {
             string messageType;
@@ -185,7 +205,7 @@ namespace Raven.Server.Documents.Replication
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
         public IncomingConnectionInfo ConnectionInfo { get; }
 
-        private long ReceiveDocuments(DocumentsOperationContext context, BlittableJsonReaderArray docs)
+        private void ReceiveDocuments(DocumentsOperationContext context, BlittableJsonReaderArray docs)
         {
             var dbChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(context);
             var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
@@ -207,16 +227,8 @@ namespace Raven.Server.Documents.Replication
                     WriteReceivedDocument(context, detachedDoc);
             }
 
-            //if any of [dbId -> etag] is larger than server pair, update it
-            var changeVectorUpdated = dbChangeVector.UpdateLargerEtagIfRelevant(maxReceivedChangeVectorByDatabase);
-            bool changeVectorResized;
-            dbChangeVector = dbChangeVector.InsertNewEtagsIfRelevant(
-                maxReceivedChangeVectorByDatabase, out changeVectorResized);
-
-            if (changeVectorUpdated || changeVectorResized)
-                _database.DocumentsStorage.SetDatabaseChangeVector(context, dbChangeVector);
-
-            return dbChangeVector.FirstOrDefault(x => x.DbId == Guid.Parse(ConnectionInfo.SourceDatabaseId)).Etag;
+            dbChangeVector.UpdateChangeVectorFrom(maxReceivedChangeVectorByDatabase);
+            _database.DocumentsStorage.SetDatabaseChangeVector(context, dbChangeVector);
         }
 
         private void WriteReceivedDocument(DocumentsOperationContext context, BlittableJsonReaderObject doc)
