@@ -1,7 +1,7 @@
 <div>
 <div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor:  selectedColor().backgroundColor}">
 
-<div data-bind="text: selectedEnvironmentText(), visible: canShowEnvironmentText()" id="environment-header">Environment</div>
+<div data-bind="visible: canShowEnvironmentText()" id="environment-header"></div>
 
 <div class="container-fluid">
 <div class="navbar-header">
@@ -356,8 +356,16 @@
                         </button>
                     </div>
                 </li>
-                <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
-                <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>
+
+                <li class="environment-type" data-bind="visible: canShowEnvironmentText()">
+                    <a class="navbar-link" data-bind="text: selectedEnvironmentText(), style: { color: selectedColor().textColor }"></a>
+                </li>
+                <li class="server-build-link" data-bind="with: serverBuildVersion">
+                    <a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a>
+                </li>
+                <li class="client-build-link" data-bind="with: clientBuildVersion">
+                    <a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a>
+                </li>
                 <!-- /ko -->
             </ul>
 

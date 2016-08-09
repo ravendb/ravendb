@@ -582,6 +582,7 @@ interface replicationClientConfigurationDto {
 interface environmentColorDto {
     Name: string;
     BackgroundColor: string;
+    TextColor: string;
 }
 
 interface replicationConfigDto {

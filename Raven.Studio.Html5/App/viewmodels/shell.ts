@@ -392,42 +392,77 @@ class shell extends viewModelBase {
         var hotSpareTask = new getHotSpareInformation().execute();
         var configTask = new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase(), true).execute();
 
-        $.when(hotSpareTask, configTask).done((hotSpareResult, doc: documentClass) => {
-            var hotSpare = <HotSpareDto>hotSpareResult[0];
+        if (license.isHotSpare()) {
+            //override environment colors with hot spare
+            hotSpareTask
+                .done((hotSpare: HotSpareDto) => {
+                    this.activateHotSpareEnvironment(hotSpare);
+                    shell.saveStudioConfig(configTask, true);
+                });
 
-            appUrl.warnWhenUsingSystemDatabase = doc && doc["WarnWhenUsingSystemDatabase"];
+            return;
+        }
 
-            if (license.licenseStatus().Attributes.hotSpare === "true") {
-                // override environment colors with hot spare
-                this.activateHotSpareEnvironment(hotSpare);
-            } else {
-                var envColor = doc && doc["EnvironmentColor"];
-                if (envColor != null) {
-                    var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
-                    shell.selectedEnvironmentColorStatic(color);
-                    shell.originalEnvironmentColor(color);
+        shell.saveStudioConfig(configTask, false);
+    }
+
+    private static saveStudioConfig(configTask: JQueryPromise<documentClass>, isHotSpare: boolean) {
+        configTask
+            .done((doc: documentClass) => {
+                var hasDoc = !!doc;
+                if (hasDoc) {
+                    appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
                 }
-            }
-        });
+
+                if (isHotSpare) {
+                    return; 
+                }
+
+                if (hasDoc === false) {
+                    shell.setDefaultColors();
+                    return;
+                }
+
+                var envColor = doc && doc["EnvironmentColor"];
+                if (!envColor) {
+                    return;
+                }
+
+                var color = new environmentColor(envColor.Name, envColor.BackgroundColor, envColor.TextColor);
+                shell.selectedEnvironmentColorStatic(color);
+                shell.originalEnvironmentColor(color);
+            })
+            .fail(() => shell.setDefaultColors());
+    }
+
+    private static setDefaultColors() {
+        var defaultColor = new environmentColor("Default", "#f8f8f8");
+        shell.selectedEnvironmentColorStatic(defaultColor);
+        shell.originalEnvironmentColor(defaultColor);
     }
 
     private fecthStudioConfigForDatabase(db: database) {
-        var hotSpareTask = new getHotSpareInformation().execute();
-        var configTask = new getStudioConfig(db).execute();
+        if (!license.licenseStatus()) {
+            //wait for license to be fetched
+            setTimeout(() => this.fecthStudioConfigForDatabase(db), 500);
+            return;
+        }
 
-        $.when(hotSpareTask, configTask).done((hotSpareResult, docResult) => {
-            var hotSpare = hotSpareResult[0];
-            var doc = <documentClass>docResult[0];
-            if (hotSpare.ActivationMode === "Activated") {
-                // override environment colors with hot spare
-                shell.activateHotSpareEnvironment(hotSpare);
-            } else {
-                var envColor = doc["EnvironmentColor"];
-                if (envColor != null) {
-                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
-                }
-            }
-        }).fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor()));
+        if (license.isHotSpare()) {
+            //don't apply any custom environment details
+            return;
+        }
+
+        var configTask = new getStudioConfig(db).execute();
+        configTask
+            .done((doc: documentClass) => {
+                var envColor = doc && doc["EnvironmentColor"];
+                if (!envColor)
+                    return;
+
+                shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor, envColor.TextColor));
+            })
+            .fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor()));
     }
 
     private activateDatabase(db: database) {
@@ -638,10 +673,9 @@ class shell extends viewModelBase {
 
     private reloadDataAfterReconnection(rs: resource) {
         if (rs.name === "<system>") {
-            shell.fetchStudioConfig();
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
-            shell.fetchLicenseStatus();
+            shell.fetchLicenseStatus().always(() => shell.fetchStudioConfig());
             this.fetchSupportCoverage();
             this.loadServerConfig();
 
@@ -696,7 +730,7 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
             this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
-            this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
+            this.globalChangesApi.watchDocument(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
             this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
@@ -810,11 +844,10 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done((results: database[]) => {
                 this.databasesLoaded(results);
-                shell.fetchStudioConfig();
                 this.fetchClusterTopology();
                 this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
-                shell.fetchLicenseStatus();
+                shell.fetchLicenseStatus().always(() => shell.fetchStudioConfig());
                 this.fetchSupportCoverage();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
@@ -1104,14 +1137,19 @@ class shell extends viewModelBase {
     }
 
     static fetchLicenseStatus(): JQueryPromise<licenseStatusDto> {
-        return new getLicenseStatusCommand()
+        var deferred = $.Deferred();
+
+        new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => {
                 if (result.Status.contains("AGPL")) {
                     result.Status = "Development Only";
                 }
                 license.licenseStatus(result);
+                deferred.resolve();
             });
+
+        return deferred;
     }
 
     fetchSupportCoverage() {

@@ -3,10 +3,24 @@ class license {
     static supportCoverage = ko.observable<supportCoverageDto>();
     static hotSpare = ko.observable<HotSpareDto>();
 
+    static isHotSpare = ko.computed(() => {
+        var hotSpare = license.hotSpare();
+        if (!!hotSpare) {
+            return true;
+        }
+
+        var status = license.licenseStatus();
+        if (status == null || !status.IsCommercial) {
+            return false;
+        }
+
+        return status.Attributes.hotSpare === "true";
+    });
+
     static licenseCssClass = ko.computed(() => {
         var status = license.licenseStatus();
         var hotSpare = license.hotSpare();
-        if (hotSpare) {
+        if (!!hotSpare) {
             return 'hot-spare';
         }
         if (status == null || !status.IsCommercial) {

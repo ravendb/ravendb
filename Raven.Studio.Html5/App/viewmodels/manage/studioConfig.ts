@@ -9,6 +9,7 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 import numberFormattingStorage = require("common/numberFormattingStorage");
+import license = require("models/auth/license");
 
 class studioConfig extends viewModelBase {
 
@@ -22,10 +23,11 @@ class studioConfig extends viewModelBase {
     isReadOnly: KnockoutComputed<boolean>;
     browserFormatExample = 5050.99.toLocaleString();
     rawFormat = ko.observable<boolean>();
+    isHotSpare: KnockoutComputed<boolean>;
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
-        new environmentColor("Development", "#80FF80"),
+        new environmentColor("Development", "#80FF80", "#3D773D"),
         new environmentColor("Staging", "#F5824D"),
         new environmentColor("Production", "#FF8585")
     ];
@@ -66,6 +68,8 @@ class studioConfig extends viewModelBase {
         this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
 
         this.rawFormat(numberFormattingStorage.shouldUseRaw());
+
+        this.isHotSpare = ko.computed(() => license.isHotSpare());
     }
 
     canActivate(args): any {

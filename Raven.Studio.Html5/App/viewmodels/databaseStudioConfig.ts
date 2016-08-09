@@ -3,14 +3,16 @@ import documentClass = require("models/database/documents/document");
 import environmentColor = require("models/resources/environmentColor");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import shell = require("viewmodels/shell");
+import license = require("models/auth/license");
 
 class studioConfig extends viewModelBase {
  
     configDocument = ko.observable<documentClass>();
+    isHotSpare: KnockoutComputed<boolean>;
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
-        new environmentColor("Development", "#80FF80"),
+        new environmentColor("Development", "#80FF80", "#3D773D"),
         new environmentColor("Staging", "#F5824D"),
         new environmentColor("Production", "#FF8585")
     ];
@@ -26,6 +28,8 @@ class studioConfig extends viewModelBase {
 
         var self = this;
         this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
+
+        this.isHotSpare = ko.computed(() => license.isHotSpare());
     }
 
     canActivate(args): any {

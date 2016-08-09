@@ -7888,6 +7888,9 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   #shellFooter .status-link {
     display: none;
   }
+  #shellFooter .environment-type {
+    display: none;
+  }
   #shellFooter .server-build-link {
     display: none;
   }
