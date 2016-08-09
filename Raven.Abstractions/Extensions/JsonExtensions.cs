@@ -267,6 +267,17 @@ namespace Raven.Abstractions.Extensions
             inner.Flush();
         }
 
+        public override int ReadByte()
+        {
+            if (passedHeader)
+                return inner.ReadByte();
+
+
+            var b = Header[headerSizePosition++];
+            passedHeader = headerSizePosition >= ActualHeaderSize;
+            return b;
+        }
+
         public override long Seek(long offset, SeekOrigin origin)
         {
             return inner.Seek(offset, origin);

@@ -34,6 +34,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Raven.Abstractions.Logging;
 using Directory = System.IO.Directory;
 
 namespace Raven.Database.Linq
@@ -41,7 +42,7 @@ namespace Raven.Database.Linq
     public static class QueryParsingUtils
     {
         private static readonly ConcurrentDictionary<int, object> Locks = new ConcurrentDictionary<int, object>();
-
+        private static ILog _logger = LogManager.GetCurrentClassLogger();
         [CLSCompliant(false)]
         public static string GenerateText(TypeDeclaration type, 
             OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
@@ -308,6 +309,8 @@ namespace Raven.Database.Linq
                     CacheEntry entry;
                     if (cacheEntries.TryGetValue(source, out entry))
                     {
+                        if (_logger.IsDebugEnabled)
+                            _logger.Debug(string.Format("Cache entrie for index {0} in database {1} was found and incremented", name, configuration.DatabaseName));
                         Interlocked.Increment(ref entry.Usages);
                         return entry.Type;
                     }
@@ -315,7 +318,11 @@ namespace Raven.Database.Linq
                     Type type;
 
                     if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
+                    {
+                        if (_logger.IsDebugEnabled)
+                            _logger.Debug(string.Format("Definition for index {0} in database {1} was found in compiled cache on disk (at {2}) and loaded to assembly", name, configuration.DatabaseName, configuration.CompiledIndexCacheDirectory));
                         return type;
+                    }
                 }
 
                 var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
@@ -323,6 +330,8 @@ namespace Raven.Database.Linq
                 // ReSharper disable once RedundantArgumentName
                 AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
 
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug(string.Format("Index {0} in database {1} was compiled, cached and stored on disk (at {2}) and loaded to assembly", name, configuration.DatabaseName, configuration.CompiledIndexCacheDirectory));
                 return result;
             }
         }
@@ -350,16 +359,6 @@ namespace Raven.Database.Linq
                 cacheEntries.AddOrUpdate(source, cacheEntry, (key, existingValue) => cacheEntry);
             else
                 cacheEntries.TryAdd(source, cacheEntry);
-
-            if (cacheEntries.Count > 256)
-            {
-                var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
-                if (kvp.Key != null)
-                {
-                    CacheEntry _;
-                    cacheEntries.TryRemove(kvp.Key, out _);
-                }
-            }
         }
 
         private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, string indexFilePath,

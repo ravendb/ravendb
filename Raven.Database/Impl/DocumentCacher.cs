@@ -129,7 +129,7 @@ namespace Raven.Database.Impl
             };
         }
 
-        public void SetCachedDocument(string key, Etag etag, RavenJObject doc, RavenJObject metadata, int size)
+        public void SetCachedDocument(string key, Etag etag, ref RavenJObject doc, ref RavenJObject metadata, int size)
         {
             if (skipSetAndGetDocumentInCache)
                 return;
@@ -137,13 +137,30 @@ namespace Raven.Database.Impl
             if (skipSetDocumentInCache)
                 return;
 
-            var documentClone = ((RavenJObject)doc.CloneToken());
-            documentClone.EnsureCannotBeChangeAndEnableSnapshotting();
-            var metadataClone = ((RavenJObject)metadata.CloneToken());
-            metadataClone.EnsureCannotBeChangeAndEnableSnapshotting();
+            var cacheKey = "Doc/" + key + "/" + etag;
             try
             {
-                cachedSerializedDocuments.Set("Doc/" + key + "/" + etag, new CachedDocument
+                if (cachedSerializedDocuments.Get(cacheKey) != null)
+                    return;
+            }
+            catch(OverflowException)
+            {
+                // this is a bug in the framework
+                // http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
+                // in this case, we just treat it as uncacheable
+            }
+
+            var documentClone = doc;
+            documentClone.EnsureCannotBeChangeAndEnableSnapshotting();
+            var metadataClone = metadata;
+            metadataClone.EnsureCannotBeChangeAndEnableSnapshotting();
+
+            doc = (RavenJObject)documentClone.CreateSnapshot();
+            metadata = (RavenJObject) metadata.CreateSnapshot();
+
+            try
+            {
+                cachedSerializedDocuments.Set(cacheKey, new CachedDocument
                 {
                     Document = documentClone,
                     Metadata = metadataClone,
