@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Raven.Abstractions.Replication;
+using Raven.Client.Replication.Messages;
 
 namespace Raven.Server.Extensions
 {

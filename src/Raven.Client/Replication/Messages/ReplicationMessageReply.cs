@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Raven.Abstractions.Replication
+namespace Raven.Client.Replication.Messages
 {
-    public class ReplicationBatchReply
+    public class ReplicationMessageReply
     {
         public enum ReplyType
         {

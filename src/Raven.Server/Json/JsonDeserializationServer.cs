@@ -14,7 +14,7 @@ namespace Raven.Server.Json
 {
     public class JsonDeserializationServer : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, ReplicationBatchReply> ReplicationBatchReply = GenerateJsonDeserializationRoutine<ReplicationBatchReply>();
+        public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtagRequest> ReplicationLatestEtagRequest = GenerateJsonDeserializationRoutine<ReplicationLatestEtagRequest>();
 

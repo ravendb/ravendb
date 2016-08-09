@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
-                instance.DocumentsSent -= OnOutgoingSendingSucceeded;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
                 instance.Failed -= OnOutgoingSendingFailed;
                 OutgoingReplicationHandler _;
                 _outgoing.TryRemove(instance.Destination, out _);

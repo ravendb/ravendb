@@ -18,6 +18,7 @@ using System.Text;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
+using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Extensions;
 
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
-        public event Action<OutgoingReplicationHandler> DocumentsSent;
+        public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
 
         public OutgoingReplicationHandler(
             DocumentDatabase database,
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents.Replication
                             //if this returns false, this means either timeout or canceled token is activated                    
                             while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                             {
-                                SendHeartbeat(context, writer);
+                                SendHeartbeat(context, writer, parser);
                             }
                             _waitForChanges.Reset();
                         }
@@ -176,7 +177,7 @@ namespace Raven.Server.Documents.Replication
 
         public ReplicationDestination Destination => _destination;
 
-        private void SendHeartbeat(DocumentsOperationContext context, BlittableJsonTextWriter writer)
+        private void SendHeartbeat(DocumentsOperationContext context, BlittableJsonTextWriter writer, JsonOperationContext.MultiDocumentParser parser)
         {
             try
             {
@@ -186,7 +187,7 @@ namespace Raven.Server.Documents.Replication
                     ["LastEtag"] = _lastSentEtag
                 });
                 writer.Flush();
-                //TODO: Get the reply from the destination and set _destinationLastKnownChangeVector
+                HandleServerResponse(parser);
             }
             catch (Exception e)
             {
@@ -289,7 +290,7 @@ namespace Raven.Server.Documents.Replication
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side
-                    SendHeartbeat(context, writer);
+                    SendHeartbeat(context, writer, parser);
                     return hasModification;
                 }
 
@@ -328,30 +329,38 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Finished sending replication batch. Sent {docs.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {docs[0].Etag}, last sent etag = {lastEtag}");
 
+            HandleServerResponse(parser);
+        }
+
+        private void HandleServerResponse(JsonOperationContext.MultiDocumentParser parser)
+        {
             using (var replicationBatchReplyMessage = parser.ParseToMemory("replication acknowledge message"))
             {
-                var replicationBatchReply = JsonDeserializationServer.ReplicationBatchReply(replicationBatchReplyMessage);
+                var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
 
-                if (replicationBatchReply.Type == ReplicationBatchReply.ReplyType.Ok)
+                if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
                 {
                     UpdateDestinationChangeVector(replicationBatchReply.CurrentChangeVector);
-                    OnDocumentsSent();
+                    OnSuccessfulTwoWaysCommunication();
                 }
 
                 if (_log.IsInfoEnabled)
                 {
                     switch (replicationBatchReply.Type)
                     {
-                        case ReplicationBatchReply.ReplyType.Ok:
-                            _log.Info($"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownChangeVectorString}");
-
+                        case ReplicationMessageReply.ReplyType.Ok:
+                            _log.Info(
+                                $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownChangeVectorString}");
                             break;
-                        case ReplicationBatchReply.ReplyType.Error:
+                        case ReplicationMessageReply.ReplyType.Error:
                             _log.Info(
                                 $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Error}");
-                            throw new InvalidOperationException($"Received failure reply for replication batch. Error string received = {replicationBatchReply.Error}");
+                            throw new InvalidOperationException(
+                                $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Error}");
                         default:
-                            throw new ArgumentOutOfRangeException(nameof(replicationBatchReply), "Received reply for replication batch with unrecognized type... got " + replicationBatchReply.Type);
+                            throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
+                                "Received reply for replication batch with unrecognized type... got " +
+                                replicationBatchReply.Type);
                     }
                 }
             }
@@ -399,6 +408,6 @@ namespace Raven.Server.Documents.Replication
 
         }
 
-        private void OnDocumentsSent() => DocumentsSent?.Invoke(this);
+        private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
     }
 }

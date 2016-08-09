@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Replication.Messages;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

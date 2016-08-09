@@ -70,27 +70,35 @@ namespace Raven.Server.Documents.Replication
                 using (var writer = new BlittableJsonTextWriter(_context, _stream))
                 using (_multiDocumentParser)
                 {
+                    long prevRecievedEtag = -1;
                     while (!_cts.IsCancellationRequested)
                     {
                         using (var message = _multiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
                         {
                             //note: at this point, the valid messages are heartbeat and replication batch.
                             _cts.Token.ThrowIfCancellationRequested();
+
+                            long lastReceivedEtag;
+                            if (message.TryGet("LastEtag", out lastReceivedEtag))
+                                throw new InvalidDataException("The property 'LastEtag' wasn't found in replication batch, invalid data");
+
                             bool _;
                             if (message.TryGet("Heartbeat", out _))
                             {
                                 if (_log.IsInfoEnabled)
                                     _log.Info($"Incoming replication thread ({FromToString}) received heartbeat.");
+                                if (prevRecievedEtag != lastReceivedEtag)
+                                {
+                                    _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
+                                    prevRecievedEtag = lastReceivedEtag;
+                                }
                                 SendStatusToSource(writer, -1);
                                 continue;
                             }
 
                             ThrowIfNotReplicationBatch(message);
 
-                            long lastReceivedEtag;
-                            if (message.TryGet("LastEtag", out lastReceivedEtag))
-                                throw new InvalidDataException("The property 'LastEtag' wasn\'t found in replication batch, invalid data");
-
+                           
                             BlittableJsonReaderArray replicatedDocs;
                             if (!message.TryGet("ReplicationBatch", out replicatedDocs))
                                 throw new InvalidDataException(
@@ -103,6 +111,7 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     ReceiveDocuments(_context, replicatedDocs);
                                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
+                                    prevRecievedEtag = lastReceivedEtag;
                                     _context.Transaction.Commit();
                                 }
                                 sw.Stop();
@@ -124,7 +133,7 @@ namespace Raven.Server.Documents.Replication
                                     //return negative ack
                                     _context.Write(writer, new DynamicJsonValue
                                     {
-                                        ["Type"] = ReplicationBatchReply.ReplyType.Error.ToString(),
+                                        ["Type"] = ReplicationMessageReply.ReplyType.Error.ToString(),
                                         ["LastEtagAccepted"] = -1,
                                         ["Error"] = e.ToString()
                                     });
@@ -175,13 +184,19 @@ namespace Raven.Server.Documents.Replication
         private void SendStatusToSource(BlittableJsonTextWriter writer, long lastReceivedEtag)
         {
             var changeVector = new DynamicJsonArray();
-            foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(_context))
+            var databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(_context);
+            foreach (var changeVectorEntry in databaseChangeVector)
             {
                 changeVector.Add(new DynamicJsonValue
                 {
                     ["DbId"] = changeVectorEntry.DbId,
                     ["Etag"] = changeVectorEntry.Etag
                 });
+            }
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info(
+                    $"Sending ok to {FromToString} with last etag {lastReceivedEtag} and change vector: {databaseChangeVector.Format()}");
             }
             _context.Write(writer, new DynamicJsonValue
             {

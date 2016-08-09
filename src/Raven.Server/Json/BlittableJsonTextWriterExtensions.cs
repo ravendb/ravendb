@@ -8,6 +8,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;

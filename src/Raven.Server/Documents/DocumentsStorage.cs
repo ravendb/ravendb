@@ -7,6 +7,7 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
