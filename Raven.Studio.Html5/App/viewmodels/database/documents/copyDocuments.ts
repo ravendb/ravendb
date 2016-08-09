@@ -2,21 +2,37 @@ import document = require("models/database/documents/document");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
+import database = require("models/resources/database");
+import getDocumentsByIdsCommand = require("commands/database/documents/getDocumentsByIdsCommand");
 
 class copyDocuments extends dialogViewModelBase {
+
+    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
     isCopyingDocs = ko.observable(true);
     documentsOrIdsText: KnockoutComputed<string>;
 
-    constructor(private documents: Array<document>, elementToFocusOnDismissal?: string) {
+    private documents: KnockoutObservableArray<document> = ko.observableArray<document>([]);
+
+    constructor(documents: Array<document>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
+
+        var ids = documents.map(x => x.getId()).filter(x => x);
+        if (ids.length !== documents.length) {
+            // all documents has empty ids - we have to use copy passed via constructor
+            this.documents(documents);
+        } else {
+            // all passed documents has ids - query for those doc to avoid trimmed content generated via doc-preview endpoint
+            new getDocumentsByIdsCommand(ids, this.activeDatabase()).execute()
+                .done((results: Array<document>) => this.documents(results));
+        }
 
         this.documentsOrIdsText = ko.computed(() => {
             var prettifySpacing = 4;
             if (this.isCopyingDocs()) {
-                return documents.map(d => d.getId() + "\r\n" + JSON.stringify(d.toDto(false), null, prettifySpacing)).join("\r\n\r\n");
+                return this.documents().map(d => d.getId() + "\r\n" + JSON.stringify(d.toDto(false), null, prettifySpacing)).join("\r\n\r\n");
             } else {
-                return documents.map(d => d.getId()).join(", ");
+                return this.documents().map(d => d.getId()).join(", ");
             }
         });
     }
