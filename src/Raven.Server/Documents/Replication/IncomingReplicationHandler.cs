@@ -12,6 +12,7 @@ using Sparrow.Logging;
 using System.Linq;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.Server.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
@@ -213,7 +214,7 @@ namespace Raven.Server.Documents.Replication
                 maxReceivedChangeVectorByDatabase, out changeVectorResized);
 
             if (changeVectorUpdated || changeVectorResized)
-                _database.DocumentsStorage.SetChangeVector(context, dbChangeVector);
+                _database.DocumentsStorage.SetDatabaseChangeVector(context, dbChangeVector);
 
             return dbChangeVector.FirstOrDefault(x => x.DbId == Guid.Parse(ConnectionInfo.SourceDatabaseId)).Etag;
         }

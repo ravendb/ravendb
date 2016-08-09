@@ -14,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing.Auto;
 
 namespace Tryouts
 {
@@ -22,17 +23,9 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var x = new SlowTests.Core.Indexing.ResultTransformers())
+            using (var x = new BasicAutoMapReduceIndexing())
             {
-                x.CanUseMetadataForInTransformer().Wait();
-            }
-            using (var x = new SlowTests.Core.Indexing.ResultTransformers())
-            {
-                x.CanUseTransformerWithParameterOrDefault().Wait();
-            }
-            using (var x = new SlowTests.Core.Indexing.ResultTransformers())
-            {
-                x.CanUseAsDocumentInTransformer().Wait();
+                x.CanDelete().Wait();
             }
         }
     }

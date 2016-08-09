@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Server.Documents.Replication;
+using Raven.Abstractions.Replication;
 
-namespace Raven.Server
+namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
     {

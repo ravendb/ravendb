@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -18,6 +19,7 @@ namespace Raven.Server.Documents
         public LazyStringValue Key;
         public long StorageId;
         public BlittableJsonReaderObject Data;
+        public ChangeVectorEntry[] ChangeVector;
 
         public unsafe ulong DataHash
         {

@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -18,6 +19,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -51,7 +53,7 @@ namespace Raven.Server.Documents
             _logger = LoggerSetup.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
 
             // The documents schema is as follows
-            // 4 fields (lowered key, etag, lazy string key, document)
+            // 4 fields (lowered key, etag, lazy string key, document, change vector)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             _docsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -192,13 +194,12 @@ namespace Raven.Server.Documents
             {
                 if (iter.Seek(Slices.BeforeAllKeys) == false)
                     return changeVector;
-                const int GuidSizeInBytes = 16;
-                var buffer = new byte[GuidSizeInBytes];
+                var buffer = new byte[sizeof(Guid)];
                 int index = 0;
                 do
                 {
-                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, GuidSizeInBytes);
-                    if (read != GuidSizeInBytes)
+                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, sizeof(Guid));
+                    if (read != sizeof(Guid))
                         throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
 
                     changeVector[index].DbId = new Guid(buffer);
@@ -209,33 +210,7 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
-        {
-            AssertTransaction(context);
-
-            var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-            var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
-            using (var iter = tree.Iterate(false))
-            {
-                if (iter.Seek(Slices.BeforeAllKeys) == false)
-                    return changeVector;
-                var buffer = new byte[16];
-                int index = 0;
-                do
-                {
-                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, 16);
-                    if (read != 16)
-                        throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
-
-                    changeVector[index].DbId = new Guid(buffer);
-                    changeVector[index].Etag = iter.CreateReaderForCurrent().ReadBigEndianInt64();
-                    index++;
-                } while (iter.MoveNext());
-            }
-            return changeVector;
-        }
-
-        public void SetChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
+        public void SetDatabaseChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
             for (int i = 0; i < changeVector.Length; i++)
@@ -613,10 +588,24 @@ namespace Raven.Server.Documents
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
             ptr = tvr.Read(1, out size);
-            result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+            result.Etag = Bits.SwapBytes(*(long*)ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr);
+
             return result;
+        }
+
+        private static unsafe ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(TableValueReader tvr)
+        {
+            int size;
+            var pChangeVector = (ChangeVectorEntry*) tvr.Read(4, out size);
+            var changeVector = new ChangeVectorEntry[size/sizeof (ChangeVectorEntry)];
+            for (int i = 0; i < changeVector.Length; i++)
+            {
+                changeVector[i] = pChangeVector[i];
+            }
+            return changeVector;
         }
 
         private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, TableValueReader tvr)
@@ -645,7 +634,7 @@ namespace Raven.Server.Documents
             return Delete(context, GetSliceFromKey(context, key), expectedEtag);
         }
 
-        public bool Delete(DocumentsOperationContext context, Slice loweredKey, long? expectedEtag)
+        public bool Delete(DocumentsOperationContext context, Slice loweredKey, long? expectedEtag, ChangeVectorEntry[] changeVector = null)
         {
             var doc = Get(context, loweredKey);
             if (doc == null)
@@ -673,7 +662,7 @@ namespace Raven.Server.Documents
             var collectionName = GetCollectionName(loweredKey, doc.Data, out originalCollectionName, out isSystemDocument);
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
-            CreateTombstone(context, table, doc, originalCollectionName);
+            CreateTombstone(context, table, doc, originalCollectionName, changeVector);
 
             if (isSystemDocument == false)
             {
@@ -694,7 +683,7 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Table collectionDocsTable, Document doc, string collectionName)
+        private void CreateTombstone(DocumentsOperationContext context, Table collectionDocsTable, Document doc, string collectionName, ChangeVectorEntry[] changeVector)
         {
             int size;
             var ptr = collectionDocsTable.DirectRead(doc.StorageId, out size);
@@ -707,26 +696,37 @@ namespace Raven.Server.Documents
             var keyPtr = tvr.Read(2, out keySize);
 
             var newEtag = ++_lastEtag;
-            var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
-            var documentEtagBigEndian = IPAddress.HostToNetworkOrder(doc.Etag);
+            var newEtagBigEndian = Bits.SwapBytes(newEtag);
+            var documentEtagBigEndian = Bits.SwapBytes(doc.Etag);
 
-            var tbv = new TableValueBuilder
+            if (changeVector == null)
             {
-                {lowerKey, lowerSize},
-                {(byte*) &newEtagBigEndian , sizeof (long)},
-                {(byte*) &documentEtagBigEndian , sizeof (long)},
-                {keyPtr, keySize}
-            };
+                changeVector = UpdateChangeVectorWithLocalChange(newEtag, doc.ChangeVector);
+            }
 
-            var col = "#" + collectionName; // TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
-            _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
-            var table = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
+            fixed (ChangeVectorEntry* pChangeVector = changeVector)
+            {
+                var tbv = new TableValueBuilder
+                {
+                    {lowerKey, lowerSize},
+                    {(byte*) &newEtagBigEndian, sizeof (long)},
+                    {(byte*) &documentEtagBigEndian, sizeof (long)},
+                    {keyPtr, keySize},
+                    {(byte*)pChangeVector, sizeof (ChangeVectorEntry)*changeVector.Length}
+                };
 
-            table.Insert(tbv);
+                var col = "#" + collectionName; // TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
+                _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
+                var table = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
+
+                table.Insert(tbv);
+            }
         }
 
+
         public PutResult Put(DocumentsOperationContext context, string key, long? expectedEtag,
-            BlittableJsonReaderObject document)
+            BlittableJsonReaderObject document,
+            ChangeVectorEntry[] changeVector = null)
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Document key cannot be null or whitespace", nameof(key));
@@ -751,51 +751,69 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
+            var col = "#" + originalCollectionName;// TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
+            _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
+            var tombstoneTable = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
+            // delete a tombstone if it exists
+            tombstoneTable.DeleteByKey(Slice.From(context.Allocator, lowerKey, lowerSize));
+
             var newEtag = ++_lastEtag;
-            var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
+            var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-            var tbv = new TableValueBuilder
-            {
-                {lowerKey, lowerSize}, //0
-                {(byte*) &newEtagBigEndian , sizeof (long)}, //1
-                {keyPtr, keySize}, //2
-                {document.BasePointer, document.Size}, //3
-            };
+            var oldValue = table.ReadByKey(Slice.External(context.Allocator, lowerKey, (ushort) lowerSize));
 
-            var oldValue = table.ReadByKey(Slice.External(context.Allocator, lowerKey, (ushort)lowerSize));
-            if (oldValue == null)
+            if (changeVector == null)
             {
-                if (expectedEtag != null && expectedEtag != 0)
-                {
-                    throw new ConcurrencyException(
-                        $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-                }
-                table.Insert(tbv);
+                changeVector = SetDocumentChangeVectorForLocalChange(oldValue, newEtag);
             }
-            else
+
+            fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
-                int size;
-                var pOldEtag = oldValue.Read(1, out size);
-                var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
-                if (expectedEtag != null && oldEtag != expectedEtag)
-                    throw new ConcurrencyException(
-                        $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                var tbv = new TableValueBuilder
+                {
+                    {lowerKey, lowerSize}, //0
+                    {(byte*) &newEtagBigEndian, sizeof (long)}, //1
+                    {keyPtr, keySize}, //2
+                    {document.BasePointer, document.Size}, //3
+                    {(byte*) pChangeVector, sizeof (ChangeVectorEntry)*changeVector.Length} //4
+                };
 
-                int oldSize;
-                var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
-                var oldCollectionName = Document.GetCollectionName(key, oldDoc, out isSystemDocument);
-                if (oldCollectionName != originalCollectionName)
-                    throw new InvalidOperationException(
-                        $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
-                        $"Delete the document and recreate the document {key}.");
+                if (oldValue == null)
+                {
+                    if (expectedEtag != null && expectedEtag != 0)
+                    {
+                        throw new ConcurrencyException(
+                            $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                    }
+                    table.Insert(tbv);
+                }
+                else
+                {
+                    int size;
+                    var pOldEtag = oldValue.Read(1, out size);
+                    var oldEtag = IPAddress.NetworkToHostOrder(*(long*) pOldEtag);
+                    if (expectedEtag != null && oldEtag != expectedEtag)
+                        throw new ConcurrencyException(
+                            $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
-                table.Update(oldValue.Id, tbv);
+                    int oldSize;
+                    var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
+                    var oldCollectionName = Document.GetCollectionName(key, oldDoc, out isSystemDocument);
+                    if (oldCollectionName != originalCollectionName)
+                        throw new InvalidOperationException(
+                            $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
+                            $"Delete the document and recreate the document {key}.");
+
+                    table.Update(oldValue.Id, tbv);
+                }
             }
 
             if (isSystemDocument == false)
             {
-                _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, originalCollectionName, key, newEtagBigEndian, document);
-                _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, Slice.External(context.Allocator, lowerKey, (ushort)lowerSize), document);
+                _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, originalCollectionName, key,
+                    newEtagBigEndian, document);
+                _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
+                    Slice.External(context.Allocator, lowerKey, (ushort) lowerSize), document);
             }
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -812,6 +830,41 @@ namespace Raven.Server.Documents
                 ETag = newEtag,
                 Key = key
             };
+        }
+
+        private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(TableValueReader oldValue, long newEtag)
+        {
+            if (oldValue == null)
+            {
+                // new write, just our own thing here
+                return new[]
+                {
+                    new ChangeVectorEntry
+                    {
+                        Etag = newEtag,
+                        DbId = Environment.DbId
+                    }
+                };
+            }
+            var changeVector = GetChangeVectorEntriesFromTableValueReader(oldValue);
+            return UpdateChangeVectorWithLocalChange(newEtag, changeVector);
+        }
+
+        private ChangeVectorEntry[] UpdateChangeVectorWithLocalChange(long newEtag, ChangeVectorEntry[] changeVector)
+        {
+            var length = changeVector.Length;
+            for (int i = 0; i < length; i++)
+            {
+                if (changeVector[i].DbId == Environment.DbId)
+                {
+                    changeVector[i].Etag = newEtag;
+                    return changeVector;
+                }
+            }
+            Array.Resize(ref changeVector, length + 1);
+            changeVector[length].DbId = Environment.DbId;
+            changeVector[length].Etag = newEtag;
+            return changeVector;
         }
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)

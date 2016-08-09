@@ -482,7 +482,6 @@ namespace Voron.Data.Tables
 
          public void DeleteByKey(Slice key)
         {
-            var pk = _schema.Key;
             var pkTree = GetTree(_schema.Key);
 
             var readResult = pkTree.Read(key);
