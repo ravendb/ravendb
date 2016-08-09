@@ -761,7 +761,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         var documentData = decodedDocumentStream.ToJObject();
 
                         size = (int)Math.Max(stream.Position, streamToUse.Position);
-                        documentCacher.SetCachedDocument(normalizedKey, existingEtag, documentData, metadata, size);
+                        documentCacher.SetCachedDocument(normalizedKey, existingEtag, ref documentData, ref metadata, size);
 
                         return documentData;
                     }

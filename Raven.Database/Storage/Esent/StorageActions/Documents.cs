@@ -128,25 +128,38 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
+        [ThreadStatic]
+        private static byte[] _readDocBuffer;
+
+        
+
         private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata, Reference<int> size)
         {
             try
             {
-                using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+                var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+                if (existingCachedDocument != null)
+                    return existingCachedDocument.Document;
+
+                var colSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+                if (_readDocBuffer == null || _readDocBuffer.Length < colSize)
+                    _readDocBuffer = new byte[colSize];
+
+                Api.JetRetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"], 
+                    _readDocBuffer, colSize, 
+                    0, out colSize, RetrieveColumnGrbit.None, null);
+
+                using (Stream stream = new MemoryStream(_readDocBuffer, 0, colSize, writable: false))
                 {
                     var documentSize = (int) stream.Length;
                     size.Value = documentSize;
-
-                    var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-                    if (existingCachedDocument != null)
-                        return existingCachedDocument.Document;
 
                     using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
                     {
                         var data = columnStream.ToJObject();
 
-                        cacher.SetCachedDocument(key, existingEtag, data, metadata, documentSize);
-
+                        cacher.SetCachedDocument(key, existingEtag, ref data, ref metadata, documentSize);
+                        //todo : add metrics
                         return data;
                     }
                 }
@@ -268,7 +281,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
 
             var serializedSizeOnDisk = metadataBuffer.Length + docSize;
-            cacher.SetCachedDocument(key, existingEtag, dataAsJson, metadata, serializedSizeOnDisk);
+            cacher.SetCachedDocument(key, existingEtag, ref dataAsJson, ref metadata, serializedSizeOnDisk);
 
             return new JsonDocument
             {
