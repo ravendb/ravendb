@@ -95,6 +95,13 @@ namespace Raven.Database.FileSystem.Synchronization
                     return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator, configuration);
                     // we have a rename tombstone but file does not exists on destination
                 }
+
+                if (destinationMetadata == null)
+                {
+                    reason = NoSyncReason.NoNeedToDeleteNonExistigFile;
+                    return null;
+                }
+
                 return new DeleteWorkItem(file, localServerUrl, storage);
             }
 
