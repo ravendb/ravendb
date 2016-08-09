@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Abstractions.Replication;
 
 namespace Raven.Server.Extensions
@@ -17,6 +18,24 @@ namespace Raven.Server.Extensions
                     return true;
             }
             return false;
+        }
+
+        public static string Format(this ChangeVectorEntry[] changeVector)
+        {
+            if (changeVector.Length == 0)
+                return "[]";
+            var sb = new StringBuilder();
+            sb.Append("[");
+            for (int i = 0; i < changeVector.Length; i++)
+            {
+                sb.Append(changeVector[i].DbId)
+                    .Append(" : ")
+                    .Append(changeVector[i].Etag)
+                    .Append(", ");
+            }
+            sb.Length -= 3;
+            sb.Append("]");
+            return sb.ToString();
         }
 
         public static void UpdateChangeVectorFrom(this ChangeVectorEntry[] changeVector, Dictionary<Guid, long> maxEtagsPerDbId)

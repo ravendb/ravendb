@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents.Replication
 
         private long _lastSentEtag;
         private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
+        private string _destinationLastKnownChangeVectorString;
         private TcpClient _tcpClient;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
@@ -73,11 +75,15 @@ namespace Raven.Server.Documents.Replication
                 new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)))
             {
                 var result = request.ReadResponseJson();
-                return convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+                var tcpConnectionInfo = convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via tcp://{tcpConnectionInfo.Url}:{tcpConnectionInfo.Port}");
+                }
+                return tcpConnectionInfo;
             }
         }
 
-        //TODO : add code to record stats and maybe additional logging
         private void ReplicateDocuments()
         {
             try
@@ -114,10 +120,11 @@ namespace Raven.Server.Documents.Replication
                         {
                             var replicationEtagReply = JsonDeserializationServer.ReplicationEtagReply(lastEtagMessage);
                             _lastSentEtag = replicationEtagReply.LastSentEtag;
-                            _destinationLastKnownChangeVector.Clear();
-                            foreach (var changeVectorEntry in replicationEtagReply.CurrentChangeVector)
+                            UpdateDestinationChangeVector(replicationEtagReply.CurrentChangeVector);
+                            if (_log.IsInfoEnabled)
                             {
-                                _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                                _log.Info(
+                                    $"Connected to {_destination.Database} @ {_destination.Url}, last sent etag {replicationEtagReply.LastSentEtag}. Change vector: [{replicationEtagReply.CurrentChangeVector.Format()}]");
                             }
                         }
 
@@ -145,13 +152,23 @@ namespace Raven.Server.Documents.Replication
             catch (OperationCanceledException)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Operation canceled on replication thread ({FromToString}). Stopped the thread.", null);
+                    _log.Info($"Operation canceled on replication thread ({FromToString}). Stopped the thread.");
             }
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Unexpected exception occured on replication thread ({FromToString}). Stopped the thread.", e);
+                    _log.Info($"Unexpected exception occured on replication thread ({FromToString}). Replication stopped (will be retried later).", e);
                 Failed?.Invoke(this, e);
+            }
+        }
+
+        private void UpdateDestinationChangeVector(ChangeVectorEntry[] currentChangeVector)
+        {
+            _destinationLastKnownChangeVector.Clear();
+            _destinationLastKnownChangeVectorString = currentChangeVector.Format();
+            foreach (var changeVectorEntry in currentChangeVector)
+            {
+                _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
         }
 
@@ -169,7 +186,6 @@ namespace Raven.Server.Documents.Replication
                     ["LastEtag"] = _lastSentEtag
                 });
                 writer.Flush();
-
                 //TODO: Get the reply from the destination and set _destinationLastKnownChangeVector
             }
             catch (Exception e)
@@ -180,19 +196,41 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private static unsafe bool ShouldSkipReplication(LazyStringValue str)
+        {
+            if (str.Length < 6)
+                return false;
+
+            // case insensitive 'Raven/' match without doing allocations
+
+            if ((str.Buffer[0] != (byte)'R' && str.Buffer[0] != (byte) 'r') ||
+                (str.Buffer[1] != (byte)'A' && str.Buffer[1] != (byte)'a') ||
+                (str.Buffer[2] != (byte)'V' && str.Buffer[2] != (byte)'v') ||
+                (str.Buffer[3] != (byte)'E' && str.Buffer[3] != (byte)'e') ||
+                (str.Buffer[4] != (byte)'N' && str.Buffer[4] != (byte)'n') ||
+                 str.Buffer[5] != (byte)'/')
+                return false;
+
+            if (str.Length < 11)
+                return true;
+
+            // Now need to find if the next bits are 'hilo/'
+            if ((str.Buffer[6] != (byte)'H' && str.Buffer[0] != (byte)'h') ||
+                (str.Buffer[7] != (byte)'I' && str.Buffer[1] != (byte)'i') ||
+                (str.Buffer[8] != (byte)'L' && str.Buffer[2] != (byte)'l') ||
+                (str.Buffer[9] != (byte)'O' && str.Buffer[3] != (byte)'o') ||
+                 str.Buffer[10] != (byte)'/')
+                return false; 
+
+            return true;
+        }
 
         private bool ExecuteReplicationOnce(DocumentsOperationContext context,
             BlittableJsonTextWriter writer,
             JsonOperationContext.MultiDocumentParser parser)
         {
-            //just for shorter code
-            var documentStorage = _database.DocumentsStorage;
             using (context.OpenReadTransaction())
             {
-                //TODO: make replication batch size configurable
-                //also, perhaps there should be timers/heuristics
-                //that would dynamically resize batch size
-
                 var replicationBatch = new List<Document>();
                 var lastEtag = _lastSentEtag;
 
@@ -200,24 +238,34 @@ namespace Raven.Server.Documents.Replication
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
                 var sp = Stopwatch.StartNew();
-                while(sp.ElapsedMilliseconds < 500)
+                while (sp.ElapsedMilliseconds < 1000)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    foreach (var document in documentStorage.GetDocumentsAfter(context, lastEtag, 0, 1024))
+                    foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(context, lastEtag, 0, 1024))
                     {
+                        if (sp.ElapsedMilliseconds > 1000)
+                            break;
+
                         lastEtag = document.Etag;
 
-                        //TODO: check the lazy string directly
-                        var key = document.Key.ToString();
-                        if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) &&
-                            key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false)
+                        if (ShouldSkipReplication(document.Key))
                         {
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info($"Skipping replication of {document.Key} because it is a system document");
+                            }
                             continue;
                         }
 
                         // destination already has it
                         if (document.ChangeVector.GreaterThen(_destinationLastKnownChangeVector) == false)
+                        {
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info($"Skipping replication of {document.Key} because destination has a higher change vector. Doc: {document.ChangeVector.Format()} < Dest: {_destinationLastKnownChangeVectorString} ");
+                            }
                             continue;
+                        }
 
                         replicationBatch.Add(document);
                     }
@@ -229,7 +277,11 @@ namespace Raven.Server.Documents.Replication
                     if (lastEtag == DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction))
                         break;
                 }
-
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info(
+                        $"Found {replicationBatch.Count:#,#;;0} documents to replicate to {_destination.Database} @ {_destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
+                }
                 if (replicationBatch.Count == 0)
                 {
                     var hasModification = lastEtag != _lastSentEtag;
@@ -248,7 +300,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        //TODO: add replication batch format in comments here		
         private void SendDocuments(
             DocumentsOperationContext context,
             BlittableJsonTextWriter writer,
@@ -256,11 +307,8 @@ namespace Raven.Server.Documents.Replication
             List<Document> docs,
             long lastEtag)
         {
-            if (docs == null) //precaution, should never happen
-                throw new ArgumentNullException(nameof(docs));
-
             if (_log.IsInfoEnabled)
-                _log.Info($"Starting sending replication batch ({_database.Name})");
+                _log.Info($"Starting sending replication batch ({_database.Name}) with {docs.Count:#,#;;0} docs and last etag {lastEtag}");
 
             var sw = Stopwatch.StartNew();
             writer.WriteStartObject();
@@ -277,22 +325,16 @@ namespace Raven.Server.Documents.Replication
 
             _lastSentEtag = lastEtag;
 
-            // number of docs, first / last etag, size, time
             if (_log.IsInfoEnabled)
-                _log.Info($"Finished sending replication batch. Sent {docs.Count} documents in {sw.ElapsedMilliseconds} ms. First sent etag = {docs[0].Etag}, last sent etag = {lastEtag}");
+                _log.Info($"Finished sending replication batch. Sent {docs.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {docs[0].Etag}, last sent etag = {lastEtag}");
 
             using (var replicationBatchReplyMessage = parser.ParseToMemory("replication acknowledge message"))
             {
                 var replicationBatchReply = JsonDeserializationServer.ReplicationBatchReply(replicationBatchReplyMessage);
 
-
                 if (replicationBatchReply.Type == ReplicationBatchReply.ReplyType.Ok)
                 {
-                    _destinationLastKnownChangeVector.Clear();
-                    foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
-                    {
-                        _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-                    }
+                    UpdateDestinationChangeVector(replicationBatchReply.CurrentChangeVector);
                     OnDocumentsSent();
                 }
 
@@ -301,7 +343,7 @@ namespace Raven.Server.Documents.Replication
                     switch (replicationBatchReply.Type)
                     {
                         case ReplicationBatchReply.ReplyType.Ok:
-                            _log.Info($"Received reply for replication batch from {_destination.Database} at {_destination.Url}. Everything is ok.");
+                            _log.Info($"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownChangeVectorString}");
 
                             break;
                         case ReplicationBatchReply.ReplyType.Error:
@@ -336,7 +378,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnDocumentChange(DocumentChangeNotification notification) => _waitForChanges.Set();
 
         public void Dispose()
@@ -358,7 +399,6 @@ namespace Raven.Server.Documents.Replication
 
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnDocumentsSent() => DocumentsSent?.Invoke(this);
     }
 }
