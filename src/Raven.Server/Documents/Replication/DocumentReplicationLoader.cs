@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime = new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
-        private readonly ConcurrentQueue<ReplicationDestination> _reconnectQueue = new ConcurrentQueue<ReplicationDestination>();
+        private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
 
         private readonly Logger _log;
 
@@ -45,13 +45,13 @@ namespace Raven.Server.Documents.Replication
             _database = database;
             _log = LoggerSetup.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
-                null, TimeSpan.Zero, TimeSpan.FromMilliseconds(45000));
+                null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
         }
 
         public IReadOnlyDictionary<ReplicationDestination, ConnectionFailureInfo> OutgoingFailureInfo => _outgoingFailureInfo;
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
-        public IReadOnlyCollection<ReplicationDestination> ReconnectQueue => _reconnectQueue;
+        public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x=>x.Destination);
 
         public void AcceptIncomingConnection(
              JsonOperationContext context, NetworkStream stream, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
@@ -124,12 +124,32 @@ namespace Raven.Server.Documents.Replication
 
         private void AttemptReconnectFailedOutgoing(object state)
         {
-            ReplicationDestination destination;
-            while (_reconnectQueue.TryDequeue(out destination))
+            var minDiff = TimeSpan.FromSeconds(30);
+            foreach (var failure in _reconnectQueue)
             {
-                _cts.Token.ThrowIfCancellationRequested();
-                AddAndStartOutgoingReplication(destination);
+                var diff = failure.RetryOn - DateTime.UtcNow;
+                if (diff < TimeSpan.Zero)
+                {
+                    try
+                    {
+                        _reconnectQueue.TryRemove(failure);
+                        AddAndStartOutgoingReplication(failure.Destination);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Failed to start outgoing replciation to {failure.Destination}", e);
+                        }
+                    }
+                }
+                else
+                {
+                    if (minDiff < diff)
+                        minDiff = diff;
+                }
             }
+            _reconnectAttemptTimer.Change(minDiff, TimeSpan.MaxValue);
         }
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
@@ -181,6 +201,7 @@ namespace Raven.Server.Documents.Replication
         {
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
+            outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             if (!_outgoing.TryAdd(destination, outgoingReplication))
             {
                 //keep outgoing replication unique per url/database name?
@@ -192,7 +213,10 @@ namespace Raven.Server.Documents.Replication
             }
             else
             {
-                _outgoingFailureInfo.TryAdd(destination, new ConnectionFailureInfo());
+                _outgoingFailureInfo.TryAdd(destination, new ConnectionFailureInfo
+                {
+                    Destination = destination
+                });
                 outgoingReplication.Start();
             }
         }
@@ -216,15 +240,14 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
-                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-                instance.Failed -= OnOutgoingSendingFailed;
                 OutgoingReplicationHandler _;
                 _outgoing.TryRemove(instance.Destination, out _);
 
-                var failureInfo = _outgoingFailureInfo[instance.Destination];
-                failureInfo.OnError();
+                ConnectionFailureInfo failureInfo;
+                if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
+                    return;
 
-                _reconnectQueue.Enqueue(instance.Destination);
+                _reconnectQueue.Add(failureInfo);
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Document replication connection ({instance.Destination}) failed, and the connection will be retried later.",
@@ -311,6 +334,10 @@ namespace Raven.Server.Documents.Replication
 
             public TimeSpan NextTimout { get; set; } = TimeSpan.FromMilliseconds(500);
 
+            public DateTime RetryOn { get; set; }
+
+            public ReplicationDestination Destination { get; set; }
+
             public void Reset()
             {
                 NextTimout = TimeSpan.FromMilliseconds(500);
@@ -321,6 +348,7 @@ namespace Raven.Server.Documents.Replication
             {
                 ErrorCount++;
                 NextTimout = TimeSpan.FromMilliseconds(Math.Min(NextTimout.TotalMilliseconds * 4, MaxConnectionTimout));
+                RetryOn = DateTime.UtcNow + NextTimout;
             }
         }
     }
