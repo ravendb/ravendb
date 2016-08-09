@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>TESTS</title>
+    
+    <!-- it must be first resource due to: https://github.com/nathanboktae/mocha-phantomjs/issues/213 -->
+    <script src="../../src/Raven.Studio/wwwroot/lib/mocha/mocha.js"></script>
+
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/mocha/mocha.css">
+    
+    
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/Content/bootstrap.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/font-awesome/css/font-awesome.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/Durandal/css/durandal.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/nprogress/nprogress.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/jquery-ui/themes/base/all.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/Content/dynatree.custom.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/nvd3/build/nv.d3.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/Content/app.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/Content/awesome-bootstrap-checkbox.css" />
+    <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/animate.css/animate.css" />
+    
+    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/es6-promise/promise.js"></script>
+    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/knockout/dist/knockout.debug.js"></script>
+    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/knockout.dirtyFlag/index.js"></script>
+    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/knockout-postbox/build/knockout-postbox.js"></script>
+    <script src="setup/requireConfig.js"></script>
+    <script src="../../src/Raven.Studio/wwwroot/lib/requirejs/require.js"></script>
+    
+    
+    
+    <script type="text/javascript">
+        var injector = null;
+    </script>
+</head>
+<body>
+    <div id="mocha">
+    </div>
+
+    <div id="test">
+    </div>
+
+    <!-- add your tests to tests.js -->
+    <script src="setup/tests.js"></script>
+    <script src="setup/testRunner.js"></script>
+</body>
+</html>

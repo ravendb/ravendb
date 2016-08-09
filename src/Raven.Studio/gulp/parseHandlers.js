@@ -6,6 +6,8 @@ var Map = require('es6-map');
 var ravenActions = new Map();
 var latestFile;
 
+var HANDLER_PATTERN = "Handler.cs";
+
 module.exports = function parseHandlers(outputFileName) {
     return through.obj(function (inputFile, encoding, callback) {
         latestFile = inputFile;
@@ -14,9 +16,15 @@ module.exports = function parseHandlers(outputFileName) {
         var groupedActions = groupRavenActions(ravenActions);
         var outputFile = createDefinitionFile(groupedActions, outputFileName);
         this.push(outputFile);
+        cleanup();
         cb();
     });
 };
+
+function cleanup() {
+    ravenActions.clear();
+    latestFile = null;
+}
 
 function findHandlerAnnotations(file, ravenActions) {
     var contents = file.contents.toString();
@@ -31,9 +39,10 @@ function findHandlerAnnotations(file, ravenActions) {
 
 function findHandlerName(input) {
     var fileName = path.basename(input);
-    if (!fileName.endsWith("Handler.cs")) {
-        throw new Error("Can not handle file: " + input);
+    if (!fileName.endsWith(HANDLER_PATTERN)) {
+        throw new Error("Cannot handle file: " + input);
     }
+
     return fileName.substring(0, fileName.length - 10);
 }
 

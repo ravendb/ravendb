@@ -31,7 +31,11 @@
     "jszip": "^2.5.0",
     "text": "requirejs-text#^2.0.14",
     "font-awesome": "fontawesome#^4.5.0",
-    "animate.css": "^3.5.1"
+    "animate.css": "^3.5.1",
+    "mocha": "~2.0.1",
+    "chai": "^3.5.0",
+    "Squire.js": "squire#^0.2.0",
+    "es6-promise": "^3.2.2"
   },
   "resolutions": {
     "jquery": "^2.2.0",

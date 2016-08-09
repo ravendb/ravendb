@@ -61,6 +61,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{FAAED88A
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TypingsGenerator", "tools\TypingsGenerator\TypingsGenerator.xproj", "{5A0A0B4D-4E43-4F0B-B2CD-E985FAB7B01C}"
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Studio", "test\Studio\Studio.xproj", "{434A9896-A7F8-4739-8491-8269C00115AD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -151,6 +153,10 @@ Global
 		{5A0A0B4D-4E43-4F0B-B2CD-E985FAB7B01C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A0A0B4D-4E43-4F0B-B2CD-E985FAB7B01C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A0A0B4D-4E43-4F0B-B2CD-E985FAB7B01C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{434A9896-A7F8-4739-8491-8269C00115AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{434A9896-A7F8-4739-8491-8269C00115AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{434A9896-A7F8-4739-8491-8269C00115AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{434A9896-A7F8-4739-8491-8269C00115AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -177,6 +183,7 @@ Global
 		{AADB78BD-36D0-4056-91B4-BD0A7EFAEB74} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 		{5F364CBA-F6E9-4C37-BE00-DE157210AC65} = {FED31B7C-041C-489C-BFA9-D88815FC63D0}
 		{5A0A0B4D-4E43-4F0B-B2CD-E985FAB7B01C} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
+		{434A9896-A7F8-4739-8491-8269C00115AD} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57

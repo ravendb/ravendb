@@ -108,7 +108,7 @@ class commandBase {
         return this.ajax(relativeUrl, args, "EVAL", resource, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         var originalArguments = arguments;
         // ContentType:
         //
