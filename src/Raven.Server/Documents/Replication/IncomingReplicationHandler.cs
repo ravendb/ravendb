@@ -60,7 +60,6 @@ namespace Raven.Server.Documents.Replication
 
         }
 
-        //TODO : do not forget to add logging and code to record stats
         private void ReceiveReplicatedDocuments()
         {
             try
@@ -86,7 +85,7 @@ namespace Raven.Server.Documents.Replication
                             if (message.TryGet("Heartbeat", out _))
                             {
                                 if (_log.IsInfoEnabled)
-                                    _log.Info($"Incoming replication thread ({FromToString}) received heartbeat.");
+                                    _log.Info($"Got heartbeat from ({FromToString}) with etag {lastReceivedEtag}.");
                                 if (prevRecievedEtag != lastReceivedEtag)
                                 {
                                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
@@ -117,7 +116,7 @@ namespace Raven.Server.Documents.Replication
                                 sw.Stop();
 
                                 if (_log.IsInfoEnabled)
-                                    _log.Info($"Replication connection {FromToString}: received and written {replicatedDocs.Length} documents to database in {sw.ElapsedMilliseconds} ms, with last etag = {lastReceivedEtag}.");
+                                    _log.Info($"Replication connection {FromToString}: received and written {replicatedDocs.Length:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastReceivedEtag}.");
 
                                 //return positive ack
 
@@ -141,7 +140,7 @@ namespace Raven.Server.Documents.Replication
                                     e.Data.Add("FailedToWrite", true);
 
                                     if (_log.IsInfoEnabled)
-                                        _log.Info($"Replication connection {FromToString}: failed writing documents to database - unhandled exception was thrown.{Environment.NewLine} {e}");
+                                        _log.Info($"Failed replicating documents from {FromToString}.",e);
                                     throw;
                                 }
                             }
@@ -169,7 +168,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     //if FailedToWrite is in e.Data, we logged the exception already
                     if (_log.IsInfoEnabled && !e.Data.Contains("FailedToWrite"))
-                        _log.Info($"Replication connection {FromToString}: an exception was thrown during receiving incoming document replication batch. {e}");
+                        _log.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.",e );
 
                     OnFailed(e, this);
                 }
@@ -243,12 +242,12 @@ namespace Raven.Server.Documents.Replication
             }
 
             dbChangeVector.UpdateChangeVectorFrom(maxReceivedChangeVectorByDatabase);
+
             _database.DocumentsStorage.SetDatabaseChangeVector(context, dbChangeVector);
         }
 
         private void WriteReceivedDocument(DocumentsOperationContext context, BlittableJsonReaderObject doc)
         {
-
             var id = doc.GetIdFromMetadata();
             if (id == null)
                 throw new InvalidDataException($"Missing {Constants.DocumentIdFieldName} field from a document; this is not something that should happen...");
