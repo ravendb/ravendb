@@ -26,7 +26,7 @@ class saveIndexDefinitionCommand extends commandBase {
         };
         var putArgs = JSON.stringify(this.index);
         var url = "/indexes/" + this.index.Name + this.urlEncodeArgs(urlArgs);
-        return this.put(url, putArgs, this.db);
+        return this.put(url, putArgs, this.db, null, 61 * 1000);
     }
 }
 

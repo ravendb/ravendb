@@ -1,3 +1,11 @@
+<style>
+    .li-disabled{
+        pointer-events: none;
+        opacity: 0.4;
+        text-decoration: line-through;
+    }
+</style>
+
 <ul class="breadcrumb">
     <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     <li>
@@ -102,21 +110,34 @@
             </a>
         </div>
         <div class="btn-group">
-            <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">
-                <i class="fa fa-trash-o"></i> <span class="caret"></span>
+            <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" data-bind="disable: isDeletingIndexes">
+                <span data-bind="visible: !isDeletingIndexes()">
+                    <i class="fa fa-trash-o"></i>
+                    <span class="caret"></span>
+                </span>
+                <i class="fa fa-spinner fa-spin fa-fw fa-1" data-bind="visible: isDeletingIndexes"></i>
             </button>
             <ul class="dropdown-menu" role="menu">
-                <li data-bind="click: deleteIdleIndexes"><a href="#">Delete Idle Indexes</a></li>
-                <li data-bind="click: deleteDisabledIndexes"><a href="#">Delete Disabled Indexes</a></li>
-                <li data-bind="click: deleteAbandonedIndexes"><a href="#">Delete Abandoned Indexes</a></li>
+                <li data-bind="click: deleteIdleIndexes, css: { 'li-disabled': !canDeleteIdleIndexes() }">
+                    <a href="#">Delete Idle Indexes</a>
+                </li>
+                <li data-bind="click: deleteDisabledIndexes, css: { 'li-disabled': !canDeleteDisabledIndexes() }">
+                    <a href="#">Delete Disabled Indexes</a>
+                </li>
+                <li data-bind="click: deleteAbandonedIndexes, css: { 'li-disabled': !canDeleteAbandonedIndexes() }">
+                    <a href="#">Delete Abandoned Indexes</a>
+                </li>
                 <li class="divider"></li>
-                <li data-bind="click: deleteAllIndexes"><a href="#">Delete All Indexes</a></li>
+                <li data-bind="click: deleteAllIndexes, css: { 'li-disabled': !canDeleteAllIndexes() }">
+                    <a href="#">Delete All Indexes</a>
+                </li>
             </ul>
         </div>
         <div class="btn-group" data-bind="visible: corruptedIndexes().length > 0">
-            <a class="btn btn-danger" title="Try to recover corrupted indexes by reopening them (the index reset might apply)" data-bind="click: tryRecoverCorruptedIndexes">
+            <button type="button" data-bind="click: tryRecoverCorruptedIndexes, disable: isRecoverringCorruptedIndexes" class="btn btn-danger" title="Try to recover corrupted indexes by reopening them (the index reset might apply)">
+                <i class="fa fa-spinner fa-spin fa-fw fa-1" data-bind="visible: isRecoverringCorruptedIndexes"></i>
                 Try to recover corrupted indexes
-            </a>
+            </button>
         </div>
         <div class="btn-group">
             <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: indexGroups().length > 0" title="Search for an index (Alt+/)">

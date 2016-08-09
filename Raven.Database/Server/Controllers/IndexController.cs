@@ -444,6 +444,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/indexes/try-recover-corrupted")]
         public HttpResponseMessage TryRecoverCorruptedIndexes()
         {
+            var count = 0;
             foreach (var indexId in Database.IndexStorage.Indexes)
             {
                 var index = Database.IndexStorage.GetIndexInstance(indexId);
@@ -452,6 +453,7 @@ namespace Raven.Database.Server.Controllers
                     continue;
 
                 long taskId;
+                var state = new OperationStateBase();
                 var task = Task.Run(() =>
                 {
                     // try to recover by reopening the index - it will reset it if necessary
@@ -462,24 +464,30 @@ namespace Raven.Database.Server.Controllers
                         Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
                         index.Priority = IndexingPriority.Normal;
 
-                        Database.WorkContext.ShouldNotifyAboutWork(() => string.Format("Index {0} has been recovered.", index.PublicName));
+                        var message = $"Index {index.PublicName} has been recovered";
+                        Database.WorkContext.ShouldNotifyAboutWork(() => message);
                         Database.WorkContext.NotifyAboutWork();
+                        state.MarkCompleted(message);
                     }
                     catch (Exception e)
                     {
-                        Log.WarnException("Failed to recover the corrupted index '{0}' by reopening it.", e);
+                        var message = $"Failed to recover the corrupted index '{index.PublicName}' by reopening it";
+                        Log.WarnException(message, e);
+                        state.MarkFaulted(message);
                     }
                 });
 
-                Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+                Database.Tasks.AddTask(task, state, new TaskActions.PendingTaskDescription
                 {
                     StartTime = SystemTime.UtcNow,
                     TaskType = TaskActions.PendingTaskType.RecoverCorruptedIndexOperation,
                     Description = index.PublicName
                 }, out taskId);
+
+                count++;
             }
 
-            return GetEmptyMessage(HttpStatusCode.Accepted);
+            return GetMessageWithObject(count);
         }
 
         [HttpGet]

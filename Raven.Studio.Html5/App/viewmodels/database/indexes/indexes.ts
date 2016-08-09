@@ -14,7 +14,7 @@ import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
-import d3 = require('d3/d3');
+import d3 = require("d3/d3");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
@@ -45,6 +45,12 @@ class indexes extends viewModelBase {
     lockModeCommon: KnockoutComputed<string>;
     searchText = ko.observable<string>();
     summary: KnockoutComputed<string>;
+    isRecoverringCorruptedIndexes = ko.observable<boolean>();
+    canDeleteIdleIndexes: KnockoutComputed<boolean>;
+    canDeleteDisabledIndexes: KnockoutComputed<boolean>;
+    canDeleteAbandonedIndexes: KnockoutComputed<boolean>;
+    canDeleteAllIndexes: KnockoutComputed<boolean>;
+    isDeletingIndexes = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -115,6 +121,26 @@ class indexes extends viewModelBase {
             }
 
             return summary;
+        });
+
+        this.canDeleteIdleIndexes = ko.computed(() => {
+            var indexes = this.getIndexes("Idle");
+            return indexes.length > 0;
+        });
+
+        this.canDeleteDisabledIndexes = ko.computed(() => {
+            var indexes = this.getIndexes("Disabled");
+            return indexes.length > 0;
+        });
+
+        this.canDeleteAbandonedIndexes = ko.computed(() => {
+            var indexes = this.getIndexes("Abandoned");
+            return indexes.length > 0;
+        });
+
+        this.canDeleteAllIndexes = ko.computed(() => {
+            var indexes = this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName");
+            return indexes.length > 0;
         });
     }
 
@@ -365,18 +391,23 @@ class indexes extends viewModelBase {
         this.btnState.toggle();
     }
 
+    private getIndexes(type: string): index[] {
+        var indexes = this.getAllIndexes();
+        return indexes.filter(i => !!i.priority && i.priority.indexOf(type) !== -1);
+    }
+
     deleteIdleIndexes() {
-        var idleIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Idle") !== -1);
+        var idleIndexes = this.getIndexes("Idle");
         this.promptDeleteIndexes(idleIndexes);
     }
 
     deleteDisabledIndexes() {
-        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Disabled") !== -1);
+        var abandonedIndexes = this.getIndexes("Disabled");
         this.promptDeleteIndexes(abandonedIndexes);
     }
 
     deleteAbandonedIndexes() {
-        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Abandoned") !== -1);
+        var abandonedIndexes = this.getIndexes("Abandoned");
         this.promptDeleteIndexes(abandonedIndexes);
     }
 
@@ -410,7 +441,7 @@ class indexes extends viewModelBase {
 
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase(), null, this.isDeletingIndexes);
             app.showDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask
                 .done((closedWithoutDeletion: boolean) => {
@@ -496,7 +527,9 @@ class indexes extends viewModelBase {
     }
 
     tryRecoverCorruptedIndexes() {
-        new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
+        this.isRecoverringCorruptedIndexes(true);
+        var action = new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
+        action.always(() => this.isRecoverringCorruptedIndexes(false));
     }
 
     setLockModeAllIndexes(lockModeString: string, lockModeStrForTitle: string) {

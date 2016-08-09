@@ -9,17 +9,21 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     deleteTask = $.Deferred();
     title: string;
 
-    constructor(private indexNames: string[], private db: database, title?) {
+    constructor(private indexNames: string[], private db: database, title?, private isDeleting: KnockoutObservable<boolean> = null) {
         super();
 
         if (!indexNames || indexNames.length === 0) {
             throw new Error("Indexes must not be null or empty.");
         }
 
-        this.title = !!title ? title : indexNames.length == 1 ? 'Delete index?' : 'Delete indexes?';
+        this.title = !!title ? title : indexNames.length === 1 ? "Delete index?" : "Delete indexes?";
     }
 
     deleteIndexes() {
+        if (!!this.isDeleting) {
+            this.isDeleting(true);
+        }
+
         var deleteTasks = this.indexNames.map(name => new deleteIndexCommand(name, this.db).execute());
         var myDeleteTask = this.deleteTask;
 
@@ -30,9 +34,15 @@ class deleteIndexesConfirm extends dialogViewModelBase {
                 }
                 myDeleteTask.resolve(false);
             })
-            .fail(()=> {
+            .fail(() => {
                 myDeleteTask.reject();
+            })
+            .always(() => {
+                if (!!this.isDeleting) {
+                    this.isDeleting(false);
+                }
             });
+
         dialog.close(this);
     }
 
