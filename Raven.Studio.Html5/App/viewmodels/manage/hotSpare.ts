@@ -10,6 +10,27 @@ class hotSpare extends viewModelBase {
     activationTime = ko.observable<string>();
     remainingTestActivation = ko.observable<number>();	
     isActivationExpired = ko.observable(false);
+    testLicenseRequestProcessing = ko.observable(false);
+    isTestEnabled: KnockoutComputed<boolean>;
+    activateLicenseRequestProcessing = ko.observable(false);
+    isActivateEnabled: KnockoutComputed<boolean>;
+
+    constructor() {
+        super();
+
+        this.isTestEnabled = ko.computed(() => {
+            return this.activationMode() === "NotActivated" &&
+                this.testLicenseRequestProcessing() === false &&
+                this.activateLicenseRequestProcessing() === false &&
+                this.remainingTestActivation() > 0;
+        });
+
+        this.isActivateEnabled = ko.computed(() => {
+            return this.activationMode() !== "Activated" &&
+                this.activateLicenseRequestProcessing() === false &&
+                this.testLicenseRequestProcessing() === false;
+        });
+    }
 
     activate(args: any) {
         super.activate(args);
@@ -22,37 +43,43 @@ class hotSpare extends viewModelBase {
             this.activationMode(res.ActivationMode);
             this.activationTime(res.ActivationTime);
             this.remainingTestActivation(res.RemainingTestActivations);
-        }).fail(() => {
-            alert("Can't fetch license information");
         });
     }
 
-    isTestEnabled(): boolean {
-        return this.activationMode() === 'NotActivated';
-    }
-
     testLicense() {
-        new testHotSpareCommand().execute();
+        this.testLicenseRequestProcessing(true);
+        new testHotSpareCommand().execute()
+            .done(() => {
+                this.remainingTestActivation(this.remainingTestActivation() - 1);
+                this.activationMode("Testing");
+
+                //refresh top navbar
+                shell.fetchStudioConfig();
+            })
+            .fail(() => this.fetchHotSpareInformation())
+            .always(() => this.testLicenseRequestProcessing(false));
     }
 
     activateLicense() {
         var self = this;
-
+        
         this.confirmationMessage("Hot Spare Activation", "This is a one time activation, valid for 96 hours, are you sure you want to activate the hot spare license?")
             .done(() => {
+                this.activateLicenseRequestProcessing(true);
                 new activateHotSpareCommand()
                     .execute()
                     .done(() => {
                         this.fetchHotSpareInformation();
 
-                        // refresh top navbar with 
+                        //refresh top navbar
                         shell.fetchStudioConfig();
                     })
                     .fail((response: JQueryXHR) => {
-                    if (response.status === 403) {
-                        self.isActivationExpired(true);
-                    }
-                });
+                        if (response.status === 403) {
+                            self.isActivationExpired(true);
+                        }
+                    })
+                    .always(() => this.activateLicenseRequestProcessing(false));
             });
     }
 }

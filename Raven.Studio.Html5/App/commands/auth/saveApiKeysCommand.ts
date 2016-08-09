@@ -13,8 +13,8 @@ class saveApiKeysCommand extends executeBulkDocsCommand {
         this.reportInfo("Saving API keys...");
 
         return super.execute()
-            .fail((result: JQueryXHR) => this.reportError("Unable to save API keys.", result.responseText, result.statusText))
-            .done(() => this.reportSuccess("Saved API keys."));
+            .fail((result: JQueryXHR) => this.reportError("Unable to save API keys", result.responseText, result.statusText))
+            .done(() => this.reportSuccess("Saved API keys"));
     }
 }
 

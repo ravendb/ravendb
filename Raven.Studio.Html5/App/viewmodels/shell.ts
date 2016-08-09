@@ -959,7 +959,19 @@ class shell extends viewModelBase {
     }
 
     private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
-        var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare": "Hot Spare", "#FF8585");
+        var title: string;
+        switch (hotSpare.ActivationMode) {
+            case "Activated":
+                title = "Active Hot Spare";
+                break;
+            case "Testing":
+                title = "Test Hot Spare";
+                break;
+            default:
+                title = "Hot Spare";
+        }
+
+        var color = new environmentColor(title, "#FF8585");
         license.hotSpare(hotSpare);
         shell.selectedEnvironmentColorStatic(color);
         shell.originalEnvironmentColor(color);
