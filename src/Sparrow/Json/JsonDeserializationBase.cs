@@ -10,11 +10,8 @@ namespace Sparrow.Json
         private static readonly Type[] EmptyTypes = new Type[0];
         private static readonly Dictionary<Type, object> DeserializedTypes = new Dictionary<Type, object>();
 
-        protected static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>(Type deserializorType = null)
+        protected static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
-            if (deserializorType == null)
-                deserializorType = typeof(JsonDeserializationBase);
-
             try
             {
                 var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
@@ -26,13 +23,13 @@ namespace Sparrow.Json
                 {
                     if (fieldInfo.IsStatic || fieldInfo.IsDefined(typeof(JsonIgnoreAttribute)))
                         continue;
-                    propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, json, vars, deserializorType)));
+                    propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, json, vars)));
                 }
                 foreach (var propertyInfo in typeof(T).GetProperties())
                 {
                     if (propertyInfo.CanWrite == false || propertyInfo.IsDefined(typeof(JsonIgnoreAttribute)))
                         continue;
-                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, json, vars, deserializorType)));
+                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, json, vars)));
                 }
 
                 var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
@@ -51,7 +48,7 @@ namespace Sparrow.Json
         //TODO : consider refactoring JsonDeserialization::GetValue() to be more generic
         //since this is understandble and clear code while it is short,
         //when it will become longer, it is likely to cause issues
-        private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars, Type deserializorType)
+        private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
             if (type == typeof(string) ||
@@ -88,8 +85,8 @@ namespace Sparrow.Json
                     else
                     {
                         // TODO: Do not duplicate, use the same as #2
-                        var convert = deserializorType.GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
-                            .Invoke(null, new[] {deserializorType});
+                        var convert = typeof(JsonDeserializationBase).GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
+                            .Invoke(null, new[] {typeof(JsonDeserializationBase)});
 
                         var convertExpression = Expression.Constant(convert);
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
@@ -100,8 +97,8 @@ namespace Sparrow.Json
                 if (genericTypeDefinition == typeof(List<>))
                 {
                     var valueType = propertyType.GenericTypeArguments[0];
-                    var convert = deserializorType.GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
-                        .Invoke(null, new object[] {deserializorType});
+                    var convert = typeof(JsonDeserializationBase).GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType)
+                        .Invoke(null, new object[] {typeof(JsonDeserializationBase)});
                     var convertExpression = Expression.Constant(convert);
                     var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
                     return Expression.Call(methodToCall, json, Expression.Constant(propertyName), convertExpression);
@@ -124,8 +121,8 @@ namespace Sparrow.Json
                 object converter;
                 if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
                 {
-                    DeserializedTypes[propertyType] = converter = deserializorType.GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType)
-                        .Invoke(null, new object[] {deserializorType});
+                    DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase).GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType)
+                        .Invoke(null, new object[] {typeof(JsonDeserializationBase)});
                 }
                 var converterExpression = Expression.Constant(converter);
                 var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToObject), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
