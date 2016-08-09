@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Sparrow.Collections;
 
 namespace Raven.Database.Impl.BackgroundTaskExecuter
@@ -104,7 +105,17 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             }
             catch (Exception e)
             {
-                logger.FatalException("Error from long running task in thread pool, task terminated, this is VERY bad", e);
+                const string error = "Error from long running task in thread pool, task terminated, this is very bad";
+                logger.FatalException(error, e);
+                database.AddAlert(new Alert
+                {
+                    AlertLevel = AlertLevel.Error,
+                    CreatedAt = DateTime.UtcNow,
+                    Title = error,
+                    UniqueKey = error,
+                    Message = e.ToString(),
+                    Exception = e.Message
+                });
             }
             finally
             {
@@ -305,7 +316,17 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             }
             catch (Exception e)
             {
-                logger.FatalException("Error while running background tasks, this is very bad", e);
+                const string error = "Error while running background tasks, this is very bad";
+                logger.FatalException(error, e);
+                database.AddAlert(new Alert
+                {
+                    AlertLevel = AlertLevel.Error,
+                    CreatedAt = DateTime.UtcNow,
+                    Title = error,
+                    UniqueKey = error,
+                    Message = e.ToString(),
+                    Exception = e.Message
+                });
             }
         }
 
