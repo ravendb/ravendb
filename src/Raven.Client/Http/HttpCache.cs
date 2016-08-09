@@ -12,7 +12,7 @@ namespace Raven.Client.Http
 {
     public class HttpCache : IDisposable
     {
-        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<ApiKeyAuthenticator>("Client");
+        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<HttpCache>("Client");
 
         private readonly long _maxSize;
         private readonly ConcurrentDictionary<string, HttpCacheItem> _items = new ConcurrentDictionary<string, HttpCacheItem>();
