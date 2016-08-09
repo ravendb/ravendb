@@ -80,7 +80,12 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
                 return;
             }
-
+            // this is the case where the incoming metadata is an older version of the metadata we have.
+            // this can happen when multiple sources send data with diffrent latencies
+            if (existingDocumentIsInConflict == false && Historian.IsDirectChildOfCurrent(existingMetadata, metadata))
+            {
+                return;
+            }
             RavenJObject resolvedMetadataToSave;
             TExternal resolvedItemToSave;
             if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
