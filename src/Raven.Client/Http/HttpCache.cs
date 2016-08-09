@@ -36,17 +36,15 @@ namespace Raven.Client.Http
             public bool AddRef()
             {
                 Interlocked.Increment(ref Utilization);
-                var addRef = Interlocked.Increment(ref Usages) > 1;
-                if (addRef == false)
-                {
-                    Interlocked.Decrement(ref Usages);
-                }
-                return addRef;
+                return Interlocked.Increment(ref Usages) > 1;
             }
 
             public void Release()
             {
                 if (Interlocked.Decrement(ref Usages) != 0)
+                    return;
+
+                if (Interlocked.CompareExchange(ref Usages, int.MinValue, 0) != 0)
                     return;
 
                 Cache._unmanagedBuffersPool.Return(Allocation);
@@ -145,13 +143,12 @@ namespace Raven.Client.Http
             {
                 return 0;
             }
+            value.Release();
             if (item.Value != value)
             {
                 item.Value.Release();
-                value.Release();
                 return item.Value.Size + value.Size;
             }
-            value.Release();
             return value.Size;
         }
 

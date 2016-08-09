@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
@@ -12,6 +14,8 @@ namespace Raven.Client.Documents.Commands
         public CancellationToken CancellationToken = CancellationToken.None;
 
         public JsonOperationContext Context;
+
+        public HashSet<ServerNode> FailedNodes;
 
         public TResult Result;
         public int AuthenticationRetries;

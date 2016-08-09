@@ -100,8 +100,8 @@ namespace Raven.Client.Http
             writer.WriteString(context.GetLazyString(node.Url));
             writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.Database)));
             writer.WriteString(context.GetLazyString(node.Database));
-            writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.LastFailure)));
-            writer.WriteString(context.GetLazyString(node.LastFailure));
+            writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.ApiKey )));
+            writer.WriteString(context.GetLazyString(node.ApiKey));
             writer.WriteEndObject();
         }
     }

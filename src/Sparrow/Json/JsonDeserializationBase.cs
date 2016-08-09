@@ -45,9 +45,6 @@ namespace Sparrow.Json
             }
         }
 
-        //TODO : consider refactoring JsonDeserialization::GetValue() to be more generic
-        //since this is understandble and clear code while it is short,
-        //when it will become longer, it is likely to cause issues
         private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
@@ -125,10 +122,10 @@ namespace Sparrow.Json
             object converter;
             if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
             {
-                DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase)
+                DeserializedTypes[propertyType] = converter = typeof (JsonDeserializationBase)
                     .GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static)
                     .MakeGenericMethod(propertyType)
-                    .Invoke(null, new object[] { typeof(JsonDeserializationBase) });
+                    .Invoke(null, null);
             }
             return converter;
         }

@@ -48,7 +48,7 @@ namespace Raven.Client.Http
                     var challenge = ComputeChallenge(authenticatorChallenge, apiKey);
                     await Send(webSocket, context, "ChallengeResponse", challenge);
 
-                    string currentToken = null;
+                    string currentToken;
                     using (var reader = await Recieve(webSocket, context))
                     {
                         string error;
@@ -98,11 +98,12 @@ namespace Raven.Client.Http
                 [command] = commandParameter
             };
 
-            // TODO: Do not read but just write
-            var blittableJsonReaderObject = context.ReadObject(json, command);
             using (var stream = new MemoryStream())
+            using(var writer = new BlittableJsonTextWriter(context, stream))
             {
-                context.Write(stream, blittableJsonReaderObject);
+                context.Write(writer, json);
+                writer.Flush();
+
                 ArraySegment<byte> bytes;
                 stream.TryGetBuffer(out bytes);
                 await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
@@ -117,23 +118,6 @@ namespace Raven.Client.Http
             var apiKeyParts = ExtractApiKeyAndSecret(apiKey);
             var apiKeyName = apiKeyParts[0].Trim();
             var apiSecret = apiKeyParts[1].Trim();
-
-            /*TODO: Use DynamicJsonValue instead of string: 
-             * var json = new DynamicJsonValue
-            {
-                [OAuthHelper.Keys.RSAExponent] = challenge.RSAExponent,
-                [OAuthHelper.Keys.RSAModulus] = challenge.RSAModulus,
-                [OAuthHelper.Keys.EncryptedData] = OAuthHelper.EncryptAsymmetric(
-                        OAuthHelper.ParseBytes(challenge.RSAExponent),
-                        OAuthHelper.ParseBytes(challenge.RSAModulus),
-                        OAuthHelper.DictionaryToString(new Dictionary<string, string>
-                        {
-                            {OAuthHelper.Keys.APIKeyName, apiKeyName},
-                            {OAuthHelper.Keys.Challenge, challenge.Challenge},
-                            {OAuthHelper.Keys.Response, OAuthHelper.Hash($"{challenge.Challenge};{apiSecret}"))}
-                        })),
-
-            };*/
 
             var data = OAuthHelper.DictionaryToString(new Dictionary<string, string>
             {
