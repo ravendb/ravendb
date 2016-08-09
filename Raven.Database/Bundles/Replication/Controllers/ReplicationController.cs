@@ -349,7 +349,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 {
                     //indicates to the replication task that this thread is going to insert documents.
                     ReplicationTask.IsThreadProcessingReplication.Value = true;
-                    ReplicationTask.HandleHeartbeat(src);
+                    ReplicationTask.HandleHeartbeat(src, wake: false);
                 }
 
                 using (Database.DisableAllTriggersForCurrentThread())
@@ -791,7 +791,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 }, HttpStatusCode.NotFound);
             }
 
-            replicationTask.HandleHeartbeat(src);
+            replicationTask.HandleHeartbeat(src, wake: true);
 
             return GetEmptyMessage();
         }

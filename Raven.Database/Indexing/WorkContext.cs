@@ -278,8 +278,8 @@ namespace Raven.Database.Indexing
             }
             ReplicationResetEvent.Set();
         }
-
-        public AutoResetEvent ReplicationResetEvent = new AutoResetEvent(false);
+    
+        public ManualResetEventSlim ReplicationResetEvent = new ManualResetEventSlim();
         public void AddError(int index, string indexName, string key, Exception exception)
         {
             AddError(index, indexName, key, exception, "Unknown");
