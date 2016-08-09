@@ -1,13 +1,14 @@
 import document = require("models/database/documents/document");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import copyToClipboard = require("common/copyToClipboard");
 
 class copyDocuments extends dialogViewModelBase {
 
     isCopyingDocs = ko.observable(true);
     documentsOrIdsText: KnockoutComputed<string>;
 
-    constructor(documents: Array<document>, elementToFocusOnDismissal?: string) {
+    constructor(private documents: Array<document>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
         this.documentsOrIdsText = ko.computed(() => {
@@ -34,6 +35,23 @@ class copyDocuments extends dialogViewModelBase {
 
     deactivate() {
         $("#documentsText").unbind('keydown.jwerty');
+    }
+
+    copyToClipboard() {
+        var message = "Document";
+        if (this.isCopyingDocs() === false) {
+            message += " ID";
+        }
+
+        if (this.documents.length === 1) {
+            message += " was";
+        } else {
+            message += "s were";
+        }
+        message += " copied to clipboard!";
+
+        copyToClipboard.copy($("#documentsText").val(), message);
+        this.close();
     }
 
     selectText() {

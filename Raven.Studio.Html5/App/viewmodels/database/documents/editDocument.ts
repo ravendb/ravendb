@@ -318,8 +318,9 @@ class editDocument extends viewModelBase {
         if (!this.documentId)
             return [];
 
+        this.changeNotification = this.createDocumentChangeNotification(this.documentId);
         return [
-            this.createDocumentChangeNotification(this.documentId)
+            this.changeNotification
         ];
     }
 

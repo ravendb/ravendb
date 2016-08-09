@@ -31,6 +31,7 @@ class indexes extends viewModelBase {
         entityName: string; 
         indexes: KnockoutObservableArray<index>; 
         groupHidden: KnockoutObservable<boolean>;
+        summary: KnockoutComputed<string>;
     }>();
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
@@ -311,10 +312,28 @@ class indexes extends viewModelBase {
                 group.indexes.push(i);
             }
         } else {
+            var indexesObservable = ko.observableArray([i]);
             this.indexGroups.push({ 
                 entityName: groupName, 
-                indexes: ko.observableArray([i]), 
-                groupHidden: ko.observable<boolean>(false) });
+                indexes: indexesObservable, 
+                groupHidden: ko.observable<boolean>(false),
+                summary: ko.computed(() => {
+                    var summary = "(";
+                    var indexesCount = indexesObservable().length;
+                    summary += indexesCount + " index";
+                    if (indexesCount > 1) {
+                        summary += "es";
+                    }
+                    
+                    var mapReduceIndexes = indexesObservable().filter(x => x.isMapReduce()).length;
+                    if (mapReduceIndexes > 0) {
+                        summary += ", " + mapReduceIndexes + " MapReduce";
+                    }
+
+                    summary += ")";
+                    return summary;
+                })
+            });
         }
     }
 

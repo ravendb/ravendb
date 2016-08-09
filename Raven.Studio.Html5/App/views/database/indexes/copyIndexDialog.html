@@ -6,16 +6,13 @@
         <h4 class="modal-title" data-bind="text:isPaste ? 'Paste Index':'Copy Index'"></h4>
     </div>
     <div class="modal-body">
-        <h4>
-            <strong data-bind="text: isPaste === true ? 'CTRL+V, Enter ': 'CTRL+C, Enter '"></strong>
-            <span data-bind="text: isPaste === true ? 'to save' : 'to copy'"></span>
-        </h4>
         <div>
             <pre data-bind="aceEditor: { code: indexJSON, lang: 'ace/mode/json', getFocus: true, selectAll: true, readOnly: !isPaste, bubbleEscKey: true }" style="width: 600px; height: 400px;"></pre>
         </div>
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: close, visible: isPaste">Close</button>
-        <button type="button" class="btn btn-primary" data-bind="click: saveIndex, text: isPaste ? 'Save Index' : 'Close', enable: indexJSON(), attr: { title: isPaste ? 'Save the index (Alt+S)' : '', accesskey: isPaste ? 'S' : '' }"></button>
+        <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
+        <button type="button" class="btn btn-default" data-bind="click: $root.format.bind($root), visible: isPaste && !!indexJSON()">Format</button>
+        <button type="button" class="btn btn-primary" data-bind="click: isPaste ? saveIndex : copyIndex, text: isPaste ? 'Save Index' : 'Copy Index', enable: indexJSON(), attr: { title: isPaste ? 'Save the index (Alt+S)' : 'Copy index (Ctrl+C)', accesskey: isPaste ? 'S' : '' }"></button>
     </div>
 </div>

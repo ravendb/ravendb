@@ -87,6 +87,7 @@
     <TypeScriptCompile Include="App\commands\timeSeries\putTypeCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\putPointCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\updatePointCommand.ts" />
+    <TypeScriptCompile Include="App\common\copyToClipboard.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />

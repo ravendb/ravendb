@@ -8,18 +8,26 @@ import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDe
 import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import copyToClipboard = require("common/copyToClipboard");
 
 class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
 
     json = ko.observable<string>("");
-    indexes = ko.observableArray < indexDefinitionListItemDto>([]);
+    indexes = ko.observableArray<indexDefinitionListItemDto>([]);
     transformers = ko.observableArray<transformerDto>([]);
     pasteDeferred = $.Deferred();
-
+    formattedOnce = false;
 
     constructor(private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
         aceEditorBindingHandler.install();
+
+        this.json.subscribe((newValue) => {
+            if (this.isPaste === false || this.formattedOnce)
+                return;
+
+            this.format();
+        });
     }
 
     canActivate(args: any): any {
@@ -66,13 +74,31 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
         if (!this.isPaste) {
             return super.enterKeyPressed();
         } else {
-            this.saveAll();
+            this.save();
         }
 
         return true;
     }
 
-    saveAll() {
+    format() {
+        var newValue = this.json();
+
+        try {
+            var tempIndex = JSON.parse(newValue);
+            var formatted = this.stringify(tempIndex);
+            this.json(formatted);
+            this.formattedOnce = true;
+        } catch (e) {
+            //ignore this
+        }
+    }
+
+    stringify(obj: any) {
+        var prettifySpacing = 4;
+        return JSON.stringify(obj, null, prettifySpacing);
+    }
+
+    save() {
         if (this.isPaste && this.json()) {
             var indexesAndTransformers: { Indexes: indexDefinitionListItemDto[]; Transformers: transformerDto[] };
             var indexesDefinitions: indexDefinitionDto[] = [];
@@ -167,6 +193,11 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
 
         this.pasteDeferred.resolve(summaryText);
 
+        this.close();
+    }
+
+    copy() {
+        copyToClipboard.copy(this.json(), "Copied transformer to clipboard!");
         this.close();
     }
 
