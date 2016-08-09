@@ -17,7 +17,7 @@ class copyDocuments extends dialogViewModelBase {
     constructor(documents: Array<document>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
-        var ids = documents.map(x => x.getId()).filter(x => x);
+        var ids = documents.map(x => x.getId()).filter(x => x != null);
         if (ids.length !== documents.length) {
             // all documents has empty ids - we have to use copy passed via constructor
             this.documents(documents);

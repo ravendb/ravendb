@@ -46,6 +46,7 @@
     <TypeScriptCompile Include="App\commands\database\debug\getDeletionBatchStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getDocumentsPreviewCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\documents\getDocumentsByIdsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
     <TypeScriptCompile Include="App\commands\database\index\getIndexesStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\getIndexNamesCommand.ts" />
