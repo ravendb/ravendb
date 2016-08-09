@@ -536,6 +536,8 @@ namespace Raven.Database.Prefetching
             var internalLoadTimes = new List<object>();
             foreach (var loadTime in loadTimes)
             {
+                var fetchingDocumentsPerSecondRate = loadTime.LoadingTimeInMillseconds == 0 ? "N/A" :
+                    $"{((double) loadTime.NumberOfDocuments)/loadTime.LoadingTimeInMillseconds*1000:#,#;;0}";
                 internalLoadTimes.Add(new
                 {
                     NumberOfDocuments = $"{loadTime.NumberOfDocuments:#,#;;0}",
@@ -543,7 +545,7 @@ namespace Raven.Database.Prefetching
                     LargestDocSizeInBytes = $"{loadTime.LargestDocSize:#,#;;0}",
                     LoadingTimeInMillseconds = $"{loadTime.LoadingTimeInMillseconds:#,#;;0}",
                     TotalSizeInKB = $"{((double)loadTime.TotalSize)/1024:#,#.00;;0}",
-                    FetchingDocumentsPerSecondRate = $"{((double)loadTime.NumberOfDocuments)/loadTime.LoadingTimeInMillseconds*1000:#,#;;0}"
+                    FetchingDocumentsPerSecondRate = fetchingDocumentsPerSecondRate
                 });
             }
 
