@@ -342,7 +342,7 @@ namespace Raven.Server.Documents.Replication
         {
             var changeVectorSize = doc.ChangeVector.Length * sizeof(ChangeVectorEntry);
             if (changeVectorSize + sizeof (int) + sizeof(int) > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(doc);
+                ThrowTooManyChangeVectorEntries(doc); 
 
             fixed (byte* pTemp = _tempBuffer)
             {
@@ -351,25 +351,25 @@ namespace Raven.Server.Documents.Replication
                     *(int*) pTemp = doc.ChangeVector.Length;
                     Memory.Copy(pTemp + sizeof (int), (byte*) pChangeVectorEntries, changeVectorSize);
                 }
-                *(int*)pTemp = doc.Data.Size;
-                var pos = changeVectorSize + sizeof (int) + sizeof(int);
-                var copied = 0;
-                while (copied < doc.Data.Size)
+                *(int*)(pTemp + sizeof(int) + changeVectorSize) = doc.Data.Size;
+                var tempBufferPos = changeVectorSize + sizeof (int) + sizeof(int);
+                var docReadPos = 0;
+                while (docReadPos < doc.Data.Size)
                 {
-                    var sizeToCopy = Math.Min(doc.Data.Size - copied, _tempBuffer.Length - pos);
-                    if (sizeToCopy == 0)
+                    var sizeToCopy = Math.Min(doc.Data.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
+                    if (sizeToCopy == 0) // buffer is full, need to flush it
                     {
-                        _stream.Write(_tempBuffer, 0, pos);
-                        pos = 0;
+                        _stream.Write(_tempBuffer, 0, tempBufferPos);
+                        tempBufferPos = 0;
                         continue;
                     }
-                    Memory.Copy(pTemp + pos, doc.Data.BasePointer + copied, sizeToCopy);
-                    pos += sizeToCopy;
-                    copied += sizeToCopy;
+                    Memory.Copy(pTemp + tempBufferPos, doc.Data.BasePointer + docReadPos, sizeToCopy);
+                    tempBufferPos += sizeToCopy;
+                    docReadPos += sizeToCopy;
                 }
-                if (pos != 0)
+                if (tempBufferPos != 0)
                 {
-                    _stream.Write(_tempBuffer, 0, pos);
+                    _stream.Write(_tempBuffer, 0, tempBufferPos);
                 }
             }
         }

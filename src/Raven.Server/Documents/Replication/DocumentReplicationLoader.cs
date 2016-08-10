@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Replication
                         minDiff = diff;
                 }
             }
-            _reconnectAttemptTimer.Change(minDiff, TimeSpan.MaxValue);
+            _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
         }
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)

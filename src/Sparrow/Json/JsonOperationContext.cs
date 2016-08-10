@@ -530,12 +530,13 @@ namespace Sparrow.Json
 
             public void ReadExactly(byte[] buffer, int offset, int count)
             {
-                while (count > 0)
+                int internalOffset = 0;
+                while (count != internalOffset)
                 {
-                    var read = Read(buffer, offset, count);
+                    var read = Read(buffer, offset + internalOffset, count - internalOffset);
                     if (read == 0)
                         throw new EndOfStreamException();
-                    count -= read;
+                    internalOffset += read;
                 }
             }
 

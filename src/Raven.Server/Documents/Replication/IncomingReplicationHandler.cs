@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Replication
 
             fixed (byte* pTemp = _tempBuffer)
             {
-                for (int i = 0; i < replicatedDocs; i++)
+                for (int x = 0; x < replicatedDocs; x++)
                 {
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var changeVectorEntriesCount = *(int*) pTemp;
@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.Replication
                         _tempReplicatedChangeVector = new ChangeVectorEntry[changeVectorEntriesCount];
                     }
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(ChangeVectorEntry) * changeVectorEntriesCount);
-                    for (int j = 0; j < changeVectorEntriesCount; j++)
+                    for (int i = 0; i < changeVectorEntriesCount; i++)
                     {
                         _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*)pTemp)[i];
                         long etag;
@@ -272,7 +272,6 @@ namespace Raven.Server.Documents.Replication
                     if (id == null)
                         throw new InvalidDataException($"Missing {Constants.DocumentIdFieldName} field from a document; this is not something that should happen...");
                     //TODO: conflict handling
-                    doc.PrepareForStorage();
                     _database.DocumentsStorage.Put(_context, id, null, doc, _tempReplicatedChangeVector);
                 }
             }
