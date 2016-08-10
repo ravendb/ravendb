@@ -12,23 +12,23 @@ namespace Raven.Server.Config.Categories
     {
         [DefaultValue(512)]
         [ConfigurationEntry("Raven/Server/MaxConcurrentRequests")]
-        [ConfigurationEntry("Raven/MaxConcurrentServerRequests")]
+        [LegacyConfigurationEntry("Raven/MaxConcurrentServerRequests")]
         public int MaxConcurrentRequests { get; set; }
 
         [DefaultValue(50)]
         [ConfigurationEntry("Raven/Server/MaxConcurrentRequestsForDatabaseDuringLoad")]
-        [ConfigurationEntry("Raven/MaxConcurrentRequestsForDatabaseDuringLoad")]
+        [LegacyConfigurationEntry("Raven/MaxConcurrentRequestsForDatabaseDuringLoad")]
         public int MaxConcurrentRequestsForDatabaseDuringLoad { get; set; }
 
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Server/MaxTimeForTaskToWaitForDatabaseToLoadInSec")]
-        [ConfigurationEntry("Raven/MaxSecondsForTaskToWaitForDatabaseToLoad")]
+        [LegacyConfigurationEntry("Raven/MaxSecondsForTaskToWaitForDatabaseToLoad")]
         public TimeSetting MaxTimeForTaskToWaitForDatabaseToLoad { get; set; }
 
         [DefaultValue(192)]
         [ConfigurationEntry("Raven/Server/MaxConcurrentMultiGetRequests")]
-        [ConfigurationEntry("Raven/MaxConcurrentMultiGetRequests")]
+        [LegacyConfigurationEntry("Raven/MaxConcurrentMultiGetRequests")]
         public int MaxConcurrentMultiGetRequests { get; set; }
 
 
@@ -37,7 +37,7 @@ namespace Raven.Server.Config.Categories
                      "Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)")]
         [DefaultValue((string)null)]
         [ConfigurationEntry("Raven/Server/AccessControlAllowOrigin")]
-        [ConfigurationEntry("Raven/AccessControlAllowOrigin")]
+        [LegacyConfigurationEntry("Raven/AccessControlAllowOrigin")]
         public string AccessControlAllowOriginStringValue { get; set; }
 
         public HashSet<string> AccessControlAllowOrigin { get; set; }
@@ -47,7 +47,7 @@ namespace Raven.Server.Config.Categories
                      "Ignored if AccessControlAllowOrigin is not specified.")]
         [DefaultValue("1728000" /* 20 days */)]
         [ConfigurationEntry("Raven/Server/AccessControlMaxAge")]
-        [ConfigurationEntry("Raven/AccessControlMaxAge")]
+        [LegacyConfigurationEntry("Raven/AccessControlMaxAge")]
         public string AccessControlMaxAge { get; set; }
 
         [Description("Determine the value of the Access-Control-Allow-Methods header sent by the server." +
@@ -55,7 +55,7 @@ namespace Raven.Server.Config.Categories
                      " Ignored if AccessControlAllowOrigin is not specified.")]
         [DefaultValue("PUT,PATCH,GET,DELETE,POST")]
         [ConfigurationEntry("Raven/Server/AccessControlAllowMethods")]
-        [ConfigurationEntry("Raven/AccessControlAllowMethods")]
+        [LegacyConfigurationEntry("Raven/AccessControlAllowMethods")]
         public string AccessControlAllowMethods { get; set; }
 
         [Description("Determine the value of the Access-Control-Request-Headers header sent by the server. " +
@@ -64,19 +64,19 @@ namespace Raven.Server.Config.Categories
                      "Allowed values: null (allow whatever headers are being requested), HTTP header field name")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Server/AccessControlRequestHeaders")]
-        [ConfigurationEntry("Raven/AccessControlRequestHeaders")]
+        [LegacyConfigurationEntry("Raven/AccessControlRequestHeaders")]
         public string AccessControlRequestHeaders { get; set; }
 
         [Description("The url to redirect the user to when then try to access the local studio")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Server/RedirectStudioUrl")]
-        [ConfigurationEntry("Raven/RedirectStudioUrl")]
+        [LegacyConfigurationEntry("Raven/RedirectStudioUrl")]
         public string RedirectStudioUrl { get; set; }
 
         [Description("The server name")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Server/Name")]
-        [ConfigurationEntry("Raven/ServerName")]
+        [LegacyConfigurationEntry("Raven/ServerName")]
         public string Name { get; set; }
 
         [Description("OAuth Token Certificate - Modulus")]

@@ -9,7 +9,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(60000)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Raven/BulkImport/BatchTimeoutInMs")]
-        [ConfigurationEntry("Raven/BulkImport/BatchTimeout")]
+        [LegacyConfigurationEntry("Raven/BulkImport/BatchTimeout")]
         public TimeSetting ImportBatchTimeout { get; set; }
     }
 }

@@ -11,10 +11,10 @@ namespace Raven.Server.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
-	    private string workingDirectory;
+        private string workingDirectory;
         private string dataDirectory;
 
-	    [Description("The maximum allowed page size for queries")]
+        [Description("The maximum allowed page size for queries")]
         [DefaultValue(1024)]
         [MinValue(10)]
         [ConfigurationEntry("Raven/MaxPageSize")]
@@ -30,12 +30,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/ServerUrl/TCP")]
         public string TcpServerUrl { get; set; }
 
-	    [Description("Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
+        [Description("Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/RunInMemory")]
         public bool RunInMemory { get; set; }
 
-	    [DefaultValue(@"~\")]
+        [DefaultValue(@"~\")]
         [ConfigurationEntry("Raven/WorkingDir")]
         public string WorkingDirectory
         {
@@ -56,7 +56,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/DatabaseOperationTimeoutInMin")]
-        [ConfigurationEntry("Raven/DatabaseOperationTimeout")]
+        [LegacyConfigurationEntry("Raven/DatabaseOperationTimeout")]
         public TimeSetting DatabaseOperationTimeout { get; set; }
 
         [Description("Indicates if we should throw an exception if any index could not be opened")]

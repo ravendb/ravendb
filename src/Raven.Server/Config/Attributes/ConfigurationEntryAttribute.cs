@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Config.Attributes
 {
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Property)]
     public class ConfigurationEntryAttribute : Attribute
     {
         public string Key { get; set; }

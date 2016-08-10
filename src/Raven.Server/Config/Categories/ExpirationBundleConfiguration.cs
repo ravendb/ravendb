@@ -9,7 +9,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(300)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Expiration/DeleteFrequencyInSec")]
-        [ConfigurationEntry("Raven/Expiration/DeleteFrequencySeconds")]
+        [LegacyConfigurationEntry("Raven/Expiration/DeleteFrequencySeconds")]
         public TimeSetting DeleteFrequency { get; set; }
     }
 }

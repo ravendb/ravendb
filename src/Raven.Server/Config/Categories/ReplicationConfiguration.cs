@@ -15,21 +15,21 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(600)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Replication/IndexAndTransformerReplicationLatencyInSec")]
-        [ConfigurationEntry("Raven/Replication/IndexAndTransformerReplicationLatency")]
+        [LegacyConfigurationEntry("Raven/Replication/IndexAndTransformerReplicationLatency")]
         public TimeSetting IndexAndTransformerReplicationLatency { get; set; }
 
         [Description("Number of seconds after which replication will stop reading documents from disk")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Replication/FetchingFromDiskTimeoutInSec")]
-        [ConfigurationEntry("Raven/Replication/FetchingFromDiskTimeout")]
+        [LegacyConfigurationEntry("Raven/Replication/FetchingFromDiskTimeout")]
         public TimeSetting FetchingFromDiskTimeoutInSeconds { get; set; }
 
         [Description("Number of milliseconds before replication requests will timeout")]
         [DefaultValue(60 * 1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Raven/Replication/ReplicationRequestTimeoutInMs")]
-        [ConfigurationEntry("Raven/Replication/ReplicationRequestTimeout")]
+        [LegacyConfigurationEntry("Raven/Replication/ReplicationRequestTimeout")]
         public TimeSetting ReplicationRequestTimeout { get; set; }
 
         [Description("Force us to buffer replication requests (useful if using windows auth under certain scenarios)")]
