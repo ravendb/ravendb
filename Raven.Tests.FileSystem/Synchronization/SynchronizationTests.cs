@@ -776,7 +776,6 @@ namespace Raven.Tests.FileSystem.Synchronization
             var synchronizationReport = await source.Synchronization.StartAsync("test.bin", destination);
 
             Assert.Equal(NoSyncReason.NoNeedToDeleteNonExistigFile.GetDescription(), synchronizationReport.Exception.Message);
-            Assert.Null(synchronizationReport.Exception);
         }
 
         [Fact]
