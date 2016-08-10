@@ -13,7 +13,7 @@ namespace Sparrow.Json
         public readonly int Size;
         public string String;
         public int[] EscapePositions;
-        public UnmanagedBuffersPool.AllocatedMemoryData AllocatedMemoryData;
+        public AllocatedMemoryData AllocatedMemoryData;
         public int? LastFoundAt;
 
         public byte this[int index] => Buffer[index];
@@ -32,7 +32,7 @@ namespace Sparrow.Json
         public int CompareTo(string other)
         {
             var sizeInBytes = Encoding.UTF8.GetMaxByteCount(other.Length);
-            var tmp = Context.GetNativeTempBuffer(sizeInBytes, out sizeInBytes);
+            var tmp = Context.GetNativeTempBuffer(sizeInBytes);
             fixed (char* pOther = other)
             {
                 var tmpSize = Context.Encoding.GetBytes(pOther, other.Length, tmp, sizeInBytes);
@@ -122,11 +122,7 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            if (AllocatedMemoryData == null)
-                return;
-
-            Context.ReturnMemory(AllocatedMemoryData);
-            AllocatedMemoryData = null;
+            
         }
 
         public bool Contains(string value)

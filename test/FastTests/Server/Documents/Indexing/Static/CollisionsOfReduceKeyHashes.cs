@@ -150,7 +150,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 var queryResult =
                     await
                         index.Query(new IndexQueryServerSide(),
-                            new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
+                            new DocumentsOperationContext(database),
                             OperationCancelToken.None);
 
                 var results = queryResult.Results;
@@ -209,7 +209,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
 
                 queryResult = await index.Query(new IndexQueryServerSide(),
-                            new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
+                            new DocumentsOperationContext(database),
                             OperationCancelToken.None);
 
                 results = queryResult.Results;
@@ -262,7 +262,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             new SortedField("Location"),
                         }
                     },
-                    new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
+                    new DocumentsOperationContext(database),
                     OperationCancelToken.None);
 
                 results = queryResult.Results;

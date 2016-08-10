@@ -64,8 +64,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public static AutoMapIndexDefinition Load(StorageEnvironment environment)
         {
-            using (var pool = new UnmanagedBuffersPool(nameof(AutoMapIndexDefinition)))
-            using (var context = new JsonOperationContext(pool))
+            using (var context = new JsonOperationContext())
             using (var tx = environment.ReadTransaction())
             {
                 var tree = tx.CreateTree("Definition");

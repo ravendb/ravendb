@@ -22,8 +22,7 @@ namespace Raven.Server.Web.System
 
         private static byte[] GetVersionBuffer()
         {
-            using (var pool = new UnmanagedBuffersPool("build/version"))
-            using (var context = new JsonOperationContext(pool))
+            using (var context = new JsonOperationContext())
             {
                 var stream = new MemoryStream();
                 using (var writer = new BlittableJsonTextWriter(context, stream))

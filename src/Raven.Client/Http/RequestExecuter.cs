@@ -25,7 +25,6 @@ namespace Raven.Client.Http
         private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
 
         private readonly DocumentStore _store;
-        private readonly UnmanagedBuffersPool _pool = new UnmanagedBuffersPool("client/RequestExecuter");
         private readonly JsonOperationContext _context;
 
         public class AggresiveCacheOptions
@@ -64,7 +63,7 @@ namespace Raven.Client.Http
             var handler = new HttpClientHandler();
             _httpClient = new HttpClient(handler);
 
-            _context = new JsonOperationContext(_pool);
+            _context = new JsonOperationContext();
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
         }
@@ -383,7 +382,6 @@ namespace Raven.Client.Http
             _cache.Dispose();
             _authenticator.Dispose();
             _context.Dispose();
-            _pool.Dispose();
         }
     }
 }

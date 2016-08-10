@@ -385,7 +385,7 @@ namespace Sparrow.Json.Parsing
             int size = Encoding.UTF8.GetMaxByteCount(str.Length);
             _state.FindEscapePositionsIn(str);
             size += _state.GetEscapePositionsSize();
-            _state.StringBuffer = _ctx.GetNativeTempBuffer(size, out size);
+            _state.StringBuffer = _ctx.GetNativeTempBuffer(size);
             fixed (char* pChars = str)
             {
                 _state.StringSize = Utf8Encoding.GetBytes(pChars, str.Length, _state.StringBuffer, size);

@@ -9,8 +9,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Equals_even_though_order_of_properties_is_different()
         {
-            using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new JsonOperationContext(pool))
+            using (var ctx = new JsonOperationContext())
             {
                 var json1 = new DynamicJsonValue()
                 {

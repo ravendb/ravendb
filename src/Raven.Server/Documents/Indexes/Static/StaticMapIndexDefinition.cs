@@ -70,8 +70,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static IndexDefinition Load(StorageEnvironment environment)
         {
-            using (var pool = new UnmanagedBuffersPool(nameof(StaticMapIndexDefinition)))
-            using (var context = new JsonOperationContext(pool))
+            using (var context = new JsonOperationContext())
             using (var tx = environment.ReadTransaction())
             {
                 var tree = tx.CreateTree("Definition");

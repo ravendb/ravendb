@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Context
         {
             TransactionOperationContext ctx;
             if (_contextPool.TryPop(out ctx) == false)
-                ctx = new TransactionOperationContext(_pool, _storageEnvironment);
+                ctx = new TransactionOperationContext(_storageEnvironment);
 
             context = ctx;
 
@@ -51,7 +51,7 @@ namespace Raven.Server.ServerWide.Context
 
             TransactionOperationContext ctx;
             if (_contextPool.TryPop(out ctx) == false)
-                ctx = new TransactionOperationContext(_pool, _storageEnvironment);
+                ctx = new TransactionOperationContext(_storageEnvironment);
 
             context = ctx;
 

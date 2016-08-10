@@ -33,7 +33,7 @@ namespace Raven.Client.Http
             public DateTime LastServerUpdate;
             public int Usages;
             public int Utilization;
-            public UnmanagedBuffersPool.AllocatedMemoryData Allocation;
+            public AllocatedMemoryData Allocation;
             public HttpCache Cache;
 
             public bool AddRef()

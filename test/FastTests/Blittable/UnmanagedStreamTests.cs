@@ -15,8 +15,7 @@ namespace FastTests.Blittable
         [Fact]
         public void EnsureSingleChunk()
         {
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new JsonOperationContext())
             {
                 var newStream = ctx.GetStream();
                 var buffer = new byte[1337];
@@ -46,10 +45,10 @@ namespace FastTests.Blittable
         [Fact]
         public void BulkWriteAscendingSizeTest()
         {
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-                using(var ctx = new JsonOperationContext(unmanagedByteArrayPool))
+            //using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
+            using(var ctx = new JsonOperationContext())
             {
-                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var allocatedMemory = new List<AllocatedMemoryData>();
                 var newStream = ctx.GetStream();
                 var totalSize = 0;
                 var rand = new Random();
@@ -76,10 +75,7 @@ namespace FastTests.Blittable
                         Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address + i)));
                         curIndex++;
                     }
-
-                    unmanagedByteArrayPool.Return(tuple);
                 }
-                unmanagedByteArrayPool.Return(buffer);
             }
         }
 
@@ -89,21 +85,18 @@ namespace FastTests.Blittable
         {
             var size = 3917701;
            
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new JsonOperationContext())
             {
                 var data = ctx.GetMemory(size);
-                ctx.ReturnMemory(data);
             }
         }
 
         [Fact]
         public void BulkWriteDescendingSizeTest()
         {
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using(var ctx = new JsonOperationContext(unmanagedByteArrayPool))
+            using(var ctx = new JsonOperationContext())
             {
-                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var allocatedMemory = new List<AllocatedMemoryData>();
                 var newStream = ctx.GetStream();
                 var rand = new Random();
                 for (var i = 5000; i > 1; i-=500)
@@ -127,20 +120,16 @@ namespace FastTests.Blittable
                         Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address+ i)));
                         curIndex++;
                     }
-
-                    ctx.ReturnMemory(tuple);
                 }
-                ctx.ReturnMemory(buffer);
             }
         }
 
         [Fact]
         public void SingleByteWritesTest()
         {
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new JsonOperationContext())
             {
-                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var allocatedMemory = new List<AllocatedMemoryData>();
                 var newStream = ctx.GetStream();
                 var rand = new Random();
                 for (var i = 1; i < 5000; i+=500)
@@ -182,10 +171,7 @@ namespace FastTests.Blittable
                             Console.WriteLine(e);
                         }
                     }
-
-                    ctx.ReturnMemory(tuple);
                 }
-                ctx.ReturnMemory(buffer);
             }
         }
 

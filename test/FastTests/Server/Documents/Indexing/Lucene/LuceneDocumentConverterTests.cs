@@ -20,14 +20,12 @@ namespace FastTests.Server.Documents.Indexing.Lucene
     {
         private LuceneDocumentConverter _sut;
 
-        private readonly UnmanagedBuffersPool _pool;
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
 
         public LuceneDocumentConverterTests()
         {
-            _pool = new UnmanagedBuffersPool("foo");
-            _ctx = new JsonOperationContext(_pool);
+            _ctx = new JsonOperationContext();
         }
 
         [Fact]
@@ -515,7 +513,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             }
 
             _ctx.Dispose();
-            _pool.Dispose();
         }
     }
 }

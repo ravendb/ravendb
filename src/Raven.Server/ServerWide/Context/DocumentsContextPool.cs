@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Context
             Debug.Assert(_documentDatabase != null);
 
             if (_contextPool.TryPop(out context) == false)
-                context = new DocumentsOperationContext(_pool, _documentDatabase);
+                context = new DocumentsOperationContext(_documentDatabase);
 
             return new ReturnRequestContext
             {

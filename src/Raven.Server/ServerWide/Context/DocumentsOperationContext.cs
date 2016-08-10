@@ -10,8 +10,8 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly DocumentDatabase _documentDatabase;
        
-        public DocumentsOperationContext(UnmanagedBuffersPool pool, DocumentDatabase documentDatabase)
-            : base(pool)
+        public DocumentsOperationContext(DocumentDatabase documentDatabase)
+            : base()
         {
             _documentDatabase = documentDatabase;
         }

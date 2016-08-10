@@ -14,7 +14,7 @@ namespace Sparrow.Json.Parsing
 
         public readonly List<int> EscapePositions = new List<int>();
 
-        private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };
+        private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
 
         public int GetEscapePositionsSize()
         {
@@ -56,11 +56,6 @@ namespace Sparrow.Json.Parsing
 
         public void FindEscapePositionsIn(string str)
         {
-            FindEscapePositionsIn(new StringSegment(str,0,str.Length));				
-        }
-
-        public void FindEscapePositionsIn(StringSegment str)
-        {
             EscapePositions.Clear();
             var lastEscape = 0;
             while (true)
@@ -72,32 +67,6 @@ namespace Sparrow.Json.Parsing
                 lastEscape = curEscape + 1;
             }
         }
-
-
-        public void FindEscapePositionsIn(char[] buffer, int start, int count)
-        {
-            EscapePositions.Clear();
-            //TODO: inefficient, need to copy  COMString::IndexOfCharArray
-            var lastEscape = 0;
-            while (true)
-            {
-                var curEscape = -1;
-
-                int offset = start + lastEscape;
-                foreach (var escapeChar in EscapeChars)
-                {
-                    curEscape = Array.IndexOf(buffer, escapeChar, start + offset, count - offset);
-                    if (curEscape != -1)
-                        break;
-                }
-
-                if (curEscape == -1)
-                    break;
-                EscapePositions.Add(curEscape - lastEscape);
-                lastEscape = curEscape + 1;
-            }
-        }
-
 
         public void WriteEscapePositionsTo(byte* buffer)
         {

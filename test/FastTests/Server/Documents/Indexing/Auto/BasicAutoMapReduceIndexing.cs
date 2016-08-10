@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(2L, count);
                 }
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
@@ -95,7 +95,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(numberOfUsers, batchStats.ReduceSuccesses);
                 Assert.Equal(0, batchStats.ReduceErrors);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide
                     {
@@ -133,7 +133,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // index 10 users
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -145,7 +145,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(numberOfUsers, results[0].Data["Count"]);
                 }
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
@@ -158,7 +158,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // one document deleted
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -175,7 +175,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // document added again
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -187,7 +187,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(numberOfUsers, results[0].Data["Count"]);
                 }
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
@@ -203,7 +203,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // all documents removed
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -217,7 +217,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // documents added back
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -364,7 +364,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -382,7 +382,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(41L, result["Age"]);
                 }
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
@@ -435,7 +435,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
@@ -485,7 +485,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         private static void CreateUsers(DocumentDatabase db, long numberOfUsers, params string[] locations)
         {
-            using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+            using (var context = new DocumentsOperationContext(db))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -536,7 +536,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -548,7 +548,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(41L, results[0].Data["Age"]);
                 }
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
@@ -572,7 +572,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -611,7 +611,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -623,7 +623,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal(41L, results[0].Data["Age"]);
                 }
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
@@ -647,7 +647,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var queryResult = await index.Query(new IndexQueryServerSide() { SortedFields = new []{ new SortedField("Location") }}, context, OperationCancelToken.None);
 
@@ -694,7 +694,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (var context = new DocumentsOperationContext(db))
                 {
                     var results = (await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None)).Results;
 
@@ -726,7 +726,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         private static void CreateOrders(DocumentDatabase db, int numberOfOrders, string[] countries = null, string[] employees = null, string[] companies = null)
         {
-            using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+            using (var context = new DocumentsOperationContext(db))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {

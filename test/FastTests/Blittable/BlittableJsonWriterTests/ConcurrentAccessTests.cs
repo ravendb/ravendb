@@ -15,28 +15,26 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [Fact]
         public void ConcurrentReadsTest()
         {
-            var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
-
             var str = GenerateSimpleEntityForFunctionalityTest2();
-            using (var blittableContext = new JsonOperationContext(unmanagedPool))
+            using (var blittableContext = new JsonOperationContext())
             using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                /* FileStream file = new FileStream(@"c:\Temp\example.txt",FileMode.Create);
                 employee.WriteTo(file);
                 file.Flush();
                 file.Dispose();*/
-                AssertEmployees(employee, unmanagedPool, str);
+                AssertEmployees(employee, str);
             }
         }
 
-        private static unsafe void AssertEmployees(BlittableJsonReaderObject employee, UnmanagedBuffersPool unmanagedPool, string str)
+        private static unsafe void AssertEmployees(BlittableJsonReaderObject employee, string str)
         {
             var basePointer = employee.BasePointer;
             var size = employee.Size;
 
             Parallel.ForEach(Enumerable.Range(0, 100), x =>
             {
-                using (var localCtx = new JsonOperationContext(unmanagedPool))
+                using (var localCtx = new JsonOperationContext())
                 {
                     AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
                 }

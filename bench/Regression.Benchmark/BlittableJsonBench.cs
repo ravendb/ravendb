@@ -16,8 +16,7 @@ namespace Regression
         {
             foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
             {
-                using (var pool = new UnmanagedBuffersPool("test"))
-                using (var context = new JsonOperationContext(pool))
+                using (var context = new JsonOperationContext())
                 {
                     var resource = "Regression.Benchmark.Data." + name;
 
@@ -42,8 +41,7 @@ namespace Regression
         {
             foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
             {
-                using (var pool = new UnmanagedBuffersPool("test"))
-                using (var context = new JsonOperationContext(pool))
+                using (var context = new JsonOperationContext())
                 {
                     var resource = "Regression.Benchmark.Data." + name;
 

@@ -272,7 +272,7 @@ namespace Raven.Server.Documents
 
             var prefixSlice = GetSliceFromKey(context, prefix);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekByPrimaryKey(prefixSlice))
+            foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith:true))
             {
                 var document = TableValueToDocument(context, result);
                 string documentKey = document.Key;
@@ -514,12 +514,10 @@ namespace Raven.Server.Documents
                     $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{key}'.",
                     nameof(key));
 
-            int size;
             var buffer = context.GetNativeTempBuffer(
                 byteCount
-                + sizeof(char) * key.Length // for the lower calls
-                , out size);
-
+                + sizeof(char) * key.Length); // for the lower calls
+            
             fixed (char* pChars = key)
             {
                 var destChars = (char*)buffer;
@@ -530,7 +528,7 @@ namespace Raven.Server.Documents
 
                 var keyBytes = buffer + key.Length * sizeof(char);
 
-                size = Encoding.UTF8.GetBytes(destChars, key.Length, keyBytes, byteCount);
+                var size = Encoding.UTF8.GetBytes(destChars, key.Length, keyBytes, byteCount);
                 return Slice.External(context.Allocator, keyBytes, (ushort)size);
             }
         }
@@ -567,8 +565,7 @@ namespace Raven.Server.Documents
                 + byteCount // lower key
                 + maxKeyLenSize // the size of var int for the len of the key
                 + byteCount // actual key
-                + escapePositionsSize
-                , out lowerSize);
+                + escapePositionsSize);
 
             fixed (char* pChars = str)
             {

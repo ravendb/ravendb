@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private class BulkInsertDoc
         {
-            public UnmanagedBuffersPool.AllocatedMemoryData Memory;
+            public AllocatedMemoryData Memory;
             public byte* Pointer;
             public int Used;
         }
@@ -370,7 +370,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         buffer.Used = 0;
                         if (buffer.Memory.SizeInBytes >= len)
                             break;
-                        _context.ReturnMemory(buffer.Memory);
                     }
                     while (len > 0)
                     {

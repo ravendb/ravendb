@@ -16,7 +16,7 @@ namespace Sparrow.Json
         private readonly IJsonParser _reader;
         private readonly JsonParserState _state;
         private readonly UnmanagedWriteBuffer _unmanagedWriteBuffer;
-        private UnmanagedBuffersPool.AllocatedMemoryData _compressionBuffer;
+        private AllocatedMemoryData _compressionBuffer;
         private int _position;
         private WriteToken _writeToken;
         private readonly string _debugTag;
@@ -61,12 +61,6 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            if (_compressionBuffer != null)
-            {
-                _context.ReturnMemory(_compressionBuffer);
-                _compressionBuffer = null;
-            }
-
             _unmanagedWriteBuffer.Dispose();
         }
 
@@ -646,9 +640,6 @@ namespace Sparrow.Json
             if (_compressionBuffer == null ||
                 minSize > _compressionBuffer.SizeInBytes)
             {
-                if (_compressionBuffer != null)
-                    _context.ReturnMemory(_compressionBuffer);
-
                 _compressionBuffer = _context.GetMemory(minSize);
             }
             return (byte*)_compressionBuffer.Address;

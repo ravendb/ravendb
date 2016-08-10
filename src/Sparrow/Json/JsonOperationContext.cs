@@ -16,13 +16,10 @@ namespace Sparrow.Json
     /// </summary>
     public class JsonOperationContext : IDisposable
     {
-        private Stack<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
-
-        public readonly UnmanagedBuffersPool Pool;
-        private UnmanagedBuffersPool.AllocatedMemoryData _tempBuffer;
+        private readonly ArenaMemoryAllocator _arenaAllocator;
+        private readonly ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
+        private AllocatedMemoryData _tempBuffer;
         private Dictionary<StringSegment, LazyStringValue> _fieldNames;
-        private Dictionary<LazyStringValue, LazyStringValue> _internedFieldNames;
-        private Dictionary<string, byte[]> _fieldNamesAsByteArrays;
         private bool _disposed;
 
         private byte[] _managedBuffer;
@@ -35,9 +32,10 @@ namespace Sparrow.Json
 
         private int _lastStreamSize = 4096;
 
-        public JsonOperationContext(UnmanagedBuffersPool pool)
+        public JsonOperationContext()
         {
-            Pool = pool;
+            _arenaAllocator = new ArenaMemoryAllocator();
+            _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(16 * 1024);
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
         }
@@ -59,66 +57,27 @@ namespace Sparrow.Json
         /// Returns memory buffer to work with, be aware, this buffer is not thread safe
         /// </summary>
         /// <param name="requestedSize"></param>
-        /// <param name="actualSize"></param>
         /// <returns></returns>
-        public unsafe byte* GetNativeTempBuffer(int requestedSize, out int actualSize)
+        public unsafe byte* GetNativeTempBuffer(int requestedSize)
+        {
+            if (_tempBuffer == null ||
+                _tempBuffer.Address == IntPtr.Zero ||
+                _tempBuffer.SizeInBytes < requestedSize)
+            {
+                _tempBuffer = GetMemory(Math.Max(_tempBuffer?.SizeInBytes ?? 0, requestedSize));
+            }
+
+            return (byte*)_tempBuffer.Address;
+        }
+
+        public AllocatedMemoryData GetMemory(int requestedSize, bool longLived = false)
         {
             if (requestedSize == 0)
                 throw new ArgumentException(nameof(requestedSize));
 
-            if (_tempBuffer == null)
-            {
-                _tempBuffer = GetMemory(requestedSize);
-            }
-            else if (requestedSize > _tempBuffer.SizeInBytes)
-            {
-                ReturnMemory(_tempBuffer);
-                _tempBuffer = GetMemory(requestedSize);
-            }
-
-            actualSize = _tempBuffer.SizeInBytes;
-            return (byte*)_tempBuffer.Address;
-        }
-
-        public UnmanagedBuffersPool.AllocatedMemoryData GetMemory(int requestedSize)
-        {
-            if (requestedSize == 0)
-                return new UnmanagedBuffersPool.AllocatedMemoryData
-                {
-                    Address = IntPtr.Zero,
-                    SizeInBytes = 0
-                };
-
-            var actualSize = Bits.NextPowerOf2(requestedSize);
-            var index = UnmanagedBuffersPool.GetIndexFromSize(actualSize);
-            if (index == -1)
-            {
-                return Pool.Allocate(requestedSize);
-            }
-
-            if (_allocatedMemory?[index] == null ||
-                _allocatedMemory[index].Count == 0)
-                return Pool.Allocate(actualSize);
-            var last = _allocatedMemory[index].Pop();
-            return last;
-        }
-
-        public void ReturnMemory(UnmanagedBuffersPool.AllocatedMemoryData buffer)
-        {
-            if (buffer.SizeInBytes == 0)
-                return;
-
-            if (_allocatedMemory == null)
-                _allocatedMemory = new Stack<UnmanagedBuffersPool.AllocatedMemoryData>[32];
-            var index = UnmanagedBuffersPool.GetIndexFromSize(buffer.SizeInBytes);
-            if (index == -1)
-            {
-                Pool.Return(buffer);
-                return;
-            }
-            if (_allocatedMemory[index] == null)
-                _allocatedMemory[index] = new Stack<UnmanagedBuffersPool.AllocatedMemoryData>();
-            _allocatedMemory[index].Push(buffer);
+            return longLived ?
+                _arenaAllocatorForLongLivedValues.Allocate(requestedSize) :
+                _arenaAllocator.Allocate(requestedSize);
         }
 
         /// <summary>
@@ -133,164 +92,58 @@ namespace Sparrow.Json
         {
             if (_disposed)
                 return;
+
             Reset();
 
-            if (_allocatedMemory != null)
-            {
-                foreach (var stack in _allocatedMemory)
-                {
-                    if(stack == null)
-                        continue;
-                    while (stack.Count > 0)
-                    {
-                        var memoryData = stack.Pop();
-                        Pool.Return(memoryData);
-                    }
-                }
-            }
+            _arenaAllocator.Dispose();
+            _arenaAllocatorForLongLivedValues.Dispose();
 
-            if (_tempBuffer != null)
-                Pool.Return(_tempBuffer);
-            if (_fieldNames != null)
-            {
-                foreach (var kvp in _fieldNames.Values)
-                {
-                    Pool.Return(kvp.AllocatedMemoryData);
-                }
-            }
-            if (_internedFieldNames != null)
-            {
-                foreach (var key in _internedFieldNames.Keys)
-                {
-                    Pool.Return(key.AllocatedMemoryData);
-
-                }
-            }
             _disposed = true;
         }
 
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
-            return GetLazyStringForFieldWithCaching(new StringSegment(field, 0, field.Length));
-        }
-
-
-        public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment field)
-        {
+            var key = new StringSegment(field, 0, field.Length);
             LazyStringValue value;
             if (_fieldNames == null)
                 _fieldNames = new Dictionary<StringSegment, LazyStringValue>();
 
-            if (_fieldNames.TryGetValue(field, out value))
+            if (_fieldNames.TryGetValue(key, out value))
                 return value;
 
-            value = GetLazyString(field.Value);
-            _fieldNames[field] = value;
+            value = GetLazyString(field, longLived: true);
+            _fieldNames[key] = value;
             return value;
         }
 
-        public unsafe LazyStringValue GetLazyString(DateTime field)
+        public LazyStringValue GetLazyString(string field)
         {
-            return GetLazyString(field.ToString("O"));
+            return GetLazyString(field, longLived: false);
         }
 
-        public unsafe LazyStringValue GetLazyString(string field)
+        private unsafe LazyStringValue GetLazyString(string field, bool longLived)
         {
             var state = new JsonParserState();
             state.FindEscapePositionsIn(field);
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
-            var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize());
-            try
-            {
-                fixed (char* pField = field)
-                {
-                    var address = (byte*)memory.Address;
-                    var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
-                    state.WriteEscapePositionsTo(address + actualSize);
-                    return new LazyStringValue(field, address, actualSize, this)
-                    {
-                        AllocatedMemoryData = memory
-                    };
-                }
-            }
-            catch (Exception)
-            {
-                ReturnMemory(memory);
-                throw;
-            }
-        }
+            var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize(), longLived: longLived);
 
-
-        public unsafe LazyStringValue GetLazyString(char[] chars, int start, int count)
-        {
-            LazyStringValue value;
-
-            var state = new JsonParserState();
-            state.FindEscapePositionsIn(chars, start, count);
-            var maxByteCount = Encoding.GetMaxByteCount(count);
-            var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize());
-            try
-            {
-                fixed (char* pChars = chars)
-                {
-                    var address = (byte*)memory.Address;
-                    var actualSize = Encoding.GetBytes(pChars + start, count, address, memory.SizeInBytes);
-                    state.WriteEscapePositionsTo(address + actualSize);
-                    value = new LazyStringValue(null, address, actualSize, this);
-                }
-            }
-            catch (Exception)
-            {
-                ReturnMemory(memory);
-                throw;
-            }
-            return value;
-        }
-
-        public unsafe LazyStringValue Intern(LazyStringValue val)
-        {
-            LazyStringValue value;
-            if (_internedFieldNames == null)
-                _internedFieldNames = new Dictionary<LazyStringValue, LazyStringValue>();
-
-            if (_internedFieldNames.TryGetValue(val, out value))
-                return value;
-
-            var memory = GetMemory(val.Size);
-            try
+            fixed (char* pField = field)
             {
                 var address = (byte*)memory.Address;
-                Memory.Copy(address, val.Buffer, val.Size);
-                value = new LazyStringValue(null, address, val.Size, this)
+                var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
+                state.WriteEscapePositionsTo(address + actualSize);
+                var result = new LazyStringValue(field, address, actualSize, this)
                 {
-                    EscapePositions = val.EscapePositions,
-                    AllocatedMemoryData = memory
+                    AllocatedMemoryData = memory,
                 };
-                _internedFieldNames[value] = value;
-                return value;
 
+                if (state.EscapePositions.Count > 0)
+                {
+                    result.EscapePositions = state.EscapePositions.ToArray();
+                }
+                return result;
             }
-            catch (Exception)
-            {
-                ReturnMemory(memory);
-                throw;
-            }
-        }
-
-        public byte[] GetBytesForFieldName(string field)
-        {
-            if (_fieldNamesAsByteArrays == null)
-                _fieldNamesAsByteArrays = new Dictionary<string, byte[]>();
-
-            byte[] returnedByteArray;
-
-            if (_fieldNamesAsByteArrays.TryGetValue(field, out returnedByteArray))
-            {
-                return returnedByteArray;
-            }
-            returnedByteArray = Encoding.GetBytes(field);
-            _fieldNamesAsByteArrays.Add(field, returnedByteArray);
-            return returnedByteArray;
         }
 
         public BlittableJsonReaderObject ReadForDisk(Stream stream, string documentId)
@@ -615,6 +468,14 @@ namespace Sparrow.Json
 
         public virtual void Reset()
         {
+            if (_tempBuffer != null)
+            {
+                _tempBuffer.Address = IntPtr.Zero;
+            }
+            _arenaAllocator.ResetArena();
+            // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
+            // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
+
             foreach (var disposable in _disposables)
             {
                 disposable.Dispose();

@@ -278,13 +278,11 @@ namespace Raven.Server.Documents.Versioning
                     $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{key}'.",
                     nameof(key));
 
-            int size;
             var buffer = context.GetNativeTempBuffer(
                 byteCount
                 + sizeof(char) * key.Length // for the lower calls
-                + sizeof(char) * 2 // for the record separator
-                , out size);
-
+                + sizeof(char) * 2); // for the record separator
+            
             fixed (char* pChars = key)
             {
                 var destChars = (char*)buffer;
@@ -296,7 +294,7 @@ namespace Raven.Server.Documents.Versioning
 
                 var keyBytes = buffer + sizeof(char) + key.Length * sizeof(char);
 
-                size = Encoding.UTF8.GetBytes(destChars, key.Length + 1, keyBytes, byteCount + 1);
+                var size = Encoding.UTF8.GetBytes(destChars, key.Length + 1, keyBytes, byteCount + 1);
                 return Slice.External(context.Allocator, keyBytes, (ushort)size);
             }
         }
