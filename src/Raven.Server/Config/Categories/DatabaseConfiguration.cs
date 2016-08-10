@@ -26,14 +26,14 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(900)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Databases/MaxIdleTimeForTenantDatabaseInSec")]
-        [ConfigurationEntry("Raven/Databases/MaxIdleTimeForTenantDatabase")]
+        [LegacyConfigurationEntry("Raven/Databases/MaxIdleTimeForTenantDatabase")]
         public TimeSetting MaxIdleTime { get; set; }
 
         [Description("The time in seconds to check for an idle tenant database")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Databases/FrequencyToCheckForIdleDatabasesInSec")]
-        [ConfigurationEntry("Raven/Databases/FrequencyToCheckForIdleDatabases")]
+        [LegacyConfigurationEntry("Raven/Databases/FrequencyToCheckForIdleDatabases")]
         public TimeSetting FrequencyToCheckForIdle { get; set; }
 
         [Description("The maximum document size after which it will get into the huge documents collection")]

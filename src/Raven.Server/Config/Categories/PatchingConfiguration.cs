@@ -7,7 +7,7 @@ namespace Raven.Server.Config.Categories
     {
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Patching/AllowScriptsToAdjustNumberOfSteps")]
-        [ConfigurationEntry("Raven/AllowScriptsToAdjustNumberOfSteps")]
+        [LegacyConfigurationEntry("Raven/AllowScriptsToAdjustNumberOfSteps")]
         public bool AllowScriptsToAdjustNumberOfSteps { get; set; }
 
         /// <summary>
@@ -16,7 +16,7 @@ namespace Raven.Server.Config.Categories
         /// </summary>
         [DefaultValue(10 * 1000)]
         [ConfigurationEntry("Raven/Patching/MaxStepsForScript")]
-        [ConfigurationEntry("Raven/MaxStepsForScript")]
+        [LegacyConfigurationEntry("Raven/MaxStepsForScript")]
         public int MaxStepsForScript { get; set; }
 
         /// <summary>
@@ -26,7 +26,7 @@ namespace Raven.Server.Config.Categories
         /// </summary>
         [DefaultValue(5)]
         [ConfigurationEntry("Raven/Patching/AdditionalStepsForScriptBasedOnDocumentSize")]
-        [ConfigurationEntry("Raven/AdditionalStepsForScriptBasedOnDocumentSize")]
+        [LegacyConfigurationEntry("Raven/AdditionalStepsForScriptBasedOnDocumentSize")]
         public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
     }
 }

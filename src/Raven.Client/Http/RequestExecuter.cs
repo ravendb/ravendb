@@ -16,11 +16,14 @@ using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Exceptions;
+using Sparrow.Logging;
 
 namespace Raven.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
+        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
+
         private readonly DocumentStore _store;
         private readonly UnmanagedBuffersPool _pool = new UnmanagedBuffersPool("client/RequestExecuter");
         private readonly JsonOperationContext _context;
@@ -199,11 +202,11 @@ namespace Raven.Client.Http
                     var oauthSource = response.Headers.GetFirstValue("OAuth-Source");
 
 #if DEBUG && FIDDLER
-                // Make sure to avoid a cross DNS security issue, when running with Fiddler
+// Make sure to avoid a cross DNS security issue, when running with Fiddler
                 if (string.IsNullOrEmpty(oauthSource) == false)
                     oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
 #endif
-                    
+
                     await HandleUnauthorized(oauthSource, node, context).ConfigureAwait(false);
                     await ExecuteAsync(node, context, command).ConfigureAwait(false);
                     return true;
@@ -330,13 +333,24 @@ namespace Raven.Client.Http
             return null;
         }
 
-        private async Task HandleUnauthorized(string oauthSource, ServerNode node, JsonOperationContext context)
+        private async Task HandleUnauthorized(string oauthSource, ServerNode node, JsonOperationContext context, bool shouldThrow = true)
         {
-            if (string.IsNullOrEmpty(oauthSource))
-                oauthSource = node.Url + "/OAuth/API-Key";
+            try
+            {
+                if (string.IsNullOrEmpty(oauthSource))
+                    oauthSource = node.Url + "/OAuth/API-Key";
 
-            var currentToken = await _authenticator.AuthenticateAsync(oauthSource, node.ApiKey, context).ConfigureAwait(false);
-            node.CurrentToken = currentToken;
+                var currentToken = await _authenticator.AuthenticateAsync(oauthSource, node.ApiKey, context).ConfigureAwait(false);
+                node.CurrentToken = currentToken;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to authorize using api key", e);
+
+                if (shouldThrow)
+                    throw;
+            }
 
             if (_updateCurrentTokenTimer == null)
             {
@@ -352,14 +366,14 @@ namespace Raven.Client.Http
             if (leaderNode != null)
             {
 #pragma warning disable 4014
-                HandleUnauthorized(null, leaderNode, _context);
+                HandleUnauthorized(null, leaderNode, _context, shouldThrow: false);
 #pragma warning restore 4014
             }
 
             foreach (var node in topology.Nodes)
             {
 #pragma warning disable 4014
-                HandleUnauthorized(null, node, _context);
+                HandleUnauthorized(null, node, _context, shouldThrow: false);
 #pragma warning restore 4014
             }
         }

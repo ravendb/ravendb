@@ -29,7 +29,7 @@ namespace Raven.Server.Config.Categories
         [Description("The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Indexing/StoragePath")]
-        [ConfigurationEntry("Raven/IndexStoragePath")]
+        [LegacyConfigurationEntry("Raven/IndexStoragePath")]
         public string IndexStoragePath
         {
             get
@@ -50,8 +50,8 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(128 * 1024)]
         [MinValue(128)]
         [ConfigurationEntry("Raven/Indexing/MaxNumberOfDocumentsToFetchForMap")]
-        [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetch")]
-        [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
+        [LegacyConfigurationEntry("Raven/MaxNumberOfItemsToPreFetch")]
+        [LegacyConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
         public int MaxNumberOfDocumentsToFetchForMap { get; set; }
 
         [Description("Maximum number of tombstones to process by index during single indexing run")]
@@ -64,7 +64,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Indexing/DocumentProcessingTimeout")]
-        [ConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
+        [LegacyConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
         public TimeSetting DocumentProcessingTimeout { get; set; }
 
         [Description("Number of seconds after which index will stop reading tombstones from disk and writing deletes to index")]
