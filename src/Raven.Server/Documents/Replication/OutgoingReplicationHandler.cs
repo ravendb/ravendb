@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Replication
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
         private DocumentsOperationContext _context;
-        private byte[] _tempBuffer = new byte[32*1024];
+        private byte[] _tempBuffer = new byte[32 * 1024];
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Replication
 
             // case insensitive 'Raven/' match without doing allocations
 
-            if ((str.Buffer[0] != (byte)'R' && str.Buffer[0] != (byte) 'r') ||
+            if ((str.Buffer[0] != (byte)'R' && str.Buffer[0] != (byte)'r') ||
                 (str.Buffer[1] != (byte)'A' && str.Buffer[1] != (byte)'a') ||
                 (str.Buffer[2] != (byte)'V' && str.Buffer[2] != (byte)'v') ||
                 (str.Buffer[3] != (byte)'E' && str.Buffer[3] != (byte)'e') ||
@@ -223,12 +223,12 @@ namespace Raven.Server.Documents.Replication
                 return true;
 
             // Now need to find if the next bits are 'hilo/'
-            if ((str.Buffer[6] != (byte)'H' && str.Buffer[0] != (byte)'h') ||
-                (str.Buffer[7] != (byte)'I' && str.Buffer[1] != (byte)'i') ||
-                (str.Buffer[8] != (byte)'L' && str.Buffer[2] != (byte)'l') ||
-                (str.Buffer[9] != (byte)'O' && str.Buffer[3] != (byte)'o') ||
-                 str.Buffer[10] != (byte)'/')
-                return false; 
+            if ((str.Buffer[6] == (byte)'H' || str.Buffer[0] == (byte)'h') &&
+                (str.Buffer[7] == (byte)'I' || str.Buffer[1] == (byte)'i') &&
+                (str.Buffer[8] == (byte)'L' || str.Buffer[2] == (byte)'l') &&
+                (str.Buffer[9] == (byte)'O' || str.Buffer[3] == (byte)'o') &&
+                str.Buffer[10] == (byte)'/')
+                return false;
 
             return true;
         }
@@ -244,12 +244,13 @@ namespace Raven.Server.Documents.Replication
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
                 var sp = Stopwatch.StartNew();
-                while (sp.ElapsedMilliseconds < 1000)
+                var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
+                while (sp.ElapsedMilliseconds < timeout)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
                     foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(_context, lastEtag, 0, 1024))
                     {
-                        if (sp.ElapsedMilliseconds > 1000)
+                        if (sp.ElapsedMilliseconds > timeout)
                             break;
 
                         lastEtag = document.Etag;
@@ -341,18 +342,31 @@ namespace Raven.Server.Documents.Replication
         private unsafe void WriteDocumentToServer(Document doc)
         {
             var changeVectorSize = doc.ChangeVector.Length * sizeof(ChangeVectorEntry);
-            if (changeVectorSize + sizeof (int) + sizeof(int) > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(doc); 
+            var requiredSize = changeVectorSize +
+                               sizeof(int) + // # of change vectors
+                               sizeof(int) + // size of document key
+                               doc.Key.Size +
+                               sizeof(int) // size of document
+                ;
+            if (requiredSize > _tempBuffer.Length)
+                ThrowTooManyChangeVectorEntries(doc);
 
             fixed (byte* pTemp = _tempBuffer)
             {
+                int tempBufferPos = 0;
                 fixed (ChangeVectorEntry* pChangeVectorEntries = doc.ChangeVector)
                 {
-                    *(int*) pTemp = doc.ChangeVector.Length;
-                    Memory.Copy(pTemp + sizeof (int), (byte*) pChangeVectorEntries, changeVectorSize);
+                    *(int*)pTemp = doc.ChangeVector.Length;
+                    tempBufferPos += sizeof (int);
+                    Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
+                    tempBufferPos += changeVectorSize;
                 }
-                *(int*)(pTemp + sizeof(int) + changeVectorSize) = doc.Data.Size;
-                var tempBufferPos = changeVectorSize + sizeof (int) + sizeof(int);
+                *(int*)(pTemp + tempBufferPos) = doc.Key.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, doc.Key.Buffer, doc.Key.Size);
+                tempBufferPos += doc.Key.Size;
+                *(int*)(pTemp + tempBufferPos) = doc.Data.Size;
+                tempBufferPos += sizeof(int);
                 var docReadPos = 0;
                 while (docReadPos < doc.Data.Size)
                 {

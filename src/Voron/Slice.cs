@@ -100,7 +100,13 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Slice From(ByteStringContext context, byte[] value, ByteStringType type = ByteStringType.Mutable)
         {
-            return new Slice(context.From(value, type));
+            return new Slice(context.From(value, 0, value.Length, type));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Slice From(ByteStringContext context, byte[] value, int offset, int count, ByteStringType type = ByteStringType.Mutable)
+        {
+            return new Slice(context.From(value, offset, count, type));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

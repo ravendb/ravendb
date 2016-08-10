@@ -98,6 +98,7 @@ namespace Raven.Server.Documents.Replication
                     ["LastSentEtag"] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
                     ["CurrentChangeVector"] = changeVector
                 });
+                writer.Flush();
             }
            
 

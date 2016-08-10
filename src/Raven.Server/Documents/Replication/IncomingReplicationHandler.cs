@@ -10,10 +10,12 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using System.Linq;
+using System.Text;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -80,7 +82,7 @@ namespace Raven.Server.Documents.Replication
                             _cts.Token.ThrowIfCancellationRequested();
 
                             long lastReceivedEtag;
-                            if (message.TryGet("LastEtag", out lastReceivedEtag))
+                            if (message.TryGet("LastEtag", out lastReceivedEtag) == false)
                                 throw new InvalidDataException("The property 'LastEtag' wasn't found in replication batch, invalid data");
 
                             bool _;
@@ -104,7 +106,7 @@ namespace Raven.Server.Documents.Replication
                                 var sw = Stopwatch.StartNew();
                                 using (_context.OpenWriteTransaction())
                                 {
-                                    ReceiveDocuments(replicatedDocs);
+                                    AcceptDocumentsFromSource(replicatedDocs);
 
                                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
                                     prevRecievedEtag = lastReceivedEtag;
@@ -225,7 +227,7 @@ namespace Raven.Server.Documents.Replication
         private readonly byte[] _tempBuffer = new byte[32*1024];
         private ChangeVectorEntry[] _tempReplicatedChangeVector = new ChangeVectorEntry[0];
         private readonly UnmanagedWriteBuffer _unmanagedWriteBuffer;
-        private unsafe void ReceiveDocuments(int replicatedDocs)
+        private unsafe void AcceptDocumentsFromSource(int replicatedDocs)
         {
             var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
             foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(_context))
@@ -255,6 +257,10 @@ namespace Raven.Server.Documents.Replication
                         }
                     }
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
+                    var keySize = *(int*)pTemp;
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, keySize);
+                    var id = Encoding.UTF8.GetString(_tempBuffer, 0, keySize);
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var documentSize = *(int*)pTemp;
                     _unmanagedWriteBuffer.Clear();
                     while (documentSize>0)
@@ -268,9 +274,6 @@ namespace Raven.Server.Documents.Replication
                     byte* ptr;
                     _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out documentSize);
                     var doc = new BlittableJsonReaderObject(ptr, documentSize, _context);
-                    var id = doc.GetIdFromMetadata();
-                    if (id == null)
-                        throw new InvalidDataException($"Missing {Constants.DocumentIdFieldName} field from a document; this is not something that should happen...");
                     //TODO: conflict handling
                     _database.DocumentsStorage.Put(_context, id, null, doc, _tempReplicatedChangeVector);
                 }

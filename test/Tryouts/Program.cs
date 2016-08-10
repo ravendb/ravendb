@@ -15,6 +15,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using FastTests;
 using FastTests.Server.Documents.Indexing.Auto;
+using FastTests.Server.Documents.Replication;
 
 namespace Tryouts
 {
@@ -23,9 +24,9 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var x = new FastTests.Server.Documents.Queries.Dynamic.Map.BasicDynamicMapQueries())
+            using (var x = new ReplicationBasicTests())
             {
-                x.Sorting_by_nested_integer_field().Wait();
+                x.Master_slave_replication_with_multiple_PUTS_should_work().Wait();
             }
         }
     }

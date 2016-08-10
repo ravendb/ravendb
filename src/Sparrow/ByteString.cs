@@ -1006,14 +1006,14 @@ namespace Sparrow
             return result;
         }
 
-        public ByteString From(byte[] value, ByteStringType type = ByteStringType.Mutable)
+        public ByteString From(byte[] value, int offset, int count, ByteStringType type = ByteStringType.Mutable)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var result = AllocateInternal(value.Length, type);
+            var result = AllocateInternal(count, type);
             fixed (byte* ptr = value)
             {
-                Memory.Copy(result._pointer->Ptr, ptr, value.Length);
+                Memory.Copy(result._pointer->Ptr, ptr + offset, count);
             }
 
             RegisterForValidation(result);

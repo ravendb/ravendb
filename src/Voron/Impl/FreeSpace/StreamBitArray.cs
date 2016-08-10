@@ -182,7 +182,8 @@ namespace Voron.Impl.FreeSpace
 
         public Slice ToSlice(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
         {
-            return new Slice(context.From(ToBuffer(), type));
+            var buffer = ToBuffer();
+            return new Slice(context.From(buffer, 0, buffer.Length, type));
         }
     }
 }

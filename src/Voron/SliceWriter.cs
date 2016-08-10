@@ -48,7 +48,7 @@ namespace Voron
 
         public Slice CreateSlice(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
         {
-            var content = context.From(_buffer, type);
+            var content = context.From(_buffer, 0, _buffer.Length, type);
             return new Slice(content);
         }
 

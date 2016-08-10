@@ -106,7 +106,13 @@ namespace Sparrow.Json
             {
                 return Expression.Default(type);
             }*/
-
+            if (propertyType.IsArray)
+            {
+                var valueType = propertyType.GetElementType();
+                var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
+                var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToArray), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
+            }
             // ToObject
             {
                 var converterExpression = Expression.Constant(GetConverterFromCache(propertyType));
@@ -215,6 +221,20 @@ namespace Sparrow.Json
                 list.Add(converter(item));
 
             return list;
+        }
+
+        private static T[] ToArray<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        {
+            var list = new List<T>();
+
+            BlittableJsonReaderArray array;
+            if (json.TryGet(name, out array) == false)
+                return list.ToArray();
+
+            foreach (BlittableJsonReaderObject item in array.Items)
+                list.Add(converter(item));
+
+            return list.ToArray();
         }
     }
 }
