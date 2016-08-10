@@ -13,8 +13,6 @@ namespace Raven.Client.Documents.Commands
     {
         public CancellationToken CancellationToken = CancellationToken.None;
 
-        public JsonOperationContext Context;
-
         public HashSet<ServerNode> FailedNodes;
 
         public TResult Result;

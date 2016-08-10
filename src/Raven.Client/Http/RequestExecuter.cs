@@ -46,6 +46,7 @@ namespace Raven.Client.Http
         private bool _firstTimeTryLoadFromTopologyCache = true;
 
         private Timer _updateCurrentTokenTimer;
+        private readonly Timer _updateFailingNodesStatus;
 
         public RequestExecuter(DocumentStore store)
         {
@@ -67,6 +68,7 @@ namespace Raven.Client.Http
             _context = new JsonOperationContext(_pool);
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
+            _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
         private void UpdateTopologyCallback(object _)
@@ -114,12 +116,7 @@ namespace Raven.Client.Http
         public async Task ExecuteAsync<TResult>(ServerNode node, JsonOperationContext context, RavenCommand<TResult> command)
         {
             string url;
-            var request = command.CreateRequest(out url);
-            url = $"{node.Url}/databases/{node.Database}/{url}";
-            request.RequestUri = new Uri(url);
-
-            if (node.CurrentToken != null)
-                request.Headers.Add("Raven-Authorization", node.CurrentToken);
+            var request = CreateRequest(node, command, out url);
 
             long cachedEtag;
             BlittableJsonReaderObject cachedValue;
@@ -180,6 +177,18 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
+        {
+            var request = command.CreateRequest(out url);
+            url = $"{node.Url}/databases/{node.Database}/{url}";
+            request.RequestUri = new Uri(url);
+
+            if (node.CurrentToken != null)
+                request.Headers.Add("Raven-Authorization", node.CurrentToken);
+
+            return request;
         }
 
         private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode node, JsonOperationContext context, RavenCommand<TResult> command,
@@ -300,6 +309,7 @@ namespace Raven.Client.Http
             if (command.FailedNodes == null)
                 command.FailedNodes = new HashSet<ServerNode>();
 
+            node.IsFailed = true;
             command.FailedNodes.Add(node);
 
             var failoverNode = GetFailoverNode(command);
@@ -322,12 +332,12 @@ namespace Raven.Client.Http
                 command.FailedNodes = new HashSet<ServerNode>();
 
             var leaderNode = topology.LeaderNode;
-            if (command.FailedNodes.Contains(leaderNode) == false)
+            if (leaderNode.IsFailed == false && command.FailedNodes.Contains(leaderNode) == false)
                 return leaderNode;
 
             foreach (var node in topology.Nodes)
             {
-                if (command.FailedNodes.Contains(node) == false)
+                if (node.IsFailed == false && command.FailedNodes.Contains(node) == false)
                     return node;
             }
             return null;
@@ -375,6 +385,72 @@ namespace Raven.Client.Http
 #pragma warning disable 4014
                 HandleUnauthorized(null, node, _context, shouldThrow: false);
 #pragma warning restore 4014
+            }
+        }
+
+        private readonly object _updateFailingNodeStatusLock = new object();
+
+        private void UpdateFailingNodesStatusCallback(object _)
+        {
+            if (Monitor.TryEnter(_updateFailingNodeStatusLock) == false)
+                return;
+
+            try
+            {
+                var topology = _topology;
+                var tasks = new List<Task>();
+
+                var leaderNode = topology.LeaderNode;
+                if (leaderNode?.IsFailed ?? false)
+                {
+                    tasks.Add(TestIfNodeAlive(leaderNode));
+                }
+
+                for (var i = 1; i <= topology.Nodes.Count; i++)
+                {
+                    var node = topology.Nodes[i];
+                    if (node?.IsFailed ?? false)
+                    {
+                        tasks.Add(TestIfNodeAlive(node));
+                    }
+                }
+
+                if (tasks.Count == 0)
+                    return;
+
+                Task.WaitAll(tasks.ToArray());
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info("Failed to check if failing server are down", e);
+                }
+            }
+            finally
+            {
+                Monitor.Exit(_updateFailingNodeStatusLock);
+            }
+        }
+
+        private async Task TestIfNodeAlive(ServerNode node)
+        {
+            var command = new GetTopologyCommand();
+            string url;
+            var request = CreateRequest(node, command, out url);
+
+            try
+            {
+                var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    node.IsFailed = false;
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Tested if node alive but it's down: {url}", e);
             }
         }
 
