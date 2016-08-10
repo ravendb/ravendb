@@ -7789,13 +7789,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
-#shellHeader #environment-header {
-  position: fixed;
-  z-index: -1;
-  margin-left: 45%;
-  font-size: 40px;
-  opacity: 0.8;
-}
 #shellHeader .container-fluid {
   padding-right: 0;
   padding-left: 0;

@@ -1084,22 +1084,6 @@ class shell extends viewModelBase {
         }
     }
 
-    getCurrentActiveFeatureName() {
-        if (this.appUrls.isAreaActive("admin")()) {
-            return "Manage Your Server";
-        } else {
-            return "Resources";
-        }
-    }
-
-    getCurrentActiveFeatureHref() {
-        if (this.appUrls.isAreaActive("admin")()) {
-            return this.appUrls.adminSettings();
-        } else {
-            return this.appUrls.resources();
-        }
-    }
-
     goToDoc(doc: documentMetadataDto) {
         this.goToDocumentSearch("");
         this.navigate(appUrl.forEditDoc(doc["@metadata"]["@id"], null, null, this.activeDatabase()));

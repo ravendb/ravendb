@@ -1,7 +1,5 @@
 <div>
-<div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor:  selectedColor().backgroundColor}">
-
-<div data-bind="visible: canShowEnvironmentText()" id="environment-header"></div>
+<div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor: selectedColor().backgroundColor}">
 
 <div class="container-fluid">
 <div class="navbar-header">
@@ -17,7 +15,7 @@
 <div data-bind="visible: appUrls.isAreaActive('admin')">
     <ul class="nav navbar-nav">
         <li class="navbar-splitbutton active">
-            <h3>Manage Your Server</h3>
+            <h3 style="margin-top: 11px">Manage Your Server</h3>
         </li>
     </ul>
 </div>
@@ -229,28 +227,26 @@
                 </li>
             </ul>
         </li>
+
         <li id="featureName" class="navbar-right">
-            <div>
+            <div class="btn-group pull-right" data-bind="visible: appUrls.isAreaActive('admin')()">
+                <button data-bind="click: navigateToResources.bind($root)" class="btn btn-warning" style="margin-top: 5px; margin-left: 10px">
+                    Resources
+                </button>
+            </div>
+
+            <div data-bind="visible: appUrls.isAreaActive('admin')() == false">
                 <ul class="nav navbar-nav">
                     <li class="vertical-navbar-menu-item">
-                        <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: getCurrentActiveFeatureHref() }">
-                            <span data-bind="text: getCurrentActiveFeatureName()"></span>&nbsp;
+                        <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: appUrls.resources() }">
+                            <span>Resources</span>&nbsp;
                             <i class="fa fa-caret-right" data-bind="visible: canShowResourcesNavbar"></i>&nbsp;
                         </a>
-                    </li>
-                    <li class="dropdown vertical-navbar-menu-item" data-bind="visible: appUrls.isAreaActive('admin')()">
-                        <a class="dropdown-toggle vertical-bottom-container" data-toggle="dropdown">
-                            <i class="fa fa-caret-down"></i>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="#resources" data-bind="click: navigateToResources.bind($root)">Resources</a>
-                            </li>
-                        </ul>
                     </li>
                 </ul>
             </div>
         </li>
+
         <li class="navbar-right" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)" title="Show errors" style="padding-left: 0;">
             <a href="#" style="padding-left: 0; padding-right: 0"><i class="fa fa-warning text-danger"></i></a>
         </li>
