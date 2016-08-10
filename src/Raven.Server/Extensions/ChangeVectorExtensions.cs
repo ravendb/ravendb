@@ -38,35 +38,5 @@ namespace Raven.Server.Extensions
             sb.Append("]");
             return sb.ToString();
         }
-
-        public static void UpdateChangeVectorFrom(this ChangeVectorEntry[] changeVector, Dictionary<Guid, long> maxEtagsPerDbId)
-        {
-            for (int i = 0; i < changeVector.Length; i++)
-            {
-                long dbEtag;
-                if (maxEtagsPerDbId.TryGetValue(changeVector[i].DbId, out dbEtag) == false)
-                    continue;
-                maxEtagsPerDbId.Remove(changeVector[i].DbId);
-                if (dbEtag > changeVector[i].Etag)
-                {
-                    changeVector[i].Etag = dbEtag;
-                }
-            }
-       
-            if (maxEtagsPerDbId.Count <= 0)
-                return;
-
-            var oldSize = changeVector.Length;
-            Array.Resize(ref changeVector, oldSize + maxEtagsPerDbId.Count);
-
-            foreach (var kvp in maxEtagsPerDbId)
-            {
-                changeVector[oldSize++] = new ChangeVectorEntry
-                {
-                    DbId = kvp.Key,
-                    Etag = kvp.Value,
-                };
-            }
-        }
     }
 }

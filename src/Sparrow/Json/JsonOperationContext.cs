@@ -528,6 +528,17 @@ namespace Sparrow.Json
                 return _stream.Read(buffer, offset, count);
             }
 
+            public void ReadExactly(byte[] buffer, int offset, int count)
+            {
+                while (count > 0)
+                {
+                    var read = Read(buffer, offset, count);
+                    if (read == 0)
+                        throw new EndOfStreamException();
+                    count -= read;
+                }
+            }
+
             public int ReadByte()
             {
                 if (_parser.BufferOffset != _parser.BufferSize)

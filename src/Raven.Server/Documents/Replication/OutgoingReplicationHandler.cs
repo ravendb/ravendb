@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -21,6 +22,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Extensions;
+using Sparrow;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -38,6 +40,11 @@ namespace Raven.Server.Documents.Replication
         private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
         private string _destinationLastKnownChangeVectorString;
         private TcpClient _tcpClient;
+        private NetworkStream _stream;
+        private BlittableJsonTextWriter _writer;
+        private JsonOperationContext.MultiDocumentParser _parser;
+        private DocumentsOperationContext _context;
+        private byte[] _tempBuffer = new byte[32*1024];
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
@@ -92,22 +99,22 @@ namespace Raven.Server.Documents.Replication
                 var connectionInfo = GetTcpInfo();
                 using (_tcpClient = new TcpClient())
                 {
-                    DocumentsOperationContext context;
                     ConnectSocket(connectionInfo, _tcpClient);
-                    using (var stream = _tcpClient.GetStream())
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                    using (var writer = new BlittableJsonTextWriter(context, stream))
-                    using (var parser = context.ParseMultiFrom(stream))
+                    _stream = _tcpClient.GetStream();
+                    using (_stream)
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context))
+                    using (_writer = new BlittableJsonTextWriter(_context, _stream))
+                    using (_parser = _context.ParseMultiFrom(_stream))
                     {
                         //send initial connection information
-                        context.Write(writer, new DynamicJsonValue
+                        _context.Write(_writer, new DynamicJsonValue
                         {
                             ["DatabaseName"] = _destination.Database,
                             ["Operation"] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
                         });
 
                         //start request/response for fetching last etag
-                        context.Write(writer, new DynamicJsonValue
+                        _context.Write(_writer, new DynamicJsonValue
                         {
                             ["Type"] = "GetLastEtag",
                             ["SourceDatabaseId"] = _database.DbId.ToString(),
@@ -115,9 +122,9 @@ namespace Raven.Server.Documents.Replication
                             ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
                             ["MachineName"] = Environment.MachineName,
                         });
-                        writer.Flush();
+                        _writer.Flush();
 
-                        using (var lastEtagMessage = parser.ParseToMemory($"Last etag from server {FromToString}"))
+                        using (var lastEtagMessage = _parser.ParseToMemory($"Last etag from server {FromToString}"))
                         {
                             var replicationEtagReply = JsonDeserializationServer.ReplicationEtagReply(lastEtagMessage);
                             _lastSentEtag = replicationEtagReply.LastSentEtag;
@@ -131,11 +138,11 @@ namespace Raven.Server.Documents.Replication
 
                         while (_cts.IsCancellationRequested == false)
                         {
-                            if (ExecuteReplicationOnce(context, writer, parser) == false)
+                            if (ExecuteReplicationOnce() == false)
                             {
-                                using (context.OpenReadTransaction())
+                                using (_context.OpenReadTransaction())
                                 {
-                                    if (DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction) < _lastSentEtag)
+                                    if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) < _lastSentEtag)
                                         continue;
                                 }
                             }
@@ -143,7 +150,7 @@ namespace Raven.Server.Documents.Replication
                             //if this returns false, this means either timeout or canceled token is activated                    
                             while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                             {
-                                SendHeartbeat(context, writer, parser);
+                                SendHeartbeat();
                             }
                             _waitForChanges.Reset();
                         }
@@ -177,17 +184,17 @@ namespace Raven.Server.Documents.Replication
 
         public ReplicationDestination Destination => _destination;
 
-        private void SendHeartbeat(DocumentsOperationContext context, BlittableJsonTextWriter writer, JsonOperationContext.MultiDocumentParser parser)
+        private void SendHeartbeat()
         {
             try
             {
-                context.Write(writer, new DynamicJsonValue
+                _context.Write(_writer, new DynamicJsonValue
                 {
                     ["Heartbeat"] = true,
                     ["LastEtag"] = _lastSentEtag
                 });
-                writer.Flush();
-                HandleServerResponse(parser);
+                _writer.Flush();
+                HandleServerResponse();
             }
             catch (Exception e)
             {
@@ -226,11 +233,9 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        private bool ExecuteReplicationOnce(DocumentsOperationContext context,
-            BlittableJsonTextWriter writer,
-            JsonOperationContext.MultiDocumentParser parser)
+        private bool ExecuteReplicationOnce()
         {
-            using (context.OpenReadTransaction())
+            using (_context.OpenReadTransaction())
             {
                 var replicationBatch = new List<Document>();
                 var lastEtag = _lastSentEtag;
@@ -242,7 +247,7 @@ namespace Raven.Server.Documents.Replication
                 while (sp.ElapsedMilliseconds < 1000)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(context, lastEtag, 0, 1024))
+                    foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(_context, lastEtag, 0, 1024))
                     {
                         if (sp.ElapsedMilliseconds > 1000)
                             break;
@@ -275,7 +280,7 @@ namespace Raven.Server.Documents.Replication
                         break;
 
                     // if we are at the end, we are done
-                    if (lastEtag == DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction))
+                    if (lastEtag == DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction))
                         break;
                 }
                 if (_log.IsInfoEnabled)
@@ -290,51 +295,96 @@ namespace Raven.Server.Documents.Replication
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side
-                    SendHeartbeat(context, writer, parser);
+                    SendHeartbeat();
                     return hasModification;
                 }
 
                 _cts.Token.ThrowIfCancellationRequested();
 
-                SendDocuments(context, writer, parser, replicationBatch, lastEtag);
+                SendDocuments(replicationBatch, lastEtag);
                 return true;
             }
         }
 
         private void SendDocuments(
-            DocumentsOperationContext context,
-            BlittableJsonTextWriter writer,
-            JsonOperationContext.MultiDocumentParser parser,
             List<Document> docs,
             long lastEtag)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"Starting sending replication batch ({_database.Name}) with {docs.Count:#,#;;0} docs and last etag {lastEtag}");
+                _log.Info(
+                    $"Starting sending replication batch ({_database.Name}) with {docs.Count:#,#;;0} docs and last etag {lastEtag}");
 
             var sw = Stopwatch.StartNew();
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Type"));
-            writer.WriteString(context.GetLazyStringForFieldWithCaching("ReplicationBatch"));
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("LastEtag"));
-            writer.WriteInteger(lastEtag);
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("ReplicationBatch"));
-            writer.WriteDocuments(context, docs, false);
-            writer.WriteEndObject();
-            writer.Flush();
+            _context.Write(_writer, new DynamicJsonValue
+            {
+                ["Type"] = "ReplicationBatch",
+                ["LastEtag"] = lastEtag,
+                ["Documents"] = docs.Count
+            });
+            _writer.Flush();
+            foreach (var document in docs)
+            {
+                WriteDocumentToServer(document);
+            }
+            _stream.Flush();
             sw.Stop();
 
             _lastSentEtag = lastEtag;
 
             if (_log.IsInfoEnabled)
-                _log.Info($"Finished sending replication batch. Sent {docs.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {docs[0].Etag}, last sent etag = {lastEtag}");
+                _log.Info(
+                    $"Finished sending replication batch. Sent {docs.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {docs[0].Etag}, last sent etag = {lastEtag}");
 
-            HandleServerResponse(parser);
+            HandleServerResponse();
         }
 
-        private void HandleServerResponse(JsonOperationContext.MultiDocumentParser parser)
+        private unsafe void WriteDocumentToServer(Document doc)
         {
-            using (var replicationBatchReplyMessage = parser.ParseToMemory("replication acknowledge message"))
+            var changeVectorSize = doc.ChangeVector.Length * sizeof(ChangeVectorEntry);
+            if (changeVectorSize + sizeof (int) + sizeof(int) > _tempBuffer.Length)
+                ThrowTooManyChangeVectorEntries(doc);
+
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                fixed (ChangeVectorEntry* pChangeVectorEntries = doc.ChangeVector)
+                {
+                    *(int*) pTemp = doc.ChangeVector.Length;
+                    Memory.Copy(pTemp + sizeof (int), (byte*) pChangeVectorEntries, changeVectorSize);
+                }
+                *(int*)pTemp = doc.Data.Size;
+                var pos = changeVectorSize + sizeof (int) + sizeof(int);
+                var copied = 0;
+                while (copied < doc.Data.Size)
+                {
+                    var sizeToCopy = Math.Min(doc.Data.Size - copied, _tempBuffer.Length - pos);
+                    if (sizeToCopy == 0)
+                    {
+                        _stream.Write(_tempBuffer, 0, pos);
+                        pos = 0;
+                        continue;
+                    }
+                    Memory.Copy(pTemp + pos, doc.Data.BasePointer + copied, sizeToCopy);
+                    pos += sizeToCopy;
+                    copied += sizeToCopy;
+                }
+                if (pos != 0)
+                {
+                    _stream.Write(_tempBuffer, 0, pos);
+                }
+            }
+        }
+
+        private static void ThrowTooManyChangeVectorEntries(Document doc)
+        {
+            throw new ArgumentOutOfRangeException(nameof(doc),
+                "Document " + doc.Key + " has too many change vector entries to replicate: " +
+                doc.ChangeVector.Length);
+        }
+
+
+        private void HandleServerResponse()
+        {
+            using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
             {
                 var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
 
