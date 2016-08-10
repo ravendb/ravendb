@@ -59,8 +59,8 @@
                 <li  data-bind="click: addReduce, visible: !hasExistingReduce()" title="Add a reduce function (Alt+R)" accesskey="R"><a href="#">Reduce</a></li>
                 <li  data-bind="click: addField" title="Add a field (Alt+G)" accesskey="G"><a href="#">Field</a></li>
                 <li  data-bind="click: addSpatialField" title="Add a spatial field (Alt+P)" accesskey="P"><a href="#">Spatial Field</a></li>
-                <li data-bind="visible: !editMaxIndexOutputsPerDocument(), click: function() {$root.editMaxIndexOutputsPerDocument(true); return false;}"><a href="#">Max Index Outputs</a></li>
-                <li data-bind="visible: !$root.editedIndex().storeAllFields(), click: function() {$root.editedIndex().setOrRemoveStoreAllFields(true); return false;}"><a href="#">Store All Fields</a></li>
+                <li data-bind="visible: !editMaxIndexOutputsPerDocument(), click: addMaxIndexOutputsPerDocument"><a href="#">Max Index Outputs</a></li>
+                <li data-bind="visible: !$root.editedIndex().storeAllFields(), click: addStoreAllFields"><a href="#">Store All Fields</a></li>
             </ul>
         </div>
 

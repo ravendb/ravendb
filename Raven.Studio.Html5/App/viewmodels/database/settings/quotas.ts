@@ -8,6 +8,7 @@ import configurationSetting = require("models/database/globalConfig/configuratio
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
 import shell = require('viewmodels/shell');
+import eventsCollector = require("common/eventsCollector");
 
 class quotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
@@ -96,6 +97,7 @@ class quotas extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("quotas", "save");
         var db = this.activeDatabase();
         if (db) {
             var settingsDocument = this.settingsDocument();
@@ -123,10 +125,12 @@ class quotas extends viewModelBase {
     }
 
     useLocal() {
+        eventsCollector.default.reportEvent("quotas", "use-local");
         this.usingGlobal(false);
     }
 
     useGlobal() {
+        eventsCollector.default.reportEvent("quotas", "use-global");
         this.usingGlobal(true);
         this.maximumSize.copyFromGlobal();
         this.warningLimitThreshold.copyFromGlobal();

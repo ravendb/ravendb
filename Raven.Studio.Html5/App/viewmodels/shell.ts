@@ -160,8 +160,6 @@ class shell extends viewModelBase {
    
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
-    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
-    newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
@@ -873,7 +871,9 @@ class shell extends viewModelBase {
 
         var statsEnabled = config != null && config.SendUsageStats;
 
-        eventsCollector.default.initialize(shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, statsEnabled);
+        var env = license.licenseStatus().IsCommercial ? "prod" : "dev";
+
+        eventsCollector.default.initialize(shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, statsEnabled);
     }
 
     private loadFileSystems(): JQueryPromise<any> {
@@ -1078,7 +1078,18 @@ class shell extends viewModelBase {
     }
 
     newDocument() {
+        eventsCollector.default.reportEvent("document", "create-from-shell");
         this.launchDocEditor(null);
+    }
+
+    newIndex() {
+        eventsCollector.default.reportEvent("index", "create-from-shell");
+        router.navigate(appUrl.forNewIndex(this.activeDatabase()));
+    }
+
+    newTransformer() {
+        eventsCollector.default.reportEvent("transformer", "create-from-shell");
+        router.navigate(appUrl.forNewTransformer(this.activeDatabase()));
     }
 
     private activateDatabaseWithName(databaseName: string) {
@@ -1105,6 +1116,7 @@ class shell extends viewModelBase {
     }
 
     goToDoc(doc: documentMetadataDto) {
+        eventsCollector.default.reportEvent("document", "go-to-from-shell");
         this.goToDocumentSearch("");
         this.navigate(appUrl.forEditDoc(doc["@metadata"]["@id"], null, null, this.activeDatabase()));
     }
@@ -1195,6 +1207,7 @@ class shell extends viewModelBase {
     }
 
     showErrorsDialog() {
+        eventsCollector.default.reportEvent("errors-dialog", "show");
         var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
         app.showDialog(errorDetails);
     }
@@ -1206,6 +1219,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
+        eventsCollector.default.reportEvent("license-status", "show");
         var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showDialog(dialog);
     }

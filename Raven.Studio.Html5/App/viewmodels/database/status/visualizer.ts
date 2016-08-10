@@ -23,6 +23,7 @@ import queryIndexDebugAfterReduceCommand = require("commands/database/debug/quer
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
+import eventsCollector = require("common/eventsCollector");
 
 import d3 = require('d3/d3');
 import nv = require('nvd3');
@@ -239,6 +240,7 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
+        eventsCollector.default.reportEvent("document-key", "add");
         if (!key || this.docKeys.contains(key))
             return;
 
@@ -268,6 +270,7 @@ class visualizer extends viewModelBase {
     }
 
     addReduceKey(key: string, needToChangeLoadingIndicator = true): JQueryPromise<any[]> {
+        eventsCollector.default.reportEvent("reduce-key", "add");
         var deferred = $.Deferred();
         if (!key || this.reduceKeys().contains(key))
             return deferred.resolve();
@@ -769,14 +772,17 @@ class visualizer extends viewModelBase {
     }
 
     saveAsSvg() {
+        eventsCollector.default.reportEvent("visualizer", "save", "svg");
         svgDownloader.downloadSvg(d3.select('#visualizer').node(), 'visualization.svg', (e) => visualizer.visualizationCss);
     }
 
     saveAsPng() {
+        eventsCollector.default.reportEvent("visualizer", "save", "png");
         svgDownloader.downloadPng(d3.select('#visualizer').node(), 'visualization.png', (e) => visualizer.visualizationCss);
     }
 
     saveAsJson() {
+        eventsCollector.default.reportEvent("visualizer", "save", "json");
         var model: visualizerExportDto = {
             indexName: this.indexName(),
             docKeys: this.docKeys(),
@@ -788,6 +794,7 @@ class visualizer extends viewModelBase {
     }
 
     chooseImportFile() {
+        eventsCollector.default.reportEvent("visualizer", "import");
         var dialog = new visualizerImport();
         dialog.task().
             done((importedData: visualizerExportDto) => {
@@ -808,7 +815,7 @@ class visualizer extends viewModelBase {
         app.showDialog(dialog);
     }
 
-
+     
     static visualizationCss = 'svg { background-color: white; }\n' +
         '* { box-sizing: border-box; }\n' +
     '.hidden { display: none !important; visibility: hidden !important; }\n' +

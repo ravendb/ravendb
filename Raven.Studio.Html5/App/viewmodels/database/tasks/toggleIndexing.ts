@@ -5,6 +5,7 @@ import startReducingCommand = require("commands/database/index/startReducingComm
 import getIndexingStatusCommand = require("commands/database/index/getIndexingStatusCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
+import eventsCollector = require("common/eventsCollector");
 
 class toggleIndexing extends viewModelBase {
 
@@ -106,24 +107,28 @@ class toggleIndexing extends viewModelBase {
     }
 
     disableIndexing() {
+        eventsCollector.default.reportEvent("indexes", "disable-indexing");
         new stopIndexingCommand(this.activeDatabase())
             .execute()
             .done(() => this.getIndexStatus());
     }
 
     enableIndexing() {
+        eventsCollector.default.reportEvent("indexes", "enable-indexing");
         new startIndexingCommand(this.activeDatabase())
             .execute()
             .done(() => this.getIndexStatus());
     }
 
     disableReducing() {
+        eventsCollector.default.reportEvent("indexes", "disable-reducing");
         new stopReducingCommand(this.activeDatabase())
             .execute()
             .done(() => this.getIndexStatus());
     }
 
     enableReducing() {
+        eventsCollector.default.reportEvent("indexes", "enable-reducing");
         new startReducingCommand(this.activeDatabase())
             .execute()
             .done(() => this.getIndexStatus());

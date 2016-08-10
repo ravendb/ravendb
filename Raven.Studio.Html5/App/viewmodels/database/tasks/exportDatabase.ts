@@ -5,6 +5,7 @@ import collection = require("models/database/documents/collection");
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
+import eventsCollector = require("common/eventsCollector");
 
 class filterSetting {
     path = ko.observable<string>("");
@@ -145,6 +146,7 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        eventsCollector.default.reportEvent("database", "export");
         var db = this.activeDatabase();
         db.isExporting(true);
         db.exportStatus("");

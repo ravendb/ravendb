@@ -8,6 +8,7 @@ import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
 import changesContext = require("common/changesContext");
 import copyTransformerDialog = require("viewmodels/database/transformers/copyTransformerDialog");
+import eventsCollector = require("common/eventsCollector");
 
 class transformers extends viewModelBase {
 
@@ -100,11 +101,13 @@ class transformers extends viewModelBase {
     }
 
     toggleExpandAll() {
+        eventsCollector.default.reportEvent("transformers", "expand-all");
         $(".index-group-content").collapse("toggle");
         this.allTransformersExpanded.toggle();
     }
 
     deleteAllTransformers() {
+        eventsCollector.default.reportEvent("transformers", "delete-all");
         var allTransformers: transformer[];
         allTransformers = this.getAllTransformers();
         this.promptDeleteTransformers(allTransformers);
@@ -117,14 +120,17 @@ class transformers extends viewModelBase {
     }
 
     deleteTransformer(transformerToDelete: transformer) {
+        eventsCollector.default.reportEvent("transformer", "delete");
         this.promptDeleteTransformers([transformerToDelete]);
     }
 
     pasteTransformer() {
+        eventsCollector.default.reportEvent("transformer", "paste");
         app.showDialog(new copyTransformerDialog('', this.activeDatabase(), true));
     }
 
     copyTransformer(t: transformer) {
+        eventsCollector.default.reportEvent("transformer", "copy");
         app.showDialog(new copyTransformerDialog(t.name(), this.activeDatabase(), false));
     }
 
@@ -141,7 +147,7 @@ class transformers extends viewModelBase {
     }
 
     updateTransformerLockMode(t: transformer) {
-
+        eventsCollector.default.reportEvent("transformer", "update-lock-mode");
         var originalLockMode = t.lockMode();
         var newLockMode = t.isLocked() ? 'Unlock' : 'LockedIgnore';
         if (originalLockMode !== newLockMode) {

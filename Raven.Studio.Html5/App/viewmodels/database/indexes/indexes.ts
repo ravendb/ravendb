@@ -12,6 +12,7 @@ import recentQueriesStorage = require("common/recentQueriesStorage");
 import changesContext = require("common/changesContext");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
+import eventsCollector = require("common/eventsCollector");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import d3 = require("d3/d3");
@@ -179,18 +180,22 @@ class indexes extends viewModelBase {
     }
 
     idlePriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "idle");
         this.setIndexPriority(idx, indexPriority.idleForced);
     }
 
     disabledPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "disabled");
         this.setIndexPriority(idx, indexPriority.disabledForced);
     }
 
     abandonedPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "abandoned");
         this.setIndexPriority(idx, indexPriority.abandonedForced);
     }
 
     normalPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "normal");
         this.setIndexPriority(idx, indexPriority.normal);
     }
 
@@ -382,25 +387,31 @@ class indexes extends viewModelBase {
     }
 
     copyIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "copy");
         app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
     }
 
     pasteIndex() {
+        eventsCollector.default.reportEvent("index", "paste");
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
 
     copyIndexesAndTransformers() {
+        eventsCollector.default.reportEvent("index-and-transformer", "copy");
         app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
     }
 
     pasteIndexesAndTransformers() {
+        eventsCollector.default.reportEvent("index-and-transformer", "paste");
         var dialog = new indexesAndTransformersClipboardDialog(this.activeDatabase(), true);
         app.showDialog(dialog);
         dialog.pasteDeferred.done((summary: string) => {
             this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
         });
     }
+
     toggleExpandAll() {
+        eventsCollector.default.reportEvent("indexes", "expand-all");
         if (this.btnState()) {
             $(".index-group-content").collapse('show');
         } else {
@@ -416,34 +427,41 @@ class indexes extends viewModelBase {
     }
 
     deleteIdleIndexes() {
+        eventsCollector.default.reportEvent("indexes", "delete", "idle");
         var idleIndexes = this.getIndexes("Idle");
         this.promptDeleteIndexes(idleIndexes);
     }
 
     deleteDisabledIndexes() {
+        eventsCollector.default.reportEvent("indexes", "delete", "disabled");
         var abandonedIndexes = this.getIndexes("Disabled");
         this.promptDeleteIndexes(abandonedIndexes);
     }
 
     deleteAbandonedIndexes() {
+        eventsCollector.default.reportEvent("indexes", "delete", "abandoned");
         var abandonedIndexes = this.getIndexes("Abandoned");
         this.promptDeleteIndexes(abandonedIndexes);
     }
 
     deleteAllIndexes() {
+        eventsCollector.default.reportEvent("indexes", "delete", "all");
         this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
     }
 
     deleteIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "delete");
         this.promptDeleteIndexes([i]);
         this.resetsInProgress.remove(i.name);
     }
 
     deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
+        eventsCollector.default.reportEvent("indexes", "delete-group");
         this.promptDeleteIndexes(i.indexes());
     }
 
     cancelIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "cancel");
         var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
         app.showDialog(cancelSideBySideIndexViewModel);
         cancelSideBySideIndexViewModel.cancelTask
@@ -477,6 +495,7 @@ class indexes extends viewModelBase {
 
 
     resetIndex(indexToReset: index) {
+        eventsCollector.default.reportEvent("index", "reset");
         var resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
 
         // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
@@ -502,18 +521,22 @@ class indexes extends viewModelBase {
     }
 
     unlockIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "lock", "unlock");
         this.updateIndexLockMode(i, "Unlock");
     }
 
     lockIndex(i: index) { 
+        eventsCollector.default.reportEvent("index", "lock", "locked-ignore");
         this.updateIndexLockMode(i, "LockedIgnore");
     }
 
     lockErrorIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "lock", "locked-error");
         this.updateIndexLockMode(i, "LockedError");
     }
 
     lockSideBySide(i: index) {
+        eventsCollector.default.reportEvent("index", "lock", "side-by-side");
         this.updateIndexLockMode(i, 'SideBySide');
     }
 
@@ -538,20 +561,24 @@ class indexes extends viewModelBase {
     }
 
     makeIndexPersistent(index: index) {
+        eventsCollector.default.reportEvent("index", "make-persistent");
         new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
 
     forceSideBySide(idx: index) {
+        eventsCollector.default.reportEvent("index", "force-side-by-side");
         new forceIndexReplace(idx.name, this.activeDatabase()).execute();
     }
 
     tryRecoverCorruptedIndexes() {
+        eventsCollector.default.reportEvent("index", "try-recover-corrupted");
         this.isRecoverringCorruptedIndexes(true);
         var action = new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
         action.always(() => this.isRecoverringCorruptedIndexes(false));
     }
 
     setLockModeAllIndexes(lockModeString: string, lockModeStrForTitle: string) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode");
         if (this.lockModeCommon() === lockModeString)
             return;
 

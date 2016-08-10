@@ -32,6 +32,8 @@ import timeSeries = require("models/timeSeries/timeSeries");
 import createTimeSeriesCommand = require("commands/resources/createTimeSeriesCommand");
 import license = require("models/auth/license");
 
+import eventsCollector = require("common/eventsCollector");
+
 class resources extends viewModelBase {
     resources: KnockoutComputed<resource[]>;
 
@@ -193,18 +195,18 @@ class resources extends viewModelBase {
     private getResourcesSummary(resourcesCollection: Array<resource>, type: string) {
         var summary = "";
 
-	    var resources = resourcesCollection.filter(x => x.isVisible());
-	    if (resources.length > 0) {
-		    summary += resources.length + " "  + type;
-		    if (resources.length > 1) {
-			    summary += "s";
-		    }
+        var resources = resourcesCollection.filter(x => x.isVisible());
+        if (resources.length > 0) {
+            summary += resources.length + " "  + type;
+            if (resources.length > 1) {
+                summary += "s";
+            }
 
-		    var disabled = resources.filter(x => x.disabled()).length;
-		    if (disabled > 0) {
-			    summary += " (" + disabled + " disabled)";
-		    }
-	    }
+            var disabled = resources.filter(x => x.disabled()).length;
+            if (disabled > 0) {
+                summary += " (" + disabled + " disabled)";
+            }
+        }
 
         return summary;
     }
@@ -443,6 +445,8 @@ class resources extends viewModelBase {
     }
 
     newResource() {
+        eventsCollector.default.reportEvent('resource', 'create');
+
         var createResourceViewModel = new createResource();
         createResourceViewModel.createDatabasePart
             .creationTask

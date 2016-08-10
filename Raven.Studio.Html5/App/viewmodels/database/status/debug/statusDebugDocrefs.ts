@@ -4,6 +4,7 @@ import customColumns = require("models/database/documents/customColumns");
 import customColumnParams = require('models/database/documents/customColumnParams');
 import pagedList = require("common/pagedList");
 import getDocRefsCommand = require("commands/database/debug/getDocRefsCommand");
+import eventsCollector = require("common/eventsCollector");
 
 
 class statusDebugDocrefs extends viewModelBase {
@@ -29,6 +30,7 @@ class statusDebugDocrefs extends viewModelBase {
     }
 
     fetchDocRefs() {
+        eventsCollector.default.reportEvent("docrefs", "fetch");
         this.currentDocRefs(this.createPagedList(this.activeDatabase()));
     }
 

@@ -3,6 +3,7 @@ import extensions = require("common/extensions");
 import getReplicationsCommand = require('commands/database/replication/getReplicationsCommand');
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import explainReplicationCommand = require("commands/database/replication/explainReplicationCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class statusDebugExplainReplication extends viewModelBase {
     destinations = ko.observable<replicationDestinationDto[]>([]);
@@ -70,6 +71,7 @@ class statusDebugExplainReplication extends viewModelBase {
     }
 
     explain() {
+        eventsCollector.default.reportEvent("replicaton", "explain");
         new explainReplicationCommand(this.activeDatabase(), this.documentId(), this.selectedDestination().Url, this.selectedDestination().Database)
             .execute()
             .done(result => this.explanation(result)); 

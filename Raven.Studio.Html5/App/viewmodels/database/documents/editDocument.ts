@@ -14,6 +14,7 @@ import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDo
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 
+import eventsCollector = require("common/eventsCollector");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
@@ -454,6 +455,7 @@ class editDocument extends viewModelBase {
     }
 
     toggleNewlineMode() {
+        eventsCollector.default.reportEvent("document", "toggle-newline-mode");
         if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 150) {
             app.showMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
                 .then((dialogResult: string) => {
@@ -469,6 +471,7 @@ class editDocument extends viewModelBase {
     }
 
     toggleAutoCollapse() {
+        eventsCollector.default.reportEvent("document", "toggle-auto-collapse");
         this.autoCollapseMode.toggle();
         if (this.autoCollapseMode()) {
             this.foldAll();
@@ -551,6 +554,7 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
+        eventsCollector.default.reportEvent("document", "save");
         this.isSaving(true);
         this.isInDocMode(true);
         var currentDocumentId = this.userSpecifiedId();
@@ -746,6 +750,7 @@ class editDocument extends viewModelBase {
     }
 
     refreshDocument() {
+        eventsCollector.default.reportEvent("document", "refresh");
         var canContinue = this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?");
         canContinue.done(() => {
             if (this.isInDocMode()) {
@@ -769,6 +774,7 @@ class editDocument extends viewModelBase {
     }
 
     deleteDocument() {
+        eventsCollector.default.reportEvent("document", "delete");
         var doc: document = this.document();
         if (doc) {
             this.isDeleting = true;
@@ -807,6 +813,7 @@ class editDocument extends viewModelBase {
     }
 
     formatDocument() {
+        eventsCollector.default.reportEvent("document", "format");
         try {
             var docEditorText = this.docEditor.getSession().getValue();
             var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
@@ -819,6 +826,7 @@ class editDocument extends viewModelBase {
     }
 
     nextDocumentOrFirst() {
+        eventsCollector.default.reportEvent("document", "next-or-first");
         var list = this.docsList();
         if (list) {
             var nextIndex = list.currentItemIndex() + 1;
@@ -832,6 +840,7 @@ class editDocument extends viewModelBase {
     }
 
     previousDocumentOrLast() {
+        eventsCollector.default.reportEvent("document", "previous-or-last");
         var list = this.docsList();
         if (list) {
             var previousIndex = list.currentItemIndex() - 1;
@@ -843,6 +852,7 @@ class editDocument extends viewModelBase {
     }
 
     lastDocument() {
+        eventsCollector.default.reportEvent("document", "last-document");
         var list = this.docsList();
         if (list) {
             this.pageToItem(list.totalResultCount() - 1);
@@ -850,6 +860,7 @@ class editDocument extends viewModelBase {
     }
 
     firstDocument() {
+        eventsCollector.default.reportEvent("document", "first-document");
         this.pageToItem(0);
     }
 
@@ -1014,6 +1025,7 @@ class editDocument extends viewModelBase {
     }
 
     generateCode() {
+        eventsCollector.default.reportEvent("document", "generate-csharp-code");
         var doc: document = this.document();
         var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         var deffered = generate.execute();
