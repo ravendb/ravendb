@@ -4,14 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using Mono.CSharp;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Expression = System.Linq.Expressions.Expression;
 using LambdaExpression = System.Linq.Expressions.LambdaExpression;
 
@@ -24,8 +21,8 @@ namespace Raven.Abstractions.Extensions
     {
         public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
         {
-            var propertySeparator = '.';
-            var collectionSeparator = ',';
+            const char propertySeparator = '.';
+            const char collectionSeparator = ',';
             var collectionSeparatorAsString = collectionSeparator.ToString();
             var propertyPath = path.ToPropertyPath(propertySeparator, collectionSeparator);
             var properties = propertyPath.Split(propertySeparator);
@@ -40,9 +37,9 @@ namespace Raven.Abstractions.Extensions
                     {
                         type = type.GetElementType().GetProperty(normalizedProperty).PropertyType;
                     }
-                    else if(type.IsGenericType)
+                    else if (type.IsGenericType())
                     {
-                       type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
+                        type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
                     }
                 }
                 else
@@ -120,7 +117,7 @@ namespace Raven.Abstractions.Extensions
                 }
 
                 builder.Append(curValue);
-                
+
             }
             return builder.ToString().Trim(propertySeparator, collectionSeparator);
         }
@@ -147,7 +144,7 @@ namespace Raven.Abstractions.Extensions
                         Results.Push(propertySeparator);
                         Results.Push("$" + node.Member.Name);
                     }
-                    
+
                     return base.VisitMember(node);
                 }
 
@@ -168,14 +165,14 @@ namespace Raven.Abstractions.Extensions
                 var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();
                 if (node.Member.Name == "Value" || node.Member.Name == "Key")
                 {
-                    return genericTypeDefinition == typeof (KeyValuePair<,>);
+                    return genericTypeDefinition == typeof(KeyValuePair<,>);
                 }
 
                 if (node.Member.Name == "Values" || node.Member.Name == "Keys")
                 {
                     propertyName = node.Member.Name;
-                    return genericTypeDefinition == typeof (Dictionary<,>) ||
-                           genericTypeDefinition == typeof (IDictionary<,>);
+                    return genericTypeDefinition == typeof(Dictionary<,>) ||
+                           genericTypeDefinition == typeof(IDictionary<,>);
 
                 }
 
