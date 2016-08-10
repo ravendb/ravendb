@@ -389,12 +389,11 @@ class shell extends viewModelBase {
     }
 
     static fetchStudioConfig() {
-        var hotSpareTask = new getHotSpareInformation().execute();
         var configTask = new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase(), true).execute();
 
         if (license.isHotSpare()) {
             //override environment colors with hot spare
-            hotSpareTask
+            new getHotSpareInformation().execute()
                 .done((hotSpare: HotSpareDto) => {
                     this.activateHotSpareEnvironment(hotSpare);
                     shell.saveStudioConfig(configTask, true);
