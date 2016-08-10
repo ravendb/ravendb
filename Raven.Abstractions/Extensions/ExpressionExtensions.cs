@@ -10,7 +10,10 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Mono.CSharp;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Expression = System.Linq.Expressions.Expression;
+using LambdaExpression = System.Linq.Expressions.LambdaExpression;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -37,9 +40,9 @@ namespace Raven.Abstractions.Extensions
                     {
                         type = type.GetElementType().GetProperty(normalizedProperty).PropertyType;
                     }
-                    else
+                    else if(type.IsGenericType)
                     {
-                        type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
+                       type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
                     }
                 }
                 else
