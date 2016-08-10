@@ -10,12 +10,14 @@ class eventsCollector {
 
     version: string;
     build: number;
+    env: string;
     enabled = false;
     initialized = false;
 
-    initialize(version: string, build: number, enabled: boolean) {
+    initialize(version: string, build: number, env: string, enabled: boolean) {
         this.version = version;
         this.build = build;
+        this.env = env;
         this.enabled = enabled;
         this.createTracker();
 
@@ -28,6 +30,7 @@ class eventsCollector {
         ga('create', eventsCollector.UACode, 'auto');
         ga('set', 'dimension1', this.version);
         ga('set', 'dimension2', this.build);
+        ga('set', 'dimension3', this.env);
     }
 
     processQueue() {
@@ -42,7 +45,9 @@ class eventsCollector {
 
     reportViewModel(view: any) {
         this.internalLog((ga) => {
-            ga('send', 'pageview', view.__moduleId__);
+            var viewName = view.__moduleId__;
+            ga('set', 'location', 'http://raven.studio/' + viewName);
+            ga('send', 'pageview');
         });
     }
 
