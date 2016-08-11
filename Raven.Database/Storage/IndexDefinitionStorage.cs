@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -454,54 +455,65 @@ namespace Raven.Database.Storage
             var currentIndexDefinition = GetIndexDefinition(newIndexDef.Name);
             if (currentIndexDefinition == null)
             {
-                if (CheckIfIndexIsBeenDeleted(newIndexDef))
+                if (CheckIfIndexHasBeenDeleted(newIndexDef))
                 {
-                    //index is been deleted ignoring this index
+                    //index has been deleted, ignoring this index
                     return IndexCreationOptions.Noop;
                 }
+
                 if (newIndexDef.IndexVersion == null)
                     newIndexDef.IndexVersion = 0;
+
                 return IndexCreationOptions.Create;
             }
             
             if (newIndexDef.IndexVersion == null)
                 newIndexDef.IndexVersion = currentIndexDefinition.IndexVersion + 1;
-            if (currentIndexDefinition.IsTestIndex) // always update test indexes
+
+            if (currentIndexDefinition.IsTestIndex) //always update test indexes
                 return IndexCreationOptions.Update;
 
             newIndexDef.IndexId = currentIndexDefinition.IndexId;
             var result = currentIndexDefinition.Equals(newIndexDef);
             if (result)
+            {
+                //index definitions are equal, nothing to do 
                 return IndexCreationOptions.Noop;
-
-            // try to compare to find changes which doesn't require removing compiled index
+            }
+                
+            //try to compare to find changes which doesn't require removing compiled index
             return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
                 ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
         }
 
-        private bool CheckIfIndexIsBeenDeleted(IndexDefinition definition)
+        private bool CheckIfIndexHasBeenDeleted(IndexDefinition definition)
         {
-            return CheckIfIndexVersionIsEqualOrSmaller(definition, Constants.RavenReplicationIndexesTombstones)
-                || CheckIfIndexVersionIsEqualOrSmaller(definition, "Raven/Indexes/PendingDeletion");
+            return CheckIfIndexVersionIsEqualOrSmaller(definition, Constants.RavenReplicationIndexesTombstones, definition.Name) ||
+                   CheckIfIndexVersionIsEqualOrSmaller(definition, "Raven/Indexes/PendingDeletion", definition.IndexId.ToString(CultureInfo.InvariantCulture));
         }
 
-        private bool CheckIfIndexVersionIsEqualOrSmaller(IndexDefinition definition, string listName)
+        private bool CheckIfIndexVersionIsEqualOrSmaller(IndexDefinition definition, string listName, string listKey)
         {
-            bool res = false;
-            if (definition.IndexVersion == null) return false;
+            var res = false;
+            if (definition.IndexVersion == null)
+                return false;
+
             transactionalStorage.Batch(action =>
             {
-                var li = action.Lists.Read(listName, definition.Name);
-                if (li == null) return;
+                var li = action.Lists.Read(listName, listKey);
+                if (li == null)
+                    return;
+
                 int version;
-                string versionStr = li.Data.Value<string>("IndexVersion");
-                // The index that we are trying to add is deleted
+                var versionStr = li.Data.Value<string>("IndexVersion");
+                //the index that we are trying to add is deleted
                 if (int.TryParse(versionStr, out version))
                 {
                     if (version >= definition.IndexVersion.Value)
                     {
                         if (version > definition.IndexVersion.Value)
                             logger.Error("Trying to add an index ({0}) with a version smaller than the deleted version, this should not happen", definition.Name);
+
                         res = true;
                     }
                 }
@@ -510,10 +522,11 @@ namespace Raven.Database.Storage
                     logger.Error("Failed to parse index version of index {0}", definition.Name);
                 }
             });
+
             return res;
         }
 
-public bool Contains(string indexName)
+        public bool Contains(string indexName)
         {
             return indexNameToId.ContainsKey(indexName);
         }

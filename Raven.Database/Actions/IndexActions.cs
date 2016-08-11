@@ -853,7 +853,10 @@ namespace Raven.Database.Actions
             var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
             if (indexDefinition == null)
                 throw new InvalidOperationException("There is no index named: " + index);
+
             DeleteIndex(index);
+            //treat it like a new index
+            indexDefinition.IndexVersion = null;
             PutIndex(index, indexDefinition);
         }
 
@@ -907,8 +910,8 @@ namespace Raven.Database.Actions
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
                     Database.Notifications.RaiseNotifications(new IndexChangeNotification
-                {
-                    Name = instance.Name,
+                    {
+                        Name = instance.Name,
                         Type = indexChangeType,
                         Version = instance.IndexVersion
                     })
