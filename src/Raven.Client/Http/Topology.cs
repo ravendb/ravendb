@@ -9,5 +9,6 @@ namespace Raven.Client.Http
         public ServerNode LeaderNode;
         public ReadBehavior ReadBehavior;
         public WriteBehavior WriteBehavior;
+        public TopologySla SLA;
     }
 }

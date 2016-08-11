@@ -33,5 +33,10 @@ namespace Raven.Client.Documents.Commands
             if (string.IsNullOrEmpty(value))
                 throw new ArgumentException($"{name} cannot be null or empty", name);
         }
+
+        public bool IsFailedWithNode(ServerNode leaderNode)
+        {
+            return FailedNodes != null && FailedNodes.Contains(leaderNode);
+        }
     }
 }

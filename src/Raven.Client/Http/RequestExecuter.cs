@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.IO.Compression;
@@ -113,6 +114,12 @@ namespace Raven.Client.Http
                 });
         }
 
+        public async Task ExecuteAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command)
+        {
+            var node = ChooseNodeForRequset(command);
+            await ExecuteAsync(node, context, command);
+        }
+
         public async Task ExecuteAsync<TResult>(ServerNode node, JsonOperationContext context, RavenCommand<TResult> command)
         {
             string url;
@@ -135,13 +142,18 @@ namespace Raven.Client.Http
                     request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(cachedEtag.ToString()));
                 }
 
+                var sp = Stopwatch.StartNew();
                 HttpResponseMessage response;
                 try
                 {
                     response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                    sp.Stop();
+                    node.UpdateRequestTime(sp.ElapsedMilliseconds);
                 }
                 catch (HttpRequestException e) // server down, network down
                 {
+                    sp.Stop();
+                    node.UpdateRequestTime(sp.ElapsedMilliseconds);
                     await HandleServerDown(node, context, command, e);
                     return;
                 }
@@ -305,42 +317,89 @@ namespace Raven.Client.Http
         private async Task HandleServerDown<TResult>(ServerNode node, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestException e)
         {
-
             if (command.FailedNodes == null)
                 command.FailedNodes = new HashSet<ServerNode>();
 
             node.IsFailed = true;
             command.FailedNodes.Add(node);
 
-            var failoverNode = GetFailoverNode(command);
-
-            if (failoverNode != null)
-            {
-                await ExecuteAsync(failoverNode, context, command);
-                return;
-            }
-
-            throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", e);
+            var failoverNode = ChooseNodeForRequset(command, e);
+            await ExecuteAsync(failoverNode, context, command);
         }
 
-        private ServerNode GetFailoverNode<T>(RavenCommand<T> command)
+        private ServerNode ChooseNodeForRequset<T>(RavenCommand<T> command, HttpRequestException exception = null)
         {
-            //TODO: implement failover policies
             var topology = _topology;
 
-            if (command.FailedNodes == null)
-                command.FailedNodes = new HashSet<ServerNode>();
-
             var leaderNode = topology.LeaderNode;
-            if (leaderNode.IsFailed == false && command.FailedNodes.Contains(leaderNode) == false)
-                return leaderNode;
 
-            foreach (var node in topology.Nodes)
+            if (command.IsReadRequest)
             {
-                if (node.IsFailed == false && command.FailedNodes.Contains(node) == false)
-                    return node;
+                if (topology.ReadBehavior == ReadBehavior.Leader)
+                {
+                    if (command.IsFailedWithNode(leaderNode) == false)
+                        return leaderNode;
+                    throw new HttpRequestException("Leader not was failed to make this request. The current ReadBehavior is set to Leader to we won't failover to a differnt node.", exception);
+                }
+
+                if (topology.ReadBehavior == ReadBehavior.All)
+                {
+                    if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                        return leaderNode;
+
+                    // TODO: Should we choose nodes here by rate value as for SLA?
+                    foreach (var node in topology.Nodes)
+                    {
+                        if (node.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                            return node;
+                    }
+
+                    throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
+                }
+
+                if (topology.ReadBehavior == ReadBehavior.SLA)
+                {
+                    if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false && leaderNode.IsRateSurpassed(topology.SLA.RequestTimeThresholdInMilliseconds))
+                        return leaderNode;
+
+                    var nodesWithLeader = topology.Nodes;
+                    nodesWithLeader.Add(leaderNode);
+
+                    foreach (var node in nodesWithLeader.OrderBy(node => node.Rate()))
+                    {
+                        if (node.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                            return node;
+                    }
+                    
+                    throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
+                }
+
+                throw new InvalidOperationException($"Invalid ReadBehaviour value: {topology.ReadBehavior}");
             }
-            return null;
+
+            if (topology.WriteBehavior == WriteBehavior.Leader)
+            {
+                if (command.IsFailedWithNode(leaderNode) == false)
+                    return leaderNode;
+                throw new HttpRequestException("Leader not was failed to make this request. The current WriteBehavior is set to Leader to we won't failover to a differnt node.", exception);
+            }
+
+            if (topology.WriteBehavior == WriteBehavior.Failover)
+            {
+                if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                    return leaderNode;
+
+                // TODO: Should we choose nodes here by rate value as for SLA?
+                foreach (var node in topology.Nodes)
+                {
+                    if (node.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                        return node;
+                }
+
+                throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
+            }
+
+            throw new InvalidOperationException($"Invalid WriteBehavior value: {topology.WriteBehavior}");
         }
 
         private async Task HandleUnauthorized(string oauthSource, ServerNode node, JsonOperationContext context, bool shouldThrow = true)
@@ -439,6 +498,7 @@ namespace Raven.Client.Http
             string url;
             var request = CreateRequest(node, command, out url);
 
+            var sp = Stopwatch.StartNew();
             try
             {
                 var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
@@ -451,6 +511,11 @@ namespace Raven.Client.Http
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Tested if node alive but it's down: {url}", e);
+            }
+            finally
+            {
+                sp.Stop();
+                node.UpdateRequestTime(sp.ElapsedMilliseconds);
             }
         }
 
