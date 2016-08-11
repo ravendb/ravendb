@@ -190,11 +190,13 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
             .done(() => {
                 this.isLeavingCluster(true);
+                node.isLeavingCluster(true);
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500))
                     .always(() => {
                         this.isLeavingCluster(false);
+                        node.isLeavingCluster(false);
                     });
             });
     }
