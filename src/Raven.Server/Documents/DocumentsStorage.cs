@@ -150,8 +150,7 @@ namespace Raven.Server.Documents
             try
             {
                 Environment = new StorageEnvironment(options);
-                _unmanagedBuffersPool = new UnmanagedBuffersPool(_name);
-                ContextPool = new DocumentsContextPool(_unmanagedBuffersPool, _documentDatabase);
+                ContextPool = new DocumentsContextPool(_documentDatabase);
 
                 using (var tx = Environment.WriteTransaction())
                 {

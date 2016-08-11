@@ -25,7 +25,8 @@ namespace Sparrow.Json
             _allocated = initialSize;
             _used = 0;
 
-            _log.Debug($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
+            if (_log.IsDebugEnabled)
+                _log.Debug($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
         }
 
         public AllocatedMemoryData Allocate(int size)
@@ -45,7 +46,8 @@ namespace Sparrow.Json
             _ptrCurrent += size;
             _used += size;
 
-            _log.Debug($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
+            if (_log.IsDebugEnabled)
+                _log.Debug($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
 
             return allocation;
         }
@@ -63,7 +65,8 @@ namespace Sparrow.Json
                 if(newSize < _allocated)
                     throw new OverflowException("Arena size overflowed");
 
-                _log.Debug($"ArenaMemoryAllocator doubled size of buffer from {_allocated:#,#;0} to {newSize:#,#;0}");
+                if (_log.IsDebugEnabled)
+                    _log.Debug($"ArenaMemoryAllocator doubled size of buffer from {_allocated:#,#;0} to {newSize:#,#;0}");
                 _allocated = newSize;
             }
             
@@ -97,7 +100,8 @@ namespace Sparrow.Json
 
         ~ArenaMemoryAllocator()
         {
-            _log.Warn($"ArenaMemoryAllocator wasn't properly disposed");
+            if (_log.IsWarnEnabled)
+                _log.Warn($"ArenaMemoryAllocator wasn't properly disposed");
 
             Dispose();
         }
@@ -106,12 +110,12 @@ namespace Sparrow.Json
         {
             if (_isDisposed)
                 return;
+            _isDisposed = true;
 
             ResetArena();
 
             Marshal.FreeHGlobal(new IntPtr(_ptrStart));
 
-            _isDisposed = true;
             GC.SuppressFinalize(this);
         }
     }

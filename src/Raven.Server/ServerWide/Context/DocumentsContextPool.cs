@@ -17,15 +17,12 @@ namespace Raven.Server.ServerWide.Context
 {
     public class DocumentsContextPool : IDocumentsContextPool
     {
-        private readonly UnmanagedBuffersPool _pool;
-
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly ConcurrentStack<DocumentsOperationContext> _contextPool;
 
-        public DocumentsContextPool(UnmanagedBuffersPool pool, DocumentDatabase documentDatabase)
+        public DocumentsContextPool(DocumentDatabase documentDatabase)
         {
-            _pool = pool;
             _documentDatabase = documentDatabase;
             _contextPool = new ConcurrentStack<DocumentsOperationContext>();
         }

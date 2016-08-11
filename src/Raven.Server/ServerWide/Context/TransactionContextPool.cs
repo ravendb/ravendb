@@ -18,16 +18,12 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly StorageEnvironment _storageEnvironment;
 
-        private readonly UnmanagedBuffersPool _pool;
-
         private readonly ConcurrentStack<TransactionOperationContext> _contextPool;
 
-        public TransactionContextPool(UnmanagedBuffersPool pool, StorageEnvironment storageEnvironment)
+        public TransactionContextPool(StorageEnvironment storageEnvironment)
         {
-            _pool = pool;
             _storageEnvironment = storageEnvironment;
             _contextPool = new ConcurrentStack<TransactionOperationContext>();
-
         }
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context)
