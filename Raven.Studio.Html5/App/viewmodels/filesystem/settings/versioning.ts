@@ -4,6 +4,7 @@ import versioningEntry = require("models/filesystem/versioningEntry");
 import appUrl = require("common/appUrl");
 import getVersioningCommand = require("commands/filesystem/getVersioningCommand");
 import saveVersioningCommand = require("commands/filesystem/saveVersioningCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class versioning extends viewModelBase {
     versioning = ko.observable<versioningEntry>();
@@ -37,6 +38,7 @@ class versioning extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("fs-versioning", "save");
         var fs = this.activeFilesystem();
         if (fs) {
             var saveTask = new saveVersioningCommand(fs, this.versioning().toDto())

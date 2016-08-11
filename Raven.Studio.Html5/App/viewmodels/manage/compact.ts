@@ -5,6 +5,7 @@ import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
 import startFsCompactCommand = require("commands/filesystem/startCompactCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class resourceCompact {
     resourceName = ko.observable<string>('');
@@ -40,6 +41,7 @@ class resourceCompact {
     }
 
     toggleKeepDown() {
+        eventsCollector.default.reportEvent("compact", "keep-down", this.type.toString());
         this.keepDown.toggle();
         this.forceKeepDown();
     }
@@ -83,6 +85,7 @@ class compact extends viewModelBase {
     }
 
     startDbCompact() {
+        eventsCollector.default.reportEvent("database", "compact");
         this.isBusy(true);
         var self = this;
 
@@ -91,6 +94,7 @@ class compact extends viewModelBase {
     }
 
     startFsCompact() {
+        eventsCollector.default.reportEvent("fs", "compact");
         this.isBusy(true);
         var self = this;
 

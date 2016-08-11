@@ -7,6 +7,7 @@ import runningTask = require("models/database/debug/runningTask");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import tableNavigationTrait = require("common/tableNavigationTrait");
+import eventsCollector = require("common/eventsCollector");
 
 type taskType = {
     name: string;
@@ -131,6 +132,7 @@ class runningTasks extends viewModelBase {
     }
 
     taskKill(task: runningTask) {
+        eventsCollector.default.reportEvent("task", "kill");
         new killRunningTaskCommand(this.activeDatabase(), task.id).execute()
             .done(() => {
                 messagePublisher.reportSuccess("Send kill task request");

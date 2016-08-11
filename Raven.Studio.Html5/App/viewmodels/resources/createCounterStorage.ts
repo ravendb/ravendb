@@ -12,6 +12,10 @@ class createCounterStorage extends createResourceBase {
         this.storageEngine("voron");
     }
 
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
+
     nextOrCreate() {
         this.creationTaskStarted = true;
         dialog.close(this.parent);

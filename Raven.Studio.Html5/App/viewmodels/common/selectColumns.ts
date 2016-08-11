@@ -9,6 +9,7 @@ import deleteDocumentCommand = require("commands/database/documents/deleteDocume
 import customFunctions = require("models/database/documents/customFunctions");
 import autoCompleterSupport = require("common/autoCompleterSupport");
 import messagePublisher = require("common/messagePublisher");
+import eventsCollector = require("common/eventsCollector");
 
 
 class selectColumns extends dialogViewModelBase {
@@ -180,13 +181,16 @@ class selectColumns extends dialogViewModelBase {
     }
 
     saveAsDefault() {
+        
         if ((<any>this.form[0]).checkValidity() === true) {
             if (this.customColumns.customMode()) {
+                eventsCollector.default.reportEvent("custom-columns", "save-as-default", "custom");
                 var configurationDocument = new document(this.customColumns.toDto());
                 new saveDocumentCommand(this.context, configurationDocument, this.database, false).execute()
                     .done(() => this.onConfigSaved())
                     .fail(() => messagePublisher.reportError("Unable to save configuration!"));
             } else {
+                eventsCollector.default.reportEvent("custom-columns", "save-as-default", "auto");
                 new deleteDocumentCommand(this.context, this.database).execute().done(() => this.onConfigSaved())
                     .fail(() => messagePublisher.reportError("Unable to save configuration!"));
             }

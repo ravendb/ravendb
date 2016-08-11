@@ -10,6 +10,7 @@ import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import messagePublisher = require("common/messagePublisher");
 import resetSqlReplicationCommand = require("commands/database/sqlReplication/resetSqlReplicationCommand");
 import toggleDisable = require("commands/database/sqlReplication/toggleDisable");
+import eventsCollector = require("common/eventsCollector");
 
 class sqlReplications extends viewModelBase {
 
@@ -25,45 +26,45 @@ class sqlReplications extends viewModelBase {
         super();
 
         this.areAllSqlReplicationsDisabled = ko.computed(() => {
-	        var replications = this.replications();
+            var replications = this.replications();
             for (var i = 0; i < replications.length; i++) {
-	            if (replications[i].disabled() === false)
-			        return false;
+                if (replications[i].disabled() === false)
+                    return false;
             }
 
-	        return true;
+            return true;
         });
 
         this.areAllSqlReplicationsEnabled = ko.computed(() => {
-	        var replications = this.replications();
+            var replications = this.replications();
             for (var i = 0; i < replications.length; i++) {
-	            if (replications[i].disabled())
-			        return false;
+                if (replications[i].disabled())
+                    return false;
             }
 
-	        return true;
+            return true;
         });
 
         this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterSqlReplications());
 
-	    this.summary = ko.computed(() => {
-		    var summary = "";
-		    if (this.replications().length === 0) {
-			    return summary;
-		    }
+        this.summary = ko.computed(() => {
+            var summary = "";
+            if (this.replications().length === 0) {
+                return summary;
+            }
 
             var visibleSqlReplications = this.replications().filter(x => x.isVisible());
-		    summary += visibleSqlReplications.length + " SQL Replication";
+            summary += visibleSqlReplications.length + " SQL Replication";
             if (visibleSqlReplications.length > 1) {
-	            summary += "s";
+                summary += "s";
             }
 
-		    var disabled = visibleSqlReplications.filter(x => x.disabled()).length;
+            var disabled = visibleSqlReplications.filter(x => x.disabled()).length;
             if (disabled > 0) {
-	            summary += " (" + disabled + " disabled)";
+                summary += " (" + disabled + " disabled)";
             }
-		    return summary;
-	    });
+            return summary;
+        });
     }
 
     private filterSqlReplications() {
@@ -76,23 +77,24 @@ class sqlReplications extends viewModelBase {
     }
 
     private toggleDisable(disable: boolean) {
-	    var self = this;
+        var self = this;
         var action = disable ? "disable" : "enable";
-	    var actionCapitalized = action.capitalizeFirstLetter();
-	    app.showMessage("Are you sure that you want to " + action + " all SQL Replications?", 
+        var actionCapitalized = action.capitalizeFirstLetter();
+        app.showMessage("Are you sure that you want to " + action + " all SQL Replications?", 
                 actionCapitalized + " SQL Replications", ["Cancel", actionCapitalized])
             .then((dialogResult: string) => {
                 if (dialogResult === actionCapitalized) {
-	                new toggleDisable(self.activeDatabase(), disable).execute()
-		                .done(() => {
-			                this.replications().forEach(x => x.disabled(disable));
-			                messagePublisher.reportSuccess("Successfully " + action + "d all SQL replications");
-		                });
+                    new toggleDisable(self.activeDatabase(), disable).execute()
+                        .done(() => {
+                            this.replications().forEach(x => x.disabled(disable));
+                            messagePublisher.reportSuccess("Successfully " + action + "d all SQL replications");
+                        });
                 }
             });
     }
 
-    showStats(replicationName:string) {
+    showStats(replicationName: string) {
+        eventsCollector.default.reportEvent("sql-replications", "stats");
         var viewModel = new sqlReplicationStatsDialog(this.activeDatabase(), replicationName);
         app.showDialog(viewModel);
     }
@@ -123,12 +125,13 @@ class sqlReplications extends viewModelBase {
     }
 
     removeSqlReplication(sr: sqlReplication) {
+        eventsCollector.default.reportEvent("sql-replications", "remove");
         var newDoc = new document(sr);
 
         if (newDoc) {
             var viewModel = new deleteDocuments([newDoc]);
             viewModel.deletionTask.done(() => {
-	            this.replications.remove(sr);
+                this.replications.remove(sr);
                 //this.fetchSqlReplications(this.activeDatabase());
             });
             app.showDialog(viewModel, sqlReplications.sqlReplicationsSelector);
@@ -137,11 +140,12 @@ class sqlReplications extends viewModelBase {
     }
 
     resetSqlReplication(replicationId: string) {
+        eventsCollector.default.reportEvent("sql-replications", "reset");
         app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
             .then((dialogResult: string) => {
                 if (dialogResult === "Reset") {
-	                new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
-		                .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"));
+                    new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()
+                        .done(() => messagePublisher.reportSuccess("SQL replication " + replicationId + " was reset successfully!"));
                 }
             });
         

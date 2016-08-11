@@ -3,6 +3,7 @@ import saveApiKeysCommand = require("commands/auth/saveApiKeysCommand");
 import apiKey = require("models/auth/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class apiKeys extends viewModelBase {
     apiKeys = ko.observableArray<apiKey>();
@@ -86,6 +87,7 @@ class apiKeys extends viewModelBase {
     }
 
     createNewApiKey() {
+        eventsCollector.default.reportEvent("api-keys", "create");
         var newApiKey = apiKey.empty();
         this.subscribeToObservableKeyName(newApiKey);
         newApiKey.generateSecret();
@@ -93,10 +95,12 @@ class apiKeys extends viewModelBase {
     }
 
     removeApiKey(key: apiKey) {
+        eventsCollector.default.reportEvent("api-keys", "remove");
         this.apiKeys.remove(key);
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("api-keys", "save");
         this.apiKeys().forEach((key: apiKey) => key.setIdFromName());
 
         var apiKeysNamesArray: Array<string> = this.apiKeys().map((key: apiKey) => key.name());

@@ -18,6 +18,7 @@ import appUrl = require("common/appUrl");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
 
 class replications extends viewModelBase {
 
@@ -228,6 +229,7 @@ class replications extends viewModelBase {
     }
 
     createNewDestination() {
+        eventsCollector.default.reportEvent("replications", "create");
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
         this.refereshSkipIndexReplicationForAllDestinations();
@@ -235,10 +237,12 @@ class replications extends viewModelBase {
     }
 
     removeDestination(repl: replicationDestination) {
+        eventsCollector.default.reportEvent("replications", "remove");
         this.replicationsSetup().destinations.remove(repl);
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("replications", "save");
         if (this.usingGlobal()) {
             new deleteLocalReplicationsSetupCommand(this.activeDatabase())
                 .execute();
@@ -283,6 +287,7 @@ class replications extends viewModelBase {
     }
 
     sendReplicateCommand(destination: replicationDestination, parentClass: replications) {
+        eventsCollector.default.reportEvent("replications", "send-replicate");
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
@@ -293,6 +298,7 @@ class replications extends viewModelBase {
     }
 
     sendReplicateAllCommand() {
+        eventsCollector.default.reportEvent("replications", "send-replicate-all");
         var db = this.activeDatabase();
         if (db) {
             new replicateAllIndexesCommand(db).execute();
@@ -304,6 +310,7 @@ class replications extends viewModelBase {
     }
 
     sendResolveAllConflictsCommand() {
+        eventsCollector.default.reportEvent("replications", "resolve-all");
         var db = this.activeDatabase();
         if (db) {
             new resolveAllConflictsCommand(db).execute();
@@ -313,6 +320,7 @@ class replications extends viewModelBase {
     }
 
     saveServerPrefixForHiLo() {
+        eventsCollector.default.reportEvent("replications", "save-hilo-prefix");
         var db = this.activeDatabase();
         if (db) {
             new updateServerPrefixHiLoCommand(this.prefixForHilo(), db)
@@ -325,6 +333,7 @@ class replications extends viewModelBase {
     }
 
     saveAutomaticConflictResolutionSettings() {
+        eventsCollector.default.reportEvent("replications", "save-auto-conflict-resolution");
         var db = this.activeDatabase();
         if (db) {
             new saveAutomaticConflictResolutionDocument(this.replicationConfig().toDto(), db)
@@ -344,10 +353,12 @@ class replications extends viewModelBase {
     }
 
     useLocal() {
+        eventsCollector.default.reportEvent("replications", "use-local");
         this.usingGlobal(false);
     }
 
     useGlobal() {
+        eventsCollector.default.reportEvent("replications", "use-global");
         // using global configuration will discard all ETL configurations, if you find any warning user about this. 
         if (this.replicationsSetup().destinations().filter(x => x.enableReplicateOnlyFromCollections()).length) {
             this.confirmationMessage("Are you sure?",
@@ -369,6 +380,7 @@ class replications extends viewModelBase {
     }
 
     enableReplication() {
+        eventsCollector.default.reportEvent("replications", "enable-replication");
         new enableReplicationCommand(this.activeDatabase())
             .execute()
             .done((bundles) => {

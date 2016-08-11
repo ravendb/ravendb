@@ -18,6 +18,7 @@ import changeSubscription = require("common/changeSubscription");
 import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -58,6 +59,7 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import getStudioConfig = require("commands/getStudioConfig");
 
 import viewModelBase = require("viewmodels/viewModelBase");
+import eventsCollector = require("common/eventsCollector");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
@@ -154,17 +156,19 @@ class shell extends viewModelBase {
     isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(3);
+    static serverMinorVersion = ko.observable<number>(5);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
    
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
-    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
-    newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
     showSplash = viewModelBase.showSplash;
+
+    displayUsageStatsInfo = ko.observable<boolean>(false);
+    trackingTask = $.Deferred();
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
@@ -403,6 +407,7 @@ class shell extends viewModelBase {
         }
 
         shell.saveStudioConfig(configTask, false);
+        return configTask;
     }
 
     private static saveStudioConfig(configTask: JQueryPromise<documentClass>, isHotSpare: boolean) {
@@ -843,17 +848,74 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done((results: database[]) => {
                 this.databasesLoaded(results);
+                var configTask = shell.fetchStudioConfig();
                 this.fetchClusterTopology();
-                this.fetchServerBuildVersion();
+                var studioVersionTask = this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
                 shell.fetchLicenseStatus().always(() => shell.fetchStudioConfig());
                 this.fetchSupportCoverage();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
+
+                $.when(configTask, studioVersionTask).then((configResult: any, buildVersionResult: any) => {
+                    this.initAnalytics(configResult, buildVersionResult);
+                });
             })
             .always(() => deferred.resolve());
 
         return deferred;
+    }
+
+    private initAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+        if (eventsCollector.gaDefined()) {
+            if (config == null || !("SendUsageStats" in config)) {
+                // ask user about GA
+                this.displayUsageStatsInfo(true);
+
+                this.trackingTask.done((accepted: boolean) => {
+                    this.displayUsageStatsInfo(false);
+
+                    if (accepted) {
+                        this.configureAnalytics(true, buildVersionResult);
+                    }
+                    this.saveTrackingSetting(config, accepted);
+                });
+            } else {
+                this.configureAnalytics(config.SendUsageStats, buildVersionResult);
+            }
+        } else {
+            // user has uBlock etc?
+            this.configureAnalytics(false, buildVersionResult);
+        }
+    }
+
+    private saveTrackingSetting(config: any, track: boolean) {
+        if (config == null) {
+            config = documentClass.empty();
+        }
+
+        config.SendUsageStats = track;
+
+        new saveDocumentCommand(shell.studioConfigDocumentId, config, this.systemDatabase, false)
+            .execute();
+    }
+
+    collectUsageData() {
+        this.trackingTask.resolve(true);
+    }
+
+    doNotCollectUsageData() {
+        this.trackingTask.resolve(false);
+    }
+
+    private configureAnalytics(track: boolean, buildVersionResult: [serverBuildVersionDto]) {
+        var currentBuildVersion = buildVersionResult[0].BuildVersion;
+        if (currentBuildVersion !== 13) {
+            shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+        }
+
+        var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
+        eventsCollector.default.initialize(shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, track);
     }
 
     private loadFileSystems(): JQueryPromise<any> {
@@ -1058,7 +1120,18 @@ class shell extends viewModelBase {
     }
 
     newDocument() {
+        eventsCollector.default.reportEvent("document", "create-from-shell");
         this.launchDocEditor(null);
+    }
+
+    newIndex() {
+        eventsCollector.default.reportEvent("index", "create-from-shell");
+        router.navigate(appUrl.forNewIndex(this.activeDatabase()));
+    }
+
+    newTransformer() {
+        eventsCollector.default.reportEvent("transformer", "create-from-shell");
+        router.navigate(appUrl.forNewTransformer(this.activeDatabase()));
     }
 
     private activateDatabaseWithName(databaseName: string) {
@@ -1085,6 +1158,7 @@ class shell extends viewModelBase {
     }
 
     goToDoc(doc: documentMetadataDto) {
+        eventsCollector.default.reportEvent("document", "go-to-from-shell");
         this.goToDocumentSearch("");
         this.navigate(appUrl.forEditDoc(doc["@metadata"]["@id"], null, null, this.activeDatabase()));
     }
@@ -1094,7 +1168,7 @@ class shell extends viewModelBase {
     }
 
     fetchServerBuildVersion() {
-        new getServerBuildVersionCommand()
+        return new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
@@ -1175,6 +1249,7 @@ class shell extends viewModelBase {
     }
 
     showErrorsDialog() {
+        eventsCollector.default.reportEvent("errors-dialog", "show");
         var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
         app.showDialog(errorDetails);
     }
@@ -1186,6 +1261,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
+        eventsCollector.default.reportEvent("license-status", "show");
         var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showDialog(dialog);
     }

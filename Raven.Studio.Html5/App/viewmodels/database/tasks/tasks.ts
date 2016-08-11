@@ -52,6 +52,10 @@ class tasks extends viewModelBase {
             return activeRoute != null ? activeRoute.title : "";
         });
     }
+
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = tasks;

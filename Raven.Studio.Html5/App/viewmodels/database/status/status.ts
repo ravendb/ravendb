@@ -95,6 +95,10 @@ class status extends viewModelBase {
         }
 
         return false;
+    } 
+
+    protected shouldReportUsage(): boolean {
+        return false;
     }
 }
 

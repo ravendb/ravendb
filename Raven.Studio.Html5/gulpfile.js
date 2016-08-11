@@ -46,7 +46,8 @@ var PATHS = {
       "Scripts/jwerty-0.3.js",
       "Scripts/jquery.fullscreen.js",
       "Scripts/spin.min.js",
-      "App/models/dto.js"
+      "App/models/dto.js",
+      "Scripts/analytics.js"
     ]
 }
 

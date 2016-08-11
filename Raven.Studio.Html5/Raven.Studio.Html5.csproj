@@ -110,6 +110,7 @@
     <TypeScriptCompile Include="App\common\awesomeMultiselect.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
+    <TypeScriptCompile Include="App\common\eventsCollector.ts" />
     <TypeScriptCompile Include="App\common\tableNavigationTrait.ts" />
     <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
     <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
@@ -179,7 +180,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\tasks\subscriptionsTask.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\files\searchInFolderClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\resetIndexConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\activityItems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\sourceSynchronizationInformation.ts" />
@@ -417,6 +417,7 @@
     <Content Include="App\views\resources\disableResourceToggleConfirm.html" />
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
+    <Content Include="App\views\usageStats.html" />
     <Content Include="App\views\shell.html" />
     <Content Include="App\views\timeSeries\configuration\types.html" />
     <Content Include="App\views\timeSeries\deleteKey.html" />
@@ -449,6 +450,7 @@
     <Content Include="Content\durandal.css" />
     <Content Include="Content\font-awesome.css" />
     <Content Include="Content\font-awesome.min.css" />
+    <Content Include="Content\images\analytics-img.png" />
     <Content Include="Content\images\icon.png" />
     <Content Include="Content\images\ios-startup-image-landscape.png" />
     <Content Include="Content\images\ios-startup-image-portrait.png" />
@@ -502,6 +504,7 @@
     <Content Include="Scripts\ace\theme-xcode.js" />
     <Content Include="Scripts\ace\worker-json.js" />
     <Content Include="Scripts\almond-custom.js" />
+    <Content Include="Scripts\analytics.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
     <Content Include="Scripts\spin.min.js" />
@@ -978,7 +981,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\resolveConflict.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\synchronization.ts" />
@@ -1049,6 +1051,7 @@
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\dagre.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\google.analytics\ga.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.blockUI\jquery.blockUI.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.dynatree\jquery.dynatree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />

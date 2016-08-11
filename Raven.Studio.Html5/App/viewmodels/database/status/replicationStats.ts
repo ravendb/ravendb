@@ -13,6 +13,7 @@ import getDocumentsLeftToReplicate = require("commands/database/replication/getD
 import d3 = require("d3/d3");
 import nv = require("nvd3");
 import dagre = require("dagre");
+import eventsCollector = require("common/eventsCollector");
 
 class replicationStats extends viewModelBase {
 
@@ -210,6 +211,7 @@ class replicationStats extends viewModelBase {
     }
 
     getDocumentsToReplicateCount() {
+        eventsCollector.default.reportEvent("replication-stats", "get-pending-count");
         var currentLink = this.currentLink();
         if (currentLink == null) {
             return;
@@ -265,6 +267,7 @@ class replicationStats extends viewModelBase {
     }
 
     export() {
+        eventsCollector.default.reportEvent("replication-stats", "export-pending");
         var confirmation = this.confirmationMessage("Export", "Are you sure that you want to export documents to replicate ids?");
         confirmation.done(() => {
             this.exportProgress("");
@@ -477,6 +480,8 @@ class replicationStats extends viewModelBase {
 
 
     fetchTopology() {
+        eventsCollector.default.reportEvent("topology", "fetch");
+
         this.showLoadingIndicator(true);
         new getReplicationTopology(this.activeDatabase())
             .execute()
@@ -492,14 +497,17 @@ class replicationStats extends viewModelBase {
     }
 
     saveAsPng() {
+        eventsCollector.default.reportEvent("topology", "save", "png");
         svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', () => replicationStats.inlineCss);
     }
 
     saveAsSvg() {
+        eventsCollector.default.reportEvent("topology", "save", "svg");
         svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', () => replicationStats.inlineCss);
     }
 
     saveAsJson() {
+        eventsCollector.default.reportEvent("topology", "save", "json");
         fileDownloader.downloadAsJson(this.topology(), "topology.json");
     }
 

@@ -9,6 +9,7 @@ import configurationSettings = require("models/database/globalConfig/configurati
 import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
 import deleteLocalPeriodicExportSetupCommand = require("commands/database/globalConfig/deleteLocalPeriodicExportSetupCommand");
 import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
 
 class periodicExport extends viewModelBase {
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
@@ -138,6 +139,7 @@ class periodicExport extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("periodic-export", "save");
         var db = this.activeDatabase();
         if (db) {
             var task: JQueryPromise<any>;
@@ -158,10 +160,12 @@ class periodicExport extends viewModelBase {
     }
 
     useLocal() {
+        eventsCollector.default.reportEvent("periodic-export", "use-local");
         this.usingGlobal(false);
     }
 
     useGlobal() {
+        eventsCollector.default.reportEvent("periodic-export", "use-global");
         this.usingGlobal(true);
         this.backupSetup().copyFrom(this.globalBackupSetup());
     }

@@ -12,6 +12,7 @@ import getInfoPackage = require('commands/database/debug/getInfoPackage');
 import viewModelBase = require("viewmodels/viewModelBase");
 import infoPackageImport = require("viewmodels/manage/infoPackageImport");
 import shell = require("viewmodels/shell");
+import eventsCollector = require("common/eventsCollector");
 
 const enum parserState {
   pid,
@@ -350,10 +351,12 @@ class infoPackage extends viewModelBase {
     }
 
     createPackageWithStacks() {
+        eventsCollector.default.reportEvent("info-package", "create", "with-stacks");
         this.createPackage(true);
     }
 
     createPackageWithoutStacks() {
+        eventsCollector.default.reportEvent("info-package", "create", "without-stacks");
         this.createPackage(false);
     }
 
@@ -393,6 +396,7 @@ class infoPackage extends viewModelBase {
     }
 
     saveAsSvg() {
+        eventsCollector.default.reportEvent("info-package", "export", "svg");
         svgDownloader.downloadSvg(d3.select('#parallelStacks').node(), 'stacks.svg', (svgClone) => {
             this.cleanupSvgCloneForSave(svgClone);
             return infoPackage.stacksCss;
@@ -400,6 +404,7 @@ class infoPackage extends viewModelBase {
     }
 
     saveAsPng() {
+        eventsCollector.default.reportEvent("info-package", "export", "png");
         svgDownloader.downloadPng(d3.select('#parallelStacks').node(), 'stacks.png', (svgClone) => {
             this.cleanupSvgCloneForSave(svgClone);
             return infoPackage.stacksCss;
@@ -407,10 +412,12 @@ class infoPackage extends viewModelBase {
     }
 
     saveAsZip() { 
+        eventsCollector.default.reportEvent("info-package", "export", "zip");
         fileDownloader.downloadAsZip(this.infoPackage(), this.infoPackageFilename());
     }
 
     saveAsJson() {
+        eventsCollector.default.reportEvent("info-package", "export", "json");
         fileDownloader.downloadAsJson(this.stacksJson(), "stacks.json");
     }
 
@@ -423,6 +430,7 @@ class infoPackage extends viewModelBase {
     }
 
     chooseImportFile() {
+        eventsCollector.default.reportEvent("info-package", "import");
         var dialog = new infoPackageImport();
         dialog.task()
             .done((importedData: any) => {

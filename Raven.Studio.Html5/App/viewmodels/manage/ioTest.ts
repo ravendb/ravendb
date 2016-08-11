@@ -8,6 +8,7 @@ import ioTestCommand = require("commands/database/debug/ioTestCommand");
 import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
+import eventsCollector = require("common/eventsCollector");
 import shell = require("viewmodels/shell");
 
 class ioTest extends viewModelBase {
@@ -173,6 +174,7 @@ class ioTest extends viewModelBase {
     }
 
     killTask() {
+        eventsCollector.default.reportEvent("io-test", "kill");
         if (this.lastCommand !== null) {
             this.lastCommand.operationIdTask.done((operationId) => {
                 new killRunningTaskCommand(appUrl.getSystemDatabase(), operationId).execute();
@@ -181,6 +183,7 @@ class ioTest extends viewModelBase {
     }
 
     startPerformanceTest() {
+        eventsCollector.default.reportEvent("io-test", "execute");
         this.isBusy(true);
         var self = this;
 

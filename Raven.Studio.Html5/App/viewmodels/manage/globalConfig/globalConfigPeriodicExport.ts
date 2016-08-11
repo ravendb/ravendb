@@ -10,6 +10,7 @@ import getEffectiveSettingsCommand = require("commands/database/globalConfig/get
 import saveGlobalSettingsCommand = require("commands/database/globalConfig/saveGlobalSettingsCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigPeriodicExport extends viewModelBase {
 
@@ -104,6 +105,7 @@ class globalConfigPeriodicExport extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("global-config-periodic-export", "save");
         this.syncChanges(false);
     }
 
@@ -157,11 +159,13 @@ class globalConfigPeriodicExport extends viewModelBase {
     }
 
     activateConfig() {
+        eventsCollector.default.reportEvent("global-config-periodic-export", "activate");
         this.activated(true);
         this.bindPopover();
     }
 
     disactivateConfig() {
+        eventsCollector.default.reportEvent("global-config-periodic-export", "disactivate");
         this.confirmationMessage("Delete global configuration for periodic export?", "Are you sure?")
             .done(() => {
                 this.activated(false);

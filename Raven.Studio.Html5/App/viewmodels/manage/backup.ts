@@ -8,6 +8,7 @@ import backupDatabaseCommand = require("commands/maintenance/backupDatabaseComma
 import backupFilesystemCommand = require("commands/filesystem/backupFilesystemCommand");
 import backupCounterStorageCommand = require("commands/counter/backupCounterStorageCommand");
 import getResourceDrives = require("commands/resources/getResourceDrives");
+import eventsCollector = require("common/eventsCollector");
 
 class resourceBackup {
     incremental = ko.observable<boolean>(false);
@@ -73,6 +74,7 @@ class resourceBackup {
     }
 
     toggleKeepDown() {
+        eventsCollector.default.reportEvent("backup", "keep-down", this.type.toString());
         this.keepDown.toggle();
         this.forceKeepDown();
     }
@@ -116,6 +118,7 @@ class backupDatabase extends viewModelBase {
     }
 
     startDbBackup() {
+        eventsCollector.default.reportEvent("database", "backup");
         var backupOptions = this.dbBackupOptions;
         backupOptions.isBusy(true);
 
@@ -126,6 +129,7 @@ class backupDatabase extends viewModelBase {
     }
 
     startFsBackup() {
+        eventsCollector.default.reportEvent("fs", "backup");
         var backupOptions = this.fsBackupOptions;
         backupOptions.isBusy(true);
 
@@ -136,6 +140,7 @@ class backupDatabase extends viewModelBase {
     }
 
     startCsBackup() {
+        eventsCollector.default.reportEvent("cs", "backup");
         var backupOptions = this.csBackupOptions;
         backupOptions.isBusy(true);
 

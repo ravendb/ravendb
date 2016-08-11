@@ -77,6 +77,10 @@ class settings extends viewModelBase {
 
         return false;
     }
+
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = settings;

@@ -36,6 +36,10 @@ class synchronization extends viewModelBase {
     canActivate(args) {
         return true;
     }
+
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = synchronization;

@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import eventsCollector = require("common/eventsCollector");
 
 class exportDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
@@ -17,6 +18,7 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        eventsCollector.default.reportEvent("fs", "export");
         var fs = this.activeFilesystem();
         fs.isExporting(true);
         fs.exportStatus("");

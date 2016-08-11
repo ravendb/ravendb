@@ -10,6 +10,7 @@ import getAutomaticConflictResolutionDocumentCommand = require("commands/databas
 import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
+import eventsCollector = require("common/eventsCollector");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import shell = require("viewmodels/shell");
@@ -147,16 +148,19 @@ class globalConfigReplications extends viewModelBase {
     }
 
     createNewDestination() {
+        eventsCollector.default.reportEvent("global-config-replications", "create");
         this.replicationsSetup().destinations.unshift(replicationDestination.empty("{databaseName}"));
         this.refereshSkipIndexReplicationForAllDestinations();
         this.bindPopover();
     }
 
     removeDestination(repl: replicationDestination) {
+        eventsCollector.default.reportEvent("global-config-replications", "remove");
         this.replicationsSetup().destinations.remove(repl);
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("global-config-replications", "save");
         this.syncChanges(false);
     }
 
@@ -222,10 +226,12 @@ class globalConfigReplications extends viewModelBase {
     }
 
     activateConfig() {
+        eventsCollector.default.reportEvent("global-config-replications", "activate");
         this.activated(true);
     }
 
     disactivateConfig() {
+        eventsCollector.default.reportEvent("global-config-replications", "disactivate");
         this.confirmationMessage("Delete global configuration for replication?", "Are you sure?")
             .done(() => {
                 this.activated(false);

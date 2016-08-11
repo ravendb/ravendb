@@ -15,7 +15,7 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
-
+import eventsCollector = require("common/eventsCollector");
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
@@ -50,6 +50,13 @@ class viewModelBase {
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
+        if (this.shouldReportUsage()) {
+            eventsCollector.default.reportViewModel(this);
+        }
+    }
+
+    protected shouldReportUsage(): boolean {
+        return true;
     }
 
     /*

@@ -8,6 +8,7 @@ import appUrl = require("common/appUrl");
 import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
@@ -54,6 +55,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     save() {
+        eventsCollector.default.reportEvent("sql-replication-connections", "save");
         if (this.usingGlobal()) {
             new deleteDocumentCommand("Raven/SqlReplication/Connections", this.activeDatabase())
                 .execute()
@@ -85,6 +87,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
 
 
     addSqlReplicationConnection() {
+        eventsCollector.default.reportEvent("sql-replication-connections", "create");
         var newPredefinedConnection = predefinedSqlConnection.empty();
         this.connections().predefinedConnections.splice(0, 0, newPredefinedConnection);
         this.subscribeToSqlReplicationConnectionName(newPredefinedConnection);
@@ -92,6 +95,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     removeSqlReplicationConnection(connection) {
+        eventsCollector.default.reportEvent("sql-replication-connections", "remove");
         this.connections().predefinedConnections.remove(connection);
     }
 
@@ -150,10 +154,12 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     useLocal() {
+        eventsCollector.default.reportEvent("sql-replication-connections", "use-local");
         this.usingGlobal(false);
     }
 
     useGlobal() {
+        eventsCollector.default.reportEvent("sql-replication-connections", "use-global");
         this.usingGlobal(true);
         this.connections().copyFromParent();
     }

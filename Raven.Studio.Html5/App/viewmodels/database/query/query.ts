@@ -18,6 +18,7 @@ import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
+import eventsCollector = require("common/eventsCollector");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
@@ -184,6 +185,7 @@ class query extends viewModelBase {
     }
 
     openQueryStats() {
+        eventsCollector.default.reportEvent("query", "show-stats");
         var viewModel = new queryStatsDialog(this.queryStats(), this.selectedIndexEditUrl(), this.didDynamicChangeIndex(), this.rawJsonUrl());
         app.showDialog(viewModel);
     }
@@ -243,8 +245,6 @@ class query extends viewModelBase {
 
         this.isLoading.extend({ rateLimit: 100 });
     }
-
-    
 
     private fetchRecentQueries() {
         this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
@@ -381,6 +381,7 @@ class query extends viewModelBase {
     }
 
     toggleCacheEnable() {
+        eventsCollector.default.reportEvent("query", "toggle-cache");
         this.isCacheDisable(!this.isCacheDisable());
     }
 
@@ -554,6 +555,7 @@ class query extends viewModelBase {
     }
 
     addSortBy() {
+        eventsCollector.default.reportEvent("query", "add-sort-by");
         var sort = new querySort();
         sort.fieldName.subscribe(() => this.runQuery());
         sort.isAscending.subscribe(() => this.runQuery());
@@ -562,11 +564,13 @@ class query extends viewModelBase {
     }
 
     removeSortBy(sortBy: querySort) {
+        eventsCollector.default.reportEvent("query", "remove-sort-by");
         this.sortBys.remove(sortBy);
         this.runQuery();
     }
 
     addTransformer() {
+        eventsCollector.default.reportEvent("query", "add-transformer");
         this.transformer(new transformerType());
     }
 
@@ -582,31 +586,37 @@ class query extends viewModelBase {
     }
 
     removeTransformer() {
+        eventsCollector.default.reportEvent("query", "remove-transformer");
         this.transformer(null);
         this.runQuery();
     }
 
     setOperatorOr() {
+        eventsCollector.default.reportEvent("query", "set-operator", "or");
         this.isDefaultOperatorOr(true);
         this.runQuery();
     }
 
     setOperatorAnd() {
+        eventsCollector.default.reportEvent("query", "set-operator", "and");
         this.isDefaultOperatorOr(false);
         this.runQuery();
     }
 
     toggleShowFields() {
+        eventsCollector.default.reportEvent("query", "show-fields");
         this.showFields(!this.showFields());
         this.runQuery();
     }
 
     toggleIndexEntries() {
+        eventsCollector.default.reportEvent("query", "index-entries");
         this.indexEntries(!this.indexEntries());
         this.runQuery();
     }
 
     deleteDocsMatchingQuery() {
+        eventsCollector.default.reportEvent("query", "delete-documents");
         // Run the query so that we have an idea of what we'll be deleting.
         var queryResult = this.runQuery();
         queryResult
@@ -636,9 +646,8 @@ class query extends viewModelBase {
         return null;
     }
 
-
-
     selectColumns() {
+        eventsCollector.default.reportEvent("query", "select-columns");
         var selectColumnsViewModel: selectColumns = new selectColumns(
             this.currentColumnsParams().clone(),
             this.currentCustomFunctions().clone(),
@@ -761,12 +770,14 @@ class query extends viewModelBase {
     }
 
     exportCsv() {
+        eventsCollector.default.reportEvent("query", "export-csv");
         var db = this.activeDatabase();
         var url = appUrl.forResourceQuery(db) + this.csvUrl();
         this.downloader.download(db, url);
     }
 
     fieldNameStartsWith() {
+        eventsCollector.default.reportEvent("query", "field-name-starts-with");
         var fieldStartsWithViewModel: fieldStringFilter = new fieldStringFilter("Field sub text");
         fieldStartsWithViewModel
             .applyFilterTask
@@ -791,6 +802,7 @@ class query extends viewModelBase {
     }
 
     fieldValueRange() {
+        eventsCollector.default.reportEvent("query", "field-value-range");
         var fieldRangeFilterViewModel: fieldRangeFilter = new fieldRangeFilter("Field range filter");
         fieldRangeFilterViewModel
             .applyFilterTask
@@ -829,6 +841,7 @@ class query extends viewModelBase {
     }
 
     fieldValueInMethod() {
+        eventsCollector.default.reportEvent("query", "field-value-in");
         var inMethodFilterViewModel: InMethodFilter = new InMethodFilter("Field in method filter");
         inMethodFilterViewModel
             .applyFilterTask

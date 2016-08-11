@@ -5,6 +5,7 @@ import database = require("models/resources/database");
 import conflictVersion = require("models/database/replication/conflictVersion");
 import customColumns = require("models/database/documents/customColumns");
 import customColumnParams = require('models/database/documents/customColumnParams');
+import eventsCollector = require("common/eventsCollector");
 
 import changesContext = require("common/changesContext");
 
@@ -165,6 +166,7 @@ class conflicts extends viewModelBase {
     }
 
     resolveToLocal() {
+        eventsCollector.default.reportEvent("conflicts", "resolve-to-local");
         this.confirmationMessage("Sure?", "You're resolving all conflicts to local.", ["No", "Yes"])
             .done(() => {
                 this.performResolve("ResolveToLocal");
@@ -172,6 +174,7 @@ class conflicts extends viewModelBase {
     }
 
     resolveToNewestRemote() {
+        eventsCollector.default.reportEvent("conflicts", "resolve-to-newest-remote");
         this.confirmationMessage("Sure?", "You're resolving all conflicts to newest remote.", ["No", "Yes"])
             .done(() => {
             this.performResolve("ResolveToRemote");
@@ -179,6 +182,7 @@ class conflicts extends viewModelBase {
     }
 
     resolveToLatest() {
+        eventsCollector.default.reportEvent("conflicts", "resolve-to-latest");
         this.confirmationMessage("Sure?", "You're resolving all conflicts to latest.", ["No", "Yes"])
             .done(() => {
             this.performResolve("ResolveToLatest");

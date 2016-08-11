@@ -11,6 +11,7 @@ import getCollectionsCommand = require("commands/database/documents/getCollectio
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class etl extends viewModelBase {
 
@@ -141,6 +142,7 @@ class etl extends viewModelBase {
     }
 
     createNewDestination() {
+        eventsCollector.default.reportEvent("etl", "create");
         var db = this.activeDatabase();
         var newDestination = replicationDestination.empty(db.name);
         newDestination.enableReplicateOnlyFromCollections(true);
@@ -152,10 +154,12 @@ class etl extends viewModelBase {
     }
 
     removeDestination(repl: replicationDestination) {
+        eventsCollector.default.reportEvent("etl", "remove");
         this.replicationsSetup().destinations.remove(repl);
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("etl", "save");
         if (this.isSetupSaveEnabled()) {
             if (this.replicationsSetup().source()) {
                 this.saveReplicationSetup();
@@ -197,6 +201,7 @@ class etl extends viewModelBase {
     }
 
     sendReplicateCommand(destination: replicationDestination, parentClass: etl) {
+        eventsCollector.default.reportEvent("etl", "send-replicate");
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
@@ -207,6 +212,7 @@ class etl extends viewModelBase {
     }
 
     enableReplication() {
+        eventsCollector.default.reportEvent("etl", "enable-replication");
         new enableReplicationCommand(this.activeDatabase())
             .execute()
             .done((bundles) => {
