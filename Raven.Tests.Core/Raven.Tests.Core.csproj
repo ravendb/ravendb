@@ -172,6 +172,7 @@
     <Compile Include="Replication\ManualConflictResolution.cs" />
     <Compile Include="ScriptedPatching\ScriptedPatchTests.cs" />
     <Compile Include="Session\Advanced.cs" />
+    <Compile Include="Session\OptimisticConcurrency.cs" />
     <Compile Include="Shard\Sharding.cs" />
     <Compile Include="Smuggler\SmugglerApiTests.cs" />
     <Compile Include="Utils\Entities\Camera.cs" />

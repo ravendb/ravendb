@@ -200,38 +200,6 @@ namespace Raven.Tests.Core.Session
         }
 
         [Fact]
-        public void CanUseOptmisticConcurrency()
-        {
-            const string entityId = "users/1";
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    Assert.False(session.Advanced.UseOptimisticConcurrency);
-                    session.Advanced.UseOptimisticConcurrency = true;
-
-                    session.Store(new User { Id = entityId, Name = "User1" });
-                    session.SaveChanges();
-
-                    using (var otherSession = store.OpenSession())
-                    {
-                        var otherUser = otherSession.Load<User>(entityId);
-                        otherUser.Name = "OtherName";
-                        otherSession.Store(otherUser);
-                        otherSession.SaveChanges();
-                    }
-
-                    var user = session.Load<User>("users/1");
-                    user.Name = "Name";
-                    session.Store(user);
-                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    Assert.Equal("PUT attempted on document '" + entityId + "' using a non current etag", e.Message);
-                }
-            }
-        }
-
-        [Fact]
         public void CanGetDocumentUrl()
         {
             using (var store = GetDocumentStore())
