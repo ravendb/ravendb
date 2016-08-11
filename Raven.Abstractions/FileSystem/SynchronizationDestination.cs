@@ -83,5 +83,10 @@ namespace Raven.Abstractions.FileSystem
                 return hashCode;
             }
         }
+
+        public override string ToString()
+        {
+            return Url;
+        }
     }
 }

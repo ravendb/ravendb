@@ -405,7 +405,7 @@ namespace Raven.Database.FileSystem.Synchronization
             var destinationUrl = destinationSyncClient.BaseUrl;
 
             bool enqueued = false;
-            Etag incrementedEtag = Etag.Empty;
+            var maxEtagOfFilteredDoc = Etag.Empty;
 
             foreach (var fileHeader in filteredFilesToSynchronization)
             {
@@ -435,28 +435,34 @@ namespace Raven.Database.FileSystem.Synchronization
                 if (work == null)
                 {
                     if (Log.IsDebugEnabled)
-                        Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, destinationUrl, reason.GetDescription());
+                        Log.Debug("File '{0}' was not synchronized to {1}. {2}", file, destinationUrl, reason.GetDescription());
 
-                    if (reason == NoSyncReason.ContainedInDestinationHistory)
+                    switch (reason)
                     {
-                        var etag = Etag.Parse(localMetadata.Value<string>(Constants.MetadataEtagField));
+                        case NoSyncReason.ContainedInDestinationHistory:
+                        case NoSyncReason.DestinationFileConflicted:
+                        case NoSyncReason.NoNeedToDeleteNonExistigFile:
+                            var localEtag = Etag.Parse(localMetadata.Value<string>(Constants.MetadataEtagField));
 
-                        await destinationSyncClient.IncrementLastETagAsync(storage.Id, FileSystemUrl, etag).ConfigureAwait(false);
-                        RemoveSyncingConfiguration(file, destinationUrl);
+                            if (reason == NoSyncReason.ContainedInDestinationHistory)
+                            {
+                                RemoveSyncingConfiguration(file, destinationUrl);
+                            }
+                            else if (reason == NoSyncReason.DestinationFileConflicted)
+                            {
+                                if (needSyncingAgain.Contains(fileHeader, FileHeaderNameEqualityComparer.Instance) == false)
+                                    CreateSyncingConfiguration(fileHeader.Name, fileHeader.Etag, destinationUrl, SynchronizationType.Unknown);
+                            }
+                            else if (reason == NoSyncReason.NoNeedToDeleteNonExistigFile)
+                            {
+                                // after the upgrade to newer build there can be still an existing syncing configuration for it
+                                RemoveSyncingConfiguration(file, destinationUrl);
+                            }
 
-                        if (EtagUtil.IsGreaterThan(etag, incrementedEtag))
-                            incrementedEtag = etag;
-                    }
-                    else if (reason == NoSyncReason.DestinationFileConflicted)
-                    {
-                        if (needSyncingAgain.Contains(fileHeader, FileHeaderNameEqualityComparer.Instance) == false)
-                            CreateSyncingConfiguration(fileHeader.Name, fileHeader.Etag, destinationUrl, SynchronizationType.Unknown);
+                            if (EtagUtil.IsGreaterThan(localEtag, maxEtagOfFilteredDoc))
+                                maxEtagOfFilteredDoc = localEtag;
 
-                        var etag = Etag.Parse(localMetadata.Value<string>(Constants.MetadataEtagField));
-                        await destinationSyncClient.IncrementLastETagAsync(storage.Id, FileSystemUrl, etag).ConfigureAwait(false);
-
-                        if (EtagUtil.IsGreaterThan(etag, incrementedEtag))
-                            incrementedEtag = etag;
+                            break;
                     }
 
                     continue;
@@ -479,8 +485,12 @@ namespace Raven.Database.FileSystem.Synchronization
                 enqueued = true;
             }
 
-            if (enqueued == false && EtagUtil.IsGreaterThan(incrementedEtag, synchronizationInfo.LastSourceFileEtag))
+            if (enqueued == false && EtagUtil.IsGreaterThan(maxEtagOfFilteredDoc, synchronizationInfo.LastSourceFileEtag))
+            {
+                await destinationSyncClient.IncrementLastETagAsync(storage.Id, FileSystemUrl, maxEtagOfFilteredDoc).ConfigureAwait(false);
+
                 return false; // we bumped the last synced etag on a destination server, let it know it need to repeat the operation
+            }
 
             return true;
         }
