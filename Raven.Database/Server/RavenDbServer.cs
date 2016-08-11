@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Database;

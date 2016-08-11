@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using metrics;
 using metrics.Core;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Util;
 

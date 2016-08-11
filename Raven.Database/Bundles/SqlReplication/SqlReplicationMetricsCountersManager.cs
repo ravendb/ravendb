@@ -5,6 +5,7 @@ using System.Linq;
 using metrics;
 using metrics.Core;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
 

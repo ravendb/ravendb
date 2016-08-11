@@ -15,11 +15,14 @@ namespace Raven.Abstractions.Data
         public double RequestsPerSecond { get; set; }
         public MeterData Requests { get; set; }
         public HistogramData RequestsDuration { get; set; }
+        public MeterData JsonDeserializationsPerSecond { get; set; }
+        public MeterData JsonDeserializedBytesPerSecond { get; set; }
+        public MeterData JsonSerializationsPerSecond { get; set; }
+        public MeterData JsonSerializedBytesPerSecond { get; set; }
         public HistogramData StaleIndexMaps { get; set; }
         public HistogramData StaleIndexReduces { get; set; }
         public Dictionary<string, Dictionary<string, string>> Gauges { get; set; }
         public Dictionary<string, MeterData> ReplicationBatchSizeMeter { get; set; }
-        public Dictionary<string, MeterData> ReplicationDurationMeter { get; set; }
         public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
     }
