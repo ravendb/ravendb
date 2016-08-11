@@ -14,7 +14,7 @@ namespace Raven.Database.Impl
             return null;
         }
 
-        public void SetCachedDocument(string key, Etag etag, ref RavenJObject doc, ref RavenJObject metadata, int size)
+        public void SetCachedDocument(string key, Etag etag, RavenJObject doc, RavenJObject metadata, int size)
         {
         }
 
