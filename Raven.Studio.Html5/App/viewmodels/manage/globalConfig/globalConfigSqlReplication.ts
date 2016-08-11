@@ -10,6 +10,7 @@ import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigSqlReplication extends viewModelBase {
 
@@ -58,6 +59,7 @@ class globalConfigSqlReplication extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("global-config-sql-replications", "save");
         this.syncChanges(false);
     }
 
@@ -88,6 +90,7 @@ class globalConfigSqlReplication extends viewModelBase {
     }
 
     addSqlReplicationConnection() {
+        eventsCollector.default.reportEvent("global-config-sql-replications", "create");
         var newPredefinedConnection = predefinedSqlConnection.empty();
         this.connections().predefinedConnections.splice(0, 0, newPredefinedConnection);
         this.subscribeToSqlReplicationConnectionName(newPredefinedConnection);
@@ -95,6 +98,7 @@ class globalConfigSqlReplication extends viewModelBase {
     }
 
     removeSqlReplicationConnection(connection) {
+        eventsCollector.default.reportEvent("global-config-sql-replications", "remove");
         this.connections().predefinedConnections.remove(connection);
     }
 
@@ -143,10 +147,12 @@ class globalConfigSqlReplication extends viewModelBase {
     }
 
     activateConfig() {
+        eventsCollector.default.reportEvent("global-config-sql-replications", "activate");
         this.activated(true);
     }
 
     disactivateConfig() {
+        eventsCollector.default.reportEvent("global-config-sql-replications", "disactivate");
         this.confirmationMessage("Delete global configuration for sql replication?", "Are you sure?")
             .done(() => {
                 this.connections().predefinedConnections.removeAll();

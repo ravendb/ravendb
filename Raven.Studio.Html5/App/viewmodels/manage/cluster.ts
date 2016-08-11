@@ -21,6 +21,7 @@ import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBin
 import license = require("models/auth/license");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class cluster extends viewModelBase {
 
@@ -68,6 +69,7 @@ class cluster extends viewModelBase {
     }
 
     refresh() {
+        eventsCollector.default.reportEvent("cluster", "refresh");
         return this.fetchClusterTopology(appUrl.getSystemDatabase())
             .done(() => this.fetchStatus(appUrl.getSystemDatabase()));
     }
@@ -111,6 +113,7 @@ class cluster extends viewModelBase {
     }
 
     addAnotherServerToCluster(forcedAdd: boolean) {
+        eventsCollector.default.reportEvent("cluster", "add-server");
         var newNode = nodeConnectionInfo.empty();
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
@@ -124,6 +127,7 @@ class cluster extends viewModelBase {
     }
 
     removeClustering() {
+        eventsCollector.default.reportEvent("cluster", "cleanup");
         this.confirmationMessage("Are you sure?", "You are about to clear cluster information on this server.")
             .done(() => {
                 new removeClusteringCommand(appUrl.getSystemDatabase())
@@ -136,6 +140,7 @@ class cluster extends viewModelBase {
     }
 
     createCluster() {
+        eventsCollector.default.reportEvent("cluster", "create");
         var newNode = nodeConnectionInfo.empty();
         newNode.name(this.systemDatabaseId());
         newNode.uri(this.serverUrl());
@@ -157,6 +162,7 @@ class cluster extends viewModelBase {
     }
 
     initializeNewCluster() {
+        eventsCollector.default.reportEvent("cluster", "secede");
         this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
             .done(() => {
                 new initializeNewClusterCommand(appUrl.getSystemDatabase())
@@ -166,6 +172,7 @@ class cluster extends viewModelBase {
     }
 
     editNode(node: nodeConnectionInfo) {
+        eventsCollector.default.reportEvent("cluster", "edit");
         var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
             .done((nci: nodeConnectionInfo) => {
@@ -178,6 +185,7 @@ class cluster extends viewModelBase {
     }
 
     leaveCluster(node: nodeConnectionInfo) {
+        eventsCollector.default.reportEvent("cluster", "leave");
         this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
             .done(() => {
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
@@ -187,6 +195,7 @@ class cluster extends viewModelBase {
     }
 
     promoteNodeToVoter(node: nodeConnectionInfo) {
+        eventsCollector.default.reportEvent("cluster", "promote");
         var nodeAsDto = node.toDto();
         nodeAsDto.IsNoneVoter = false;
         this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter.")

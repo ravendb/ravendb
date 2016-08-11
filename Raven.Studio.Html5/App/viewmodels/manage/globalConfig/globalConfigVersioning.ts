@@ -5,6 +5,7 @@ import getVersioningsCommand = require("commands/database/documents/getVersionin
 import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigVersioning extends viewModelBase {
     activated = ko.observable<boolean>(false);
@@ -50,6 +51,7 @@ class globalConfigVersioning extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("global-config-versioning", "save");
         this.syncChanges(false);
     }
 
@@ -79,10 +81,12 @@ class globalConfigVersioning extends viewModelBase {
     }
 
     createNewVersioning() {
+        eventsCollector.default.reportEvent("global-config-versioning", "create");
         this.versionings.push(new versioningEntry());
     }
 
     removeVersioning(entry: versioningEntry) {
+        eventsCollector.default.reportEvent("global-config-versioning", "remove");
         if (entry.fromDatabase()) {
             // If this entry is in database schedule the removal
             this.toRemove.push(entry);
@@ -111,6 +115,7 @@ class globalConfigVersioning extends viewModelBase {
     }
 
     activateConfig() {
+        eventsCollector.default.reportEvent("global-config-versioning", "activate");
         this.activated(true);
         this.versionings.push(this.defaultVersioningEntry());
     }
@@ -129,6 +134,7 @@ class globalConfigVersioning extends viewModelBase {
     }
 
     disactivateConfig() {
+        eventsCollector.default.reportEvent("global-config-versioning", "disactivate");
         this.confirmationMessage("Delete global configuration for versioning?", "Are you sure?")
             .done(() => {
                 this.activated(false);

@@ -10,6 +10,7 @@ import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 import numberFormattingStorage = require("common/numberFormattingStorage");
 import license = require("models/auth/license");
+import eventsCollector = require("common/eventsCollector");
 
 class studioConfig extends viewModelBase {
 
@@ -117,6 +118,7 @@ class studioConfig extends viewModelBase {
     }
 
     setEnvironmentColor(envColor: environmentColor) {
+        eventsCollector.default.reportEvent("studio-config", "env-color");
         var newDocument = this.configDocument();
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
@@ -127,6 +129,7 @@ class studioConfig extends viewModelBase {
     }
 
     setSystemDatabaseWarning(warnSetting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "sys-db-warning");
         if (this.warnWhenUsingSystemDatabase() !== warnSetting) {
             var newDocument = this.configDocument();
             this.warnWhenUsingSystemDatabase(warnSetting);
@@ -137,6 +140,7 @@ class studioConfig extends viewModelBase {
     }
 
     setSendUsageStats(setting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "usage-stats");
         if (this.sendUsageStats() !== setting) {
             var newDocument = this.configDocument();
             this.sendUsageStats(setting);
@@ -151,15 +155,18 @@ class studioConfig extends viewModelBase {
     }
 
     setEventSourceDisabled(setting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "event-source");
         this.disableEventSource(setting);
         eventSourceSettingStorage.setValue(setting);
     }
 
     setUpgradeReminder(upgradeSetting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "upgrade-reminder");
         serverBuildReminder.mute(upgradeSetting);
     }
 
     setNumberFormat(raw: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "number-format");
         this.rawFormat(raw);
         numberFormattingStorage.save(raw);
     }

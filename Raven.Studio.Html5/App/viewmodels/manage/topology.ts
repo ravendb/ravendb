@@ -10,6 +10,7 @@ import dagre = require('dagre');
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
 
 class topology extends viewModelBase {
 
@@ -151,6 +152,7 @@ class topology extends viewModelBase {
     }
 
     getDocumentsToReplicateCount() {
+        eventsCollector.default.reportEvent("topology", "get-pending-count");
         var currentLink = this.currentLink();
         if (currentLink == null) {
             return;
@@ -208,6 +210,7 @@ class topology extends viewModelBase {
     }
 
     export() {
+        eventsCollector.default.reportEvent("topology", "export");
         var confirmation = this.confirmationMessage("Export", "Are you sure that you want to export documents to replicate ids?");
         confirmation.done(() => {
             this.exportProgress("");
@@ -546,6 +549,7 @@ class topology extends viewModelBase {
     }
 
     fetchTopology() {
+        eventsCollector.default.reportEvent("topology", "fetch");
         this.showLoadingIndicator(true);
         new getGlobalReplicationTopology(this.fetchDb(), this.fetchFs(), this.fetchCs()) 
             .execute()
@@ -561,6 +565,7 @@ class topology extends viewModelBase {
     }
 
     saveAsPng() {
+        eventsCollector.default.reportEvent("topology", "save", "png");
         svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', svg => {
             this.preprocesSvgDownload(svg);
             return topology.inlineCss;
@@ -568,6 +573,7 @@ class topology extends viewModelBase {
     }
 
     saveAsSvg() {
+        eventsCollector.default.reportEvent("topology", "save", "svg");
         svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', (svg) => {
             this.preprocesSvgDownload(svg);
             return topology.inlineCss;
@@ -597,6 +603,7 @@ class topology extends viewModelBase {
     }
 
     saveAsJson() {
+        eventsCollector.default.reportEvent("topology", "save", "json");
         fileDownloader.downloadAsJson(this.topology(), "topology.json");
     }
 

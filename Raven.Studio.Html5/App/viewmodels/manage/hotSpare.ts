@@ -3,6 +3,7 @@ import getHotSpareInformation = require("commands/licensing/GetHotSpareInformati
 import testHotSpareCommand = require("commands/licensing/testHotSpareCommand");
 import activateHotSpareCommand = require("commands/licensing/activateHotSpareCommand");
 import shell = require("viewmodels/shell");
+import eventsCollector = require("common/eventsCollector");
 
 class hotSpare extends viewModelBase {
     runningOnExpiredLicense = ko.observable<boolean>(false);
@@ -47,6 +48,7 @@ class hotSpare extends viewModelBase {
     }
 
     testLicense() {
+        eventsCollector.default.reportEvent("hot-spare", "test");
         this.testLicenseRequestProcessing(true);
         new testHotSpareCommand().execute()
             .done(() => {
@@ -61,6 +63,7 @@ class hotSpare extends viewModelBase {
     }
 
     activateLicense() {
+        eventsCollector.default.reportEvent("hot-spare", "activate");
         var self = this;
         
         this.confirmationMessage("Hot Spare Activation", "This is a one time activation, valid for 96 hours, are you sure you want to activate the hot spare license?")
