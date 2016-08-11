@@ -1,31 +1,29 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList.PhilJones
+namespace SlowTests.MailingList.PhilJones
 {
-    public class PhilJones88 : RavenTest
+    public class PhilJones88 : RavenTestBase
     {
-        public class Admin
+        private class Admin
         {
             public string Id { get; set; }
             public string Username { get; set; }
         }
 
-        public class Customer
+        private class Customer
         {
             public string Id { get; set; }
             public string Username { get; set; }
             public string Name { get; set; }
         }
 
-        public class Proposal
+        private class Proposal
         {
             public string Id { get; set; }
             public string AdminUserId { get; set; }
@@ -41,7 +39,7 @@ namespace Raven.Tests.MailingList.PhilJones
             public DateTime Created { get; set; }
         }
 
-        public class ProposalListSearch
+        private class ProposalListSearch
         {
             public string[] ProposalIds { get; set; }
             public string CustomerUserId { get; set; }
@@ -49,7 +47,7 @@ namespace Raven.Tests.MailingList.PhilJones
             public DateTime Created { get; set; }
         }
 
-        public class ProposalListSearchResult
+        private class ProposalListSearchResult
         {
             public string Id { get; set; }
             public string TripName { get; set; }
@@ -61,7 +59,7 @@ namespace Raven.Tests.MailingList.PhilJones
             public DateTime Created { get; set; }
         }
 
-        public class Proposals_ListProjection : AbstractMultiMapIndexCreationTask<ProposalListSearch>
+        private class Proposals_ListProjection : AbstractMultiMapIndexCreationTask<ProposalListSearch>
         {
             public Proposals_ListProjection()
             {
@@ -92,51 +90,48 @@ namespace Raven.Tests.MailingList.PhilJones
                 Reduce = results => from result in results
                                     group result by result.CustomerUserId
                                         into g
-                                        select new
-                                        {
-                                            ProposalIds = g.SelectMany(x => x.ProposalIds).ToArray(),
-                                            CustomerUserId = g.Key,
-                                            Query = g.SelectMany(x => x.Query).ToArray(),
-                                            Created = g.Max(x => (DateTime)x.Created)
-                                        };
+                                    select new
+                                    {
+                                        ProposalIds = g.SelectMany(x => x.ProposalIds).ToArray(),
+                                        CustomerUserId = g.Key,
+                                        Query = g.SelectMany(x => x.Query).ToArray(),
+                                        Created = g.Max(x => (DateTime)x.Created)
+                                    };
 
                 Index(x => x.Query, FieldIndexing.Analyzed);
                 Store(x => x.Query, FieldStorage.No);
             }
         }
 
-        public class Proposals_ListProjectionTransformer : AbstractTransformerCreationTask<ProposalListSearch>
+        private class Proposals_ListProjectionTransformer : AbstractTransformerCreationTask<ProposalListSearch>
         {
             public Proposals_ListProjectionTransformer()
             {
                 TransformResults = results => from result in results
-                                                          let customer = LoadDocument<Customer>(result.CustomerUserId)
-                                                          from proposalId in result.ProposalIds.DefaultIfEmpty()
-                                                          let proposal = LoadDocument<Proposal>(proposalId)
-                                                          let admin = LoadDocument<Admin>(proposal.AdminUserId)
-                                                          orderby proposal.Created descending
-                                                          select
-                                                          new
-                                                          {
-                                                              proposal.Id,
-                                                              TripName = proposal.TripName,
-                                                              proposal.DepartureDate,
-                                                              proposal.HasBeenSent,
-                                                              proposal.IsFromTailorMade,
-                                                              CustomerName = customer.Name,
-                                                              SalesPerson = admin.Username,
-                                                              proposal.Created
-                                                          };
+                                              let customer = LoadDocument<Customer>(result.CustomerUserId)
+                                              from proposalId in result.ProposalIds.DefaultIfEmpty()
+                                              let proposal = LoadDocument<Proposal>(proposalId)
+                                              let admin = LoadDocument<Admin>(proposal.AdminUserId)
+                                              orderby proposal.Created descending
+                                              select
+                                              new
+                                              {
+                                                  proposal.Id,
+                                                  TripName = proposal.TripName,
+                                                  proposal.DepartureDate,
+                                                  proposal.HasBeenSent,
+                                                  proposal.IsFromTailorMade,
+                                                  CustomerName = customer.Name,
+                                                  SalesPerson = admin.Username,
+                                                  proposal.Created
+                                              };
             }
         }
 
         [Fact]
-        public void OrderByDescending_is_ignored_when_using_multimap_index()
+        public async Task OrderByDescending_is_ignored_when_using_multimap_index()
         {
-            using (var store = NewDocumentStore(configureStore: documentStore =>
-            {
-                documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
-            }))
+            using (var store = await GetDocumentStore())
             {
                 new Proposals_ListProjection().Execute(store);
                 new Proposals_ListProjectionTransformer().Execute(store);
@@ -165,6 +160,8 @@ namespace Raven.Tests.MailingList.PhilJones
                     session.Store(p5);
                     session.Store(p6);
                     session.SaveChanges();
+
+                    WaitForIndexing(store);
 
                     var proposals = session.Query<ProposalListSearch, Proposals_ListProjection>()
                                             .Customize(x => x.WaitForNonStaleResultsAsOfNow()) // strangely required to actually get data back, actual system just uses QueryYourWrites not this

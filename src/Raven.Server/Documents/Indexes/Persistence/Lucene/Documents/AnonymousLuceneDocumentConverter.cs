@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Lucene.Net.Documents;
 using Raven.Client.Data;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 
@@ -69,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public static bool ShouldTreatAsEnumerable(object item)
         {
-            if (item == null)
+            if (item == null || item is DynamicNullObject)
                 return false;
 
             if (item is DynamicBlittableJson)

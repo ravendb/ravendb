@@ -1,17 +1,16 @@
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList.PhilJones
+namespace SlowTests.MailingList.PhilJones
 {
-    public class Projections : RavenTest
+    public class Projections : RavenTestBase
     {
         [Fact]
-        public void WorkWithRealTypes()
+        public async Task WorkWithRealTypes()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -28,14 +27,13 @@ namespace Raven.Tests.MailingList.PhilJones
             }
         }
 
-        public class SelectListItem
+        private class SelectListItem
         {
             public string Text { get; set; }
             public string Value { get; set; }
         }
 
-
-        public class Offer
+        private class Offer
         {
             public string Id { get; set; }
             public string TripId { get; set; }

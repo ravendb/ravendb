@@ -729,6 +729,14 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
+            Transformer transformer = null;
+            if (string.IsNullOrEmpty(query.Transformer) == false)
+            {
+                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
+                if (transformer == null)
+                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
+            }
+
             TransactionOperationContext indexContext;
 
             using (MarkQueryAsRunning(query, token))
@@ -766,8 +774,8 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(result, isStale, documentsContext, indexContext);
 
-                        if (Type.IsMapReduce())
-                            documentsContext.Reset(); // map reduce don't need to access mapResults storage
+                        if (Type.IsMapReduce() && transformer == null)
+                            documentsContext.Reset(); // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
@@ -787,14 +795,6 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
-
-                            Transformer transformer = null;
-                            if (string.IsNullOrEmpty(query.Transformer) == false)
-                            {
-                                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
-                                if (transformer == null)
-                                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
-                            }
 
                             using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, DocumentDatabase.DocumentsStorage, DocumentDatabase.TransformerStore, documentsContext))
                             {

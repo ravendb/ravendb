@@ -1,26 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.Linq;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList.PhilJones
+namespace SlowTests.MailingList.PhilJones
 {
-    public class PhilJones1 : NoDisposalNeeded
+    public class PhilJones1 : RavenTestBase
     {
-        public class Bar
+        private class Bar
         {
             public string AdminUserId { get; set; }
             public string Note { get; set; }
             public DateTime ReminderDue { get; set; }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public string AdminUserId { get; set; }
@@ -30,7 +29,7 @@ namespace Raven.Tests.MailingList.PhilJones
             public List<Bar> Reminders { get; set; }
         }
 
-        public class FooListViewModel
+        private class FooListViewModel
         {
             public string AdminUserId { get; set; }
             public string Note { get; set; }
@@ -40,7 +39,7 @@ namespace Raven.Tests.MailingList.PhilJones
             public string Id { get; set; }
         }
 
-        public class Foos_BarProjection : AbstractIndexCreationTask<Foo>
+        private class Foos_BarProjection : AbstractIndexCreationTask<Foo>
         {
             public Foos_BarProjection()
             {
@@ -58,41 +57,40 @@ namespace Raven.Tests.MailingList.PhilJones
             }
         }
 
-            [Fact]
-            public void ravendb_fails_to_map()
+        [Fact]
+        public async Task ravendb_fails_to_map()
+        {
+            using (var store = await GetDocumentStore())
             {
-                using (var documentStore = new EmbeddableDocumentStore { Configuration = { Core = { RunInMemory = true }, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true } })
+                new Foos_BarProjection().Execute(store);
+
+                using (var session = store.OpenSession())
                 {
-                    documentStore.Conventions.DefaultQueryingConsistency = Raven.Client.Document.ConsistencyOptions.QueryYourWrites;
-                    documentStore.Initialize();
-
-                    new Foos_BarProjection().Execute(documentStore);
-
-                    using (var session = documentStore.OpenSession())
+                    var newReminder = new Foo
                     {
-                        var newReminder = new Foo
+                        AdminUserId = "users/1",
+                        FirstName = "Bob",
+                        LastName = "Smith",
+                        Reminders = new List<Bar>
                         {
-                            AdminUserId = "users/1",
-                            FirstName = "Bob",
-                            LastName = "Smith",
-                            Reminders = new List<Bar> 
-                        { 
                             new Bar { AdminUserId = "users/2", Note = "Ring Bob", ReminderDue = new DateTime(year: 2011, month: 12, day: 12)},
                             new Bar { AdminUserId = "users/3", Note ="Ring failed", ReminderDue = new DateTime(year:2011, month:12, day:11)}
                         }
-                        };
+                    };
 
-                        session.Store(newReminder);
-                        session.SaveChanges();
+                    session.Store(newReminder);
+                    session.SaveChanges();
 
-                        var reminders = session.Query<Foo, Foos_BarProjection>()
-                            .Where(x => x.Reminders.Any(y => y.ReminderDue == new DateTime(2011, 12, 12)))
-                            .ProjectFromIndexFieldsInto<FooListViewModel>()
-                            .ToList();
+                    WaitForIndexing(store);
 
-                        Assert.Equal(1, reminders.Count());
-                    }
+                    var reminders = session.Query<Foo, Foos_BarProjection>()
+                        .Where(x => x.Reminders.Any(y => y.ReminderDue == new DateTime(2011, 12, 12)))
+                        .ProjectFromIndexFieldsInto<FooListViewModel>()
+                        .ToList();
+
+                    Assert.Equal(1, reminders.Count());
                 }
+            }
         }
     }
 }

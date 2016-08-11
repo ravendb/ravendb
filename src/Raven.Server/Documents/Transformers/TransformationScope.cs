@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Includes;
 using Sparrow.Json;
 
@@ -99,7 +100,7 @@ namespace Raven.Server.Documents.Transformers
 
         private static object ConvertType(object value, JsonOperationContext context)
         {
-            if (value == null)
+            if (value == null || value is DynamicNullObject)
                 return null;
 
             var dynamicDocument = value as DynamicBlittableJson;
@@ -114,6 +115,9 @@ namespace Raven.Server.Documents.Transformers
                 return value;
 
             if (value is LazyStringValue || value is LazyCompressedStringValue)
+                return value;
+
+            if (value is bool)
                 return value;
 
             if (value is DateTime)

@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (_key == null)
                 {
                     result = DynamicNullObject.Null;
-                    return false;
+                    return true;
                 }
 
                 result = _key;
