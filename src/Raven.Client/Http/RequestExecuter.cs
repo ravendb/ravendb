@@ -350,7 +350,7 @@ namespace Raven.Client.Http
                     // TODO: Should we choose nodes here by rate value as for SLA?
                     foreach (var node in topology.Nodes)
                     {
-                        if (node.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                        if (node.IsFailed == false && command.IsFailedWithNode(node) == false)
                             return node;
                     }
 
@@ -369,7 +369,7 @@ namespace Raven.Client.Http
 
                     foreach (var node in nodesWithLeader.OrderBy(node => node.Rate()))
                     {
-                        if (node.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                        if (node.IsFailed == false && command.IsFailedWithNode(node) == false)
                             return node;
                     }
                     
@@ -394,7 +394,7 @@ namespace Raven.Client.Http
                 // TODO: Should we choose nodes here by rate value as for SLA?
                 foreach (var node in topology.Nodes)
                 {
-                    if (node.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
+                    if (node.IsFailed == false && command.IsFailedWithNode(node) == false)
                         return node;
                 }
 
