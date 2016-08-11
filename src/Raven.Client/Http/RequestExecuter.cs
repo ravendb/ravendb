@@ -351,14 +351,14 @@ namespace Raven.Client.Http
 
             if (command.IsReadRequest)
             {
-                if (topology.ReadBehavior == ReadBehavior.Leader)
+                if (topology.ReadBehavior == ReadBehavior.ReadFromLeaderOnly)
                 {
                     if (command.IsFailedWithNode(leaderNode) == false)
                         return new ChoosenNode {Node = leaderNode};
                     throw new HttpRequestException("Leader not was failed to make this request. The current ReadBehavior is set to Leader to we won't failover to a differnt node.", exception);
                 }
 
-                if (topology.ReadBehavior == ReadBehavior.All)
+                if (topology.ReadBehavior == ReadBehavior.ReadFromRandomNode)
                 {
                     if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
                         return new ChoosenNode {Node = leaderNode};
@@ -379,7 +379,7 @@ namespace Raven.Client.Http
                     throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
                 }
 
-                if (topology.ReadBehavior == ReadBehavior.SLA)
+                if (topology.ReadBehavior == ReadBehavior.ReadFromLeaderWithFailoverWhenRequestTimeSlaThresholdIsReached)
                 {
                     if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false && leaderNode.IsRateSurpassed(topology.SLA.RequestTimeThresholdInMilliseconds))
                         return new ChoosenNode {Node = leaderNode};
@@ -406,14 +406,14 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException($"Invalid ReadBehaviour value: {topology.ReadBehavior}");
             }
 
-            if (topology.WriteBehavior == WriteBehavior.Leader)
+            if (topology.WriteBehavior == WriteBehavior.WriteToLeaderOnly)
             {
                 if (command.IsFailedWithNode(leaderNode) == false)
                     return new ChoosenNode {Node = leaderNode};
                 throw new HttpRequestException("Leader not was failed to make this request. The current WriteBehavior is set to Leader to we won't failover to a differnt node.", exception);
             }
 
-            if (topology.WriteBehavior == WriteBehavior.Failover)
+            if (topology.WriteBehavior == WriteBehavior.WriteToLeaderWithFailover)
             {
                 if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
                     return new ChoosenNode {Node = leaderNode};
