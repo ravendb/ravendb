@@ -57,6 +57,7 @@ namespace Raven.Server
             };
 
             metricsTicker = MetricsTicker.Instance;
+            
         }
 
         public InMemoryRavenConfiguration Configuration

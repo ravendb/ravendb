@@ -990,6 +990,10 @@ interface statusDebugMetricsDto {
     RequestsPerSecond: number;
     Requests: meterDataDto;
     RequestsDuration: histogramDataDto;
+    JsonDeserializationsPerSecond: meterDataDto;
+    JsonDeserializedBytesPerSecond: meterDataDto;
+    JsonSerializationsPerSecond: meterDataDto;
+    JsonSerializedBytesPerSecond: meterDataDto;
     StaleIndexMaps: histogramDataDto;
     StaleIndexReduces: histogramDataDto;
     Gauges: any;

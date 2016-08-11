@@ -27,6 +27,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Abstractions.Util.MiniMetrics;
 using Raven.Database.Actions;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
@@ -846,6 +847,10 @@ namespace Raven.Database
                 RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
                 RequestDurationLastMinute = metrics.RequestDurationLastMinute.GetData(),
                 Requests = metrics.ConcurrentRequests.CreateMeterData(),
+                JsonDeserializationsPerSecond = JsonExtensions.JsonStreamDeserializationsPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamDeserializationsPerSecond.GetValue(),
+                JsonDeserializedBytesPerSecond = JsonExtensions.JsonStreamDeserializedBytesPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamDeserializedBytesPerSecond.GetValue(),
+                JsonSerializationsPerSecond = JsonExtensions.JsonStreamSerializationsPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamSerializationsPerSecond.GetValue(),
+                JsonSerializedBytesPerSecond = JsonExtensions.JsonStreamSerializedBytesPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamSerializedBytesPerSecond.GetValue(),
                 Gauges = metrics.Gauges,
                 StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
                 StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),

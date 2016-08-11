@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Util.MiniMetrics;
 
 namespace Raven.Abstractions.Data
 {
@@ -18,6 +19,12 @@ namespace Raven.Abstractions.Data
         public OneMinuteMetricData RequestDurationLastMinute { get; set; }
         public HistogramData StaleIndexMaps { get; set; }
         public HistogramData StaleIndexReduces { get; set; }
+
+        public MeterValue? JsonDeserializationsPerSecond { get; set; }
+        public MeterValue? JsonDeserializedBytesPerSecond { get; set; }
+        public MeterValue? JsonSerializationsPerSecond { get; set; }
+        public MeterValue? JsonSerializedBytesPerSecond { get; set; }
+
         public Dictionary<string, Dictionary<string, string>> Gauges { get; set; }
         public Dictionary<string, MeterData> ReplicationBatchSizeMeter { get; set; }
         public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }

@@ -484,6 +484,12 @@
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\EnvironmentUtils.cs" />
+    <Compile Include="Util\MiniMetrics\ActionScheduler.cs" />
+    <Compile Include="Util\MiniMetrics\Clock.cs" />
+    <Compile Include="Util\MiniMetrics\EWMA.cs" />
+    <Compile Include="Util\MiniMetrics\MeterMetric.cs" />
+    <Compile Include="Util\MiniMetrics\MeterValue.cs" />
+    <Compile Include="Util\MiniMetrics\MetricsScheduler.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
