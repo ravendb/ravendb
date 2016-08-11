@@ -66,5 +66,25 @@ namespace Raven.Client.Http
                 return hashCode;
             }
         }
+
+        private const double MaxDecreasingRatio = 0.75;
+        private const double MinDecreasingRatio = 0.25;
+
+        public void DecreaseRate(long requestTimeInMilliseconds)
+        {
+            var rate = Rate();
+            var maxRate = MaxDecreasingRatio * rate;
+            var minRate = MinDecreasingRatio * rate;
+
+            var decreasingRate = rate - requestTimeInMilliseconds;
+
+            if (decreasingRate > maxRate)
+                decreasingRate = maxRate;
+
+            if (decreasingRate < minRate)
+                decreasingRate = minRate;
+
+            UpdateRequestTime((long)decreasingRate);
+        }
     }
 }

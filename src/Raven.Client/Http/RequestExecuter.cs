@@ -365,6 +365,8 @@ namespace Raven.Client.Http
                     var nodesWithLeader = topology.Nodes;
                     nodesWithLeader.Add(leaderNode);
 
+                    leaderNode.DecreaseRate(topology.SLA.RequestTimeThresholdInMilliseconds);
+
                     foreach (var node in nodesWithLeader.OrderBy(node => node.Rate()))
                     {
                         if (node.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
