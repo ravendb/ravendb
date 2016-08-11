@@ -27,6 +27,7 @@ class cluster extends viewModelBase {
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>(); 
+    isLeavingCluster = ko.observable<boolean>(); 
 
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
@@ -178,18 +179,24 @@ class cluster extends viewModelBase {
     }
 
     leaveCluster(node: nodeConnectionInfo) {
-        this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
+        this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster")
             .done(() => {
+                this.isLeavingCluster(true);
+                node.isLeavingCluster(true);
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
                     .execute()
-                    .done(() => setTimeout(() => this.refresh(), 500));
-        });
+                    .done(() => setTimeout(() => this.refresh(), 500))
+                    .always(() => {
+                        node.isLeavingCluster(false);
+                        this.isLeavingCluster(false);
+                    });
+            });
     }
 
     promoteNodeToVoter(node: nodeConnectionInfo) {
         var nodeAsDto = node.toDto();
         nodeAsDto.IsNoneVoter = false;
-        this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter.")
+        this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter")
             .done(() => {
                 new changeNodeVotingModeCommand(appUrl.getSystemDatabase(), nodeAsDto)
                     .execute()

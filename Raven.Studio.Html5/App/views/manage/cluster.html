@@ -77,7 +77,13 @@
                                     <button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button>
                                     <button data-bind="visible: state() === 'non-voting', click: $root.promoteNodeToVoter.bind($root)" class="btn btn-default"><i class="fa fa-arrow-up"></i> Promote</button> 
                                 </td>
-                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()"><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
+                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()">
+                                    <button data-bind="click: $root.leaveCluster.bind($root), disable: $root.isLeavingCluster" class="btn btn-danger">
+                                        <i class="fa fa-trash" data-bind="visible: isLeavingCluster() == false"></i>
+                                        <i class="fa fa-spinner fa-spin fa-fw fa-1" data-bind="visible: isLeavingCluster"></i>
+                                        Leave cluster
+                                    </button>
+                                </td>
                             </tr>
                         </tbody>
                     </table>

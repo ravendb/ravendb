@@ -9,6 +9,7 @@ class nodeConnectionInfo {
     state = ko.observable<string>(); // used to store owning collection name (voting, non-voting, promotable)
     status = ko.observable<string>("Loading");
     isVoting = ko.observable<boolean>();
+    isLeavingCluster = ko.observable<boolean>();
 
     constructor(dto: nodeConnectionInfoDto) {
         this.uri(dto.Uri);
