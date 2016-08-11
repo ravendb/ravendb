@@ -77,12 +77,14 @@ class studioConfig extends viewModelBase {
     canActivate(args): any {
         var deferred = $.Deferred();
 
-        if (this.isForbidden() === false) {
+        if (this.isForbidden() === false) { 
             new getDocumentWithMetadataCommand(this.documentId, this.systemDatabase)
                 .execute()
                 .done((doc: documentClass) => {
                     this.configDocument(doc);
-                    this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
+                    if ("WarnWhenUsingSystemDatabase" in doc) {
+                        this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
+                    }
                     this.sendUsageStats(doc["SendUsageStats"]);
                 })
                 .fail(() => this.configDocument(documentClass.empty()))

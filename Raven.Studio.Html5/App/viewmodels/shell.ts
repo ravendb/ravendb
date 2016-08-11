@@ -18,6 +18,7 @@ import changeSubscription = require("common/changeSubscription");
 import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -165,6 +166,9 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
     showSplash = viewModelBase.showSplash;
+
+    displayUsageStatsInfo = ko.observable<boolean>(false);
+    trackingTask = $.Deferred();
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
@@ -854,7 +858,7 @@ class shell extends viewModelBase {
                 router.activate();
 
                 $.when(configTask, studioVersionTask).then((configResult: any, buildVersionResult: any) => {
-                    shell.configureAnalytics(configResult, buildVersionResult);
+                    this.initAnalytics(configResult, buildVersionResult);
                 });
             })
             .always(() => deferred.resolve());
@@ -862,18 +866,56 @@ class shell extends viewModelBase {
         return deferred;
     }
 
-    static configureAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+    private initAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+        if (eventsCollector.gaDefined()) {
+            if (config == null || !("SendUsageStats" in config)) {
+                // ask user about GA
+                this.displayUsageStatsInfo(true);
 
+                this.trackingTask.done((accepted: boolean) => {
+                    this.displayUsageStatsInfo(false);
+
+                    if (accepted) {
+                        this.configureAnalytics(true, buildVersionResult);
+                    }
+                    this.saveTrackingSetting(config, accepted);
+                });
+            } else {
+                this.configureAnalytics(config.SendUsageStats, buildVersionResult);
+            }
+        } else {
+            // user has uBlock etc?
+            this.configureAnalytics(false, buildVersionResult);
+        }
+    }
+
+    private saveTrackingSetting(config: any, track: boolean) {
+        if (config == null) {
+            config = documentClass.empty();
+        }
+
+        config.SendUsageStats = track;
+
+        new saveDocumentCommand(shell.studioConfigDocumentId, config, this.systemDatabase, false)
+            .execute();
+    }
+
+    collectUsageData() {
+        this.trackingTask.resolve(true);
+    }
+
+    doNotCollectUsageData() {
+        this.trackingTask.resolve(false);
+    }
+
+    private configureAnalytics(track: boolean, buildVersionResult: [serverBuildVersionDto]) {
         var currentBuildVersion = buildVersionResult[0].BuildVersion;
         if (currentBuildVersion !== 13) {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         }
 
-        var statsEnabled = config != null && config.SendUsageStats;
-
-        var env = license.licenseStatus().IsCommercial ? "prod" : "dev";
-
-        eventsCollector.default.initialize(shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, statsEnabled);
+        var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
+        eventsCollector.default.initialize(shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, track);
     }
 
     private loadFileSystems(): JQueryPromise<any> {

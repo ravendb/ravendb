@@ -180,7 +180,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\tasks\subscriptionsTask.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\files\searchInFolderClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\resetIndexConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\activityItems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\sourceSynchronizationInformation.ts" />
@@ -418,6 +417,7 @@
     <Content Include="App\views\resources\disableResourceToggleConfirm.html" />
     <Content Include="App\views\resources\filesystemSettingsDialog.html" />
     <Content Include="App\views\resources\resources.html" />
+    <Content Include="App\views\usageStats.html" />
     <Content Include="App\views\shell.html" />
     <Content Include="App\views\timeSeries\configuration\types.html" />
     <Content Include="App\views\timeSeries\deleteKey.html" />
@@ -450,6 +450,7 @@
     <Content Include="Content\durandal.css" />
     <Content Include="Content\font-awesome.css" />
     <Content Include="Content\font-awesome.min.css" />
+    <Content Include="Content\images\analytics-img.png" />
     <Content Include="Content\images\icon.png" />
     <Content Include="Content\images\ios-startup-image-landscape.png" />
     <Content Include="Content\images\ios-startup-image-portrait.png" />
@@ -980,7 +981,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\resolveConflict.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\synchronization.ts" />

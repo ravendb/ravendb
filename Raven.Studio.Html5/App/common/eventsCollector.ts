@@ -1,6 +1,6 @@
 
 class eventsCollector {
-    static UACode = "UA-82090983-1"; //TODO: change me!
+    static UACode = "UA-82335022-1";
 
     static default = new eventsCollector();
 
@@ -18,7 +18,7 @@ class eventsCollector {
         this.version = version;
         this.build = build;
         this.env = env;
-        this.enabled = enabled;
+        this.enabled = enabled && eventsCollector.gaDefined();
         this.createTracker();
 
         this.initialized = true;
@@ -26,17 +26,23 @@ class eventsCollector {
         this.processQueue();
     }
 
+    static gaDefined() {
+        return typeof (ga) !== 'undefined';
+    }
+
     createTracker() {
-        ga('create', eventsCollector.UACode, 'auto');
-        ga('set', 'dimension1', this.version);
-        ga('set', 'dimension2', this.build);
-        ga('set', 'dimension3', this.env);
+        if (eventsCollector.gaDefined()) {
+            ga('create', eventsCollector.UACode, 'auto');
+            ga('set', 'dimension1', this.version);
+            ga('set', 'dimension2', this.build);
+            ga('set', 'dimension3', this.env);
+        }
     }
 
     processQueue() {
         if (this.enabled) {
             this.preInitializationQueue.forEach(action => {
-                action();
+                action(ga);
             });
         }
         
@@ -59,7 +65,7 @@ class eventsCollector {
 
     private internalLog(action: (ga: UniversalAnalytics.ga) => void) {
         if (!this.initialized) {
-            this.preInitializationQueue.push(ga);
+            this.preInitializationQueue.push(action);
             return;
         }
         if (!this.enabled) {
