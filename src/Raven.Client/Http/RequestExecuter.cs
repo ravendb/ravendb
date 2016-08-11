@@ -362,17 +362,24 @@ namespace Raven.Client.Http
                     if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false && leaderNode.IsRateSurpassed(topology.SLA.RequestTimeThresholdInMilliseconds))
                         return leaderNode;
 
-                    var nodesWithLeader = topology.Nodes;
-                    nodesWithLeader.Add(leaderNode);
+                    var nodesWithLeader = topology.Nodes
+                        .Union(new[] { leaderNode })
+                        .OrderBy(node => node.Rate())
+                        .ToArray();
 
-                    leaderNode.DecreaseRate(topology.SLA.RequestTimeThresholdInMilliseconds);
-
-                    foreach (var node in nodesWithLeader.OrderBy(node => node.Rate()))
+                    ServerNode fastestNode = null;
+                    foreach (var node in nodesWithLeader)
                     {
-                        if (node.IsFailed == false && command.IsFailedWithNode(node) == false)
-                            return node;
+                        if (fastestNode == null && node.IsFailed == false && command.IsFailedWithNode(node) == false)
+                            fastestNode = node;
+                        else
+                        {
+                            node.DecreaseRate(topology.SLA.RequestTimeThresholdInMilliseconds);
+                        }
                     }
-                    
+                    if (fastestNode != null)
+                        return fastestNode;
+
                     throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
                 }
 
