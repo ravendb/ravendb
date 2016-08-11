@@ -158,8 +158,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     {
                         var data = columnStream.ToJObject();
 
-                        cacher.SetCachedDocument(key, existingEtag, ref data, ref metadata, documentSize);
-                        //todo : add metrics
+                        cacher.SetCachedDocument(key, existingEtag, data, metadata, documentSize);
+                        
                         return data;
                     }
                 }
@@ -281,7 +281,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
 
             var serializedSizeOnDisk = metadataBuffer.Length + docSize;
-            cacher.SetCachedDocument(key, existingEtag, ref dataAsJson, ref metadata, serializedSizeOnDisk);
+            cacher.SetCachedDocument(key, existingEtag, dataAsJson, metadata, serializedSizeOnDisk);
 
             return new JsonDocument
             {
