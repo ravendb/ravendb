@@ -92,8 +92,13 @@ namespace Raven.Server.Documents.Replication
                                     _log.Info($"Got heartbeat from ({FromToString}) with etag {lastReceivedEtag}.");
                                 if (prevRecievedEtag != lastReceivedEtag)
                                 {
-                                    _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
-                                    prevRecievedEtag = lastReceivedEtag;
+                                    using (_context.OpenWriteTransaction())
+                                    {
+                                        _database.DocumentsStorage.SetLastReplicateEtagFrom(_context,
+                                            ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
+                                        prevRecievedEtag = lastReceivedEtag;
+                                        _context.Transaction.Commit();
+                                    }
                                 }
                                 SendStatusToSource(writer, -1);
                                 continue;
@@ -104,6 +109,9 @@ namespace Raven.Server.Documents.Replication
                             try
                             {
                                 var sw = Stopwatch.StartNew();
+                                //TODO: Here we are reading from the network while
+                                //TODO: holding the write tx open, this is bad, we need
+                                //TODO: to read to memory, and only then open the tx
                                 using (_context.OpenWriteTransaction())
                                 {
                                     AcceptDocumentsFromSource(replicatedDocs);
@@ -182,7 +190,13 @@ namespace Raven.Server.Documents.Replication
         private void SendStatusToSource(BlittableJsonTextWriter writer, long lastReceivedEtag)
         {
             var changeVector = new DynamicJsonArray();
-            var databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(_context);
+            ChangeVectorEntry[] databaseChangeVector;
+
+            using (_context.OpenReadTransaction())
+            {
+                databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(_context);
+            }
+
             foreach (var changeVectorEntry in databaseChangeVector)
             {
                 changeVector.Add(new DynamicJsonValue
@@ -203,6 +217,8 @@ namespace Raven.Server.Documents.Replication
                 ["Error"] = null,
                 ["CurrentChangeVector"] = changeVector
             });
+
+            writer.Flush();
         }
 
         private static int ValidateReplicationBatchAndGetDocsCount(BlittableJsonReaderObject message)
