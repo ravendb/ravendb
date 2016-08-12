@@ -10,6 +10,7 @@ namespace Raven.Client.Documents.Commands
         public string Id;
         public long? Etag;
         public BlittableJsonReaderObject Document;
+        public JsonOperationContext Context;
 
         public override HttpRequestMessage CreateRequest(out string url)
         {

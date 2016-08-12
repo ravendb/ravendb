@@ -2,8 +2,11 @@
 {
     public enum ReadBehavior
     {
-        All,
-        Leader,
-        SLA
+        ReadFromLeaderOnly,
+        ReadFromLeaderWithFailover,
+        ReadFromLeaderWithFailoverWhenRequestTimeSlaThresholdIsReached,
+        ReadFromRandomNode,
+        ReadFromRandomNodeWithFailoverWhenRequestTimeSlaThresholdIsReached,
+        ReadFromFastestNode,
     }
 }

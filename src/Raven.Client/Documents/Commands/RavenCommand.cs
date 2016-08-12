@@ -13,8 +13,6 @@ namespace Raven.Client.Documents.Commands
     {
         public CancellationToken CancellationToken = CancellationToken.None;
 
-        public JsonOperationContext Context;
-
         public HashSet<ServerNode> FailedNodes;
 
         public TResult Result;
@@ -34,6 +32,11 @@ namespace Raven.Client.Documents.Commands
         {
             if (string.IsNullOrEmpty(value))
                 throw new ArgumentException($"{name} cannot be null or empty", name);
+        }
+
+        public bool IsFailedWithNode(ServerNode leaderNode)
+        {
+            return FailedNodes != null && FailedNodes.Contains(leaderNode);
         }
     }
 }
