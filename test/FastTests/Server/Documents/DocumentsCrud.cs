@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents
 {
-    public class DocumentsCrud : IDisposable
+    public class DocumentsCrud : RavenLowLevelTestBase
     {
         private RavenConfiguration _configuration;
         private DocumentDatabase _documentDatabase;
@@ -556,10 +556,12 @@ namespace FastTests.Server.Documents
 
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _documentDatabase.Dispose();
             _unmanagedBuffersPool.Dispose();
+
+            base.Dispose();
         }
     }
 }

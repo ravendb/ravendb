@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 using Lucene.Net.Analysis;
@@ -24,21 +25,16 @@ namespace FastTests.Server.Documents.Indexing
 
             var fields = new Dictionary<string, IndexField>();
             fields.Add(Constants.AllFields, new IndexField());
-            var analyzer = operation.GetAnalyzer(fields, forQuerying: false);
 
-            Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
-            Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer("Unknown_Field"));
+            Assert.Throws<InvalidOperationException>(() => operation.GetAnalyzer(fields, forQuerying: false));
 
             fields.Clear();
             fields.Add(Constants.AllFields, new IndexField { Analyzer = "StandardAnalyzer" });
-            analyzer = operation.GetAnalyzer(fields, forQuerying: false);
-
-            Assert.IsType<StandardAnalyzer>(analyzer.GetAnalyzer(string.Empty));
-            Assert.IsType<StandardAnalyzer>(analyzer.GetAnalyzer("Unknown_Field"));
+            Assert.Throws<InvalidOperationException>(() => operation.GetAnalyzer(fields, forQuerying: false));
 
             fields.Clear();
             fields.Add("Field1", new IndexField { Analyzer = "StandardAnalyzer" }); // field must be 'NotAnalyzed' or 'Analyzed'
-            analyzer = operation.GetAnalyzer(fields, forQuerying: false);
+            var analyzer = operation.GetAnalyzer(fields, forQuerying: false);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer("Field1"));

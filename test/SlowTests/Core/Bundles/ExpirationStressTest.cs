@@ -5,12 +5,13 @@
 //-----------------------------------------------------------------------
 
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Documents.Expiration;
 using Xunit;
 
 namespace SlowTests.Core.Bundles
 {
-    public class ExpirationStressTest
+    public class ExpirationStressTest : NoDisposalNeeded
     {
         [Theory]
         [InlineData(10)]

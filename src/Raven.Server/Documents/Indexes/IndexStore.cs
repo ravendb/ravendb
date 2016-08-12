@@ -296,13 +296,14 @@ namespace Raven.Server.Documents.Indexes
             return ResetIndexInternal(index);
         }
 
-        public void DeleteIndex(string name)
+        public bool TryDeleteIndexIfExists(string name)
         {
             var index = GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is no index with name: " + name);
+                return false;
 
             DeleteIndexInternal(index.IndexId);
+            return true;
         }
 
         public void DeleteIndex(int id)

@@ -52,5 +52,11 @@ namespace Raven.Server.Documents.Queries.Results
                 Data = result
             };
         }
+
+        public bool TryGetKey(Lucene.Net.Documents.Document document, out string key)
+        {
+            key = null;
+            return false;
+        }
     }
 }

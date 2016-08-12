@@ -49,9 +49,25 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Sum":
                 case "Average":
                     return Visit(ModifyLambdaForNumerics(node));
+                case "Any":
+                case "All":
+                case "First":
+                case "FirstOrDefault":
+                case "Last":
+                case "LastOfDefault":
+                case "Single":
+                case "Where":
+                case "Count":
+                case "SingleOrDefault":
+                    return Visit(ModifyLambdaForBools(node));
             }
 
             return base.VisitSimpleLambdaExpression(node);
+        }
+
+        private static SyntaxNode ModifyLambdaForBools(SimpleLambdaExpressionSyntax node)
+        {
+            return SyntaxFactory.ParseExpression($"(Func<dynamic, bool>)({node})");
         }
 
         private static SyntaxNode ModifyLambdaForSelectMany(SimpleLambdaExpressionSyntax node)

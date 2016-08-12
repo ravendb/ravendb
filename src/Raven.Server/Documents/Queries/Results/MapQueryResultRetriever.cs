@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -27,12 +29,20 @@ namespace Raven.Server.Documents.Queries.Results
 
         public Document Get(Lucene.Net.Documents.Document input)
         {
-            var id = input.Get(Constants.DocumentIdFieldName);
+            string id;
+            if (TryGetKey(input, out id) == false)
+                throw new InvalidOperationException($"Could not extract '{Constants.DocumentIdFieldName}' from index.");
 
-            if (_fieldsToFetch.IsProjection)
+            if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)
                 return GetProjection(input, id);
 
             return DirectGet(id);
+        }
+
+        public bool TryGetKey(Lucene.Net.Documents.Document input, out string key)
+        {
+            key = input.Get(Constants.DocumentIdFieldName);
+            return key != null;
         }
 
         private Document DirectGet(string id)
@@ -64,7 +74,33 @@ namespace Raven.Server.Documents.Queries.Results
             if (_fieldsToFetch.IsDistinct == false)
                 result[Constants.DocumentIdFieldName] = id;
 
-            foreach (var fieldToFetch in _fieldsToFetch.Fields.Values)
+            Dictionary<string, FieldsToFetch.FieldToFetch> fields;
+            if (_fieldsToFetch.ExtractAllFromIndexAndDocument)
+            {
+                fields = input.GetFields()
+                    .Where(x => x.Name != Constants.DocumentIdFieldName)
+                    .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
+
+                doc = _documentsStorage.Get(_context, id);
+                documentLoaded = true;
+
+                if (doc != null)
+                {
+                    foreach (var name in doc.Data.GetPropertyNames())
+                    {
+                        if (fields.ContainsKey(name))
+                            continue;
+
+                        fields[name] = new FieldsToFetch.FieldToFetch(name, canExtractFromIndex: false);
+                    }
+                }
+            }
+            else
+            {
+                fields = _fieldsToFetch.Fields;
+            }
+
+            foreach (var fieldToFetch in fields.Values)
             {
                 if (TryExtractValueFromIndex(fieldToFetch, input, result))
                     continue;

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Server.Json
 {
-    public class BlittableJsonTraverserTests : IDisposable
+    public class BlittableJsonTraverserTests : RavenLowLevelTestBase
     {
         private readonly UnmanagedBuffersPool _pool;
         private readonly JsonOperationContext _ctx;
@@ -250,7 +250,7 @@ namespace FastTests.Server.Json
             return doc;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             foreach (var docReader in _docs)
             {
@@ -259,6 +259,8 @@ namespace FastTests.Server.Json
 
             _ctx.Dispose();
             _pool.Dispose();
+
+            base.Dispose();
         }
     }
 }

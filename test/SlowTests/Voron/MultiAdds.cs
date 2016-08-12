@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using FastTests;
 using Sparrow.Logging;
 using Voron;
 using Xunit;
 
 namespace SlowTests.Voron
 {
-    public class MultiAdds
+    public class MultiAdds : NoDisposalNeeded
     {
         readonly Random _random = new Random(1234);
 

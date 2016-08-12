@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -14,7 +15,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly Queue<long> _idsOfDeletedEntries = new Queue<long>();
 
         public Tree MapEntries;
-        public Dictionary<ulong, ReduceKeyState> StateByReduceKeyHash = new Dictionary<ulong, ReduceKeyState>();
+        public FixedSizeTree ResultsStoreTypes;
+        public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new Dictionary<ulong, MapReduceResultsStore>(); // TODO arek NumericEqualityComparer.Instance
         public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
         public Dictionary<string, long> ProcessedTombstoneEtags = new Dictionary<string, long>();
         
@@ -27,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapEntries = null;
             ProcessedDocEtags.Clear();
             ProcessedTombstoneEtags.Clear();
-            StateByReduceKeyHash.Clear();
+            StoreByReduceKeyHash.Clear();
             _idsOfDeletedEntries.Clear();
         }
 

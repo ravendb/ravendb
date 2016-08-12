@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
-            if (_mapReduceContext.StateByReduceKeyHash.Count == 0)
+            if (_mapReduceContext.StoreByReduceKeyHash.Count == 0)
                 return false;
 
             _aggregationBatch.Clear();
@@ -57,154 +57,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var table = new Table(_reduceResultsSchema, "PageNumberToReduceResult", indexContext.Transaction.InnerTransaction);
 
             var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
-            var parentPagesToAggregate = new Dictionary<long, Tree>();
+            
 
             var writer = writeOperation.Value;
 
-            foreach (var state in _mapReduceContext.StateByReduceKeyHash)
+            foreach (var store in _mapReduceContext.StoreByReduceKeyHash)
             {
-                using (var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)))
+                using (var reduceKeyHash = indexContext.GetLazyString(store.Key.ToString(CultureInfo.InvariantCulture)))
+                using (store.Value)
                 {
-                    var modifiedState = state.Value;
+                    var modifiedStore = store.Value;
 
-                    foreach (var modifiedPage in modifiedState.ModifiedPages)
+                    switch (modifiedStore.Type)
                     {
-                        token.ThrowIfCancellationRequested();
+                        case MapResultsStorageType.Tree:
+                            HandleTreeReduction(indexContext, stats, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
+                            break;
+                        case MapResultsStorageType.Nested:
+                            HandleNestedValuesReduction(indexContext, stats, token, modifiedStore, writer, reduceKeyHash);
+                            break;
 
-                        if (modifiedState.FreedPages.Contains(modifiedPage))
-                            continue;
-
-                        var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
-                        if (page.IsLeaf == false)
-                            continue;
-
-                        if (page.NumberOfEntries == 0)
-                        {
-                            if (page.PageNumber != modifiedState.Tree.State.RootPageNumber)
-                            {
-                                throw new InvalidOperationException($"Encountered empty page which isn't a root. Page #{page.PageNumber} in '{modifiedState.Tree.Name}' tree.");
-                            }
-
-                            writer.DeleteReduceResult(reduceKeyHash, stats);
-
-                            var emptyPageNumber = page.PageNumber;
-                            table.DeleteByKey(Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long)));
-
-                            continue;
-                        }
-
-                        var parentPage = modifiedState.Tree.GetParentPageOf(page);
-
-                        stats.RecordReduceAttempts(page.NumberOfEntries);
-
-                        try
-                        {
-                            using (var result = AggregateLeafPage(page, lowLevelTransaction, table, indexContext))
-                            {
-                                if (parentPage == -1)
-                                {
-                                    writer.DeleteReduceResult(reduceKeyHash, stats);
-
-                                    foreach (var output in result.Outputs)
-                                    {
-                                        writer.IndexDocument(reduceKeyHash, new Document
-                                        {
-                                            Key = reduceKeyHash,
-                                            Data = output
-                                        }, stats);
-                                    }
-
-                                    _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
-
-                                    stats.RecordReduceSuccesses(page.NumberOfEntries);
-                                }
-                                else
-                                {
-                                    parentPagesToAggregate[parentPage] = modifiedState.Tree;
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
-
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info(message, e);
-
-                            if (parentPage == -1)
-                            {
-                                stats.RecordReduceErrors(page.NumberOfEntries);
-                                stats.AddReduceError(message + $" Message: {message}.");
-                            }
-                        }
-                    }
-
-                    long tmp = 0;
-                    var pageNumberSlice = Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long));
-                    foreach (var freedPage in modifiedState.FreedPages)
-                    {
-                        tmp = freedPage;
-                        table.DeleteByKey(pageNumberSlice);
-                    }
-
-                    while (parentPagesToAggregate.Count > 0)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        var other = parentPagesToAggregate;
-                        parentPagesToAggregate = new Dictionary<long, Tree>();
-
-                        foreach (var kvp in other)
-                        {
-                            var pageNumber = kvp.Key;
-                            var tree = kvp.Value;
-                            var page = lowLevelTransaction.GetPage(pageNumber).ToTreePage();
-
-                            if (page.IsBranch == false)
-                            {
-                                throw new InvalidOperationException("Parent page was found that wasn't a branch, error at " + page.PageNumber);
-                            }
-
-                            var parentPage = tree.GetParentPageOf(page);
-
-                            int aggregatedEntries = 0;
-
-                            try
-                            {
-                                using (var result = AggregateBranchPage(page, table, indexContext, out aggregatedEntries))
-                                {
-                                    if (parentPage == -1)
-                                    {
-                                        writer.DeleteReduceResult(reduceKeyHash, stats);
-                                        foreach (var output in result.Outputs)
-                                        {
-                                            writer.IndexDocument(reduceKeyHash, new Document
-                                            {
-                                                Key = reduceKeyHash,
-                                                Data = output
-                                            }, stats);
-                                        }
-                                        _metrics.MapReduceReducedPerSecond.Mark(aggregatedEntries);
-
-                                        stats.RecordReduceSuccesses(aggregatedEntries);
-                                    }
-                                    else
-                                    {
-                                        parentPagesToAggregate[parentPage] = tree;
-                                    }
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a branch page #{page} of '{_indexDefinition.Name}' index.";
-
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info(message, e);
-
-                                stats.RecordReduceErrors(aggregatedEntries);
-                                stats.AddReduceError(message + $" Message: {message}.");
-                            }
-                        }
+                        default:
+                            throw new ArgumentOutOfRangeException(modifiedStore.Type.ToString());
                     }
                 }
             }
@@ -222,7 +96,216 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext)
+        private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats, 
+                    CancellationToken token, MapReduceResultsStore modifiedStore, 
+                    IndexWriteOperation writer, LazyStringValue reduceKeyHash)
+        {
+            var numberOfEntriesToReduce = 0;
+
+            try
+            {
+                modifiedStore.FlushNestedValues();
+
+                var section = modifiedStore.GetNestedResultsSection();
+
+                foreach (var mapResult in section.GetResults())
+                {
+                    _aggregationBatch.Add(mapResult.Value);
+                    numberOfEntriesToReduce++;
+                }
+
+                stats.RecordReduceAttempts(numberOfEntriesToReduce);
+
+                var result = AggregateOn(_aggregationBatch, indexContext, token);
+
+                writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                foreach (var output in result.Outputs)
+                {
+                    writer.IndexDocument(reduceKeyHash, new Document
+                    {
+                        Key = reduceKeyHash,
+                        Data = output
+                    }, stats);
+                }
+
+                _metrics.MapReduceReducedPerSecond.Mark(numberOfEntriesToReduce);
+
+                stats.RecordReduceSuccesses(numberOfEntriesToReduce);
+            }
+            catch (Exception e)
+            {
+                foreach (var item in _aggregationBatch)
+                {
+                    item.Dispose();
+                }
+
+                var message = $"Failed to execute reduce function for reduce key '{reduceKeyHash}' on nested values of '{_indexDefinition.Name}' index.";
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(message, e);
+
+                stats.RecordReduceErrors(numberOfEntriesToReduce);
+                stats.AddReduceError(message + $" Message: {message}.");
+            }
+            finally
+            {
+                _aggregationBatch.Clear();
+            }
+        }
+
+        private void HandleTreeReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
+            CancellationToken token, MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
+            IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table)
+        {
+            var parentPagesToAggregate = new Dictionary<long, Tree>();
+
+            foreach (var modifiedPage in modifiedStore.ModifiedPages)
+            {
+                token.ThrowIfCancellationRequested();
+
+                if (modifiedStore.FreedPages.Contains(modifiedPage))
+                    continue;
+
+                var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
+                if (page.IsLeaf == false)
+                    continue;
+
+                if (page.NumberOfEntries == 0)
+                {
+                    if (page.PageNumber != modifiedStore.Tree.State.RootPageNumber)
+                    {
+                        throw new InvalidOperationException(
+                            $"Encountered empty page which isn't a root. Page #{page.PageNumber} in '{modifiedStore.Tree.Name}' tree.");
+                    }
+
+                    writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                    var emptyPageNumber = page.PageNumber;
+                    table.DeleteByKey(Slice.External(indexContext.Allocator, (byte*) &emptyPageNumber, sizeof(long)));
+
+                    continue;
+                }
+
+                var parentPage = modifiedStore.Tree.GetParentPageOf(page);
+
+                stats.RecordReduceAttempts(page.NumberOfEntries);
+
+                try
+                {
+                    using (var result = AggregateLeafPage(page, lowLevelTransaction, table, indexContext, token))
+                    {
+                        if (parentPage == -1)
+                        {
+                            writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                            foreach (var output in result.Outputs)
+                            {
+                                writer.IndexDocument(reduceKeyHash, new Document
+                                {
+                                    Key = reduceKeyHash,
+                                    Data = output
+                                }, stats);
+                            }
+
+                            _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
+
+                            stats.RecordReduceSuccesses(page.NumberOfEntries);
+                        }
+                        else
+                        {
+                            parentPagesToAggregate[parentPage] = modifiedStore.Tree;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    var message =
+                        $"Failed to execute reduce function for reduce key '{modifiedStore.Tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(message, e);
+
+                    if (parentPage == -1)
+                    {
+                        stats.RecordReduceErrors(page.NumberOfEntries);
+                        stats.AddReduceError(message + $" Message: {message}.");
+                    }
+                }
+            }
+
+            long tmp = 0;
+            var pageNumberSlice = Slice.External(indexContext.Allocator, (byte*) &tmp, sizeof(long));
+            foreach (var freedPage in modifiedStore.FreedPages)
+            {
+                tmp = freedPage;
+                table.DeleteByKey(pageNumberSlice);
+            }
+
+            while (parentPagesToAggregate.Count > 0)
+            {
+                token.ThrowIfCancellationRequested();
+
+                var other = parentPagesToAggregate;
+                parentPagesToAggregate = new Dictionary<long, Tree>();
+
+                foreach (var kvp in other)
+                {
+                    var pageNumber = kvp.Key;
+                    var tree = kvp.Value;
+                    var page = lowLevelTransaction.GetPage(pageNumber).ToTreePage();
+
+                    if (page.IsBranch == false)
+                    {
+                        throw new InvalidOperationException("Parent page was found that wasn't a branch, error at " +
+                                                            page.PageNumber);
+                    }
+
+                    var parentPage = tree.GetParentPageOf(page);
+
+                    int aggregatedEntries = 0;
+
+                    try
+                    {
+                        using (var result = AggregateBranchPage(page, table, indexContext, token, out aggregatedEntries))
+                        {
+                            if (parentPage == -1)
+                            {
+                                writer.DeleteReduceResult(reduceKeyHash, stats);
+                                foreach (var output in result.Outputs)
+                                {
+                                    writer.IndexDocument(reduceKeyHash, new Document
+                                    {
+                                        Key = reduceKeyHash,
+                                        Data = output
+                                    }, stats);
+                                }
+                                _metrics.MapReduceReducedPerSecond.Mark(aggregatedEntries);
+
+                                stats.RecordReduceSuccesses(aggregatedEntries);
+                            }
+                            else
+                            {
+                                parentPagesToAggregate[parentPage] = tree;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        var message =
+                            $"Failed to execute reduce function for reduce key '{modifiedStore.Tree.Name}' on a branch page #{page} of '{_indexDefinition.Name}' index.";
+
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(message, e);
+
+                        stats.RecordReduceErrors(aggregatedEntries);
+                        stats.AddReduceError(message + $" Message: {message}.");
+                    }
+                }
+            }
+        }
+
+        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext, CancellationToken token)
         {
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
@@ -232,10 +315,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _aggregationBatch.Add(reduceEntry);
             }
 
-            return AggregateBatchResults(_aggregationBatch, page.PageNumber, page.NumberOfEntries, table, indexContext);
+            return AggregateBatchResults(_aggregationBatch, page.PageNumber, page.NumberOfEntries, table, indexContext, token);
         }
 
-        private AggregationResult AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, out int aggregatedEntries)
+        private AggregationResult AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, CancellationToken token, out int aggregatedEntries)
         {
             aggregatedEntries = 0;
 
@@ -259,17 +342,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            return AggregateBatchResults(_aggregationBatch, page.PageNumber, aggregatedEntries, table, indexContext);
+            return AggregateBatchResults(_aggregationBatch, page.PageNumber, aggregatedEntries, table, indexContext, token);
         }
 
         private AggregationResult AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, long modifiedPage, int aggregatedEntries,
-            Table table, TransactionOperationContext indexContext)
+            Table table, TransactionOperationContext indexContext, CancellationToken token)
         {
             AggregationResult result;
 
             try
             {
-                result = AggregateOn(aggregationBatch, indexContext);
+                result = AggregateOn(aggregationBatch, indexContext, token);
             }
             catch (Exception)
             {
@@ -305,6 +388,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return result;
         }
 
-        protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext);
+        protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);
     }
 }

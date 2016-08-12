@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using Raven.Client.Linq;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -73,6 +74,11 @@ namespace Raven.Server.Documents.Indexes.Static
         public decimal Sum(Func<object, decimal> selector)
         {
             return Enumerable.Sum(this, selector);
+        }
+
+        public dynamic DefaultIfEmpty(object defaultValue = null)
+        {
+            return Enumerable.DefaultIfEmpty(this, defaultValue ?? DynamicNullObject.Null);
         }
 
         private class DynamicArrayIterator : IEnumerator<object>

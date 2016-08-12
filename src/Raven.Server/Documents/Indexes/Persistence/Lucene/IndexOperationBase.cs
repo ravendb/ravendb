@@ -19,12 +19,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         protected RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, Dictionary<string, IndexField> fields, bool forQuerying = false)
         {
-            Analyzer defaultAnalyzer;
-            IndexField value;
-            if (fields.TryGetValue(Constants.AllFields, out value) && string.IsNullOrWhiteSpace(value.Analyzer) == false)
-                defaultAnalyzer = IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, value.Analyzer);
-            else
-                defaultAnalyzer = createDefaultAnalyzer();
+            if (fields.ContainsKey(Constants.AllFields))
+                throw new InvalidOperationException($"Detected '{Constants.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
+
+            var defaultAnalyzer = createDefaultAnalyzer();
 
             RavenStandardAnalyzer standardAnalyzer = null;
             KeywordAnalyzer keywordAnalyzer = null;
@@ -60,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public abstract void Dispose();
 
-        private Analyzer GetAnalyzer(string name, IndexField field, bool forQuerying)
+        private static Analyzer GetAnalyzer(string name, IndexField field, bool forQuerying)
         {
             if (string.IsNullOrWhiteSpace(field.Analyzer))
                 return null;

@@ -35,7 +35,6 @@ namespace Raven.Server.Documents.Transformers
 
         public dynamic Source;
 
-        private DynamicBlittableJson _document;
         private HashSet<string> _nested;
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString)
@@ -48,14 +47,14 @@ namespace Raven.Server.Documents.Transformers
                 throw new ArgumentException("Cannot execute LoadDocument. Source is not set.");
 
             var id = source.__document_id as LazyStringValue;
-            if (id == null)
-                throw new ArgumentException("Cannot execute LoadDocument. Source does not have a key.");
+            if (id != null)
+            {
+                if (keyLazy != null && id.Equals(keyLazy))
+                    return source;
 
-            if (keyLazy != null && id.Equals(keyLazy))
-                return source;
-
-            if (keyString != null && id.Equals(keyString))
-                return source;
+                if (keyString != null && id.Equals(keyString))
+                    return source;
+            }
 
             Slice keySlice;
             if (keyLazy != null)
@@ -71,16 +70,8 @@ namespace Raven.Server.Documents.Transformers
             if (document == null)
                 return DynamicNullObject.Null;
 
-            if (_document == null)
-            {
-                _document = new DynamicBlittableJson(document);
-            }
-            else
-            {
-                _document.Set(document);
-            }
-
-            return _document;
+            // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
+            return new DynamicBlittableJson(document);
         }
 
         public dynamic Include(object key)
@@ -178,6 +169,9 @@ namespace Raven.Server.Documents.Transformers
         {
             if (value == null)
                 return null;
+
+            if (value is DynamicNullObject)
+                return value;
 
             if (value is DynamicBlittableJson)
                 return value;

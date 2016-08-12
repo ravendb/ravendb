@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new AutoIndexDocsEnumerator(documents);
         }
 
-        public override unsafe void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
+        public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
             var document = ((Document[])mapResults)[0];
             Debug.Assert(key == document.Key);
@@ -148,15 +148,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             var reduceHashKey = _reduceKeyProcessor.Hash;
 
-            var state = GetReduceKeyState(reduceHashKey, indexContext, create: true);
-
             using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
             {
                 var mapResult = _singleOutputList[0];
 
                 mapResult.Data = mappedresult;
                 mapResult.ReduceKeyHash = reduceHashKey;
-                mapResult.State = state;
 
                 PutMapResults(document.Key, _singleOutputList, indexContext);
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -18,12 +19,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
         }
 
-        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext)
+        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token)
         {
             var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 
             foreach (var obj in aggregationBatch)
             {
+                token.ThrowIfCancellationRequested();
+
                 using (obj)
                 {
                     var aggregatedResult = new Dictionary<string, PropertyResult>();

@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Threading;
+﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Tests.Notifications;
 using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class Subscriptions: RavenTestBase
+    public class Subscriptions : RavenTestBase
     {
         [Fact]
         public async Task BasicSusbscriptionTest()

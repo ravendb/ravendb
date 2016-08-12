@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Reflection;
+using FastTests;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
@@ -7,7 +8,7 @@ using Xunit;
 
 namespace SlowTests.Voron
 {
-    public class DuplicatePageUsage
+    public class DuplicatePageUsage : NoDisposalNeeded
     {
 
         private readonly TableSchema _entriesSchema = new TableSchema()
