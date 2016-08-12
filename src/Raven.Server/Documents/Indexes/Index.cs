@@ -782,7 +782,7 @@ namespace Raven.Server.Documents.Indexes
                             var totalResults = new Reference<int>();
                             var skippedResults = new Reference<int>();
 
-                            var fieldsToFetch = new FieldsToFetch(query, Definition);
+                            var fieldsToFetch = new FieldsToFetch(query, Definition, transformer);
                             IEnumerable<Document> documents;
 
                             if (string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false)
@@ -870,7 +870,7 @@ namespace Raven.Server.Documents.Indexes
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
                     var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
-                    foreach (var document in reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, new FieldsToFetch(fieldsToFetch, Definition)), token.Token))
+                    foreach (var document in reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, new FieldsToFetch(fieldsToFetch, Definition, null)), token.Token))
                     {
                         result.Results.Add(document);
                         includeDocumentsCommand.Gather(document);
