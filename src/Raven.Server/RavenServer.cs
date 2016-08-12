@@ -41,7 +41,6 @@ namespace Raven.Server
 
         private IWebHost _webHost;
         private Task<List<TcpListener>> _tcpListenerTask;
-        private readonly UnmanagedBuffersPool _unmanagedBuffersPool = new UnmanagedBuffersPool("TcpConnectionPool");
         private readonly Logger _tcpLogger;
 
         public RavenServer(RavenConfiguration configuration)
@@ -245,7 +244,7 @@ namespace Raven.Server
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
                     stream = tcpClient.GetStream();
-                    context = new JsonOperationContext(_unmanagedBuffersPool);
+                    context = new JsonOperationContext();
                     multiDocumentParser = context.ParseMultiFrom(stream);
                     try
                     {
@@ -373,7 +372,6 @@ namespace Raven.Server
             }
             ServerStore?.Dispose();
             Timer?.Dispose();
-            _unmanagedBuffersPool?.Dispose();
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)

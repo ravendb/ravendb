@@ -14,7 +14,7 @@ namespace Sparrow.Json
         private class Segment
         {
             public Segment Previous;
-            public UnmanagedBuffersPool.AllocatedMemoryData Allocation;
+            public AllocatedMemoryData Allocation;
             public byte* Address;
             public int Used;
 
@@ -28,7 +28,7 @@ namespace Sparrow.Json
 
         public int SizeInBytes => _sizeInBytes;
 
-        internal UnmanagedWriteBuffer(JsonOperationContext context, UnmanagedBuffersPool.AllocatedMemoryData allocatedMemoryData)
+        internal UnmanagedWriteBuffer(JsonOperationContext context, AllocatedMemoryData allocatedMemoryData)
         {
             _context = context;
             _current = new Segment
@@ -80,7 +80,7 @@ namespace Sparrow.Json
             // grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
             var nextSegmentSize = Math.Max(Bits.NextPowerOf2(required), _current.Allocation.SizeInBytes * 2);
-            const int oneMb = 1024*1024*1024;
+            const int oneMb = 1024*1024;
             if (nextSegmentSize > oneMb && required <= oneMb)
             {
                 nextSegmentSize = oneMb;
@@ -134,14 +134,7 @@ namespace Sparrow.Json
             _current.Used = 0;
             _sizeInBytes = 0;
 
-            // this releases everything but the current item
-            var prev = _current.Previous;
             _current.Previous = null;
-            while (prev != null)
-            {
-                _context.ReturnMemory(prev.Allocation);
-                prev = prev.Previous;
-            }
         }
 
         public void Dispose()
@@ -150,12 +143,7 @@ namespace Sparrow.Json
                 return;
 
             _context.LastStreamSize(_sizeInBytes);
-            var cur = _current;
-            while (cur != null)
-            {
-                _context.ReturnMemory(cur.Allocation);
-                cur = cur.Previous;
-            }
+
             _disposed = true;
         }
 
@@ -178,12 +166,7 @@ namespace Sparrow.Json
             _current = realCurrent.Previous;
             CopyTo(realCurrent.Address);
             realCurrent.Used = SizeInBytes;
-            var cur = _current;
-            while (cur != null)
-            {
-                _context.ReturnMemory(cur.Allocation);
-                cur = cur.Previous;
-            }
+            
             _current = realCurrent;
             _current.Previous = null;
             ptr = _current.Address;

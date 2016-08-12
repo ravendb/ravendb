@@ -44,8 +44,7 @@ namespace Sparrow.Json
 
         public byte* DecompressToTempBuffer()
         {
-            int bufferSize;
-            var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize, out bufferSize);
+            var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize);
             int uncompressedSize;
 
             if (UncompressedSize > 128)

@@ -48,7 +48,7 @@ namespace Sparrow.Json
             if (_propertyNameToId.TryGetValue(propName, out prop) == false)
             {
                 var propIndex = _docPropNames.Count;
-                propName = _context.Intern(propName);
+                propName = _context.GetLazyStringForFieldWithCaching(propName);
                 prop = new PropertyName
                 {
                     Comparer = propName,

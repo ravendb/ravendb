@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     {
         private readonly UnmanagedBuffersPool _buffersPool;
         private Mode _mode;
-        private UnmanagedBuffersPool.AllocatedMemoryData _buffer;
+        private AllocatedMemoryData _buffer;
         private int _bufferPos;
         private ulong _singleValueHash;
 

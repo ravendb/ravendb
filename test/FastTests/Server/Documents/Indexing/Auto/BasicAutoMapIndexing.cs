@@ -271,7 +271,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Storage = FieldStorage.No
                 } }), database))
                 {
-                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                    using (var context = new DocumentsOperationContext(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -961,7 +961,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var index1 = database.IndexStore.GetIndex(index1Id);
                 var index2 = database.IndexStore.GetIndex(index2Id);
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                using (var context = new DocumentsOperationContext(database))
                 {
                     await index1.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
                     context.Reset();
@@ -981,7 +981,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                using (var context = new DocumentsOperationContext(database))
                 {
                     await index1.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
                 }

@@ -13,7 +13,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         public void Can_handle_values_of_different_types()
         {
             using (var bufferPool = new UnmanagedBuffersPool("ReduceKeyProcessorTests"))
-            using (var context = new JsonOperationContext(bufferPool))
+            using (var context = new JsonOperationContext())
             {
                 var sut = new ReduceKeyProcessor(10, bufferPool);
 

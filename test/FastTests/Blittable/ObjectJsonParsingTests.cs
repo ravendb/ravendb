@@ -14,8 +14,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Zzz()
         {
-            using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new JsonOperationContext(pool))
+            using (var ctx = new JsonOperationContext())
             {
                 var array = new DynamicJsonArray
                 {
@@ -43,8 +42,7 @@ namespace FastTests.Blittable
         {
             var traverser = new BlittableJsonTraverser();
 
-            using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new JsonOperationContext(pool))
+            using (var ctx = new JsonOperationContext())
             {
                 var input = new DynamicJsonValue
                 {
@@ -150,8 +148,7 @@ namespace FastTests.Blittable
 
         private static void AssertEqualAfterRoundTrip(DynamicJsonValue doc, string expected)
         {
-            using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new JsonOperationContext(pool))
+            using (var ctx = new JsonOperationContext())
             {
                 using (var writer = ctx.ReadObject(doc, "foo"))
                 {

@@ -51,8 +51,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }), database);
 
                 var mapReduceContext = new MapReduceIndexingContext();
-                using (var pool = new UnmanagedBuffersPool("test"))
-                using (var contextPool = new TransactionContextPool(pool, database.DocumentsStorage.Environment))
+                using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
 
@@ -86,8 +85,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }, database);
 
                 var mapReduceContext = new MapReduceIndexingContext();
-                using (var pool = new UnmanagedBuffersPool("test"))
-                using (var contextPool = new TransactionContextPool(pool, database.DocumentsStorage.Environment))
+                using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
                     var reducer = new ReduceMapResultsOfStaticIndex(index._compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(), mapReduceContext);
@@ -145,7 +143,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 var queryResult =
                     await
                         index.Query(new IndexQueryServerSide(),
-                            new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
+                            new DocumentsOperationContext(database),
                             OperationCancelToken.None);
 
                 var results = queryResult.Results;
@@ -199,7 +197,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
 
                 queryResult = await index.Query(new IndexQueryServerSide(),
-                            new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
+                            new DocumentsOperationContext(database),
                             OperationCancelToken.None);
 
                 results = queryResult.Results;
@@ -250,7 +248,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             new SortedField("Location"),
                         }
                     },
-                    new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database),
+                    new DocumentsOperationContext(database),
                     OperationCancelToken.None);
 
                 results = queryResult.Results;

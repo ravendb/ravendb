@@ -25,7 +25,6 @@ namespace Raven.Client.Document
         private static readonly ILog Log = LogManager.GetLogger(typeof(TcpBulkInsertOperation));
         private readonly CancellationTokenSource _cts;
         private readonly Task _getServerResponseTask;
-        private UnmanagedBuffersPool _unmanagedBuffersPool;
         private JsonOperationContext _jsonOperationContext;
         private readonly BlockingCollection<MemoryStream> _documents = new BlockingCollection<MemoryStream>();
         private readonly BlockingCollection<MemoryStream> _buffers =
@@ -58,8 +57,7 @@ namespace Raven.Client.Document
         public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
-            _unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/client");
-            _jsonOperationContext = new JsonOperationContext(_unmanagedBuffersPool);
+            _jsonOperationContext = new JsonOperationContext();
             _cts = cts ?? new CancellationTokenSource();
             _tcpClient = new TcpClient();
 
@@ -236,7 +234,7 @@ namespace Raven.Client.Document
         private void ReadServerResponses(Stream stream)
         {
             bool completed = false;
-            using (var context = new JsonOperationContext(_unmanagedBuffersPool))
+            using (var context = new JsonOperationContext())
             {
                 do
                 {
@@ -401,8 +399,6 @@ namespace Raven.Client.Document
                 _tcpClient = null;
                 _jsonOperationContext?.Dispose();
                 _jsonOperationContext = null;
-                _unmanagedBuffersPool?.Dispose();
-                _unmanagedBuffersPool = null;
                 GC.SuppressFinalize(this);
             }
         }

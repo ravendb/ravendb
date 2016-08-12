@@ -16,8 +16,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [MemberData("Samples")]
         public void CanReadAll(string name)
         {
-            using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new JsonOperationContext(pool))
+            using (var ctx = new JsonOperationContext())
             using (var stream = typeof(UnmanageJsonReaderTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             using (var parser = new UnmanagedJsonParser(ctx, new JsonParserState(), "test"))
             {

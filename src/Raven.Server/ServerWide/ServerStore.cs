@@ -100,8 +100,7 @@ namespace Raven.Server.ServerWide
                 throw;
             }
 
-            _pool = new UnmanagedBuffersPool("ServerStore");// 128MB should be more than big enough for the server store
-            ContextPool = new TransactionContextPool(_pool, _env);
+            ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
         }
 
@@ -178,7 +177,6 @@ namespace Raven.Server.ServerWide
 
             ContextPool?.Dispose();
 
-            toDispose.Add(_pool);
             toDispose.Add(_env);
             toDispose.Add(DatabasesLandlord);
 

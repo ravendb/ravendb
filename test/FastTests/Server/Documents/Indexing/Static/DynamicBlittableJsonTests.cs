@@ -14,14 +14,12 @@ namespace FastTests.Server.Documents.Indexing.Static
 {
     public class DynamicBlittableJsonTests
     {
-        private readonly UnmanagedBuffersPool _pool;
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
 
         public DynamicBlittableJsonTests()
         {
-            _pool = new UnmanagedBuffersPool("foo");
-            _ctx = new JsonOperationContext(_pool);
+            _ctx = new JsonOperationContext();
         }
 
         [Fact]
@@ -95,7 +93,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
 
             _ctx.Dispose();
-            _pool.Dispose();
         }
     }
 }

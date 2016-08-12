@@ -15,13 +15,7 @@ namespace Sparrow.Json
         private readonly ConcurrentStack<AllocatedMemoryData>[] _freeSegments;
 
         private bool _isDisposed;
-
-        public class AllocatedMemoryData
-        {
-            public IntPtr Address;
-            public int SizeInBytes;
-        }
-
+        
         public UnmanagedBuffersPool(string debugTag)
         {
             _debugTag = debugTag;

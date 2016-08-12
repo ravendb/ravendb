@@ -9,13 +9,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
     public class LazyStringValueReaderTests : RavenLowLevelTestBase
     {
         private readonly LazyStringReader _sut = new LazyStringReader();
-        private readonly UnmanagedBuffersPool _pool;
         private readonly JsonOperationContext _ctx;
 
         public LazyStringValueReaderTests()
         {
-            _pool = new UnmanagedBuffersPool("foo");
-            _ctx = new JsonOperationContext(_pool);
+            _ctx = new JsonOperationContext();
         }
 
         [Theory]
@@ -76,7 +74,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         public override void Dispose()
         {
             _ctx.Dispose();
-            _pool.Dispose();
 
             base.Dispose();
         }

@@ -1,5 +1,7 @@
 ﻿{
   "Test\"": "\n",
   "Url": "http: //foo",
-  "TwoEscapes": "\r\n"
+  "TwoEscapes": "\r\n",
+  "Escaping\/Slash": "Should be\/\/OK",
+  "One/slash": "One/Slash2"
 }

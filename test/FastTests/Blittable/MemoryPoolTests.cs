@@ -14,7 +14,7 @@ namespace FastTests.Blittable
         {
             using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
-                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var allocatedMemory = new List<AllocatedMemoryData>();
                 for (var i = 0; i < 1000; i++)
                 {
                     allocatedMemory.Add(pool.Allocate(i));
@@ -31,7 +31,7 @@ namespace FastTests.Blittable
         {
             using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
-                var allocatedMemory = new global::Sparrow.Collections.ConcurrentSet<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var allocatedMemory = new global::Sparrow.Collections.ConcurrentSet<AllocatedMemoryData>();
                 Parallel.For(0, 100, x =>
                 {
                     for (var i = 0; i < 10; i++)
@@ -52,7 +52,7 @@ namespace FastTests.Blittable
         {
             using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
-                var allocatedMemory = new BlockingCollection<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var allocatedMemory = new BlockingCollection<AllocatedMemoryData>();
                 Task.Run(() =>
                 {
                     for (var i = 0; i < 100; i++)
@@ -64,7 +64,7 @@ namespace FastTests.Blittable
                 
                 while (allocatedMemory.IsCompleted == false)
                 {
-                    UnmanagedBuffersPool.AllocatedMemoryData tuple;
+                    AllocatedMemoryData tuple;
                     if (allocatedMemory.TryTake(out tuple, 100))
                         pool.Return(tuple);
                 }

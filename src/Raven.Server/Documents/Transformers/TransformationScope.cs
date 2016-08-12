@@ -126,8 +126,7 @@ namespace Raven.Server.Documents.Transformers
             var charEnumerable = value as IEnumerable<char>;
             if (charEnumerable != null)
             {
-                var charArray = charEnumerable.ToArray();
-                return context.GetLazyString(charArray, 0, charArray.Length);
+                return context.GetLazyString(charEnumerable.ToString());
             }
 
             var inner = new DynamicJsonValue();
