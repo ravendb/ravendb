@@ -12,14 +12,6 @@ namespace Raven.Tests.Core.Commands
 {
     public class Patching : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Patching(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public async Task CanSkipPatchIfEtagMismatch()
         {

@@ -14,14 +14,6 @@ namespace Raven.Tests.Core.Indexing
 {
     public class ReferencedDocuments : RavenCoreTestBase
     {
-#if DNXCORE50
-        public ReferencedDocuments(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()
         {

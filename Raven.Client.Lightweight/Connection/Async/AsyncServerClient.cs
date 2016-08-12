@@ -256,12 +256,6 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
         }
 
-        public Task<Tuple<string, Operation>> PutIndexAsyncWithOperation(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken))
-        {
-            return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsyncWithOperation(name, indexDef, overwrite, operationMetadata, token), token);
-        }
-
-
         public Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexesAsync(indexesToAdd, operationMetadata, token), token);
@@ -279,12 +273,7 @@ namespace Raven.Client.Connection.Async
 
         public async Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
         {
-            return (await DirectPutIndexAsyncWithOperation(name, indexDef, overwrite, operationMetadata, token).ConfigureAwait(false)).Item1;
-        }
-
-        public async Task<Tuple<string, Operation>> DirectPutIndexAsyncWithOperation(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
-        {
-            var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes&includePrecomputeOperation=yes";
+            var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "GET", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
             {
                 request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
@@ -311,12 +300,7 @@ namespace Raven.Client.Connection.Async
                 {
                     await request.WriteAsync(serializeObject).ConfigureAwait(false);
                     var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                    var resultObject = result as RavenJObject;
-                    if (resultObject == null || !resultObject.ContainsKey("OperationId"))
-                        return Tuple.Create(result.Value<string>("Index"), (Operation)null);
-
-                    var operationId = result.Value<long>("OperationId");
-                    return Tuple.Create(result.Value<string>("Index"), operationId != -1 ? new Operation(this, operationId) : null);
+                    return result.Value<string>("Index");
                 }
                 catch (ErrorResponseException e)
                 {
@@ -1569,14 +1553,12 @@ namespace Raven.Client.Connection.Async
             if (convention.EnlistInDistributedTransactions == false)
                 return;
 
-#if !DNXCORE50
             var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
             if (transactionInformation == null)
                 return;
 
             string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
             metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
-#endif
         }
 
         private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -1683,11 +1665,7 @@ namespace Raven.Client.Connection.Async
                             {
                                 throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
                             },
-#if !DNXCORE50
                             Size = int.Parse(request.ResponseHeaders["Content-Length"]),
-#else
-                            Size = int.Parse(request.ResponseHeaders["Raven-Content-Length"]),
-#endif
                             Etag = request.ResponseHeaders.GetEtagHeader(),
                             Metadata = request.ResponseHeaders.FilterHeadersAttachment()
                         };
@@ -1975,11 +1953,7 @@ namespace Raven.Client.Connection.Async
 
                 try
                 {
-#if !DNXCORE50
                     streamReader.Close();
-#else
-                    streamReader.Dispose();
-#endif
                 }
                 catch (Exception)
                 {
@@ -1987,11 +1961,7 @@ namespace Raven.Client.Connection.Async
 
                 try
                 {
-#if !DNXCORE50
                     stream.Close();
-#else
-                    stream.Dispose();
-#endif
                 }
                 catch (Exception)
                 {
@@ -2347,7 +2317,6 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-#if !DNXCORE50
         public Task CommitAsync(string txId, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication("POST", operationMetadata => DirectCommit(txId, operationMetadata, token), token);
@@ -2398,7 +2367,6 @@ namespace Raven.Client.Connection.Async
                 await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
             }
         }
-#endif
 
         private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
         {
@@ -2570,7 +2538,9 @@ namespace Raven.Client.Connection.Async
                 }
                 catch (ErrorResponseException e)
                 {
-                    if (e.StatusCode == HttpStatusCode.NotFound) return null;
+                    if (e.StatusCode == HttpStatusCode.NotFound)
+                        return null;
+
                     throw;
                 }
             }

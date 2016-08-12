@@ -1,4 +1,3 @@
-#if !DNXCORE50
 using System;
 
 using Raven.Abstractions.Util;
@@ -35,4 +34,3 @@ namespace Raven.Tests.Core
         }
     }
 }
-#endif

@@ -17,14 +17,6 @@ namespace Raven.Tests.Core.ChangesApi
 {
     public class ImplementingChangesClient : RavenCoreTestBase
     {
-#if DNXCORE50
-        public ImplementingChangesClient(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         private interface IUntypedConnectable : IConnectableChanges
         { }
 
@@ -40,7 +32,7 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
 
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            protected override void NotifySubscribers(string type, RavenJObject value, List<MockConnectionState> connections)
             {
                 throw new NotImplementedException();
             }
@@ -66,7 +58,7 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
 
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            protected override void NotifySubscribers(string type, RavenJObject value, List<MockConnectionState> connections)
             {
                 throw new NotImplementedException();
             }
@@ -105,7 +97,7 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
 
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            protected override void NotifySubscribers(string type, RavenJObject value, List<MockConnectionState> connections)
             {
                 throw new NotImplementedException();
             }

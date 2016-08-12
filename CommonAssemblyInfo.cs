@@ -15,11 +15,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyInformationalVersion("3.0.0 / {commit} / ")]
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
-
-#if !DNXCORE50
-
 [assembly: SuppressIldasm]
-#endif
 
 #if DEBUG
 

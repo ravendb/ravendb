@@ -11,9 +11,7 @@ namespace Raven.Abstractions.Connection
     [Serializable]
     public class ErrorResponseException : Exception
     {
-#if !DNXCORE50
         [NonSerialized]
-#endif
         private readonly HttpResponseMessage response;
 
         public HttpResponseMessage Response
@@ -86,13 +84,11 @@ namespace Raven.Abstractions.Connection
             }
         }
 
-#if !DNXCORE50
         protected ErrorResponseException(
             System.Runtime.Serialization.SerializationInfo info,
             System.Runtime.Serialization.StreamingContext context)
             : base(info, context)
         {
         }
-#endif
     }
 }

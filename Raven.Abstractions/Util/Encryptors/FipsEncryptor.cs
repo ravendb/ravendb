@@ -164,12 +164,7 @@ namespace Raven.Abstractions.Util.Encryptors
 
             public FipsSymmetricalEncryptor()
             {
-#if !DNXCORE50
                 algorithm = new AesCryptoServiceProvider();
-
-#else
-                algorithm = Aes.Create();
-#endif
             }
 
             public byte[] Key
@@ -296,12 +291,10 @@ namespace Raven.Abstractions.Util.Encryptors
                 return algorithm.Decrypt(bytes, fOAEP);
             }
 
-#if !DNXCORE50
             public void FromXmlString(string xml)
             {
                 algorithm.FromXmlString(xml);
             }
-#endif
 
             public void ImportCspBlob(byte[] keyBlob)
             {

@@ -1,385 +1,255 @@
+<script type="text/html" id="meter-data-template">
+    <div data-bin="with:data">
+        <label class="col-md-4 control-label">Count</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: Count.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">Mean rate</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: MeanRate.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">One minute rate</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: OneMinuteRate.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">Five minute rate</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: FiveMinuteRate.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">Fifteen minute rate</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: FifteenMinuteRate.toLocaleString()"></p>
+        </div>
+    </div>
+</script>
+<script type="text/html" id="histogram-data-template">
+    <div data-bin="with:data">
+        <label class="col-md-4 control-label">Counter</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: Counter.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">Min</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: Min.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">Max</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: Max.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">Mean</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: Mean.toLocaleString()"></p>
+        </div>
+        <label class="col-md-4 control-label">Std dev.</label>
+        <div class="col-md-8">
+            <p class="form-control-static" data-bind="text: Stdev.toLocaleString()"></p>
+        </div>
+    </div>
+</script>
+<script type="text/html" id="histogram-percentile-data-template">    
+    <label class="col-md-4 control-label" data-bind="text: key"></label>
+    <div class="col-md-8">
+        <p class="form-control-static" data-bind="text: value.toLocaleString()"></p>
+    </div>    
+</script>
+
 <section data-bind="with: data">
-    <div class="panel-group">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" href="#metricsGeneral">General</a>
-                </h4>
-            </div>
-            <div class="panel-collapse collapse in"  id="metricsGeneral" >
-                <div class="panel-body">
-                    <div class="form-horizontal" role="form">
-                        <div class="form-group">
-                            <label class="col-md-4 control-label">Docs writes/second</label>
-                            <div class="col-md-8">
-                                <p class="form-control-static" data-bind="text: DocsWritesPerSecond"></p>
+        <div class="panel-group">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#metricsGeneral">General</a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse in" id="metricsGeneral">
+                    <div class="panel-body">
+                        <div class="form-horizontal" role="form">
+                            <div class="form-group">
+                                <label class="col-md-4 control-label">Docs writes/second</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static" data-bind="text: DocsWritesPerSecond"></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-md-4 control-label">Indexed/second</label>
-                            <div class="col-md-8">
-                                <p class="form-control-static" data-bind="text: IndexedPerSecond"></p>
+                            <div class="form-group">
+                                <label class="col-md-4 control-label">Indexed/second</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static" data-bind="text: IndexedPerSecond"></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-md-4 control-label">Reduced/second</label>
-                            <div class="col-md-8">
-                                <p class="form-control-static" data-bind="text: ReducedPerSecond"></p>
+                            <div class="form-group">
+                                <label class="col-md-4 control-label">Reduced/second</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static" data-bind="text: ReducedPerSecond"></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-md-4 control-label">Requests/second</label>
-                            <div class="col-md-8">
-                                <p class="form-control-static" data-bind="text: RequestsPerSecond"></p>
+                            <div class="form-group">
+                                <label class="col-md-4 control-label">Requests/second</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static" data-bind="text: RequestsPerSecond"></p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" href="#metricsRequest">Requests</a>
-                </h4>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#metricsRequest">Requests</a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse in" id="metricsRequest">
+                    <div class="panel-body">
+                        <div class="form-horizontal" role="form">
+                            <div class="form-group">
+                                <div class="col-md-6">
+                                    <h4>Requests Per Second</h4>
+                                    <u><h5>Meter</h5></u>
+                                    <div data-bind="template: { name : 'meter-data-template', data: Requests}"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4>Requests Duration</h4>
+                                    <u><h5>Histogram</h5></u>
+                                    <div data-bind="template: { name : 'histogram-data-template', data: RequestsDuration}"></div>
+                                    <u><h5>Percentiles</h5></u>
+                                    <div data-bind="template: { name : 'histogram-percentile-data-template', foreach: $parent.requestPercentiles}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="panel-collapse collapse in" id="metricsRequest" >
-                <div class="panel-body">
-                    <div class="form-horizontal" role="form">
-                        <div class="form-group">
-                            <label class="col-md-2 control-label">Count</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: Requests.Count"></p>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#metricsJsonSerializations">JSON (De)Serializations</a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse in" id="metricsJsonSerializations">
+                    <div class="panel-body">
+                        <div class="form-horizontal" role="form">
+                            <div class="form-group">
+                                <div class="col-md-6">
+                                    <h4>JSON Serializations</h4>
+                                    <u><h5>Operations Per Second</h5></u>
+                                    <div data-bind="template: { name : 'meter-data-template', data: JsonSerializationsPerSecond}"></div>
+                                    <u><h5>Bytes Per Socond</h5></u>
+                                    <div data-bind="template: { name : 'meter-data-template', data: JsonSerializedBytesPerSecond}"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4>JSON Deserializations</h4>
+                                    <u><h5>Operations Per Second</h5></u>
+                                    <div data-bind="template: { name : 'meter-data-template', data: JsonDeserializationsPerSecond}"></div>
+                                    <u><h5>Bytes Per Socond</h5></u>
+                                    <div data-bind="template: { name : 'meter-data-template', data: JsonDeserializedBytesPerSecond}"></div>
+                                </div>
                             </div>
-                            <label class="col-md-2 control-label">Counter</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: RequestsDuration.Counter"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#metricsStaleIndexes">Stale Indexes</a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse in" id="metricsStaleIndexes">
+                    <div class="panel-body">
+                        <div class="form-horizontal" role="form">
+                            <div class="form-group">
+                                <div class="col-md-6">
+                                    <h4>Maps</h4>
+                                    <u><h5>Histogram</h5></u>
+                                    <div data-bind="template: { name : 'histogram-data-template', data: StaleIndexMaps}"></div>
+                                    <u><h5>Percentiles</h5></u>
+                                    <div data-bind="template: { name : 'histogram-percentile-data-template', foreach: $parent.staleIndexMapsPercentiles}"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4>Reduces</h4>
+                                    <u><h5>Histogram</h5></u>
+                                    <div data-bind="template: { name : 'histogram-data-template', data: StaleIndexReduces}"></div>
+                                    <u><h5>Percentiles</h5></u>
+                                    <div data-bind="template: { name : 'histogram-percentile-data-template', foreach: $parent.staleIndexReducesPercentiles}"></div>
+
+                                </div>
                             </div>
-                            <label class="col-md-2 control-label">Mean rate</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: Requests.MeanRate"></p>
-                            </div>
-                            <label class="col-md-2 control-label">Min</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: RequestsDuration.Min"></p>
-                            </div>
-                            <label class="col-md-2 control-label">One minute rate</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: Requests.OneMinuteRate"></p>
-                            </div>
-                            <label class="col-md-2 control-label">Max</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: RequestsDuration.Max"></p>
-                            </div>
-                            <label class="col-md-2 control-label">Five minute rate</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: Requests.FiveMinuteRate"></p>
-                            </div>
-                            <label class="col-md-2 control-label">Mean</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: RequestsDuration.Mean"></p>
-                            </div>
-                            <label class="col-md-2 control-label">Fifteen minute rate</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: Requests.FifteenMinuteRate"></p>
-                            </div>
-                            <label class="col-md-2 control-label">Std dev.</label>
-                            <div class="col-md-4">
-                                <p class="form-control-static" data-bind="text: RequestsDuration.Stdev"></p>
-                            </div>
-                            <label class="col-md-2 col-md-offset-6 control-label">Percentiles</label>
-                            <div class="col-md-4"></div>
-                            <div data-bind="foreach: $parent.requestPercentiles">
-                                <label class="col-md-2 col-md-offset-6 control-label" data-bind="text: key"></label>
-                                <div class="col-md-4">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#metricsGauges">Gauges</a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse in" id="metricsGauges">
+                    <div class="panel-body">
+                        <div class="form-horizontal" role="form" data-bind="foreach: $root.gauges">
+                            <!-- ko foreach: values -->
+                            <div class="form-group">
+                                <label class="col-md-6 control-label" data-bind="text: $parent.key + ' ' + key "></label>
+                                <div class="col-md-6">
                                     <p class="form-control-static" data-bind="text: value"></p>
                                 </div>
                             </div>
+                            <!-- /ko -->
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" href="#metricsStaleIndexes">Stale Indexes</a>
-                </h4>
-            </div>
-            <div class="panel-collapse collapse in" id="metricsStaleIndexes" >
-                <div class="panel-body">
-                    <div class="form-horizontal" role="form">
-                        <div class="form-group">
-                            <div class="col-md-6">
-                                <h4>Maps</h4>
-                                <label class="col-md-4 control-label">Counter</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexMaps.Counter"></p>
-                                </div>
-                                 <label class="col-md-4 control-label">Min</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexMaps.Min"></p>
-                                </div>
-                                 <label class="col-md-4 control-label">Max</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexMaps.Max"></p>
-                                </div>
-                                  <label class="col-md-4 control-label">Mean</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexMaps.Mean"></p>
-                                </div>
-                                 <label class="col-md-4 control-label">Std dev.</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexMaps.Stdev"></p>
-                                </div>
-                                <label class="col-md-4 control-label">Percentiles</label>
-                                <div class="clearfix"></div>
-                                <div class="left" data-bind="foreach: $parent.staleIndexMapsPercentiles">
-                                    <label class="col-md-4 control-label" data-bind="text: key"></label>
-                                    <div class="col-md-8">
-                                        <p class="form-control-static" data-bind="text: value"></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <h4>Reduces</h4>
-                                <label class="col-md-4 control-label">Counter</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexReduces.Counter"></p>
-                                </div>
-                                 <label class="col-md-4 control-label">Min</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexReduces.Min"></p>
-                                </div>
-                                 <label class="col-md-4 control-label">Max</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexReduces.Max"></p>
-                                </div>
-                                <label class="col-md-4 control-label">Mean</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexReduces.Mean"></p>
-                                </div>
-                                <label class="col-md-4 control-label">Std dev.</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static" data-bind="text: StaleIndexReduces.Stdev"></p>
-                                </div>
-                                <label class="col-md-4 control-label">Percentiles</label>
-                                <div class="clearfix"></div>
-                                <div class="left" data-bind="foreach: $parent.staleIndexReducesPercentiles">
-                                    <label class="col-md-4 control-label" data-bind="text: key"></label>
-                                    <div class="col-md-8">
-                                        <p class="form-control-static" data-bind="text: value"></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#metricsReplication">Replication</a>
+                    </h4>
                 </div>
-            </div>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" href="#metricsGauges">Gauges</a>
-                </h4>
-            </div>
-            <div class="panel-collapse collapse in"  id="metricsGauges" >
-                <div class="panel-body">
-                    <div class="form-horizontal" role="form" data-bind="foreach: $root.gauges">
-                        <!-- ko foreach: values -->
-                        <div class="form-group">
-                            <label class="col-md-6 control-label" data-bind="text: $parent.key + ' ' + key "></label>
-                            <div class="col-md-6">
-                                <p class="form-control-static" data-bind="text: value"></p>
-                            </div>
-                        </div>
-                        <!-- /ko -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" href="#metricsReplication">Replication</a>
-                </h4>
-            </div>
-            <div class="panel-collapse collapse in" id="metricsReplication"  >
-                <div class="panel-body">
-                    <ul class="nav nav-tabs" data-bind="foreach: $root.replicationDestinations">
-                        <li data-bind="css: { active: $index() == 0 }"><a data-bind="attr: { href: '#replication-tab-' + $index() }, text: $data" data-toggle="tab"></a></li>
-                    </ul>
-                    <div class="tab-content" data-bind="foreach: $root.replicationDestinations">
-                        <div data-bind="attr: { id: 'replication-tab-' + $index() }, css: { active: $index() == 0 }" class="tab-pane">
-                            <div class="panel-group">
-                                <div class="panel panel-default">
-                                    <div class="panel-heading">
-                                        <h4 class="panel-title">
-                                            <a data-toggle="collapse" data-bind="attr: { href: '#metrics-rep-' + $index() + '-bs' }">Batch Size</a>
-                                        </h4>
-                                    </div>
-                                    <div class="panel-collapse collapse in" data-bind="attr: { id: 'metrics-rep-' + $index() + '-bs' }">
-                                        <div class="panel-body">
-                                            <div class="form-horizontal" role="form" >
-                                                <div class="col-md-6" data-bind="with: $root.data().ReplicationBatchSizeMeter[$data]"> 
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Count</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Count"></p>
-                                                        </div>
+                <div class="panel-collapse collapse in" id="metricsReplication">
+                    <div class="panel-body">
+                        <ul class="nav nav-tabs" data-bind="foreach: $root.replicationDestinations">
+                            <li data-bind="css: { active: $index() == 0 }"><a data-bind="attr: { href: '#replication-tab-' + $index() }, text: $data" data-toggle="tab"></a></li>
+                        </ul>
+                        <div class="tab-content" data-bind="foreach: $root.replicationDestinations">
+                            <div data-bind="attr: { id: 'replication-tab-' + $index() }, css: { active: $index() == 0 }" class="tab-pane">
+                                <div class="panel-group">
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-bind="attr: { href: '#metrics-rep-' + $index() + '-bs' }">Batch Size</a>
+                                            </h4>
+                                        </div>
+                                        <div class="panel-collapse collapse in" data-bind="attr: { id: 'metrics-rep-' + $index() + '-bs' }">
+                                            <div class="panel-body">
+                                                <div class="form-horizontal" role="form">
+                                                    <div class="col-md-6">
+                                                        <u><h5>Meter</h5></u>
+                                                        <div data-bind="template: { name : 'meter-data-template', data: $root.data().ReplicationBatchSizeMeter[$data]}"></div>
                                                     </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Mean rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: MeanRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">One minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: OneMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Five minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: FiveMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Fifteen minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: FifteenMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6" data-bind="with: $root.data().ReplicationBatchSizeHistogram[$data]">
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Counter</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Counter"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Min</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Min"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Max</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Max"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Mean</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Mean"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Std dev.</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Stdev"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Percentiles</label>
-                                                        <div class="clearfix"></div>
-                                                        <div class="left" data-bind="foreach: $root.extractPercentiles(Percentiles)">
-                                                            <label class="col-md-4 control-label" data-bind="text: key"></label>
-                                                            <div class="col-md-8">
-                                                                <p class="form-control-static" data-bind="text: value"></p>
-                                                            </div>
-                                                        </div>
+                                                    <div class="col-md-6">
+                                                        <u><h5>Histogram</h5></u>
+                                                        <div data-bind="template: { name : 'histogram-data-template', data: $root.data().ReplicationBatchSizeHistogram[$data]}"></div>
+                                                        <u><h5>Percentiles</h5></u>
+                                                        <div data-bind="template: { name : 'histogram-percentile-data-template', foreach: $root.extractPercentiles($root.data().ReplicationBatchSizeHistogram[$data].Percentiles)}"></div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="panel panel-default">
-                                    <div class="panel-heading">
-                                        <h4 class="panel-title">
-                                            <a data-toggle="collapse" data-bind="attr: { href: '#metrics-rep-' + $index() + '-duration' }">Duration</a>
-                                        </h4>
-                                    </div>
-                                    <div class="panel-collapse collapse in" data-bind="attr: { id: 'metrics-rep-' + $index() + '-duration' }">
-                                        <div class="panel-body">
-                                            <div class="form-horizontal" role="form" >
-                                                <div class="col-md-6" data-bind="with: $root.data().ReplicationDurationMeter[$data]"> 
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Count</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Count"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Mean rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: MeanRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">One minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: OneMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Five minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: FiveMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Fifteen minute rate</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: FifteenMinuteRate"></p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6" data-bind="with: $root.data().ReplicationDurationHistogram[$data]">
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Counter</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Counter"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Min</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Min"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Max</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Max"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Mean</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Mean"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Std dev.</label>
-                                                        <div class="col-md-8">
-                                                            <p class="form-control-static" data-bind="text: Stdev"></p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-4 control-label">Percentiles</label>
-                                                        <div class="clearfix"></div>
-                                                        <div class="left" data-bind="foreach: $root.extractPercentiles(Percentiles)">
-                                                            <label class="col-md-4 control-label" data-bind="text: key"></label>
-                                                            <div class="col-md-8">
-                                                                <p class="form-control-static" data-bind="text: value"></p>
-                                                            </div>
-                                                        </div>
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-bind="attr: { href: '#metrics-rep-' + $index() + '-duration' }">Duration</a>
+                                            </h4>
+                                        </div>
+                                        <div class="panel-collapse collapse in" data-bind="attr: { id: 'metrics-rep-' + $index() + '-duration' }">                                        
+                                            <div class="panel-body">
+                                                <div class="form-horizontal" role="form">
+                                                    <div class="col-md-6">
+                                                        <u><h5>Histogram</h5></u>
+                                                        <div data-bind="template: { name : 'histogram-data-template', data: $root.data().ReplicationDurationHistogram[$data]}"></div>
+                                                        <u><h5>Percentiles</h5></u>
+                                                        <div data-bind="template: { name : 'histogram-percentile-data-template', foreach: $root.extractPercentiles($root.data().ReplicationDurationHistogram[$data].Percentiles)}"></div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -392,6 +262,5 @@
                 </div>
             </div>
         </div>
-    </div>
 
-</section>
+    </section>

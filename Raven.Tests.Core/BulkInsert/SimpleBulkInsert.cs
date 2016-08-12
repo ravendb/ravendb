@@ -14,14 +14,6 @@ namespace Raven.Tests.Core.BulkInsert
 {
     public class SimpleBulkInsert : RavenCoreTestBase
     {
-#if DNXCORE50
-        public SimpleBulkInsert(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void BasicBulkInsert()
         {

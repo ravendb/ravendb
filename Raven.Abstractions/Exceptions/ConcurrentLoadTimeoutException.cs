@@ -25,12 +25,10 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
-#if !DNXCORE50
         protected ConcurrentLoadTimeoutException(
             SerializationInfo info,
             StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 }

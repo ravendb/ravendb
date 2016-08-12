@@ -355,6 +355,7 @@
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerExporter.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From53To54 .cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From52To53.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From51To52.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />

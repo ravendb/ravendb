@@ -64,9 +64,7 @@ namespace Raven.Client.Document
                 new Int64Converter(),
             };
             PreserveDocumentPropertiesNotFoundOnModel = true;
-#if !DNXCORE50
             PrettifyGeneratedLinqExpressions = true;
-#endif
             DisableProfiling = true;
             EnlistInDistributedTransactions = true;
             UseParallelMultiGet = true;
@@ -667,12 +665,10 @@ namespace Raven.Client.Document
         /// </summary>
         public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
-#if !DNXCORE50
         /// <summary>
         ///  Attempts to prettify the generated linq expressions for indexes and transformers
         /// </summary>
         public bool PrettifyGeneratedLinqExpressions { get; set; }
-#endif
 
         /// <summary>
         /// How index and transformer updates should be handled in replicated setup.

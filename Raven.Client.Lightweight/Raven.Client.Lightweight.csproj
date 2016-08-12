@@ -130,6 +130,7 @@
     <Compile Include="Document\IReliableSubscriptions.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
     <Compile Include="Document\ResponseTimeInformation.cs" />
+    <Compile Include="Document\SessionOperations\ShardLoadOperation.cs" />
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
     <Compile Include="Document\ShardedBulkInsertOperation.cs" />

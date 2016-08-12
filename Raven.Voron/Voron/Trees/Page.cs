@@ -778,6 +778,23 @@ namespace Voron.Trees
             return LastSearchPosition;
         }
 
+        public int NodePositionReferencing(long pageNumber)
+        {
+            Debug.Assert(IsBranch);
+
+            int referencingNode = 0;
+
+            for (; referencingNode < NumberOfEntries; referencingNode++)
+            {
+                if (GetNode(referencingNode)->PageNumber == pageNumber)
+                    break;
+            }
+
+            Debug.Assert(GetNode(referencingNode)->PageNumber == pageNumber);
+
+            return referencingNode;
+        }
+
         public override string ToString()
         {
             return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + Flags;

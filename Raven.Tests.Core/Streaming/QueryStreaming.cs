@@ -11,14 +11,6 @@ namespace Raven.Tests.Core.Streaming
 {
     public class QueryStreaming : RavenCoreTestBase
     {
-#if DNXCORE50
-        public QueryStreaming(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanStreamQueryResults()
         {

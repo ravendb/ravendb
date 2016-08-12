@@ -16,14 +16,6 @@ namespace Raven.Tests.Core.Commands
 {
     public class Querying : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Querying(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanDoSimpleQueryOnDatabase()
         {

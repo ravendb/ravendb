@@ -130,6 +130,7 @@
     <Compile Include="Migration\Northwind.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
+    <Compile Include="Issues\RavenDB_4750.cs" />
     <Compile Include="Replication\AsyncReadStriping.cs" />
     <Compile Include="Replication\ReadStriping.cs" />
     <Compile Include="RunExternalProcess.cs" />

@@ -14,14 +14,6 @@ namespace Raven.Tests.Core.Session
 {
     public class Keys : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Keys(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void GetDocumentId()
         {

@@ -38,15 +38,12 @@ namespace Raven.Abstractions.Exceptions
         /// Value of a problematic property.
         /// </summary>
         public string ProblematicText { get; set; }
-
-#if !DNXCORE50
         protected IndexCompilationException(
             SerializationInfo info,
             StreamingContext context)
             : base(info, context)
         {
         }
-#endif
 
         public override string ToString()
         {

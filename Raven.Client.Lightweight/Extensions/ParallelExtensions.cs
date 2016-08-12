@@ -37,11 +37,7 @@ namespace Raven.Client.Extensions
 
         private static Exception PreserveStackTrace(Exception exception)
         {
-#if !DNXCORE50
             const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod;
-#else
-            const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
-#endif
 
             typeof(Exception).InvokeMember("InternalPreserveStackTrace", Flags, exception);
             return exception;

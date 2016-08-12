@@ -9,11 +9,7 @@ namespace Raven.Client.Helpers
         {
             get
             {
-#if !DNXCORE50
                 return Environment.Is64BitProcess;
-#else
-                return IntPtr.Size == 8;
-#endif
             }
         }
 
@@ -21,12 +17,7 @@ namespace Raven.Client.Helpers
         {
             get
             {
-#if !DNXCORE50
                 return new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory;
-#else
-                // TODO [ppekrol] how to check this?
-                throw new NotImplementedException();
-#endif
             }
         }
 
@@ -34,11 +25,7 @@ namespace Raven.Client.Helpers
         {
             get
             {
-#if !DNXCORE50
                 return Environment.MachineName;
-#else
-                return Dns.GetHostName();
-#endif
             }
         }
     }

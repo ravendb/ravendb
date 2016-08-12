@@ -138,11 +138,10 @@ namespace Raven.Client.Connection
                 if (exception is ObjectDisposedException)
                     return;
 
-#if !DNXCORE50
                 var we = exception as WebException;
                 if (we != null && we.Status == WebExceptionStatus.RequestCanceled)
                     return;
-#endif
+
                 foreach (var subscriber in subscribers)
                 {
                     subscriber.OnError(aggregateException);
@@ -156,16 +155,10 @@ namespace Raven.Client.Connection
 
         private async Task<int> ReadAsync()
         {
-#if !DNXCORE50
             return await Task.Factory.FromAsync<int>(
                 (callback, state) => stream.BeginRead(buffer, posInBuffer, buffer.Length - posInBuffer, callback, state),
                 stream.EndRead,
                 null).ConfigureAwait(false);
-#else
-            return await stream
-                .ReadAsync(buffer, posInBuffer, buffer.Length - posInBuffer)
-                .ConfigureAwait(false);
-#endif
         }
 
         public IDisposable Subscribe(IObserver<string> observer)

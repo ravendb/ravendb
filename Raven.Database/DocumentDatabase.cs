@@ -734,13 +734,17 @@ namespace Raven.Database
             ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
             RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
             Requests = metrics.ConcurrentRequests.CreateMeterData(),
-            Gauges = metrics.Gauges,
+            JsonDeserializationsPerSecond = JsonExtensions.JsonStreamDeserializationsPerSecond == null?null: JsonExtensions.JsonStreamDeserializationsPerSecond.CreateMeterData(),
+            JsonDeserializedBytesPerSecond = JsonExtensions.JsonStreamDeserializedBytesPerSecond == null ? null : JsonExtensions.JsonStreamDeserializedBytesPerSecond.CreateMeterData(),
+            JsonSerializationsPerSecond = JsonExtensions.JsonStreamSerializationsPerSecond == null ? null : JsonExtensions.JsonStreamSerializationsPerSecond.CreateMeterData(),
+            JsonSerializedBytesPerSecond = JsonExtensions.JsonStreamSerializedBytesPerSecond == null ? null : JsonExtensions.JsonStreamSerializedBytesPerSecond.CreateMeterData(),
+                Gauges = metrics.Gauges,
             StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
             StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
             ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
             ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
             ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
-        };
+            };
         }
 
 

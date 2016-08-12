@@ -557,16 +557,12 @@ namespace Raven.Client.Linq
                 switch ((StringComparison)comparisonType)
                 {
                     case StringComparison.CurrentCulture:
-#if !DNXCORE50
                     case StringComparison.InvariantCulture:
-#endif
                     case StringComparison.Ordinal:
                         throw new NotSupportedException(
                             "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
                     case StringComparison.CurrentCultureIgnoreCase:
-#if !DNXCORE50
                     case StringComparison.InvariantCultureIgnoreCase:
-#endif
                     case StringComparison.OrdinalIgnoreCase:
                         break;
                     default:

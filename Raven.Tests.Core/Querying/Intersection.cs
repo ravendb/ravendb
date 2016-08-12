@@ -9,14 +9,6 @@ namespace Raven.Tests.Core.Querying
 {
     public class Intersection : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Intersection(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanPerformIntersectQuery()
         {

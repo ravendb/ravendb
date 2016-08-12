@@ -84,18 +84,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         public IndexStats GetIndexStats(int id)
         {
-            var key = CreateKey(id);
-            var keySlice = new Slice(key);
+            try
+            {
+                var key = CreateKey(id);
+                var keySlice = new Slice(key);
 
-            ushort version;
+                ushort version;
 
-            var indexStats = LoadStruct(tableStorage.IndexingStats, keySlice, out version);
-            var reduceStats = LoadStruct(tableStorage.ReduceStats, keySlice, out version);
-            var lastIndexedEtags = LoadStruct(tableStorage.LastIndexedEtags, keySlice, out version);
-            var priority = ReadPriority(key);
-            var touches = ReadTouches(key);
+                var indexStats = LoadStruct(tableStorage.IndexingStats, keySlice, out version);
+                var reduceStats = LoadStruct(tableStorage.ReduceStats, keySlice, out version);
+                var lastIndexedEtags = LoadStruct(tableStorage.LastIndexedEtags, keySlice, out version);
+                var priority = ReadPriority(key);
+                var touches = ReadTouches(key);
 
-            return GetIndexStats(indexStats, reduceStats, lastIndexedEtags, priority, touches);
+                return GetIndexStats(indexStats, reduceStats, lastIndexedEtags, priority, touches);
+            }
+            //in esent we do not throw, we return null in case of failure.
+            //this is causing an infinit loop of index re-creation
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public void AddIndex(int id, bool createMapReduce)

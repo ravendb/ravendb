@@ -13,14 +13,6 @@ namespace Raven.Tests.Core.Shard
 {
     public class Sharding : RavenReplicationCoreTest
     {
-#if DNXCORE50
-        public Sharding(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanUseShardedDocumentStore()
         {

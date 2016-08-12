@@ -4,12 +4,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using System.Collections.Generic;
@@ -20,11 +18,7 @@ namespace Raven.Client.Changes
                                 where TConnectionState : class, IChangesConnectionState
                                 where TChangesApi : class, IConnectableChanges
     {
-#if !DNXCORE50
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-#else
-        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteChangesClientBase<TChangesApi, TConnectionState>));
-#endif
 
         private Timer clientSideHeartbeatTimer;
 
@@ -43,6 +37,10 @@ namespace Raven.Client.Changes
         private readonly string id;
 
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
+
+        private int isReconnecting = 0;
+        private const int Reconnecting = 1;
+        private const int Idle = 0;
 
         public RemoteChangesClientBase(
             string url,
@@ -86,14 +84,13 @@ namespace Raven.Client.Changes
             logger.Info("Connection ({1}) status changed, new status: {0}", Connected, url);
         }
 
-
         public Task<TChangesApi> Task { get; private set; }
 
         public void WaitForAllPendingSubscriptions()
         {
-            foreach (var kvp in Counters)
+            foreach (var value in Counters.ValuesSnapshot)
             {
-                kvp.Value.Task.Wait();
+                value.Task.Wait();
             }
         }
 
@@ -102,11 +99,7 @@ namespace Raven.Client.Changes
             if (disposed)
                 return;
 
-            if (clientSideHeartbeatTimer != null)
-            {
-                clientSideHeartbeatTimer.Dispose();
-                clientSideHeartbeatTimer = null;
-            }
+            DisposeHeartbeatTimer();
 
             var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
             {
@@ -166,16 +159,44 @@ namespace Raven.Client.Changes
 
             clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
 
-            await SubscribeOnServer();
+            await SubscribeOnServer().ConfigureAwait(false);
         }
 
         private void ClientSideHeartbeat(object _)
         {
-            TimeSpan elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
+            if (Connected == false)
+                return;
+
+            var elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
             if (elapsedTimeSinceHeartbeat.TotalSeconds < 45)
                 return;
+
+            if (DisposeHeartbeatTimer() == false)
+            {
+                //timer already disposed means that we started a new reconnection process
+                return;
+            }
+
             OnError(new TimeoutException("Over 45 seconds have passed since we got a server heartbeat, even though we should get one every 10 seconds or so.\r\n" +
                                          "This connection is now presumed dead, and will attempt reconnection"));
+        }
+
+        private bool DisposeHeartbeatTimer()
+        {
+            var timer = clientSideHeartbeatTimer;
+            if (timer == null)
+                return false;
+
+            try
+            {
+                timer.Dispose();
+                clientSideHeartbeatTimer = null;
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private Task lastSendTask;
@@ -205,14 +226,13 @@ namespace Raven.Client.Changes
                         AvoidCachingRequest = true
                     };
                     var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                    return lastSendTask =
-                        request.ExecuteRequestAsync()
-                            .ObserveException()
-                            .ContinueWith(task =>
-                            {
-                                lastSendTask = null;
-                                request.Dispose();
-                            });
+                    lastSendTask = request.ExecuteRequestAsync().ObserveException();
+
+                    return lastSendTask.ContinueWith(task =>
+                    {
+                        lastSendTask = null;
+                        request.Dispose();
+                    });
                 }
                 catch (Exception e)
                 {
@@ -235,12 +255,11 @@ namespace Raven.Client.Changes
         {
             if (disposed)
                 return new CompletedTask();
+
             disposed = true;
             onDispose();
 
-            if (clientSideHeartbeatTimer != null)
-                clientSideHeartbeatTimer.Dispose();
-            clientSideHeartbeatTimer = null;
+            DisposeHeartbeatTimer();
 
             return Send("disconnect", null).
                 ContinueWith(_ =>
@@ -252,34 +271,65 @@ namespace Raven.Client.Changes
                     }
                     catch (Exception e)
                     {
-                        logger.ErrorException("Got error from server connection for " + url + " on id " + id, e);
-
+                        logger.ErrorException("Got error from server connection after disconnect for " + url + " on id " + id, e);
                     }
                 });
         }
 
-
         public virtual void OnError(Exception error)
         {
+            if (disposed)
+                return;
+
             logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
 
             RenewConnection();
         }
 
+        private void DisposeConnection()
+        {
+            var connectionLocal = connection;
+            if (connectionLocal == null)
+                return;
+
+            try
+            {
+                connectionLocal.Dispose();
+                connection = null;
+            }
+            catch (Exception e)
+            {
+                //ignore
+            }
+        }
+
         private void RenewConnection()
         {
+            if (disposed)
+                return;
+
+            if (Interlocked.CompareExchange(ref isReconnecting, Reconnecting, Idle) == Reconnecting)
+            {
+                //we already started the reconnection process
+                return;
+            }
+
+            DisposeConnection();
+
             Time.Delay(TimeSpan.FromSeconds(15))
                 .ContinueWith(_ => EstablishConnection())
                 .Unwrap()
                 .ObserveException()
                 .ContinueWith(task =>
                 {
+                    Interlocked.Exchange(ref isReconnecting, Idle);
+
                     if (task.IsFaulted == false)
                         return;
 
-                    foreach (var keyValuePair in Counters)
+                    foreach (var value in Counters.ValuesSnapshot)
                     {
-                        keyValuePair.Value.Error(task.Exception);
+                        value.Error(task.Exception);
                     }
                     Counters.Clear();
                 });
@@ -293,26 +343,25 @@ namespace Raven.Client.Changes
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
 
-            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
 
             switch (type)
             {
                 case "Disconnect":
-                    if (connection != null)
-                        connection.Dispose();
                     RenewConnection();
                     break;
                 case "Initialized":
                 case "Heartbeat":
                     break;
                 default:
-                    NotifySubscribers(type, value, Counters.Snapshot);
+                    NotifySubscribers(type, value, Counters.ValuesSnapshot);
                     break;
             }
         }
 
         protected abstract Task SubscribeOnServer();
-        protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);
+        protected abstract void NotifySubscribers(string type, RavenJObject value, List<TConnectionState> connections);
 
         public virtual void OnCompleted()
         { }

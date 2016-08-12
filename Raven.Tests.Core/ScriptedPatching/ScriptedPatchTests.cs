@@ -6,14 +6,6 @@ namespace Raven.Tests.Core.ScriptedPatching
 {
     public class ScriptedPatchTests : RavenCoreTestBase
     {
-#if DNXCORE50
-        public ScriptedPatchTests(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         public class Foo
         {
             public string Id { get; set; }

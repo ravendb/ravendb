@@ -68,6 +68,7 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.WebRequest" />
@@ -146,6 +147,8 @@
     <Compile Include="Issues\RavenDB_4069.cs" />
     <Compile Include="Issues\RavenDB_4092.cs" />
     <Compile Include="Issues\RavenDB_4189.cs" />
+    <Compile Include="Issues\RavenDB_4690.cs" />
+    <Compile Include="Issues\RavenDB_4961.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />
     <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />

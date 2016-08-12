@@ -18,6 +18,21 @@ namespace Raven.Database.Server.WebApi.Handlers
 {
     public class GZipToJsonAndCompressHandler : DelegatingHandler
     {
+        [ThreadStatic]
+        private static byte[] buffer;
+
+        private void CopyBetween(Stream source, Stream destination)
+        {
+            if (buffer == null)
+            {
+                buffer = new byte[4*1024];
+            }
+
+
+            int read;
+            while ((read = source.Read(buffer, 0, buffer.Length)) != 0)
+                destination.Write(buffer, 0, read);
+        }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
                                                                CancellationToken cancellationToken)
         {
@@ -40,7 +55,8 @@ namespace Raven.Database.Server.WebApi.Handlers
                 Stream inputStream = t.Result;
                 var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress);
 
-                gzipStream.CopyTo(outputStream);
+                CopyBetween(gzipStream, outputStream);
+                
                 gzipStream.Dispose();
 
                 outputStream.Seek(0, SeekOrigin.Begin);

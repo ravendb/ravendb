@@ -55,7 +55,6 @@ namespace Raven.Client.Exceptions
         {
         }
 
-#if !DNXCORE50
         /// <summary>
         /// Initializes a new instance of the <see cref="ConflictException"/> class.
         /// </summary>
@@ -69,6 +68,5 @@ namespace Raven.Client.Exceptions
             : base(info, context)
         {
         }
-#endif
     }
 }

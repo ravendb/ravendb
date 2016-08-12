@@ -17,6 +17,11 @@ using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 using System.Collections.Generic;
+using metrics;
+using metrics.Core;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Util;
+using Raven.Database.Util;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -25,6 +30,27 @@ namespace Raven.Abstractions.Extensions
     /// </summary>
     public static class JsonExtensions
     {
+        private static Metrics _dbMetrics  = new Metrics();
+        public static MeterMetric JsonStreamDeserializationsPerSecond;
+        public static MeterMetric JsonStreamDeserializedBytesPerSecond;
+
+        public static MeterMetric JsonStreamSerializationsPerSecond;
+        public static MeterMetric JsonStreamSerializedBytesPerSecond;
+
+        static JsonExtensions()
+        {
+            JsonStreamSerializationsPerSecond = _dbMetrics.Meter("metrics", "ser/sec", "JsonStreamSerializationsPerSecond Meter", TimeUnit.Seconds); ;
+            MetricsTicker.Instance.AddMeterMetric(JsonStreamSerializationsPerSecond);
+
+            JsonStreamSerializedBytesPerSecond = _dbMetrics.Meter("metrics", "serbytes/sec", "JsonStreamSerializedBytesPerSecondMeter", TimeUnit.Seconds); ;
+            MetricsTicker.Instance.AddMeterMetric(JsonStreamSerializedBytesPerSecond);
+
+            JsonStreamDeserializationsPerSecond = _dbMetrics.Meter("metrics", "deser/sec", "JsonStreamDeserializationsPerSecond Meter", TimeUnit.Seconds);
+            MetricsTicker.Instance.AddMeterMetric(JsonExtensions.JsonStreamDeserializationsPerSecond);
+            
+            JsonStreamDeserializedBytesPerSecond = _dbMetrics.Meter("metrics", "deserbytes/sec", "JsonStreamDeserializedBytesPerSecond Meter", TimeUnit.Seconds);
+            MetricsTicker.Instance.AddMeterMetric(JsonStreamDeserializedBytesPerSecond);
+        }
         public static RavenJObject ToJObject(object result)
         {
             var dynamicJsonObject = result as Linq.IDynamicJsonObject;
@@ -51,23 +77,45 @@ namespace Raven.Abstractions.Extensions
                 return ToJObject(stream);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void RegisterJsonStreamDeserializationMetrics(int size)
+        {
+            JsonStreamDeserializationsPerSecond.Mark();
+            JsonStreamDeserializedBytesPerSecond.Mark(size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void RegisterJsonStreamSerializationMetrics(int size)
+        {
+            JsonStreamSerializationsPerSecond.Mark();
+            JsonStreamSerializedBytesPerSecond.Mark(size);
+        }
+
         /// <summary>
         /// Convert a byte array to a RavenJObject
         /// </summary>
         public static RavenJObject ToJObject(this Stream self)
         {
             var streamWithCachedHeader = new StreamWithCachedHeader(self, 5);
-            if (IsJson(streamWithCachedHeader))
+            using (var counting = new CountingStream(streamWithCachedHeader))
             {
-                // note that we intentionally don't close it here
-                var jsonReader = new JsonTextReader(new StreamReader(streamWithCachedHeader));
-                return RavenJObject.Load(jsonReader);
-            }
+                
+                if (IsJson(streamWithCachedHeader))
+                {
+                    // note that we intentionally don't close it here
+                    var jsonReader = new JsonTextReader(new StreamReader(counting));
+                    var ravenJObject = RavenJObject.Load(jsonReader);
+                    RegisterJsonStreamDeserializationMetrics((int)counting.NumberOfReadBytes);
+                    return ravenJObject;
+                }
 
-            return RavenJObject.Load(new BsonReader(streamWithCachedHeader)
-            {
-                DateTimeKindHandling = DateTimeKind.Utc,
-            });
+                var deserializedObject = RavenJObject.Load(new BsonReader(counting)
+                {
+                    DateTimeKindHandling = DateTimeKind.Utc,
+                });
+                RegisterJsonStreamDeserializationMetrics((int)counting.NumberOfReadBytes);
+                return deserializedObject;
+            }
         }
 
         /// <summary>
@@ -75,14 +123,19 @@ namespace Raven.Abstractions.Extensions
         /// </summary>
         public static void WriteTo(this RavenJToken self, Stream stream)
         {
-            using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 1024, true))
-            using (var jsonWriter = new JsonTextWriter(streamWriter))
+            using (var counting = new CountingStream(stream))
             {
-                jsonWriter.Formatting = Formatting.None;
-                jsonWriter.DateFormatHandling = DateFormatHandling.IsoDateFormat;
-                jsonWriter.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
-                jsonWriter.DateFormatString = Default.DateTimeFormatsToWrite;
-                self.WriteTo(jsonWriter, Default.Converters);
+                using (var streamWriter = new StreamWriter(counting, Encoding.UTF8, 1024, true))
+                using (var jsonWriter = new JsonTextWriter(streamWriter))
+                {
+                    jsonWriter.Formatting = Formatting.None;
+                    jsonWriter.DateFormatHandling = DateFormatHandling.IsoDateFormat;
+                    jsonWriter.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
+                    jsonWriter.DateFormatString = Default.DateTimeFormatsToWrite;
+                    self.WriteTo(jsonWriter, Default.Converters);
+             
+                }
+                RegisterJsonStreamSerializationMetrics((int)counting.NumberOfWrittenBytes);
             }
         }
 
@@ -267,6 +320,17 @@ namespace Raven.Abstractions.Extensions
             inner.Flush();
         }
 
+        public override int ReadByte()
+        {
+            if (passedHeader)
+                return inner.ReadByte();
+
+
+            var b = Header[headerSizePosition++];
+            passedHeader = headerSizePosition >= ActualHeaderSize;
+            return b;
+        }
+
         public override long Seek(long offset, SeekOrigin origin)
         {
             return inner.Seek(offset, origin);
@@ -353,12 +417,10 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
-#if !DNXCORE50
         public override void Close()
         {
             if (inner != null)
                 inner.Close();
         }
-#endif
     }
 }

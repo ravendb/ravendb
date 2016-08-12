@@ -152,6 +152,12 @@ namespace Raven.Database.Indexing
 
         protected virtual void Init() { }
 
+        protected string GetIndexName(int indexId)
+        {
+            var index = context.IndexStorage.GetIndexInstance(indexId);
+            return index == null ? string.Format("N/A, index id: {0}", indexId) : index.PublicName;
+        }
+
         private void HandleOutOfMemoryException(Exception oome)
         {
             Log.WarnException(

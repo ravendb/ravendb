@@ -266,12 +266,6 @@ namespace Raven.Database.Indexing
                 disabledIndexIds, context.IndexStorage.Indexes, alreadySeen);
         }
 
-        private string GetIndexName(int indexId)
-        {
-            var index = context.IndexStorage.GetIndexInstance(indexId);
-            return index == null ? string.Format("N/A, index id: {0}", indexId) : index.PublicName;
-        }
-
         protected override void FlushAllIndexes()
         {
             context.IndexStorage.FlushMapIndexes();
@@ -414,6 +408,11 @@ namespace Raven.Database.Indexing
                                 }
                             }
                         }
+                    }
+                    catch (IndexDoesNotExistsException)
+                    {
+                        Log.Info("Indexing batch was aborted because index was deleted, indexing batch will be retried");
+                        throw;
                     }
                     catch (OperationCanceledException)
                     {
@@ -640,7 +639,11 @@ namespace Raven.Database.Indexing
 
         private IndexingPerformanceStats HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified, CancellationToken token)
         {
-            currentlyProcessedIndexes.TryAdd(batchForIndex.IndexId, batchForIndex.Index);
+            if (currentlyProcessedIndexes.TryAdd(batchForIndex.IndexId, batchForIndex.Index) == false)
+            {
+                Log.Warn("Tried to run indexing for index '{0}' that is already running", batchForIndex.Index.PublicName);
+                return null;
+            }
 
             IndexingPerformanceStats performanceResult = null;
             var wasOutOfMemory = false;
@@ -687,33 +690,56 @@ namespace Raven.Database.Indexing
             }
             finally
             {
-                if (performanceResult != null)
-                {                    
-                    performanceResult.OnCompleted = null;
-                }				
-
-                if (Log.IsDebugEnabled)
+                try
                 {
-                    Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
-                              batchForIndex.Batch.Docs.Count,
-                              lastEtag,
-                              batchForIndex.Index.PublicName);
-                }
-
-                if (wasOutOfMemory == false && wasOperationCanceled == false)
-                {
-                    transactionalStorage.Batch(actions =>
+                    if (performanceResult != null)
                     {
-                        // whatever we succeeded in indexing or not, we have to update this
-                        // because otherwise we keep trying to re-index failed documents
-                        actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
-                    });
-                }
-                else if (wasOutOfMemory)
-                    HandleOutOfMemory(batchForIndex);
+                        performanceResult.OnCompleted = null;
+                    }
 
-                Index _;
-                currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
+                            batchForIndex.Batch.Docs.Count,
+                            lastEtag,
+                            batchForIndex.Index.PublicName);
+                    }
+
+                    if (wasOutOfMemory)
+                    {
+                        HandleOutOfMemory(batchForIndex);
+                    }
+                    else if (wasOperationCanceled == false)
+                    {
+                        var keepTrying = true;
+                        for (var i = 0; i < 10 && keepTrying; i++)
+                        {
+                            keepTrying = false;
+
+                            try
+                            {
+                                transactionalStorage.Batch(actions =>
+                                {
+                                    // whatever we succeeded in indexing or not, we have to update this
+                                    // because otherwise we keep trying to re-index failed documents
+                                    actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+                                });
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                keepTrying = true;
+                            }
+
+                            if (keepTrying)
+                                Thread.Sleep(11);
+                        }
+                    }
+                }
+                finally
+                {
+                    Index _;
+                    currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+                }
             }
 
             return performanceResult;

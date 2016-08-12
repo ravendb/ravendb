@@ -23,6 +23,7 @@ namespace Raven.Database.Storage
 
         void PutMappedResult(int indexId, string docId, string reduceKey, RavenJObject data);
         void IncrementReduceKeyCounter(int indexId, string reduceKey, int val);
+        bool HasMappedResultsForIndex(int view);
         void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed);
         void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed, CancellationToken token);
         void DeleteMappedResultsForView(int indexId, CancellationToken token);

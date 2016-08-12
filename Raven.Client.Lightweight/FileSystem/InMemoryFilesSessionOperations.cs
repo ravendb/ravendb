@@ -27,16 +27,8 @@ namespace Raven.Client.FileSystem
         /// </summary>
         public abstract string FileSystemName { get; }
 
-#if !DNXCORE50
-        private readonly static ILog log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog log = LogManager.GetLogger(typeof(InMemoryFilesSessionOperations));
-#endif
-
         protected readonly string fsName;
         private readonly FilesStore filesStore;
-
-
 
         /// <summary>
         /// Translate between a key and its associated entity

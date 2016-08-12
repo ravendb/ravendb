@@ -910,11 +910,7 @@ namespace Raven.Client.Indexes
             if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
                 return @"\u" + ((int)c).ToString("x4");
 
-#if !DNXCORE50
             return c.ToString(CultureInfo.InvariantCulture);
-#else
-            return c.ToString();
-#endif
         }
 
         private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)
@@ -1115,7 +1111,6 @@ namespace Raven.Client.Indexes
             return node;
         }
 
-#if !DNXCORE50
         /// <summary>
         ///   Visits the children of the <see cref = "T:System.Linq.Expressions.DynamicExpression" />.
         /// </summary>
@@ -1129,7 +1124,6 @@ namespace Raven.Client.Indexes
             VisitExpressions('(', node.Arguments, ')');
             return node;
         }
-#endif
 
         /// <summary>
         ///   Visits the element init.
@@ -1174,11 +1168,7 @@ namespace Raven.Client.Indexes
         /// </returns>
         protected override Expression VisitExtension(Expression node)
         {
-#if !DNXCORE50
             const BindingFlags bindingAttr = BindingFlags.ExactBinding | BindingFlags.Public | BindingFlags.Instance;
-#else
-            const BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance;
-#endif
 
             if (node.GetType().GetMethod("ToString", bindingAttr, null, ReflectionUtils.EmptyTypes, null).DeclaringType !=
                 typeof(Expression))
@@ -1201,11 +1191,7 @@ namespace Raven.Client.Indexes
         /// </returns>
         protected override Expression VisitGoto(GotoExpression node)
         {
-#if !DNXCORE50
             Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
-#else
-            Out(node.Kind.ToString().ToLower());
-#endif
 
             DumpLabel(node.Target);
             if (node.Value != null)

@@ -12,14 +12,6 @@ namespace Raven.Tests.Core.Indexing
 {
     public class MultiMap : RavenCoreTestBase
     {
-#if DNXCORE50
-        public MultiMap(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanCreateAndSearchMultiMapIndex()
         {

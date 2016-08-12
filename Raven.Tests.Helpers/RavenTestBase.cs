@@ -1089,5 +1089,18 @@ namespace Raven.Tests.Helpers
                 transformer.Execute(documentStore);
             }
         }
+
+        protected static int GetCachedItemsCount(DocumentStore store)
+        {
+            var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(null,
+                    store.Url + string.Format("/databases/{0}/debug/cache-details", store.DefaultDatabase),
+                    "GET",
+                    store.DatabaseCommands.PrimaryCredentials,
+                    store.Conventions));
+
+            var response = request.ReadResponseJson();
+            return response.Value<int>("CachedItems");
+        }
     }
 }

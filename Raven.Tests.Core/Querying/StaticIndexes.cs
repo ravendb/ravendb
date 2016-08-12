@@ -11,14 +11,6 @@ namespace Raven.Tests.Core.Querying
 {
     public class StaticIndexes : RavenCoreTestBase
     {
-#if DNXCORE50
-        public StaticIndexes(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CreateAndQuerySimpleMapReduceIndexWithMetadataForCall()
         {

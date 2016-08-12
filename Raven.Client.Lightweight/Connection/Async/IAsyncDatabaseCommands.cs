@@ -67,14 +67,12 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken));
 
-#if !DNXCORE50
         /// <summary>
         ///     Commits the specified tx id
         /// </summary>
         /// <param name="txId">transaction identifier</param>
         /// <param name="token">The cancellation token.</param>
         Task CommitAsync(string txId, CancellationToken token = default (CancellationToken));
-#endif
 
         HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
@@ -473,12 +471,10 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken));
 
-#if !DNXCORE50
         /// <summary>
         ///     Prepares the transaction on the server.
         /// </summary>
         Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null, CancellationToken token = default (CancellationToken));
-#endif
 
         /// <summary>
         ///     Puts the document in the database with the specified key.
@@ -593,14 +589,12 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken));
 
-#if !DNXCORE50
         /// <summary>
         ///     Rollbacks the specified tx id
         /// </summary>
         /// <param name="txId">transaction identifier</param>
         /// <param name="token">The cancellation token.</param>
         Task RollbackAsync(string txId, CancellationToken token = default(CancellationToken));
-#endif
 
         /// <summary>
         ///     Seeds the next identity value on the server

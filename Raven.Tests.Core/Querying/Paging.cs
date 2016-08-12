@@ -16,14 +16,6 @@ namespace Raven.Tests.Core.Querying
 {
     public class Paging : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Paging(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void BasicPaging()
         {

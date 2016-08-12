@@ -28,13 +28,11 @@ namespace Raven.Abstractions.Exceptions.Subscriptions
         {
         }
 
-#if !DNXCORE50
         protected SubscriptionInUseException(
             SerializationInfo info,
             StreamingContext context)
             : base(info, context)
         {
         }
-#endif
     }
 }

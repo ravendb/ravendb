@@ -39,7 +39,6 @@ namespace Raven.Client.Exceptions
         {
         }
 
-#if !DNXCORE50
         /// <summary>
         /// Initializes a new instance of the <see cref="NonUniqueObjectException"/> class.
         /// </summary>
@@ -52,6 +51,5 @@ namespace Raven.Client.Exceptions
             StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 }

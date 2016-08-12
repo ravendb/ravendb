@@ -20,11 +20,7 @@ namespace Raven.Tests.Core.Utils.Indexes
 
             Sort(c => c.Name, SortOptions.String);
 
-#if !DNXCORE50
             Analyzers.Add(c => c.Name, typeof(Raven.Database.Indexing.Collation.Cultures.PlCollationAnalyzer).ToString());
-#else
-            Analyzers.Add(c => c.Name, "Raven.Database.Indexing.Collation.Cultures.PlCollationAnalyzer");
-#endif
         }
     }
 }

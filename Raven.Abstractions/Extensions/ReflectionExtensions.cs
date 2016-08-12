@@ -18,47 +18,27 @@ namespace Raven.Abstractions.Extensions
 
         public static bool IsGenericTypeDefinition(this Type type)
         {
-#if !DNXCORE50
             return type.IsGenericTypeDefinition;
-#else
-            return type.GetTypeInfo().IsGenericTypeDefinition;
-#endif
         }
 
         public static bool IsDefined(this Type type, Type attributeType, bool inherit)
         {
-#if !DNXCORE50
             return type.IsDefined(attributeType, inherit);
-#else
-            return type.GetTypeInfo().CustomAttributes.Any(a => a.AttributeType == attributeType);
-#endif
         }
 
         public static bool IsEnum(this Type type)
         {
-#if !DNXCORE50
             return type.IsEnum;
-#else
-            return type.GetTypeInfo().IsEnum;
-#endif
         }
 
         public static bool IsValueType(this Type type)
         {
-#if !DNXCORE50
             return type.IsValueType;
-#else
-            return type.GetTypeInfo().IsValueType;
-#endif
         }
 
         public static Type BaseType(this Type type)
         {
-#if !DNXCORE50
             return type.BaseType;
-#else
-            return type.GetTypeInfo().BaseType;
-#endif
         }
 
         public static MethodInfo GetMethod(this Type type, string name, IList<Type> parameterTypes)
@@ -89,30 +69,17 @@ namespace Raven.Abstractions.Extensions
 
         public static void InvokeMember(this Type type, string name, BindingFlags invokeAttr, object target)
         {
-#if !DNXCORE50
             type.InvokeMember(name, invokeAttr, null, target, null);
-#else
-            var method = type.GetMethod(name);
-            method.Invoke(target, null);
-#endif
         }
 
         public static Assembly Assembly(this Type type)
         {
-#if !DNXCORE50
             return type.Assembly;
-#else
-            return type.GetTypeInfo().Assembly;
-#endif
         }
 
         public static bool IsGenericType(this Type type)
         {
-#if !(NETFX_CORE || PORTABLE)
             return type.IsGenericType;
-#else
-            return type.GetTypeInfo().IsGenericType;
-#endif
         }
 
         public static Type GetMemberType(this MemberInfo member)

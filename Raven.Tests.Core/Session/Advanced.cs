@@ -15,14 +15,6 @@ namespace Raven.Tests.Core.Session
 {
     public class Advanced : RavenCoreTestBase
     {
-#if DNXCORE50
-        public Advanced(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanGetChangesInformation()
         {
@@ -509,9 +501,7 @@ namespace Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-#if !DNXCORE50
                 Server.Server.ResetNumberOfRequests();
-#endif
 
                 using (var session = store.OpenSession())
                 {

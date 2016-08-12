@@ -17,14 +17,6 @@ namespace Raven.Tests.Core.Indexing
 {
     public class ResultTransformers : RavenCoreTestBase
     {
-#if DNXCORE50
-        public ResultTransformers(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
         [Fact]
         public void CanApplyTransformerOnQueryResults()
         {

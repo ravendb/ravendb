@@ -385,13 +385,8 @@ namespace Raven.Client.FileSystem
             public void Dispose()
             {
                 reader.Close();
-#if !DNXCORE50
                 streamReader.Close();
                 stream.Close();
-#else
-                streamReader.Dispose();
-                stream.Dispose();
-#endif
                 request.Dispose();
             }
 

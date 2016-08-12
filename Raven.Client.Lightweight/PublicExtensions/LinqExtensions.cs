@@ -360,11 +360,7 @@ namespace Raven.Client
         /// </summary>
         public static IRavenQueryable<T> Intersect<T>(this IQueryable<T> self)
         {
-#if !DNXCORE50
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            var currentMethod = typeof(LinqExtensions).GetMethod("Intersect");
-#endif
 
             Expression expression = self.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))
@@ -1153,11 +1149,7 @@ namespace Raven.Client
                                                    SearchOptions options = SearchOptions.Guess,
                                                    EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
         {
-#if !DNXCORE50
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            var currentMethod = typeof(LinqExtensions).GetMethod("Search");
-#endif
 
             Expression expression = self.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))
@@ -1178,11 +1170,7 @@ namespace Raven.Client
         /// </summary>
         public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
         {
-#if !DNXCORE50
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            var currentMethod = typeof(LinqExtensions).GetMethod("OrderByScore");
-#endif
 
             Expression expression = self.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))
@@ -1198,11 +1186,7 @@ namespace Raven.Client
         /// </summary>
         public static IOrderedQueryable<T> OrderByScoreDescending<T>(this IQueryable<T> self)
         {
-#if !DNXCORE50
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#else
-            var currentMethod = typeof(LinqExtensions).GetMethod("OrderByScoreDescending");
-#endif
 
             Expression expression = self.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))

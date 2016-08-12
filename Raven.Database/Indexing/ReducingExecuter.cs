@@ -58,8 +58,6 @@ namespace Raven.Database.Indexing
                 }
             });
 
-            currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index);
-
             var performanceStats = new List<ReducingPerformanceStats>();
 
             try
@@ -148,9 +146,6 @@ namespace Raven.Database.Indexing
                 {
                     LevelStats = new List<ReduceLevelPeformanceStats> { postReducingOperations }
                 });
-
-                Index _;
-                currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
             }
 
             return performanceStats.ToArray();
@@ -390,6 +385,17 @@ namespace Raven.Database.Indexing
 
                 BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
                 {
+                    var localKeys = new HashSet<string>();
+                    while (enumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        localKeys.Add(enumerator.Current);
+                    }
+
+                    if (localKeys.Count == 0)
+                        return;
+
                     var parallelStats = new ParallelBatchStats
                     {
                         StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
@@ -399,14 +405,6 @@ namespace Raven.Database.Indexing
                     needToMoveToSingleStepQueue.Enqueue(localNeedToMoveToSingleStep);
                     var localAlreadySingleStep = new HashSet<string>();
                     alreadySingleStepQueue.Enqueue(localAlreadySingleStep);
-
-                    var localKeys = new HashSet<string>();
-                    while (enumerator.MoveNext())
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        localKeys.Add(enumerator.Current);
-                    }
 
                     transactionalStorage.Batch(actions =>
                     {
@@ -648,11 +646,25 @@ namespace Raven.Database.Indexing
             {
                 reducingBatchInfo = context.ReportReducingBatchStarted(indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
 
-                BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn, index =>
+                BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn, indexToWorkOn =>
                 {
-                    var performanceStats = HandleReduceForIndex(index, context.CancellationToken);
+                    if (currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index) == false)
+                    {
+                        Log.Warn("Tried to run a map-reduce for index '{0}' that is already running!", GetIndexName(indexToWorkOn.IndexId));
+                        return;
+                    }
 
-                    reducingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performanceStats);
+                    try
+                    {
+                        var performanceStats = HandleReduceForIndex(indexToWorkOn, context.CancellationToken);
+
+                        reducingBatchInfo.PerformanceStats.TryAdd(indexToWorkOn.Index.PublicName, performanceStats);
+                    }
+                    finally
+                    {
+                        Index _;
+                        currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
+                    }
                 });
             }
             finally

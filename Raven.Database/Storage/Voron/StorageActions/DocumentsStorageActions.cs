@@ -318,6 +318,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
+        public IEnumerable<JsonDocument> GetDocuments(int start)
+        {
+            using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false || 
+                    iterator.Skip(start) == false)
+                    yield break;
+
+                do
+                {
+                    var key = iterator.CurrentKey.ToString();
+
+                    var fetchedDocument = DocumentByKey(key);
+                    if (fetchedDocument == null)
+                        continue;
+
+                    yield return fetchedDocument;
+                } while (iterator.MoveNext());
+            }
+        }
+
         public long GetDocumentsCount()
         {
             return tableStorage.GetEntriesCount(tableStorage.Documents);

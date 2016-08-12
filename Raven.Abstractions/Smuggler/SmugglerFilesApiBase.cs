@@ -1,4 +1,3 @@
-#if !DNXCORE50
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -728,4 +727,3 @@ namespace Raven.Abstractions.Smuggler
         }
     }
 }
-#endif

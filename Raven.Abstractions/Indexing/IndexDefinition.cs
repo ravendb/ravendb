@@ -33,6 +33,7 @@ namespace Raven.Abstractions.Indexing
         /// <para>- Unlock - all index definition changes acceptable</para>
         /// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
         /// <para>- LockedError - all index definition changes will raise exception</para>
+        /// <para>- SideBySide - all index definition changes will raise exception except when updated by a side by side index</para>
         /// </summary>
         public IndexLockMode LockMode { get; set; }
 
@@ -195,12 +196,8 @@ namespace Raven.Abstractions.Indexing
             bool mapsReduceEquals;
             if (ignoreFormatting)
             {
-#if !DNXCORE50
                 var comparer = new IndexPrettyPrinterEqualityComparer();
                 mapsReduceEquals = Maps.SequenceEqual(other.Maps, comparer) && comparer.Equals(Reduce, other.Reduce);
-#else
-                mapsReduceEquals = Maps.SequenceEqual(other.Maps) && Reduce.Equals(other.Reduce);
-#endif
             }
             else
             {

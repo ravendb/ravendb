@@ -21,15 +21,6 @@ namespace Raven.Tests.Core.ChangesApi
     {
         private ConcurrentSet<string> output = new ConcurrentSet<string>(), output2 = new ConcurrentSet<string>();
 
-#if DNXCORE50
-        public Subscribing(TestServerFixture fixture)
-            : base(fixture)
-        {
-
-        }
-#endif
-
-
         [Fact]
         public void CanSubscribeToDocumentChanges()
         {

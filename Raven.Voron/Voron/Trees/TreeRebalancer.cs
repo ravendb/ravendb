@@ -2,10 +2,8 @@ using Sparrow;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -30,9 +28,11 @@ namespace Voron.Trees
                 RebalanceRoot(page);
                 return null;
             }
+            
+            _cursor.Pop();
 
-            var parentPage = _tx.ModifyPage(_cursor.ParentPage.PageNumber, _tree, _cursor.ParentPage);
-            _cursor.Update(_cursor.Pages.First.Next, parentPage);
+            var parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, _cursor.CurrentPage);
+            _cursor.Update(_cursor.Pages.First, parentPage);
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
@@ -49,7 +49,6 @@ namespace Voron.Trees
                 }
 
                 _tree.FreePage(page);
-                _cursor.Pop();
 
                 return parentPage;
             }
@@ -57,13 +56,12 @@ namespace Voron.Trees
             if (page.IsBranch && page.NumberOfEntries == 1)
             {
                 RemoveBranchWithOneEntry(page, parentPage);
-                _cursor.Pop();
 
                 return parentPage;
             }
 
             var minKeys = page.IsBranch ? 2 : 1;
-            if ((page.UseMoreSizeThan(_tx.DataPager.PageMinSpace)) &&
+            if (page.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                 page.NumberOfEntries >= minKeys)
                 return null; // above space/keys thresholds
 
@@ -79,8 +77,6 @@ namespace Voron.Trees
             if (sibling.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                 sibling.NumberOfEntries > minKeys)
             {
-                _cursor.Pop();
-
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
                 if (page.IsBranch)
                     MoveBranchNode(parentPage, sibling, page);
@@ -100,8 +96,6 @@ namespace Voron.Trees
                 if (TryMergePages(parentPage, page, sibling) == false)
                     return null;
             }
-
-            _cursor.Pop();			
 
             return parentPage;
         }
@@ -240,23 +234,14 @@ namespace Voron.Trees
                 newSeparatorKey = GetActualKey(from, 0);
             }
 
-            AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
+            AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
         }
 
-        private void AddSeparatorToParentPage(Page parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
+        private void AddSeparatorToParentPage(Page childPage, Page parentPage, long pageNumber, MemorySlice seperatorKey, int separatorKeyPosition)
         {
-            var separatorKeyToInsert = parentPage.PrepareKeyToInsert(seperatorKey, separatorKeyPosition);
+            var parent = new ParentPageAction(parentPage, childPage, _tree, _cursor, _tx);
 
-            if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
-            {
-                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
-                    0, _cursor, _tree.State);
-                pageSplitter.Execute();
-            }
-            else
-            {
-                parentPage.AddPageRefNode(separatorKeyPosition, separatorKeyToInsert, pageNumber);
-            }
+            parent.AddSeparator(seperatorKey, pageNumber, separatorKeyPosition);
         }
 
         private void MoveBranchNode(Page parentPage, Page from, Page to)
@@ -327,7 +312,7 @@ namespace Voron.Trees
                 newSeparatorKey = GetActualKey(from, 0);
             }
 
-            AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
+            AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

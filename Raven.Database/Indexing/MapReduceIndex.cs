@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
             token.ThrowIfCancellationRequested();
 
             var count = 0;
-            var sourceCount = 0;
+            var sourceCount = batch.Docs.Count;
             var deleted = new Dictionary<ReduceKeyAndBucket, int>();
             var performance = RecordCurrentBatch("Current Map", "Map", batch.Docs.Count);
             var performanceStats = new List<BasePerformanceStats>();
@@ -112,29 +112,38 @@ namespace Raven.Database.Indexing
                 };
             }
 
-            var deleteMappedResultsDuration = new Stopwatch();
-            var documentsWrapped = batch.Docs.Select(doc =>
+            List<dynamic> documentsWrapped;
+
+            if (actions.MapReduce.HasMappedResultsForIndex(indexId) == false)
             {
-                token.ThrowIfCancellationRequested();
-
-                sourceCount++;
-                var documentId = doc.__document_id;
-
-                using (StopwatchScope.For(deleteMappedResultsDuration))
+                //new index
+                documentsWrapped = batch.Docs.Where(x => x is FilteredDocument == false).ToList();
+            }
+            else
+            {
+                var deleteMappedResultsDuration = new Stopwatch();
+                documentsWrapped = batch.Docs.Select(doc =>
                 {
-                    actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
-                }
+                    token.ThrowIfCancellationRequested();
 
-                return doc;
-            })
-            .Where(x => x is FilteredDocument == false)
-            .ToList();
+                    var documentId = doc.__document_id;
 
-            performanceStats.Add(new PerformanceStats
-            {
-                Name = IndexingOperation.Map_DeleteMappedResults,
-                DurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
-            });
+                    using (StopwatchScope.For(deleteMappedResultsDuration))
+                    {
+                        actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
+                    }
+
+                    return doc;
+                })
+                .Where(x => x is FilteredDocument == false)
+                .ToList();
+
+                performanceStats.Add(new PerformanceStats
+                {
+                    Name = IndexingOperation.Map_DeleteMappedResults,
+                    DurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
+                });
+            }
 
             var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
             var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
@@ -514,10 +523,13 @@ namespace Raven.Database.Indexing
             context.TransactionalStorage.Batch(actions =>
             {
                 var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
-                foreach (var key in keys)
+                if (actions.MapReduce.HasMappedResultsForIndex(indexId))
                 {
-                    actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
-                    context.CancellationToken.ThrowIfCancellationRequested();
+                    foreach (var key in keys)
+                    {
+                        actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
+                        context.CancellationToken.ThrowIfCancellationRequested();
+                    }
                 }
 
                 actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);

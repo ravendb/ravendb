@@ -23,11 +23,7 @@ namespace Raven.Client.FileSystem
         where TSelf : AbstractFilesQuery<T, TSelf>
         where T : class
     {
-#if !DNXCORE50
         private readonly static ILog log = LogManager.GetCurrentClassLogger();
-#else
-        private readonly static ILog log = LogManager.GetLogger(typeof(AbstractFilesQuery<T, TSelf>));
-#endif
 
         private readonly LinqPathProvider linqPathProvider;
         private readonly FilesConvention conventions;

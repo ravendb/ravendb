@@ -19,7 +19,7 @@
         </div>
         <div class="form-group">
             <div class="col-md-8 col-md-offset-4 text-height-fix">
-                <button data-bind="click: forceUpdate" class="btn btn-default"><i class="fa fa-bolt fa-fw"></i> Force license update</button>
+                <button data-bind="click: forceUpdate, enable: forceButtonEnabled() && forceInProgress() == false" class="btn btn-default"><i class="fa fa-bolt fa-fw"></i> Force license update</button>
             </div>
         </div>
     </div>
