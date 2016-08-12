@@ -424,7 +424,18 @@ namespace Raven.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Indexes(name), HttpMethod.Delete, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(operationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
-                    await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+
+                    try
+                    {
+                        await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                    }
+                    catch (ErrorResponseException e)
+                    {
+                        if (e.StatusCode == HttpStatusCode.NotFound)
+                            return;
+
+                        throw;
+                    }
                 }
             }, token);
         }
@@ -1128,7 +1139,7 @@ namespace Raven.Client.Connection.Async
 
         public async Task<TcpConnectionInfo> GetTcpInfoAsync(CancellationToken token = default(CancellationToken))
         {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetRootDatabaseUrl(Url)+ "/info/tcp"), HttpMethod.Get, 
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetRootDatabaseUrl(Url) + "/info/tcp"), HttpMethod.Get,
                 credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
             {
                 request.AddOperationHeaders(OperationsHeaders);

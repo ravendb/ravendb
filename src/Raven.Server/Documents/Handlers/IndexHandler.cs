@@ -185,9 +185,10 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            Database.IndexStore.DeleteIndex(name);
+            HttpContext.Response.StatusCode = Database.IndexStore.TryDeleteIndexIfExists(name)
+                ? (int) HttpStatusCode.NoContent
+                : (int) HttpStatusCode.NotFound;
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 

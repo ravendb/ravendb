@@ -1,17 +1,15 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Linq;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.MailingList.spokeypokey
+namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey2 : RavenTest
+    public class spokeypokey2 : RavenTestBase
     {
         private enum AddressTypeEnumPto2
         {
@@ -135,28 +133,26 @@ namespace Raven.Tests.MailingList.spokeypokey
         }
 
         //1105376
-        [Theory]
-        [PropertyData("Storages")]
-        public void Can_search_by_Zip(string storage)
+        [Fact]
+        public async Task Can_search_by_Zip()
         {
-            using (var ravenServer = GetNewServer(requestedStorage: storage))
-            using (var store = NewRemoteDocumentStore(ravenDbServer:ravenServer))
+            using (var store = await GetDocumentStore())
             {
                 CreateTestData(store);
 
                 var fromCutoffDate = DateTime.MaxValue;
                 var thruCutoffDate = DateTime.MinValue;
                 var searchCriteria = new SearchProviderParamsPto
-                                        {
-                                            Zip = "WA000",
-                                            AddressTypes = new Collection<AddressTypeEnumPto2>
+                {
+                    Zip = "WA000",
+                    AddressTypes = new Collection<AddressTypeEnumPto2>
                                                             {
                                                                 AddressTypeEnumPto2.PayToAddress,
                                                                 AddressTypeEnumPto2.PracticeOfficeAddress,
                                                                 AddressTypeEnumPto2.ProviderAddress
 
                                                             }
-                                        };
+                };
 
                 using (var session = store.OpenSession())
                 {
@@ -171,16 +167,16 @@ namespace Raven.Tests.MailingList.spokeypokey
                                                                       &&
                                                                       x.PrimaryContact.Address.AddressTypePto.In(
                                                                         searchCriteria.AddressTypes) &&
-                                        // Check PracticeOffice effective dates
+                                                                      // Check PracticeOffice effective dates
                                                                       (x.EffectiveFrom <= fromCutoffDate)
                                                                       &&
                                                                       ((x.EffectiveThrough == null) ||
                                                                        (x.EffectiveThrough >= thruCutoffDate)) &&
-                                        // Check Contact effective dates
+                                                                      // Check Contact effective dates
                                                                       (x.PrimaryContact.ContactEffectiveFrom <= fromCutoffDate) &&
                                                                       ((x.PrimaryContact.ContactEffectiveThrough == null) ||
                                                                        (x.PrimaryContact.ContactEffectiveThrough >= thruCutoffDate)) &&
-                                        // Check Contact address effective dates
+                                                                      // Check Contact address effective dates
                                                                       (x.PrimaryContact.AddressEffectiveFrom <= fromCutoffDate) &&
                                                                       ((x.PrimaryContact.AddressEffectiveThrough == null) ||
                                                                        (x.PrimaryContact.AddressEffectiveThrough >= thruCutoffDate))

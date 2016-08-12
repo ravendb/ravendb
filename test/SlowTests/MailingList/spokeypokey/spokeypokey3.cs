@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList.spokeypokey
+namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey3 : RavenTest
+    public class spokeypokey3 : RavenTestBase
     {
-        public class ProviderSearchIndex2 : AbstractIndexCreationTask<Provider>
+        private class ProviderSearchIndex2 : AbstractIndexCreationTask<Provider>
         {
             public ProviderSearchIndex2()
             {
@@ -27,9 +27,9 @@ namespace Raven.Tests.MailingList.spokeypokey
         }
 
         [Fact]
-        public void Can_deal_with_nulls2()
+        public async Task Can_deal_with_nulls2()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = await GetDocumentStore())
             {
                 var categories = new List<Category>
                 {
@@ -132,20 +132,20 @@ namespace Raven.Tests.MailingList.spokeypokey
             }
         }
 
-        public class Category
+        private class Category
         {
             public string Identifier { get; set; }
             public string Name { get; set; }
         }
 
-        public class PracticeOffice
+        private class PracticeOffice
         {
             public string Identifier { get; set; }
             public string ZipCode { get; set; }
             public string Name { get; set; }
         }
 
-        public class Provider
+        private class Provider
         {
             public string Id { get; set; }
             public string Name { get; set; }

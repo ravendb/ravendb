@@ -1,17 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList.spokeypokey
+namespace SlowTests.MailingList.spokeypokey
 {
-    public class spokeypokey : RavenTest
+    public class spokeypokey : RavenTestBase
     {
-        public class BarnIndex : AbstractIndexCreationTask<Barn, Barn>
+        private class BarnIndex : AbstractIndexCreationTask<Barn, Barn>
         {
             public BarnIndex()
             {
@@ -33,9 +33,9 @@ namespace Raven.Tests.MailingList.spokeypokey
         }
 
         [Fact]
-        public void Can_use_barn_index2()
+        public async Task Can_use_barn_index2()
         {
-            using (var docStore = NewDocumentStore())
+            using (var docStore = await GetDocumentStore())
             {
                 docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
                 {
@@ -51,9 +51,9 @@ namespace Raven.Tests.MailingList.spokeypokey
                 new BarnIndex().Execute(docStore);
 
                 var barn1 = new Barn
-                                {
-                                    Name = "Barn1",
-                                    Households = new List<Household>
+                {
+                    Name = "Barn1",
+                    Households = new List<Household>
                                                     {
                                                         new Household
                                                             {
@@ -61,7 +61,7 @@ namespace Raven.Tests.MailingList.spokeypokey
                                                                 Members = new List<Member> {new Member {Name = "Joe"},},
                                                             },
                                                     }
-                                };
+                };
                 using (var session = docStore.OpenSession())
                 {
                     session.Store(barn1);
@@ -108,26 +108,24 @@ namespace Raven.Tests.MailingList.spokeypokey
             }
         }
 
-        public class Barn
+        private class Barn
         {
             public string InternalId { get; set; }
             public string Name { get; set; }
             public IList<Household> Households { get; set; }
         }
 
-        public class Household
+        private class Household
         {
             public string InternalId { get; set; }
             public string Address { get; set; }
             public IList<Member> Members { get; set; }
         }
 
-        public class Member
+        private class Member
         {
             public string InternalId { get; set; }
             public string Name { get; set; }
         }
-
-
     }
 }

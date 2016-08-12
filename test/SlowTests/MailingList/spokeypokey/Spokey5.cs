@@ -1,15 +1,14 @@
 using System;
 using System.Linq;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Document;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList.spokeypokey
+namespace SlowTests.MailingList.spokeypokey
 {
-    public class Spokey5 : RavenTest
+    public class Spokey5 : RavenTestBase
     {
         private class Reference
         {
@@ -72,23 +71,22 @@ namespace Raven.Tests.MailingList.spokeypokey
                 Reduce = results => from r in results
                                     group r by r.TaxonomyCode_InternalId
                                         into g
-                                        select new
-                                        {
-                                            InternalId = g.Select(x => x.InternalId).FirstOrDefault(x => x != null),
-                                            Name = g.Select(x => x.Name).FirstOrDefault(x => x != null),
-                                            TaxonomyCode_EffectiveFrom = g.Select(x => x.TaxonomyCode_EffectiveFrom).FirstOrDefault(x => x > DateTime.MinValue),
-                                            TaxonomyCode_EffectiveThrough = g.Select(x => x.TaxonomyCode_EffectiveThrough).FirstOrDefault(x => x > DateTime.MinValue),
-                                            TaxonomyCode_InternalId = g.Key,
-                                        };
+                                    select new
+                                    {
+                                        InternalId = g.Select(x => x.InternalId).FirstOrDefault(x => x != null),
+                                        Name = g.Select(x => x.Name).FirstOrDefault(x => x != null),
+                                        TaxonomyCode_EffectiveFrom = g.Select(x => x.TaxonomyCode_EffectiveFrom).FirstOrDefault(x => x > DateTime.MinValue),
+                                        TaxonomyCode_EffectiveThrough = g.Select(x => x.TaxonomyCode_EffectiveThrough).FirstOrDefault(x => x > DateTime.MinValue),
+                                        TaxonomyCode_InternalId = g.Key,
+                                    };
             }
         }
 
 
-        [Fact]
-        public void CanReferenceChildDocumentsInIndex()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task CanReferenceChildDocumentsInIndex()
         {
-            using(GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 store.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
                 new ProviderAndTaxonomyCodeIndex1().Execute(store);
@@ -133,16 +131,7 @@ namespace Raven.Tests.MailingList.spokeypokey
                         .Customize(x => x.WaitForNonStaleResults())
                         .FirstOrDefault(p => p.Name == provider1.Name);
 
-                    var serverErrors = store.DatabaseCommands.GetStatistics().Errors;
-                    try
-                    {
-                        Assert.Empty(serverErrors);
-                    }
-                    catch (Exception)
-                    {
-                        serverErrors.ForEach(Console.WriteLine);
-                        throw;
-                    }
+                    TestHelper.AssertNoIndexErrors(store);
 
                     Assert.NotNull(result);
                     Assert.Equal(provider1.Name, result.Name);
