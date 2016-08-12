@@ -19,6 +19,7 @@ import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import liveTestDetector = require("common/liveTestDetector");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -868,7 +869,10 @@ class shell extends viewModelBase {
 
     private initAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
         if (eventsCollector.gaDefined()) {
-            if (config == null || !("SendUsageStats" in config)) {
+            if (liveTestDetector.isLiveTest()) {
+                // force tracking on live test
+                this.configureAnalytics(true, buildVersionResult);
+            } else if (config == null || !("SendUsageStats" in config)) {
                 // ask user about GA
                 this.displayUsageStatsInfo(true);
 

@@ -110,6 +110,7 @@
     <TypeScriptCompile Include="App\common\awesomeMultiselect.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
+    <TypeScriptCompile Include="App\common\liveTestDetector.ts" />
     <TypeScriptCompile Include="App\common\eventsCollector.ts" />
     <TypeScriptCompile Include="App\common\tableNavigationTrait.ts" />
     <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
