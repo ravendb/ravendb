@@ -147,7 +147,7 @@ namespace Raven.Client.Shard
             var dbCommands = GetCommandsToOperateOn(shardRequestData);
             var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, shardRequestData, (commands, i) =>
             {
-                var loadOperation = new LoadOperation(this, commands.DisableAllCaching, id);
+                var loadOperation = new ShardLoadOperation(this, commands.DisableAllCaching, id);
                 bool retry;
                 do
                 {
@@ -167,7 +167,13 @@ namespace Raven.Client.Shard
                                                     " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
             }
 
-            return shardsContainThisDocument.FirstOrDefault();
+            if (shardsContainThisDocument.Count() == 0)
+            {
+                RegisterMissing(id);
+                return default(T);
+            }
+
+            return shardsContainThisDocument.First();
         }
 
         public T[] Load<T>(IEnumerable<string> ids)
@@ -391,8 +397,19 @@ namespace Raven.Client.Shard
             return ids.Select(id => // so we get items that were skipped because they are already in the session cache
             {
                 object val;
-                entitiesByKey.TryGetValue(id, out val);
-                return (T)val;
+                if (entitiesByKey.TryGetValue(id, out val))
+                {
+                    return (T)val;
+                }
+
+                JsonDocument value;
+                if (includedDocumentsByKey.TryGetValue(id, out value))
+                {
+                    includedDocumentsByKey.Remove(id);
+                    return TrackEntity<T>(value);
+                }
+
+                return default(T);
             }).ToArray();
         }
 
