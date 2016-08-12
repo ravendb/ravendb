@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private static readonly int SizeOfResultHeader = sizeof(ResultHeader);
         
         private readonly TransactionOperationContext _indexContext;
-        private readonly List<UnmanagedBuffersPool.AllocatedMemoryData> _allocations = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+        private readonly List<AllocatedMemoryData> _allocations = new List<AllocatedMemoryData>();
         private readonly Dictionary<long, BlittableJsonReaderObject> _mapResults = new Dictionary<long, BlittableJsonReaderObject>();
 
         private int _dataSize;
@@ -73,10 +73,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Dispose()
         {
-            foreach (var allocation in _allocations)
-            {
-                _indexContext.ReturnMemory(allocation);
-            }
+
         }
 
         public void Delete(long id)
