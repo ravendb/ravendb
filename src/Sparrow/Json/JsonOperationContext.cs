@@ -72,7 +72,7 @@ namespace Sparrow.Json
 
         public AllocatedMemoryData GetMemory(int requestedSize, bool longLived = false)
         {
-            if (requestedSize == 0)
+            if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
 
             return longLived ?

@@ -24,9 +24,9 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var x = new ReplicationBasicTests())
+            using (var x = new BasicAutoMapReduceIndexing())
             {
-                x.Master_master_replication_from_etag_zero_without_conflict_should_work().Wait();
+                x.CanDelete().Wait();
             }
         }
     }

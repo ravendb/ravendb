@@ -21,6 +21,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             _indexContext = indexContext;
 
+            if (size == 0)
+                return;
+
             // need to have a copy because pointer can become invalid after defragmentation of a related page
 
             var inMemorySection = _indexContext.GetMemory(size);
