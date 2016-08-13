@@ -32,10 +32,15 @@ namespace Sparrow.Json
 
         private int _lastStreamSize = 4096;
 
-        public JsonOperationContext()
+        public static JsonOperationContext ShortTermSingleUse()
         {
-            _arenaAllocator = new ArenaMemoryAllocator();
-            _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(16 * 1024);
+            return new JsonOperationContext(4096, 1024);
+        }
+
+        public JsonOperationContext(int initialSize, int longLivedSize)
+        {
+            _arenaAllocator = new ArenaMemoryAllocator(initialSize);
+            _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(longLivedSize);
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
         }

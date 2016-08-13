@@ -17,7 +17,7 @@ namespace FastTests.Server.Json
 
         public BlittableJsonTraverserTests()
         {
-            _ctx = new JsonOperationContext();
+            _ctx = JsonOperationContext.ShortTermSingleUse();
         }
 
         [Fact]

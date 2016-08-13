@@ -65,7 +65,10 @@ namespace Raven.Client.Http
             var handler = new HttpClientHandler();
             _httpClient = new HttpClient(handler);
 
-            _context = new JsonOperationContext();
+            //TODO: This need to be taken from the context pool
+            //TODO: context has to be single threaded, but is used 
+            //TODO: in multiple threads
+            _context = new JsonOperationContext(1024*1024, 16*1024);
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));

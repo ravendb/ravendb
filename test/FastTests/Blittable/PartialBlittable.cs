@@ -23,7 +23,7 @@ namespace FastTests.Blittable
         [Fact]
         public void CanSkipWritingPropertyNames()
         {
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var buffer = Encoding.UTF8.GetBytes("{\"Name\":\"Oren\"}");
                 var state = new JsonParserState();

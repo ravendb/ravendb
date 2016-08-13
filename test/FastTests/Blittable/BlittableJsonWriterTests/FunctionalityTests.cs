@@ -22,7 +22,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         public void FunctionalityTest()
         {
             var str = GenerateSimpleEntityForFunctionalityTest();
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
@@ -47,7 +47,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         public void FunctionalityTest2()
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 AssertComplexEmployee(str, employee, blittableContext);
@@ -58,7 +58,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         public void EmptyArrayTest()
         {
             var str = "{\"Alias\":\"Jimmy\",\"Data\":[],\"Name\":\"Trolo\",\"SubData\":{\"SubArray\":[]}}";
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(employee);
@@ -129,7 +129,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             };
             var str = sampleObject.ToJsonString();
 
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var doc =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(doc);
@@ -166,7 +166,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 }
             });
 
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             using (var r =  ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();
@@ -185,7 +185,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Dogs = true
             });
 
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();

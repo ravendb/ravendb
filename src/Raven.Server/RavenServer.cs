@@ -244,7 +244,8 @@ namespace Raven.Server
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
                     stream = tcpClient.GetStream();
-                    context = new JsonOperationContext();
+                    //TODO: need to have a dedicate context pool here
+                    context = JsonOperationContext.ShortTermSingleUse();
                     multiDocumentParser = context.ParseMultiFrom(stream);
                     try
                     {

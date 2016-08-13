@@ -25,7 +25,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             {
                 var compacted = JObject.Parse(new StreamReader(stream).ReadToEnd()).ToString(Formatting.None);
                 stream.Position = 0;
-                using (var context = new JsonOperationContext())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var writer = context.Read(stream, "docs/1");
 
@@ -45,7 +45,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })
             {
-                using (var context = new JsonOperationContext())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
 

@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static IndexDefinition Load(StorageEnvironment environment)
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var tx = environment.ReadTransaction())
             {
                 var tree = tx.CreateTree("Definition");

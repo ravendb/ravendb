@@ -37,7 +37,7 @@ namespace FastTests.Blittable.Benchmark
                 Console.Write(" lines {1:#,#} json - {0:#,#}ms - {2:#,#} ", sp.ElapsedMilliseconds, lines, size);
 
                 size = 0;
-                using (var blittableContext = new JsonOperationContext())
+                using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
                 {
                     sp.Restart();
 
@@ -77,7 +77,7 @@ namespace FastTests.Blittable.Benchmark
                     }
                 }
 
-                using (var blittableContext = new JsonOperationContext())
+                using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
                 {
                     foreach (var line in jsonCache)
                     {
@@ -111,7 +111,7 @@ namespace FastTests.Blittable.Benchmark
 
         private static unsafe void BlitIndexing(List<BlittableJsonReaderObject> blitCache)
         {
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             {
                 foreach (var tuple in blitCache)
                 {
@@ -136,7 +136,7 @@ namespace FastTests.Blittable.Benchmark
                 var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length).Take(size);
 
                 streamWriter.WriteLine("Name,Json Parse Time,Json Size, Json Time, Blit Parse Time,Blit Size, Blit Time");
-                using (var blittableContext = new JsonOperationContext())
+                using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
                 {
                     foreach (var jsonFile in files)
                     {

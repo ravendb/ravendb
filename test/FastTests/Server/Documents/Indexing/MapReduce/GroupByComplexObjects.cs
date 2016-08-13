@@ -43,7 +43,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
 
@@ -97,7 +97,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
 
@@ -159,7 +159,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
 
@@ -221,7 +221,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
 

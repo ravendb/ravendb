@@ -41,7 +41,7 @@ namespace SlowTests.Tests.Indexes
             var index = IndexAndTransformerCompiler.Compile(indexDefinition);
             var map = index.Maps.Values.First();
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var results = map(new[]
                 {

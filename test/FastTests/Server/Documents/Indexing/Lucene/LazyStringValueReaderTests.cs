@@ -13,7 +13,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
         public LazyStringValueReaderTests()
         {
-            _ctx = new JsonOperationContext();
+            _ctx = JsonOperationContext.ShortTermSingleUse();
         }
 
         [Theory]

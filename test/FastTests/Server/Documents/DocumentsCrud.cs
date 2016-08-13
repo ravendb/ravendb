@@ -36,7 +36,7 @@ namespace FastTests.Server.Documents
         [InlineData("users/111112222233333333333444444445555556")]
         public void PutAndGetDocumentById(string key)
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -72,7 +72,7 @@ namespace FastTests.Server.Documents
         [InlineData("לכובע שלי שלוש פינות")]
         public void CanDelete(string key)
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -86,7 +86,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -95,7 +95,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -109,7 +109,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByGlobalEtag()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -149,7 +149,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -170,7 +170,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void EtagsArePersisted()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -192,7 +192,7 @@ namespace FastTests.Server.Documents
 
             Restart();
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -216,7 +216,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void EtagsArePersistedWithDeletes()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -239,7 +239,7 @@ namespace FastTests.Server.Documents
 
             Restart();
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
                 using (var doc = ctx.ReadObject(new DynamicJsonValue
@@ -278,7 +278,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByPrefix()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -318,7 +318,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -337,7 +337,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByCollectionEtag()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -378,7 +378,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -397,7 +397,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_New()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -421,7 +421,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_Existing()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -445,7 +445,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteExisting()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -469,7 +469,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteNotThere()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -482,7 +482,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_ShouldBeNew()
         {
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -507,7 +507,7 @@ namespace FastTests.Server.Documents
         public void PutDocumentWithoutId()
         {
             var key = "users/";
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -525,7 +525,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -534,7 +534,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new DocumentsOperationContext(_documentDatabase))
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 

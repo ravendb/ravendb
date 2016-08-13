@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Tombstones
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var context = new DocumentsOperationContext(database))
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
                     PutResult result;
                     using (var tx = context.OpenWriteTransaction())
@@ -80,7 +80,7 @@ namespace FastTests.Server.Documents.Tombstones
                     Storage = FieldStorage.No
                 } }), database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
                         {

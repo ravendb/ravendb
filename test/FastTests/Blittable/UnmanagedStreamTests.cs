@@ -15,7 +15,7 @@ namespace FastTests.Blittable
         [Fact]
         public void EnsureSingleChunk()
         {
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var newStream = ctx.GetStream();
                 var buffer = new byte[1337];
@@ -46,7 +46,7 @@ namespace FastTests.Blittable
         public void BulkWriteAscendingSizeTest()
         {
             //using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using(var ctx = new JsonOperationContext())
+            using(var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemory = new List<AllocatedMemoryData>();
                 var newStream = ctx.GetStream();
@@ -85,7 +85,7 @@ namespace FastTests.Blittable
         {
             var size = 3917701;
            
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var data = ctx.GetMemory(size);
             }
@@ -94,7 +94,7 @@ namespace FastTests.Blittable
         [Fact]
         public void BulkWriteDescendingSizeTest()
         {
-            using(var ctx = new JsonOperationContext())
+            using(var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemory = new List<AllocatedMemoryData>();
                 var newStream = ctx.GetStream();
@@ -127,7 +127,7 @@ namespace FastTests.Blittable
         [Fact]
         public void SingleByteWritesTest()
         {
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemory = new List<AllocatedMemoryData>();
                 var newStream = ctx.GetStream();

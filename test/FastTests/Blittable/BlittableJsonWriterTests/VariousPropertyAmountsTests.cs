@@ -38,7 +38,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             //var maxValue = short.MaxValue + 1000;
             var str = GetJsonString(maxValue);
 
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
 
@@ -62,7 +62,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             var str = GetJsonString(maxValue);
 
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 var ms = new MemoryStream();

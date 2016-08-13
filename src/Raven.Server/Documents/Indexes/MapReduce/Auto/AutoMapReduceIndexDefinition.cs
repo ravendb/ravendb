@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public static AutoMapReduceIndexDefinition Load(StorageEnvironment environment)
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var tx = environment.ReadTransaction())
             {
                 var tree = tx.CreateTree("Definition");

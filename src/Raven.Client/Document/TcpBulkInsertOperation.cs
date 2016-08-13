@@ -57,7 +57,7 @@ namespace Raven.Client.Document
         public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
-            _jsonOperationContext = new JsonOperationContext();
+            _jsonOperationContext = new JsonOperationContext(1024*1024, 16*1024);
             _cts = cts ?? new CancellationTokenSource();
             _tcpClient = new TcpClient();
 
@@ -234,7 +234,7 @@ namespace Raven.Client.Document
         private void ReadServerResponses(Stream stream)
         {
             bool completed = false;
-            using (var context = new JsonOperationContext())
+            using (var context = new JsonOperationContext(4096, 1024))
             {
                 do
                 {

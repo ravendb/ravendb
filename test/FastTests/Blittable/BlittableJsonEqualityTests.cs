@@ -9,7 +9,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Equals_even_though_order_of_properties_is_different()
         {
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var json1 = new DynamicJsonValue()
                 {

@@ -9,9 +9,14 @@ namespace Raven.Server.ServerWide.Context
     public class DocumentsOperationContext : TransactionOperationContext<DocumentsTransaction>
     {
         private readonly DocumentDatabase _documentDatabase;
-       
-        public DocumentsOperationContext(DocumentDatabase documentDatabase)
-            : base()
+
+        public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
+        {
+            return new DocumentsOperationContext(documentDatabase, 4096, 1024);
+        }
+
+        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize) :
+            base(initialSize, longLivedSize)
         {
             _documentDatabase = documentDatabase;
         }

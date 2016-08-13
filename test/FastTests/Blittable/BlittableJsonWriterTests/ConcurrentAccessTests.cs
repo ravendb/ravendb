@@ -16,7 +16,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         public void ConcurrentReadsTest()
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                /* FileStream file = new FileStream(@"c:\Temp\example.txt",FileMode.Create);
@@ -34,7 +34,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             Parallel.ForEach(Enumerable.Range(0, 100), x =>
             {
-                using (var localCtx = new JsonOperationContext())
+                using (var localCtx = JsonOperationContext.ShortTermSingleUse())
                 {
                     AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
                 }

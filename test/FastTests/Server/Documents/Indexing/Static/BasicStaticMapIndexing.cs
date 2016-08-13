@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Type = IndexType.Map
                 }, database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -209,7 +209,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
             };
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var builder = indexDefinition.ToJson();
                 using (var json = context.ReadObject(builder, nameof(IndexDefinition)))

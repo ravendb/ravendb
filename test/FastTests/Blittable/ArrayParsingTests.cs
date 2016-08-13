@@ -14,7 +14,7 @@ namespace FastTests.Blittable
         [Fact]
         public async Task CanParseSimpleArray()
         {
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var ms = new MemoryStream(Encoding.UTF8.GetBytes("[\"Oren\",\"Arava\"]"));
                 var array = await ctx.ParseArrayToMemoryAsync(ms, "array",BlittableJsonDocumentBuilder.UsageMode.None);

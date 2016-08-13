@@ -39,7 +39,7 @@ namespace FastTests.Blittable
         public void WithEscape()
         {
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var obj = RavenJObject.FromObject(new Employee
                 {
@@ -214,7 +214,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Complex_Valid_Blittable()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var company = InitCompany();
                 var obj = RavenJObject.FromObject(company);
@@ -232,7 +232,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Empty_Valid_Blittable()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var obj = RavenJObject.FromObject(new Empty());
                 var objString = obj.ToString(Formatting.None);
@@ -335,7 +335,7 @@ namespace FastTests.Blittable
         [Fact]
         public unsafe void Invalid_Names_Offset()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 int size;
                 var reader = InitSimpleBlittable(context, out size);
@@ -435,7 +435,7 @@ namespace FastTests.Blittable
         [Fact]
         public unsafe void Invalid_Root_Token()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 int size;
                 var reader = InitSimpleBlittable(context, out size);
@@ -475,7 +475,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Simple_Valid_Blittable_Test()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 int size;
                 var reader = InitSimpleBlittable(context, out size);
@@ -486,7 +486,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Valid_Blittable()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var allTokens = new AllTokensTypes
                 {
@@ -513,7 +513,7 @@ namespace FastTests.Blittable
         [Fact]
         public void Valid_Compressed_String()
         {
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var state = new JsonParserState();
                 using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
@@ -555,7 +555,7 @@ namespace FastTests.Blittable
         [Fact]
         public unsafe void Invalid_Props_Offset()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 int size;
                 var reader = InitSimpleBlittable(context, out size);
@@ -574,7 +574,7 @@ namespace FastTests.Blittable
         [Fact]
         public unsafe void Invalid_Root_Metadata_Offset()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 int size;
                 var reader = InitSimpleBlittable(context, out size);
@@ -596,7 +596,7 @@ namespace FastTests.Blittable
 
             foreach (var name in resources.Where( x => x.StartsWith(resourcePrefix, StringComparison.Ordinal)))
             {
-                using (var context = new JsonOperationContext())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {                    
                     using (var stream = assembly.GetManifestResourceStream(name))
                     {

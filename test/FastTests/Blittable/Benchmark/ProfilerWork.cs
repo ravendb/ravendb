@@ -22,7 +22,7 @@ namespace FastTests.Blittable.Benchmark
         {
             string directory = @"C:\Users\bumax_000\Downloads\JsonExamples";
             var files = Directory.GetFiles(directory, "*.json");
-            using (var blittableContext = new JsonOperationContext())
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             {
                 foreach (var file in files.OrderBy(x=> new FileInfo(x).Length).Take(take))
                 {

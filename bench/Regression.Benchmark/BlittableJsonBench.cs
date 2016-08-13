@@ -16,7 +16,7 @@ namespace Regression
         {
             foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
             {
-                using (var context = new JsonOperationContext())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var resource = "Regression.Benchmark.Data." + name;
 
@@ -41,7 +41,7 @@ namespace Regression
         {
             foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
             {
-                using (var context = new JsonOperationContext())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var resource = "Regression.Benchmark.Data." + name;
 

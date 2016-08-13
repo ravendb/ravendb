@@ -84,7 +84,7 @@ namespace FastTests.Utils
                 })
             };
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -111,7 +111,7 @@ namespace FastTests.Utils
                 })
             };
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -158,7 +158,7 @@ namespace FastTests.Utils
                 })
             };
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -206,7 +206,7 @@ namespace FastTests.Utils
                 })
             };
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -262,7 +262,7 @@ namespace FastTests.Utils
                 })
             };
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -327,7 +327,7 @@ namespace FastTests.Utils
                 })
             };
 
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -478,7 +478,7 @@ namespace FastTests.Utils
                     }
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -554,7 +554,7 @@ namespace FastTests.Utils
                     }
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -629,7 +629,7 @@ namespace FastTests.Utils
                     }
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -646,7 +646,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = new DynamicJsonArray(new object[] { 1, 2, 3 })
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -663,7 +663,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = new DynamicJsonArray(new object[] { 1, 2, 3 })
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -698,7 +698,7 @@ namespace FastTests.Utils
                     },
                 })
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -733,7 +733,7 @@ namespace FastTests.Utils
                     },
                 })
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -750,7 +750,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = new DynamicJsonArray(new[] { "foo/1", "foo/2", "foo/3" })
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -774,7 +774,7 @@ namespace FastTests.Utils
                     ["ContactInfoId2"] = new DynamicJsonArray(new[] { "foo/1", "foo/2", "foo/3" })
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -797,7 +797,7 @@ namespace FastTests.Utils
                 ["ContactInfoId2"] = new DynamicJsonArray(new object[] { 1.1, 2.2, 3.3 }),
                 ["ContactInfoId3"] = new DynamicJsonArray(new object[] { (long)1, (long)2, (long)3 })
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -825,7 +825,7 @@ namespace FastTests.Utils
                     ["ContactInfoId"] = "contacts/1"
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -846,7 +846,7 @@ namespace FastTests.Utils
                     ["ContactInfoId"] = 1
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -883,7 +883,7 @@ namespace FastTests.Utils
                     ["ContactInfoId"] = 1
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -920,7 +920,7 @@ namespace FastTests.Utils
                     ["ContactInfoId"] = "megadevice"
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -957,7 +957,7 @@ namespace FastTests.Utils
                     ["ContactInfoId"] = "megadevice"
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1002,7 +1002,7 @@ namespace FastTests.Utils
                     }
                 }
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1028,7 +1028,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = "contacts/1"
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1046,7 +1046,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = "contacts/1"
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1066,7 +1066,7 @@ namespace FastTests.Utils
                 ["ContactInfoId2"] = (long)56,
                 ["ContactInfoId3"] = 78.89, //this one is double
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1091,7 +1091,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = 1
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1109,7 +1109,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = 1
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1136,7 +1136,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = 1
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1154,7 +1154,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = 1
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1173,7 +1173,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = 1
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1199,7 +1199,7 @@ namespace FastTests.Utils
                 ["Name"] = "John Doe",
                 ["ContactInfoId"] = 1
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1227,7 +1227,7 @@ namespace FastTests.Utils
                 ["AddressInfoId"] = "addresses/1",
                 ["CarInfoId"] = "cars/1"
             };
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

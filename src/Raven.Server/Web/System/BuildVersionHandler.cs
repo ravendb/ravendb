@@ -22,7 +22,7 @@ namespace Raven.Server.Web.System
 
         private static byte[] GetVersionBuffer()
         {
-            using (var context = new JsonOperationContext())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var stream = new MemoryStream();
                 using (var writer = new BlittableJsonTextWriter(context, stream))

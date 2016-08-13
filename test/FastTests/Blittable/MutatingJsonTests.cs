@@ -121,7 +121,7 @@ namespace FastTests.Blittable
 
         private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
         {
-            using (var ctx = new JsonOperationContext())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);

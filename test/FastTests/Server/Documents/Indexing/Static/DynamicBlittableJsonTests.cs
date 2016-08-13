@@ -19,7 +19,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         public DynamicBlittableJsonTests()
         {
-            _ctx = new JsonOperationContext();
+            _ctx = JsonOperationContext.ShortTermSingleUse();
         }
 
         [Fact]

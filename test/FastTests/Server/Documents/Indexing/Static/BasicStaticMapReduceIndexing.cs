@@ -40,7 +40,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             }"
                 }, database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -130,7 +130,7 @@ select new
                     }
                 }, database))
                 {
-                    using (var context = new DocumentsOperationContext(database))
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -250,7 +250,7 @@ select new
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(defTwo));
 
-                using (var context = new DocumentsOperationContext(database))
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
