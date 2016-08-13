@@ -496,12 +496,16 @@ namespace Raven.Client.Http
                     tasks.Add(TestIfNodeAlive(leaderNode));
                 }
 
-                for (var i = 1; i <= topology.Nodes.Count; i++)
+                var serverNodes = topology.Nodes;
+                if (serverNodes != null)
                 {
-                    var node = topology.Nodes[i];
-                    if (node?.IsFailed ?? false)
+                    for (var i = 1; i <= serverNodes.Count; i++)
                     {
-                        tasks.Add(TestIfNodeAlive(node));
+                        var node = serverNodes[i];
+                        if (node?.IsFailed ?? false)
+                        {
+                            tasks.Add(TestIfNodeAlive(node));
+                        }
                     }
                 }
 

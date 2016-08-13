@@ -19,6 +19,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -136,7 +137,8 @@ namespace Raven.Server
                 throw;
             }
         }
-        
+
+        private JsonContextPool _tcpContextPool = new JsonContextPool();
         private async Task<List<TcpListener>> StartTcpListener()
         {
             var listeners = new List<TcpListener>();
@@ -235,21 +237,31 @@ namespace Raven.Server
                     return;
                 }
                 ListenToNewTcpConnection(listener);
-                NetworkStream stream = null;
-                JsonOperationContext context = null;
-                JsonOperationContext.MultiDocumentParser multiDocumentParser = null;
+                TcpConnectionParams tcp = null;
                 try
                 {
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
-                    stream = tcpClient.GetStream();
-                    //TODO: need to have a dedicate context pool here
-                    context = JsonOperationContext.ShortTermSingleUse();
-                    multiDocumentParser = context.ParseMultiFrom(stream);
+                    var stream = tcpClient.GetStream();
+                    tcp = new TcpConnectionParams
+                    {
+                        Stream = stream,
+                        TcpClient = tcpClient,
+                        DisposeOnConnectionClose =
+                        {
+                            stream,
+                            tcpClient
+                        }
+                    };
+                    tcp.DisposeOnConnectionClose.Add(
+                        _tcpContextPool.AllocateOperationContext(out tcp.Context)
+                        );
+                    tcp.MultiDocumentParser = tcp.Context.ParseMultiFrom(stream);
+
                     try
                     {
-                        var header = JsonDeserializationClient.TcpConnectionHeaderMessage(await multiDocumentParser.ParseToMemoryAsync());
+                        var header = JsonDeserializationClient.TcpConnectionHeaderMessage(await tcp.MultiDocumentParser.ParseToMemoryAsync());
 
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)
@@ -259,26 +271,24 @@ namespace Raven.Server
                             throw new InvalidOperationException(
                                 $"Timeout when loading database {header.DatabaseName}, try again later");
 
-                        var documentDatabase = await databaseLoadingTask;
+                        tcp.DocumentDatabase = await databaseLoadingTask;
                         switch (header.Operation)
                         {
                             case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
-                                BulkInsertConnection.Run(documentDatabase, context, stream, tcpClient, multiDocumentParser);
+                                BulkInsertConnection.Run(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-								SubscriptionConnection.SendSubscriptionDocuments(documentDatabase, context, stream, tcpClient.Client.RemoteEndPoint, multiDocumentParser);
+								SubscriptionConnection.SendSubscriptionDocuments(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                                documentDatabase.DocumentReplicationLoader.AcceptIncomingConnection(context, stream, tcpClient, multiDocumentParser);
+                                var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
+                                documentReplicationLoader.AcceptIncomingConnection(tcp);
                                 break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
                         }
 
-                        tcpClient = null; // the connection handler will dispose this, it is not its responsability
-                        stream = null;
-                        context = null;
-                        multiDocumentParser = null;
+                        tcp = null;
                     }
                     catch (Exception e)
                     {
@@ -286,11 +296,11 @@ namespace Raven.Server
                         {
                             _tcpLogger.Info("Failed to process TCP connection run", e);
                         }
-                        if (context != null)
+                        if (tcp != null)
                         {
-                            using (var errorWriter = new BlittableJsonTextWriter(context, stream))
+                            using (var errorWriter = new BlittableJsonTextWriter(tcp.Context, tcp.Stream))
                             {
-                                context.Write(errorWriter, new DynamicJsonValue
+                                tcp.Context.Write(errorWriter, new DynamicJsonValue
                                 {
                                     ["Type"] = "Error",
                                     ["Exception"] = e.ToString()
@@ -308,35 +318,7 @@ namespace Raven.Server
                 }
                 finally
                 {
-                    try
-                    {
-                        multiDocumentParser?.Dispose();
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-                    try
-                    {
-                        stream?.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    try
-                    {
-                        tcpClient?.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    try
-                    {
-                        context?.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    tcp?.Dispose();
                 }
 
             });

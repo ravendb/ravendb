@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
@@ -53,11 +54,10 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x=>x.Destination);
 
-        public void AcceptIncomingConnection(
-             JsonOperationContext context, NetworkStream stream, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
+        public void AcceptIncomingConnection(TcpConnectionParams tcpConnectionParams)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
-            using (var readerObject = multiDocumentParser.ParseToMemory("IncomingReplication/get-last-etag-message read"))
+            using (var readerObject = tcpConnectionParams.MultiDocumentParser.ParseToMemory("IncomingReplication/get-last-etag-message read"))
             {
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
             }
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Replication
 
             DocumentsOperationContext documentsOperationContext;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
-            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, stream))
+            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionParams.Stream))
             using (documentsOperationContext.OpenReadTransaction())
             {
                 var changeVector = new DynamicJsonArray();
@@ -104,10 +104,12 @@ namespace Raven.Server.Documents.Replication
 
             var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
             {
-                var newIncoming = new IncomingReplicationHandler(multiDocumentParser,
+                //TODO: fix the disposable of the passed context and all the params cleanly
+                var newIncoming = new IncomingReplicationHandler(
+                        tcpConnectionParams.MultiDocumentParser,
                         _database,
-                        tcpClient,
-                        stream,
+                        tcpConnectionParams.TcpClient,
+                        tcpConnectionParams.Stream,
                         getLatestEtagMessage);
                 newIncoming.Failed += OnIncomingReceiveFailed;
                 newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
@@ -120,7 +122,6 @@ namespace Raven.Server.Documents.Replication
 
             //TODO: Why are we using lazy here?
             lazyIncomingHandler.Value.Start();
-
         }
 
         private void AttemptReconnectFailedOutgoing(object state)

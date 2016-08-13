@@ -14,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using FastTests;
+using FastTests.Client.Subscriptions;
 using FastTests.Server.Documents.Indexing.Auto;
 using FastTests.Server.Documents.Replication;
 
@@ -24,9 +25,9 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var x = new BasicAutoMapReduceIndexing())
+            using (var x = new CriteriaScript())
             {
-                x.CanDelete().Wait();
+                x.BasicCriteriaTest().Wait();
             }
         }
     }

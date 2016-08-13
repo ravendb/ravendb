@@ -182,11 +182,17 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        public static void SendSubscriptionDocuments(DocumentDatabase database, JsonOperationContext context, NetworkStream stream, EndPoint clientEndpoint, JsonOperationContext.MultiDocumentParser multiDocumentParser)
+        public static void SendSubscriptionDocuments(TcpConnectionParams tcpConnectionParams)
         {
             Task.Run(async () =>
             {
-                var connection = new SubscriptionConnection(stream, clientEndpoint, database, context, multiDocumentParser);
+                var connection = new SubscriptionConnection(
+                    tcpConnectionParams.Stream, 
+                    tcpConnectionParams.TcpClient.Client.RemoteEndPoint, 
+                    tcpConnectionParams.DocumentDatabase,
+                    tcpConnectionParams.Context,
+                    tcpConnectionParams.MultiDocumentParser);
+                tcpConnectionParams.DisposeOnConnectionClose.Add(connection);
                 try
                 {
                     if (await connection.InitAsync() == false)
@@ -204,9 +210,9 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         if (connection.ConnectionException != null)
                             return;
-                        using (var writer = new BlittableJsonTextWriter(context, stream))
+                        using (var writer = new BlittableJsonTextWriter(tcpConnectionParams.Context, tcpConnectionParams.Stream))
                         {
-                            context.Write(writer, new DynamicJsonValue
+                            tcpConnectionParams.Context.Write(writer, new DynamicJsonValue
                             {
                                 ["Type"] = "Error",
                                 ["Exception"] = e.ToString()
@@ -232,9 +238,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (connection.ConnectionException is SubscriptionClosedException)
                                 status = "Closed";
                             
-                            using (var writer = new BlittableJsonTextWriter(context, stream))
+                            using (var writer = new BlittableJsonTextWriter(tcpConnectionParams.Context, tcpConnectionParams.Stream))
                             {
-                                context.Write(writer, new DynamicJsonValue
+                                tcpConnectionParams.Context.Write(writer, new DynamicJsonValue
                                 {
                                     ["Type"] = "Error",
                                     ["Status"] = status,
@@ -246,23 +252,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                         }
                     }
-                    SilentDispose(stream);
-                    SilentDispose(context);
-                    SilentDispose(connection);
+                    tcpConnectionParams.Dispose();
                 }
             });
-        }
-
-        private static void SilentDispose(IDisposable disposable)
-        {
-            try
-            {
-                disposable.Dispose();
-            }
-            catch
-            {
-                // ignored
-            }
         }
 
         private IDisposable RegisterForNotificationOnNewDocuments(SubscriptionCriteria criteria)

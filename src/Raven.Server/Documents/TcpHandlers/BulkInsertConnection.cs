@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -420,14 +419,14 @@ namespace Raven.Server.Documents.TcpHandlers
             _messagesToClient.Dispose();
         }
 
-        public static void Run(DocumentDatabase documentDatabase, JsonOperationContext context, NetworkStream stream, TcpClient tcpClient, JsonOperationContext.MultiDocumentParser multiDocumentParser)
+        public static void Run(TcpConnectionParams tcpConnectionParams)
         {
             var bulkInsertThread = new Thread(() =>
             {
-                var logger = LoggerSetup.Instance.GetLogger<BulkInsertConnection>(documentDatabase.Name);
+                var logger = LoggerSetup.Instance.GetLogger<BulkInsertConnection>(tcpConnectionParams.DocumentDatabase.Name);
                 try
                 {
-                    using (var bulkInsert = new BulkInsertConnection(documentDatabase, context, stream, logger, multiDocumentParser))
+                    using (var bulkInsert = new BulkInsertConnection(tcpConnectionParams.DocumentDatabase, tcpConnectionParams.Context, tcpConnectionParams.Stream, logger, tcpConnectionParams.MultiDocumentParser))
                     {
                         bulkInsert.Execute();
                     }
@@ -440,9 +439,9 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     try
                     {
-                        using (var writer = new BlittableJsonTextWriter(context, stream))
+                        using (var writer = new BlittableJsonTextWriter(tcpConnectionParams.Context, tcpConnectionParams.Stream))
                         {
-                            context.Write(writer, new DynamicJsonValue
+                            tcpConnectionParams.Context.Write(writer, new DynamicJsonValue
                             {
                                 ["Type"] = "Error",
                                 ["Exception"] = e.ToString()
@@ -455,27 +454,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 finally
                 {
-                    try
-                    {
-                        stream.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    try
-                    {
-                        tcpClient.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    try
-                    {
-                        context.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    tcpConnectionParams.Dispose();
                 }
             })
             {
