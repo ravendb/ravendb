@@ -66,9 +66,10 @@ namespace Sparrow.Json
                     throw new OverflowException("Arena size overflowed");
 
                 if (_log.IsDebugEnabled)
-                    _log.Debug($"ArenaMemoryAllocator doubled size of buffer from {_allocated:#,#;0} to {newSize:#,#;0}");
+                    _log.Debug($"ArenaMemoryAllocator doubled size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}");
                 _allocated = newSize;
             }
+
             
             var newBuffer = (byte*) Marshal.AllocHGlobal(_allocated).ToPointer();
             
