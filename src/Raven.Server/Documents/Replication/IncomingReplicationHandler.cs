@@ -76,6 +76,8 @@ namespace Raven.Server.Documents.Replication
                     long prevRecievedEtag = -1;
                     while (!_cts.IsCancellationRequested)
                     {
+                        _context.Reset();
+
                         using (var message = _multiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
                         {
                             //note: at this point, the valid messages are heartbeat and replication batch.

@@ -48,17 +48,16 @@ namespace Raven.Server.Documents.TcpHandlers
         public long SubscriptionId => _options.SubscriptionId;
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
-        public SubscriptionConnection(Stream networkStream, EndPoint clientEndpoint, DocumentDatabase database, 
-            JsonOperationContext context,JsonOperationContext.MultiDocumentParser multiDocumentParser)
+        public SubscriptionConnection(TcpConnectionParams connectionParams)
         {
-            _networkStream = networkStream;
-            _database = database;
-            _context = context;
-            ClientEndpoint = clientEndpoint;
-            _multiDocumentParser = multiDocumentParser;
-            _bufferedWriter = new BlittableJsonTextWriter(context, _buffer);
-            _unbufferedWriter = new BlittableJsonTextWriter(context, networkStream);
-            _logger = LoggerSetup.Instance.GetLogger<SubscriptionConnection>(database.Name);
+            _networkStream = connectionParams.Stream;
+            _database = connectionParams.DocumentDatabase;
+            _context = connectionParams.Context;
+            ClientEndpoint = connectionParams.TcpClient.Client.RemoteEndPoint;
+            _multiDocumentParser = connectionParams.MultiDocumentParser;
+            _bufferedWriter = new BlittableJsonTextWriter(connectionParams.Context, _buffer);
+            _unbufferedWriter = new BlittableJsonTextWriter(connectionParams.Context, connectionParams.Stream);
+            _logger = LoggerSetup.Instance.GetLogger<SubscriptionConnection>(connectionParams.DocumentDatabase.Name);
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
@@ -186,12 +185,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             Task.Run(async () =>
             {
-                var connection = new SubscriptionConnection(
-                    tcpConnectionParams.Stream, 
-                    tcpConnectionParams.TcpClient.Client.RemoteEndPoint, 
-                    tcpConnectionParams.DocumentDatabase,
-                    tcpConnectionParams.Context,
-                    tcpConnectionParams.MultiDocumentParser);
+                var connection = new SubscriptionConnection(tcpConnectionParams);
                 tcpConnectionParams.DisposeOnConnectionClose.Add(connection);
                 try
                 {
@@ -298,6 +292,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     while (CancellationTokenSource.IsCancellationRequested == false)
                     {
+                        dbContext.Reset();
+                        _context.Reset();
+
                         bool anyDocumentsSentInCurrentIteration = false;
                         using (dbContext.OpenReadTransaction())
                         {

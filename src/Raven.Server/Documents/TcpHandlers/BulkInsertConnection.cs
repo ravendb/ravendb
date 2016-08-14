@@ -328,6 +328,11 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 while (true)
                 {
+                    // _context.Reset(); - we cannot reset the context here
+                    // because the memory is being used by the other threads 
+                    // we avoid the memory leak of infinite usage by limiting 
+                    // the number of buffers we get from the context and then
+                    // reusing them
                     var len = Read7BitEncodedInt();
                     if (len <= 0)
                     {
