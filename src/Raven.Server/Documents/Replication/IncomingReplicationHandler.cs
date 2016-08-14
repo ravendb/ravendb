@@ -187,23 +187,7 @@ namespace Raven.Server.Documents.Replication
 
                     foreach (var doc in _replicatedDocs)
                     {
-                        if (_tempReplicatedChangeVector.Length != doc.ChangeVectorCount)
-                        {
-                            _tempReplicatedChangeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
-                        }
-                        for (int i = 0; i < doc.ChangeVectorCount; i++)
-                        {
-                            _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*) (buffer + doc.Position))[i];
-                            long etag;
-                            if (
-                                maxReceivedChangeVectorByDatabase.TryGetValue(_tempReplicatedChangeVector[i].DbId,
-                                    out etag) ==
-                                false ||
-                                etag > _tempReplicatedChangeVector[i].Etag)
-                            {
-                                maxReceivedChangeVectorByDatabase[_tempReplicatedChangeVector[i].DbId] = etag;
-                            }
-                        }
+                        ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);
 
                         var json = new BlittableJsonReaderObject(
                             buffer + doc.Position + (doc.ChangeVectorCount*sizeof (ChangeVectorEntry))
@@ -213,7 +197,7 @@ namespace Raven.Server.Documents.Replication
                         _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
                     }
                     _database.DocumentsStorage.SetDatabaseChangeVector(_context,
-                        _database.DocumentsStorage.GetDatabaseChangeVector(_context));
+                        maxReceivedChangeVectorByDatabase);
 
                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId,
                         lastReceivedEtag);
@@ -226,6 +210,25 @@ namespace Raven.Server.Documents.Replication
                     _log.Info(
                         $"Replication connection {FromToString}: received and written {replicatedDocs:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastReceivedEtag}.");
                 return prevRecievedEtag;
+            }
+        }
+
+        private unsafe void ReadChangeVector(ReplicationDocumentsPositions doc, byte* buffer,
+            Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
+        {
+            if (_tempReplicatedChangeVector.Length != doc.ChangeVectorCount)
+            {
+                _tempReplicatedChangeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
+            }
+            for (int i = 0; i < doc.ChangeVectorCount; i++)
+            {
+                _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*) (buffer + doc.Position))[i];
+                long etag;
+                if (maxReceivedChangeVectorByDatabase.TryGetValue(_tempReplicatedChangeVector[i].DbId, out etag) == false ||
+                    etag > _tempReplicatedChangeVector[i].Etag)
+                {
+                    maxReceivedChangeVectorByDatabase[_tempReplicatedChangeVector[i].DbId] = _tempReplicatedChangeVector[i].Etag;
+                }
             }
         }
 
@@ -243,7 +246,7 @@ namespace Raven.Server.Documents.Replication
             {
                 changeVector.Add(new DynamicJsonValue
                 {
-                    ["DbId"] = changeVectorEntry.DbId,
+                    ["DbId"] = changeVectorEntry.DbId.ToString(),
                     ["Etag"] = changeVectorEntry.Etag
                 });
             }

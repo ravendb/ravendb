@@ -211,14 +211,15 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public void SetDatabaseChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
+        public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-            for (int i = 0; i < changeVector.Length; i++)
+            foreach (var kvp in changeVector)
             {
-                var entry = changeVector[i];
-                tree.Add(Slice.External(context.Allocator, (byte*)&entry.DbId, (ushort)sizeof(Guid)),
-                         Slice.External(context.Allocator, (byte*)&entry.Etag, (ushort)sizeof(long)));
+                var dbId = kvp.Key;
+                var etag = kvp.Value;
+                tree.Add(Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid)),
+                   Slice.External(context.Allocator, (byte*)&etag, sizeof(long)));
             }
         }
 
