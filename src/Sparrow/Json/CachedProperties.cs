@@ -106,9 +106,9 @@ namespace Sparrow.Json
                 }
                 _propertiesNeedSorting = false;
             }
-            hasDuplicates = false;
+            _hasDuplicates = false;
             properties.Sort(this);
-            if (hasDuplicates)
+            if (_hasDuplicates)
             {
                 // leave just the latest
                 for (int i = 0; i < properties.Count-1; i++)
@@ -123,7 +123,7 @@ namespace Sparrow.Json
 
         }
 
-        private bool hasDuplicates;
+        private bool _hasDuplicates;
         public int Version;
 
         int IComparer<BlittableJsonDocumentBuilder.PropertyTag>.Compare(BlittableJsonDocumentBuilder.PropertyTag x, BlittableJsonDocumentBuilder.PropertyTag y)
@@ -131,7 +131,7 @@ namespace Sparrow.Json
             var compare = _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
             if (compare == 0)
             {
-                hasDuplicates = true;
+                _hasDuplicates = true;
                 return y.Position - x.Position;
             }
             return compare;

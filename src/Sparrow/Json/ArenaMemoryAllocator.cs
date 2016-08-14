@@ -18,7 +18,9 @@ namespace Sparrow.Json
 
         private bool _isDisposed;
         private static readonly Logger _log = LogManager.GetLogger(nameof(ArenaMemoryAllocator));
-        
+
+        public int Allocated => _allocated;
+
         public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
         {
             _ptrStart = _ptrCurrent = (byte*)Marshal.AllocHGlobal(initialSize).ToPointer();

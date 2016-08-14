@@ -16,8 +16,10 @@ namespace Sparrow.Json
     /// </summary>
     public class JsonOperationContext : IDisposable
     {
+        private readonly int _initialSize;
+        private readonly int _longLivedSize;
         private readonly ArenaMemoryAllocator _arenaAllocator;
-        private readonly ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
+        private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
         private Dictionary<StringSegment, LazyStringValue> _fieldNames;
         private bool _disposed;
@@ -39,6 +41,8 @@ namespace Sparrow.Json
 
         public JsonOperationContext(int initialSize, int longLivedSize)
         {
+            _initialSize = initialSize;
+            _longLivedSize = longLivedSize;
             _arenaAllocator = new ArenaMemoryAllocator(initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(longLivedSize);
             Encoding = new UTF8Encoding();
@@ -492,6 +496,19 @@ namespace Sparrow.Json
             _arenaAllocator.ResetArena();
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
+
+            if (_arenaAllocatorForLongLivedValues.Allocated > _initialSize)
+            {
+                // at this point, the long lived section is far too large, this is something that can happen
+                // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
+                // property names before this kicks in, which is a true abuse of the system. In this case, 
+                // in order to avoid unlimited growth, we'll reset the long lived section
+                _arenaAllocatorForLongLivedValues.Dispose();
+                _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(_longLivedSize);
+                CachedProperties = new CachedProperties(this);// need to reset this as well
+                _fieldNames.Clear();
+            }
+
 
             foreach (var disposable in _disposables)
             {
