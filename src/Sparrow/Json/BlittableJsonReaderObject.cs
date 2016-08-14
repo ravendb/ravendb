@@ -275,6 +275,16 @@ namespace Sparrow.Json
                             throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to DateTime");
                         obj = (T)(object)time;
                     }
+                    else if (type == typeof (Guid))
+                    {
+                        string guidString;
+                        if (ChangeTypeToString(result, out guidString) == false)
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to string");
+                        Guid guid;
+                        if (Guid.TryParse(guidString, out guid) == false)
+                            throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to Guid");
+                        obj = (T)(object)guid;
+                    }
                     else
                     {
                         obj = (T)Convert.ChangeType(result, type);

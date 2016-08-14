@@ -17,7 +17,13 @@ namespace Sparrow.Json
                 var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
 
                 var vars = new Dictionary<Type, ParameterExpression>();
-                var instance = Expression.New(typeof(T).GetConstructor(EmptyTypes));
+                NewExpression instance;
+
+                var ctor = typeof(T).GetConstructor(EmptyTypes);
+                if (ctor != null)
+                    instance = Expression.New(ctor);
+                else
+                    instance = Expression.New(typeof (T));
                 var propInit = new List<MemberBinding>();
                 foreach (var fieldInfo in typeof(T).GetFields())
                 {
@@ -54,6 +60,7 @@ namespace Sparrow.Json
                 type == typeof(int) ||
                 type == typeof(double) ||
                 type.GetTypeInfo().IsEnum ||
+                type == typeof(Guid) ||
                 type == typeof(DateTime))
             {
                 var value = GetParameter(propertyType, vars);
