@@ -9,7 +9,7 @@ namespace Raven.Tests.Core.Session
     public class OptimisticConcurrency : RavenCoreTestBase
     {
 #if DNXCORE50
-        public Advanced(TestServerFixture fixture)
+        public OptimisticConcurrency(TestServerFixture fixture)
             : base(fixture)
         {
 
