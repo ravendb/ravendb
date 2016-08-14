@@ -1,15 +1,11 @@
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Dynamic;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Raven.Database.Impl.Generators
 {
@@ -134,8 +130,6 @@ namespace Raven.Database.Impl.Generators
             public ClassType( string name, IDictionary<string, FieldType> properties = null ) : base ( name, false )
             {
                 this.Properties = new ReadOnlyDictionary<string, FieldType>(properties);
-                if (this.Properties == null)
-                    this.Properties = NoProperties;
             }
 
             public static bool operator ==(ClassType a, ClassType b)
