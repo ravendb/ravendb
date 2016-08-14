@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Replication
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
         private DocumentsOperationContext _context;
-        private byte[] _tempBuffer = new byte[32 * 1024];
+        private readonly byte[] _tempBuffer = new byte[32 * 1024];
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 

@@ -4,19 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
-using Raven.Abstractions.Data;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
-using System.Linq;
 using System.Text;
-using NLog.Targets.Wrappers;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
-using Raven.Server.Extensions;
 using Sparrow.Json.Parsing;
-using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -25,8 +19,8 @@ namespace Raven.Server.Documents.Replication
         private readonly JsonOperationContext.MultiDocumentParser _multiDocumentParser;
         private readonly DocumentDatabase _database;
         private readonly TcpClient _tcpClient;
-        private NetworkStream _stream;
-        private DocumentsOperationContext _context;
+        private readonly NetworkStream _stream;
+        private readonly DocumentsOperationContext _context;
         private Thread _incomingThread;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
@@ -63,6 +57,8 @@ namespace Raven.Server.Documents.Replication
 
         }
 
+        long _prevRecievedEtag = -1;
+
         private void ReceiveReplicatedDocuments()
         {
             bool exceptionLogged = false;
@@ -73,7 +69,6 @@ namespace Raven.Server.Documents.Replication
                 using (var writer = new BlittableJsonTextWriter(_context, _stream))
                 using (_multiDocumentParser)
                 {
-                    long prevRecievedEtag = -1;
                     while (!_cts.IsCancellationRequested)
                     {
                         _context.Reset();
@@ -90,15 +85,15 @@ namespace Raven.Server.Documents.Replication
                             bool _;
                             if (message.TryGet("Heartbeat", out _))
                             {
-                                prevRecievedEtag = HandleHeartbeat(lastReceivedEtag, prevRecievedEtag, writer);
+                                HandleHeartbeat(lastReceivedEtag, writer);
                                 continue;
                             }
 
-                            int replicatedDocs = ValidateReplicationBatchAndGetDocsCount(message);
 
                             try
                             {
-                                prevRecievedEtag = ReceiveSingleBatch(replicatedDocs, lastReceivedEtag, prevRecievedEtag);
+                                int replicatedDocs = ValidateReplicationBatchAndGetDocsCount(message);
+                                ReceiveSingleBatch(replicatedDocs, lastReceivedEtag);
 
                                 OnDocumentsReceived(this);
 
@@ -142,30 +137,29 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private long HandleHeartbeat(long lastReceivedEtag, long prevRecievedEtag, BlittableJsonTextWriter writer)
+        private void HandleHeartbeat(long lastReceivedEtag, BlittableJsonTextWriter writer)
         {
             if (_log.IsInfoEnabled)
                 _log.Info($"Got heartbeat from ({FromToString}) with etag {lastReceivedEtag}.");
-            if (prevRecievedEtag != lastReceivedEtag)
+
+            if (_prevRecievedEtag != lastReceivedEtag)
             {
                 using (_context.OpenWriteTransaction())
                 {
                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context,
                         ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
-                    prevRecievedEtag = lastReceivedEtag;
+                    _prevRecievedEtag = lastReceivedEtag;
                     _context.Transaction.Commit();
                 }
             }
             SendStatusToSource(writer, -1);
-            return prevRecievedEtag;
         }
 
-        private unsafe long ReceiveSingleBatch(int replicatedDocs, long lastReceivedEtag, long prevRecievedEtag)
+        private unsafe void ReceiveSingleBatch(int replicatedDocs, long lastReceivedEtag)
         {
             var sw = Stopwatch.StartNew();
             using (var writeBuffer = _context.GetStream())
             {
-
                 // this will read the documents to memory from the network
                 // without holding the write tx open
                 ReadDocumentsFromSource(writeBuffer, replicatedDocs);
@@ -201,7 +195,7 @@ namespace Raven.Server.Documents.Replication
 
                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId,
                         lastReceivedEtag);
-                    prevRecievedEtag = lastReceivedEtag;
+                    _prevRecievedEtag = lastReceivedEtag;
                     _context.Transaction.Commit();
                 }
                 sw.Stop();
@@ -209,7 +203,6 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info(
                         $"Replication connection {FromToString}: received and written {replicatedDocs:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastReceivedEtag}.");
-                return prevRecievedEtag;
             }
         }
 
@@ -334,8 +327,6 @@ namespace Raven.Server.Documents.Replication
                     _replicatedDocs.Add(curDoc);
                 }
             }
-            byte* ptr;
-            int _;
         }
 
         public void Dispose()
