@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -37,6 +38,7 @@ namespace Raven.Server.Documents.Replication
         private Thread _sendingThread;
 
         private long _lastSentEtag;
+        private DateTime _lastSentTime;
         private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
         private string _destinationLastKnownChangeVectorString;
         private TcpClient _tcpClient;
@@ -124,16 +126,9 @@ namespace Raven.Server.Documents.Replication
                         });
                         _writer.Flush();
 
-                        using (var lastEtagMessage = _parser.ParseToMemory($"Last etag from server {FromToString}"))
+                        using (_context.OpenReadTransaction())
                         {
-                            var replicationEtagReply = JsonDeserializationServer.ReplicationEtagReply(lastEtagMessage);
-                            _lastSentEtag = replicationEtagReply.LastSentEtag;
-                            UpdateDestinationChangeVector(replicationEtagReply.CurrentChangeVector);
-                            if (_log.IsInfoEnabled)
-                            {
-                                _log.Info(
-                                    $"Connected to {_destination.Database} @ {_destination.Url}, last sent etag {replicationEtagReply.LastSentEtag}. Change vector: [{replicationEtagReply.CurrentChangeVector.Format()}]");
-                            }
+                            HandleServerResponse();
                         }
 
                         while (_cts.IsCancellationRequested == false)
@@ -153,7 +148,10 @@ namespace Raven.Server.Documents.Replication
                             while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                             {
                                 _context.Reset();
-                                SendHeartbeat();
+                                using (_context.OpenReadTransaction())
+                                {
+                                    SendHeartbeat();
+                                }
                             }
                             _waitForChanges.Reset();
                         }
@@ -173,13 +171,28 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void UpdateDestinationChangeVector(ChangeVectorEntry[] currentChangeVector)
+        private void UpdateDestinationChangeVector(ReplicationMessageReply replicationBatchReply)
         {
             _destinationLastKnownChangeVector.Clear();
-            _destinationLastKnownChangeVectorString = currentChangeVector.Format();
-            foreach (var changeVectorEntry in currentChangeVector)
+
+            _lastSentEtag = replicationBatchReply.LastEtagAccepted;
+
+            _destinationLastKnownChangeVectorString = replicationBatchReply.CurrentChangeVector.Format();
+
+            foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
             {
                 _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+            }
+            if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) >
+                replicationBatchReply.LastEtagAccepted)
+            {
+                // We have changes that the other side doesn't have, this can be because we have writes
+                // or because we have documents that were replicated to us. Either way, we need to sync
+                // those up with the remove side, so we'll start the replication loop again.
+                // We don't care if they are locally modified or not, because we filter documents that
+                // the other side already have (based on the change vector).
+                if (DateTime.UtcNow - _lastSentTime > _minimalHeartbeatInterval)
+                    _waitForChanges.Set();
             }
         }
 
@@ -193,8 +206,9 @@ namespace Raven.Server.Documents.Replication
             {
                 _context.Write(_writer, new DynamicJsonValue
                 {
-                    ["Heartbeat"] = true,
-                    ["LastEtag"] = _lastSentEtag
+                    ["Type"] = "ReplicationBatch",
+                    ["LastEtag"] = _lastSentEtag,
+                    ["Documents"] = 0
                 });
                 _writer.Flush();
                 HandleServerResponse();
@@ -310,9 +324,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void SendDocuments(
-            List<Document> docs,
-            long lastEtag)
+        private void SendDocuments(List<Document> docs, long lastEtag)
         {
             if (_log.IsInfoEnabled)
                 _log.Info(
@@ -330,6 +342,11 @@ namespace Raven.Server.Documents.Replication
             {
                 WriteDocumentToServer(document);
             }
+
+            // we can release the read transaction while we are waiting for 
+            // reply from the server and hold it for a long time
+            _context.Transaction.Dispose();
+
             _stream.Flush();
             sw.Stop();
 
@@ -338,8 +355,11 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info(
                     $"Finished sending replication batch. Sent {docs.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {docs[0].Etag}, last sent etag = {lastEtag}");
-
-            HandleServerResponse();
+            _lastSentTime = DateTime.UtcNow;
+            using (_context.OpenReadTransaction())
+            {
+                HandleServerResponse();
+            }
         }
 
         private unsafe void WriteDocumentToServer(Document doc)
@@ -360,7 +380,7 @@ namespace Raven.Server.Documents.Replication
                 fixed (ChangeVectorEntry* pChangeVectorEntries = doc.ChangeVector)
                 {
                     *(int*)pTemp = doc.ChangeVector.Length;
-                    tempBufferPos += sizeof (int);
+                    tempBufferPos += sizeof(int);
                     Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
                     tempBufferPos += changeVectorSize;
                 }
@@ -407,7 +427,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
                 {
-                    UpdateDestinationChangeVector(replicationBatchReply.CurrentChangeVector);
+                    UpdateDestinationChangeVector(replicationBatchReply);
                     OnSuccessfulTwoWaysCommunication();
                 }
 
@@ -454,7 +474,12 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void OnDocumentChange(DocumentChangeNotification notification) => _waitForChanges.Set();
+        private void OnDocumentChange(DocumentChangeNotification notification)
+        {
+            if (IncomingReplicationHandler.IsIncomingReplicationThread)
+                return;
+            _waitForChanges.Set();
+        }
 
         public void Dispose()
         {

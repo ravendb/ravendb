@@ -18,9 +18,6 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtagRequest> ReplicationLatestEtagRequest = GenerateJsonDeserializationRoutine<ReplicationLatestEtagRequest>();
 
-        public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtagReply> ReplicationEtagReply = GenerateJsonDeserializationRoutine<ReplicationLatestEtagReply>();
-
-
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
