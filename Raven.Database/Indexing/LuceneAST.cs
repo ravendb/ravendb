@@ -1,19 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.DirectoryServices.ActiveDirectory;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing.LuceneIntegration;
-using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
@@ -319,7 +315,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             //This is probably wrong, need to check what happens with analyzed unqouted terms.
             if (Type == TermType.UnQuoted && !string.IsNullOrEmpty(Similarity))
             {
-                var similarity = string.IsNullOrEmpty(Similarity) ? (float)0.5 : float.Parse(Similarity);
+                var similarity = float.Parse(Similarity);
 
                 return new FuzzyQuery(new Term(configuration.FieldName, terms.FirstOrDefault()), similarity, 0) { Boost = boost };
             }
