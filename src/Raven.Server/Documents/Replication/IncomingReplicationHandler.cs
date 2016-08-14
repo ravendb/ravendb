@@ -11,6 +11,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using System.Linq;
 using System.Text;
+using NLog.Targets.Wrappers;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
@@ -45,8 +46,6 @@ namespace Raven.Server.Documents.Replication
                                           .ContextPool
                                           .AllocateOperationContext(out _context);
 
-            _unmanagedWriteBuffer = _context.GetStream();
-
             _log = LoggerSetup.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
@@ -66,6 +65,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ReceiveReplicatedDocuments()
         {
+            bool exceptionLogged = false;
             try
             {
                 using (_contextDisposable)
@@ -90,19 +90,7 @@ namespace Raven.Server.Documents.Replication
                             bool _;
                             if (message.TryGet("Heartbeat", out _))
                             {
-                                if (_log.IsInfoEnabled)
-                                    _log.Info($"Got heartbeat from ({FromToString}) with etag {lastReceivedEtag}.");
-                                if (prevRecievedEtag != lastReceivedEtag)
-                                {
-                                    using (_context.OpenWriteTransaction())
-                                    {
-                                        _database.DocumentsStorage.SetLastReplicateEtagFrom(_context,
-                                            ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
-                                        prevRecievedEtag = lastReceivedEtag;
-                                        _context.Transaction.Commit();
-                                    }
-                                }
-                                SendStatusToSource(writer, -1);
+                                prevRecievedEtag = HandleHeartbeat(lastReceivedEtag, prevRecievedEtag, writer);
                                 continue;
                             }
 
@@ -110,28 +98,12 @@ namespace Raven.Server.Documents.Replication
 
                             try
                             {
-                                var sw = Stopwatch.StartNew();
-                                //TODO: Here we are reading from the network while
-                                //TODO: holding the write tx open, this is bad, we need
-                                //TODO: to read to memory, and only then open the tx
-                                using (_context.OpenWriteTransaction())
-                                {
-                                    AcceptDocumentsFromSource(replicatedDocs);
-
-                                    _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
-                                    prevRecievedEtag = lastReceivedEtag;
-                                    _context.Transaction.Commit();
-                                }
-                                sw.Stop();
-
-                                if (_log.IsInfoEnabled)
-                                    _log.Info($"Replication connection {FromToString}: received and written {replicatedDocs:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastReceivedEtag}.");
-
-                                //return positive ack
-
-                                SendStatusToSource(writer, lastReceivedEtag);
+                                prevRecievedEtag = ReceiveSingleBatch(replicatedDocs, lastReceivedEtag, prevRecievedEtag);
 
                                 OnDocumentsReceived(this);
+
+                                //return positive ack
+                                SendStatusToSource(writer, lastReceivedEtag);
                             }
                             catch (Exception e)
                             {
@@ -146,24 +118,11 @@ namespace Raven.Server.Documents.Replication
                                         ["Error"] = e.ToString()
                                     });
 
-                                    e.Data.Add("FailedToWrite", true);
+                                    exceptionLogged = true;
 
                                     if (_log.IsInfoEnabled)
                                         _log.Info($"Failed replicating documents from {FromToString}.",e);
                                     throw;
-                                }
-                            }
-                            finally
-                            {
-                                try
-                                {
-                                    writer.Flush();
-                                }
-                                catch (Exception e)
-                                {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info($"Replication connection {FromToString}: failed to send back acknowledgement message for the replication batch. Error thrown : {e}");
-                                    // nothing to do at this point
                                 }
                             }
                         }
@@ -175,17 +134,98 @@ namespace Raven.Server.Documents.Replication
                 //if we are disposing, do not notify about failure (not relevant)
                 if (!_cts.IsCancellationRequested)
                 {
-                    //if FailedToWrite is in e.Data, we logged the exception already
-                    if (_log.IsInfoEnabled && !e.Data.Contains("FailedToWrite"))
+                    if (_log.IsInfoEnabled && exceptionLogged == false)
                         _log.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.",e );
 
                     OnFailed(e, this);
                 }
             }
-            finally
+        }
+
+        private long HandleHeartbeat(long lastReceivedEtag, long prevRecievedEtag, BlittableJsonTextWriter writer)
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info($"Got heartbeat from ({FromToString}) with etag {lastReceivedEtag}.");
+            if (prevRecievedEtag != lastReceivedEtag)
             {
-                _context = null;
-                _stream = null;
+                using (_context.OpenWriteTransaction())
+                {
+                    _database.DocumentsStorage.SetLastReplicateEtagFrom(_context,
+                        ConnectionInfo.SourceDatabaseId, lastReceivedEtag);
+                    prevRecievedEtag = lastReceivedEtag;
+                    _context.Transaction.Commit();
+                }
+            }
+            SendStatusToSource(writer, -1);
+            return prevRecievedEtag;
+        }
+
+        private unsafe long ReceiveSingleBatch(int replicatedDocs, long lastReceivedEtag, long prevRecievedEtag)
+        {
+            var sw = Stopwatch.StartNew();
+            using (var writeBuffer = _context.GetStream())
+            {
+
+                // this will read the documents to memory from the network
+                // without holding the write tx open
+                ReadDocumentsFromSource(writeBuffer, replicatedDocs);
+                byte* buffer;
+                int _;
+                writeBuffer.EnsureSingleChunk(out buffer, out _);
+
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        $"Replication connection {FromToString}: received {replicatedDocs:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+
+                using (_context.OpenWriteTransaction())
+                {
+                    var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
+                    foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(_context))
+                    {
+                        maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                    }
+
+                    foreach (var doc in _replicatedDocs)
+                    {
+                        if (_tempReplicatedChangeVector.Length != doc.ChangeVectorCount)
+                        {
+                            _tempReplicatedChangeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
+                        }
+                        for (int i = 0; i < doc.ChangeVectorCount; i++)
+                        {
+                            _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*) (buffer + doc.Position))[i];
+                            long etag;
+                            if (
+                                maxReceivedChangeVectorByDatabase.TryGetValue(_tempReplicatedChangeVector[i].DbId,
+                                    out etag) ==
+                                false ||
+                                etag > _tempReplicatedChangeVector[i].Etag)
+                            {
+                                maxReceivedChangeVectorByDatabase[_tempReplicatedChangeVector[i].DbId] = etag;
+                            }
+                        }
+
+                        var json = new BlittableJsonReaderObject(
+                            buffer + doc.Position + (doc.ChangeVectorCount*sizeof (ChangeVectorEntry))
+                            , doc.DocumentSize, _context);
+
+                        //TODO: conflict handling
+                        _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+                    }
+                    _database.DocumentsStorage.SetDatabaseChangeVector(_context,
+                        _database.DocumentsStorage.GetDatabaseChangeVector(_context));
+
+                    _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId,
+                        lastReceivedEtag);
+                    prevRecievedEtag = lastReceivedEtag;
+                    _context.Transaction.Commit();
+                }
+                sw.Stop();
+
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        $"Replication connection {FromToString}: received and written {replicatedDocs:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastReceivedEtag}.");
+                return prevRecievedEtag;
             }
         }
 
@@ -244,60 +284,55 @@ namespace Raven.Server.Documents.Replication
 
         private readonly byte[] _tempBuffer = new byte[32*1024];
         private ChangeVectorEntry[] _tempReplicatedChangeVector = new ChangeVectorEntry[0];
-        private readonly UnmanagedWriteBuffer _unmanagedWriteBuffer;
-        private unsafe void AcceptDocumentsFromSource(int replicatedDocs)
+        private readonly List<ReplicationDocumentsPositions> _replicatedDocs = new List<ReplicationDocumentsPositions>(); 
+
+        public struct ReplicationDocumentsPositions
         {
-            var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-            foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(_context))
-            {
-                maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-            }
+            public string Id;
+            public int Position;
+            public int ChangeVectorCount;
+            public int DocumentSize;
+        }
+
+        private unsafe void ReadDocumentsFromSource(UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
+        {
+            _replicatedDocs.Clear();
 
             fixed (byte* pTemp = _tempBuffer)
             {
                 for (int x = 0; x < replicatedDocs; x++)
                 {
+                    var curDoc = new ReplicationDocumentsPositions
+                    {
+                        Position = writeBuffer.SizeInBytes
+                    };
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
-                    var changeVectorEntriesCount = *(int*) pTemp;
-                    if (_tempReplicatedChangeVector.Length != changeVectorEntriesCount)
-                    {
-                        _tempReplicatedChangeVector = new ChangeVectorEntry[changeVectorEntriesCount];
-                    }
-                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(ChangeVectorEntry) * changeVectorEntriesCount);
-                    for (int i = 0; i < changeVectorEntriesCount; i++)
-                    {
-                        _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*)pTemp)[i];
-                        long etag;
-                        if (maxReceivedChangeVectorByDatabase.TryGetValue(_tempReplicatedChangeVector[i].DbId, out etag) == false ||
-                            etag > _tempReplicatedChangeVector[i].Etag)
-                        {
-                                maxReceivedChangeVectorByDatabase[_tempReplicatedChangeVector[i].DbId] = etag;
-                        }
-                    }
+                    curDoc.ChangeVectorCount = *(int*) pTemp;
+                   
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
+                    writeBuffer.Write(_tempBuffer, 0, sizeof (ChangeVectorEntry)*curDoc.ChangeVectorCount);
+                    
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var keySize = *(int*)pTemp;
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, keySize);
-                    var id = Encoding.UTF8.GetString(_tempBuffer, 0, keySize);
+                    curDoc.Id = Encoding.UTF8.GetString(_tempBuffer, 0, keySize);
+
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
-                    var documentSize = *(int*)pTemp;
-                    _unmanagedWriteBuffer.Clear();
+                    var documentSize = curDoc.DocumentSize = *(int*)pTemp;
                     while (documentSize>0)
                     {
                         var read = _multiDocumentParser.Read(_tempBuffer, 0, Math.Min(_tempBuffer.Length, documentSize));
                         if(read == 0)
                             throw new EndOfStreamException();
-                        _unmanagedWriteBuffer.Write(pTemp, read);
+                        writeBuffer.Write(pTemp, read);
                         documentSize -= read;
                     }
-                    byte* ptr;
-                    _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out documentSize);
-                    var doc = new BlittableJsonReaderObject(ptr, documentSize, _context);
-                    //TODO: conflict handling
-                    _database.DocumentsStorage.Put(_context, id, null, doc, _tempReplicatedChangeVector);
+                    
+                    _replicatedDocs.Add(curDoc);
                 }
             }
-
-            _database.DocumentsStorage.SetDatabaseChangeVector(_context, _database.DocumentsStorage.GetDatabaseChangeVector(_context));
+            byte* ptr;
+            int _;
         }
 
         public void Dispose()
