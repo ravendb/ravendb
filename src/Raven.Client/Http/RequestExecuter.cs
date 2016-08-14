@@ -279,6 +279,7 @@ namespace Raven.Client.Http
                     ms.Write(buffer, 0, read);
                 }
                 stream.Dispose();
+                ms.Position = 0;
                 return ms;
             }
         }
@@ -292,7 +293,7 @@ namespace Raven.Client.Http
                 {
                     blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "ErrorResponse");
                 }
-                catch (InvalidDataException e)
+                catch (Exception e)
                 {
                     stream.Position = 0;
                     throw new InvalidOperationException(

@@ -46,14 +46,16 @@ namespace Raven.Server
                     //TODO: operaton cancelled (timeout)
                     //TODO: Invalid data exception 422
 
+
+                    //TODO: Proper json output, not like this
                     var response = context.Response;
                     response.StatusCode = 500;
                     var sb = new StringBuilder();
-                    sb.Append(context.Request.Path).Append('?').Append(context.Request.QueryString)
-                        .AppendLine()
-                        .Append("- - - - - - - - - - - - - - - - - - - - -")
-                        .AppendLine();
-                    sb.Append(e);
+                    sb.Append("{\r\n\t\"Url\":\"")
+                        .Append(context.Request.Path).Append('?').Append(context.Request.QueryString)
+                        .Append("\",")
+                        .Append("\r\n\t\"Error\":\"");
+
                     string errorString;
 
                     try
@@ -64,7 +66,11 @@ namespace Raven.Server
                     {
                         errorString = e.ToString();
                     }
-                    await response.WriteAsync(errorString);
+
+                    sb.Append(errorString.Replace("\\","\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n"));
+                    sb.Append("\"\r\n}");
+
+                    await response.WriteAsync(sb.ToString());
                 }
             });
         }
