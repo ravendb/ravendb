@@ -10,7 +10,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class DocumentsContextPool : JsonContextPool<DocumentsOperationContext>, IDocumentsContextPool
+    public class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, IDocumentsContextPool
     {
         private readonly DocumentDatabase _database;
 

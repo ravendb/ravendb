@@ -14,7 +14,7 @@ using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class TransactionContextPool : JsonContextPool<TransactionOperationContext> ,ITransactionContextPool
+    public class TransactionContextPool : JsonContextPoolBase<TransactionOperationContext> ,ITransactionContextPool
     {
         private readonly StorageEnvironment _storageEnvironment;
 
