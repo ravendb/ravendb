@@ -252,8 +252,10 @@ namespace Raven.Server.Documents.Replication
 
         private bool ExecuteReplicationOnce()
         {
-            using (_context.OpenReadTransaction())
+            var readTx = _context.OpenReadTransaction();
+            try
             {
+
                 var replicationBatch = new List<Document>();
                 var lastEtag = _lastSentEtag;
 
@@ -261,7 +263,7 @@ namespace Raven.Server.Documents.Replication
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
                 var sp = Stopwatch.StartNew();
-                var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
+                var timeout = Debugger.IsAttached ? 60*1000 : 1000;
                 while (sp.ElapsedMilliseconds < timeout)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
@@ -286,7 +288,8 @@ namespace Raven.Server.Documents.Replication
                         {
                             if (_log.IsInfoEnabled)
                             {
-                                _log.Info($"Skipping replication of {document.Key} because destination has a higher change vector. Doc: {document.ChangeVector.Format()} < Dest: {_destinationLastKnownChangeVectorString} ");
+                                _log.Info(
+                                    $"Skipping replication of {document.Key} because destination has a higher change vector. Doc: {document.ChangeVector.Format()} < Dest: {_destinationLastKnownChangeVectorString} ");
                             }
                             continue;
                         }
@@ -321,6 +324,11 @@ namespace Raven.Server.Documents.Replication
 
                 SendDocuments(replicationBatch, lastEtag);
                 return true;
+            }
+            finally
+            {
+                if (readTx.Disposed == false)
+                    readTx.Dispose();
             }
         }
 

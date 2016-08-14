@@ -9,7 +9,7 @@ namespace Tryouts
         {
             using (var x = new ReplicationBasicTests())
             {
-                x.Master_master_replication_with_multiple_PUTS_should_work().Wait();
+                x.Master_master_replication_from_etag_zero_without_conflict_should_work().Wait();
             }
         }
     }
