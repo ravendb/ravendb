@@ -128,6 +128,16 @@ namespace Raven.Client
         FacetResults GetFacets(List<Facet> facets, int start, int? pageSize);
 
         /// <summary>
+        ///     Get the facets lazily as per the specified doc with the given start and pageSize
+        /// </summary>
+        Lazy<FacetResults> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize);
+
+        /// <summary>
+        ///     Get the facets lazily as per the specified doc with the given start and pageSize
+        /// </summary>
+        Lazy<FacetResults> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize);
+
+        /// <summary>
         ///     Returns first element or throws if sequence is empty.
         /// </summary>
         T First();

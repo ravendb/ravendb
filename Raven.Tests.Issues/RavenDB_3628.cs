@@ -108,7 +108,7 @@ namespace Raven.Tests.Issues
                     var stats = store.DatabaseCommands.GetStatistics();
                     var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                     return indexStats.Priority == IndexingPriority.Disabled;
-                }, TimeSpan.FromSeconds(120));
+                }, TimeSpan.FromSeconds(180));
 
                 Assert.True(result);
 
