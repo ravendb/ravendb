@@ -23,7 +23,6 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-
 using Voron.Impl.Backup;
 
 namespace Raven.Database.Actions
@@ -31,9 +30,7 @@ namespace Raven.Database.Actions
     public class MaintenanceActions : ActionsBase
     {
         private readonly ConcurrentQueue<DeleteIndexTask> pendingDeletions = new ConcurrentQueue<DeleteIndexTask>();
-        private int lockStatus = 0;
-        private const int Locked = 1;
-        private const int UnLocked = 0;
+        private readonly InterlockedLock interlockedLock = new InterlockedLock();
 
         public MaintenanceActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
             : base(database, recentTouches, uuidGenerator, log)
@@ -271,12 +268,12 @@ namespace Raven.Database.Actions
 
         private void TryCreateIndexesDeletionTask()
         {
-            if (Interlocked.CompareExchange(ref lockStatus, Locked, UnLocked) == Locked)
+            if (interlockedLock.TryEnter() == false)
                 return;
 
             if (pendingDeletions.IsEmpty)
             {
-                Interlocked.Exchange(ref lockStatus, UnLocked);
+                interlockedLock.Exit();
                 return;
             }
 
@@ -311,7 +308,7 @@ namespace Raven.Database.Actions
                 }
                 finally
                 {
-                    Interlocked.Exchange(ref lockStatus, UnLocked);
+                    interlockedLock.Exit();
 
                     if (pendingDeletions.IsEmpty == false)
                     {

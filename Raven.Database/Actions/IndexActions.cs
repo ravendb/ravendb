@@ -319,10 +319,16 @@ namespace Raven.Database.Actions
 
                 for (var i = 0; i < createdIndexes.Count; i++)
                 {
-                    var index = createdIndexes[i];
+                    var indexName = createdIndexes[i];
                     var priority = prioritiesList[i];
 
-                    var instance = Database.IndexStorage.GetIndexInstance(index);
+                    var instance = Database.IndexStorage.GetIndexInstance(indexName);
+                    if (instance == null)
+                    {
+                        Log.Warn("Couldn't set index priority because index named: '{0}' doesn't exist", indexName);
+                        continue;
+                    }
+
                     instance.Priority = priority;
                 }
 
@@ -375,8 +381,6 @@ namespace Raven.Database.Actions
                         //keep the SideBySide lock mode from the replaced index
                         indexToAdd.Definition.LockMode = GetCurrentLockMode(originalIndexName) ?? indexToAdd.Definition.LockMode;
                     }
-
-                    long _;
                     var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,
                         disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
 
@@ -387,7 +391,9 @@ namespace Raven.Database.Actions
                     {
                         Name = indexName,
                         OriginalName = originalIndexName,
-                        IsSideBySide = isSideBySide
+                        IsSideBySide = isSideBySide,
+                        MinimumEtagBeforeReplace = indexToAdd.MinimumEtagBeforeReplace ?? sideBySideIndexes.MinimumEtagBeforeReplace,
+                        ReplaceTimeUtc = indexToAdd.ReplaceTimeUtc ?? sideBySideIndexes.ReplaceTimeUtc
                     });
 
                     prioritiesList.Add(indexToAdd.Priority);
@@ -411,7 +417,7 @@ namespace Raven.Database.Actions
                     instance.Priority = priority;
                 }
 
-                CreateIndexReplacementDocuments(sideBySideIndexes, createdIndexes);
+                CreateIndexReplacementDocuments(createdIndexes);
 
                 return createdIndexes;
             }
@@ -428,7 +434,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        private void CreateIndexReplacementDocuments(SideBySideIndexes sideBySideIndexes, List<IndexInfo> createdIndexes)
+        private void CreateIndexReplacementDocuments(List<IndexInfo> createdIndexes)
         {
             Database.TransactionalStorage.Batch(accessor =>
             {
@@ -443,8 +449,8 @@ namespace Raven.Database.Actions
                         RavenJObject.FromObject(new IndexReplaceDocument
                         {
                             IndexToReplace = createdIndex.OriginalName,
-                            MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace,
-                            ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc
+                            MinimumEtagBeforeReplace = createdIndex.MinimumEtagBeforeReplace,
+                            ReplaceTimeUtc = createdIndex.ReplaceTimeUtc
                         }),
                         new RavenJObject(),
                         null);
@@ -465,6 +471,10 @@ namespace Raven.Database.Actions
             public string OriginalName { get; set; }
 
             public bool IsSideBySide { get; set; }
+
+            public Etag MinimumEtagBeforeReplace { get; set; }
+
+            public DateTime? ReplaceTimeUtc { get; set; }
         }
 
         private static void AssertAnalyzersValid(IndexDefinition indexDefinition)

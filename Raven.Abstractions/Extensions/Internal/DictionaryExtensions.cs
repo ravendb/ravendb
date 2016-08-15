@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.Extensions 
+namespace Raven.Abstractions.Extensions
 {
     public static class DictionaryExtensions
     {
@@ -25,7 +25,7 @@ namespace Raven.Abstractions.Extensions
         public static bool ContentEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
         {
             if (x == null || y == null) 
-                return x == null && y == null;
+                return (x == null || x.Count == 0) && (y == null || y.Count == 0);
             
             if (x.Count != y.Count)
                 return false;
