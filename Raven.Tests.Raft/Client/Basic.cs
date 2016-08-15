@@ -147,7 +147,7 @@ namespace Raven.Tests.Raft.Client
                 var databaseCommands = nonLeaderDocStore.DatabaseCommands;
                 var clusterAwareRequestExecuter = ((ClusterAwareRequestExecuter)((ServerClient)databaseCommands).RequestExecuter);
                 var nonLeaderUrl = clusterAwareRequestExecuter.LeaderNode.Url.Replace(leader.Configuration.ServerUrl, nonLeader.Configuration.ServerUrl);
-                clusterAwareRequestExecuter.LeaderNode = new OperationMetadata(nonLeaderUrl);
+                clusterAwareRequestExecuter.SetLeaderNodeToKnownLeader(new OperationMetadata(nonLeaderUrl));
                 databaseCommands.Put("keys/" + 1, null, new RavenJObject(), new RavenJObject());
 
                 Assert.NotNull(leaderDocStore.DatabaseCommands.Get("keys/1"));
