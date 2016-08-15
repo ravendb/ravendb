@@ -115,8 +115,8 @@ namespace Raven.Database.Bundles.Replication.Tasks
                 interlockedLock.Exit();
                 return;
             }
-
-            Task.Factory.StartNew(() =>
+            
+            Task.Run(() =>
             {
                 try
                 {
@@ -186,7 +186,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
                         ReplicateSideBySideIndexes();
                     }
                 }
-            }, TaskCreationOptions.LongRunning);
+            }, database.WorkContext.CancellationToken);
         }
 
         private void OnDocumentChange(DocumentDatabase db, DocumentChangeNotification notification, RavenJObject doc)
