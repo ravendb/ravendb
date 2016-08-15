@@ -1,4 +1,6 @@
-﻿using FastTests.Server.Documents.Replication;
+﻿using System;
+using System.Threading.Tasks;
+using FastTests.Server.Documents.Replication;
 
 namespace Tryouts
 {
@@ -7,10 +9,11 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var x = new ReplicationBasicTests())
+            using (var f = new FastTests.Server.Documents.Replication.ReplicationBasicTests())
             {
-                x.Master_master_replication_from_etag_zero_without_conflict_should_work().Wait();
+                f.Master_slave_replication_with_multiple_PUTS_should_work().Wait();
             }
+
         }
     }
 }

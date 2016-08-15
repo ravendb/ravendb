@@ -188,7 +188,7 @@ namespace Raven.Server.Documents
         {
             AssertTransaction(context);
 
-            var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
+            var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
             var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
             using (var iter = tree.Iterate(false))
             {
