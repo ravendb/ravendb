@@ -160,7 +160,6 @@ namespace Raven.Server.Documents
                     tx.CreateTree("Docs");
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
-                    tx.CreateTree("Tombstones");
                     tx.CreateTree("ChangeVector");
                     _docsSchema.Create(tx, Document.SystemDocumentsCollection);
                     _lastEtag = ReadLastEtag(tx);
