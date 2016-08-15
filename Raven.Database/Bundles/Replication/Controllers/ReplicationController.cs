@@ -824,7 +824,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
                 return InternalPutIndex(sideBySideReplicationInfo.Index.Name,
                     sideBySideReplicationInfo.SideBySideIndex,
-                    string.Format("Index with the name {0} wasn't found, so we created it with side-by-side index definition. (Perhaps it was deleted?)", sideBySideReplicationInfo.Index.Name));
+                    $"Index with the name {sideBySideReplicationInfo.Index.Name} wasn't found, so we created it with side-by-side index definition. (Perhaps it was deleted?)");
             }
 
             if (index.Equals(sideBySideReplicationInfo.SideBySideIndex, false))

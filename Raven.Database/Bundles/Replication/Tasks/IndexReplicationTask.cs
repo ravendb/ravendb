@@ -4,10 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -17,11 +19,12 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Impl;
-using Raven.Database;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+using Sparrow.Collections;
 
-namespace Raven.Bundles.Replication.Tasks
+namespace Raven.Database.Bundles.Replication.Tasks
 {
     public class IndexReplicationTask : ReplicationTaskBase
     {
@@ -34,6 +37,15 @@ namespace Raven.Bundles.Replication.Tasks
         private Timer indexReplicationTimer;
         private Timer lastQueriedTimer;
 
+        private readonly ConcurrentDictionary<int, IndexToAdd> sideBySideIndexesToReplicate =
+            new ConcurrentDictionary<int, IndexToAdd>();
+        private readonly ConcurrentDictionary<string, ConcurrentSet<int>> replicatedSideBySideIndexIds = 
+            new ConcurrentDictionary<string, ConcurrentSet<int>>();
+        private long sideBySideWorkCounter;
+        private readonly InterlockedLock interlockedLock = new InterlockedLock();
+
+        public TimeSpan TimeToWaitBeforeSendingDeletesOfIndexesToSiblings { get; set; }
+
         public IndexReplicationTask(DocumentDatabase database, HttpRavenRequestFactory httpRavenRequestFactory, ReplicationTask replication)
             : base(database, httpRavenRequestFactory)
         {
@@ -44,14 +56,190 @@ namespace Raven.Bundles.Replication.Tasks
             TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
         }
 
-        public TimeSpan TimeToWaitBeforeSendingDeletesOfIndexesToSiblings { get; set; }
-
         public void Start()
         {
-            database.Notifications.OnIndexChange += OnIndexChange;
+            var indexDefinitions = database.Indexes.Definitions;
+            var sideBySideIndexes = indexDefinitions.Where(x => x.Name.StartsWith(Constants.SideBySideIndexNamePrefix)).ToList();
+            foreach (var indexDefinition in sideBySideIndexes)
+            {
+                var indexName = indexDefinition.Name;
+                var instance = database.IndexStorage.GetIndexInstance(indexName);
+                if (instance == null)
+                {
+                    //probably deleted
+                    continue;
+                }
+                    
+                var indexToAdd = new IndexToAdd
+                {
+                    Name = indexDefinition.Name,
+                    Definition = indexDefinition,
+                    Priority = instance.Priority
+                };
 
+                SetIndexReplaceInfo(indexName, indexToAdd);
+
+                StartReplicatingSideBySideIndexAsync(indexToAdd);
+            }
+
+            database.Notifications.OnIndexChange += OnIndexChange;
+            database.Notifications.OnDocumentChange += OnDocumentChange;
+            
             indexReplicationTimer = database.TimerManager.NewTimer(x => Execute(), TimeSpan.Zero, replicationFrequency);
             lastQueriedTimer = database.TimerManager.NewTimer(x => SendLastQueried(), TimeSpan.Zero, lastQueriedFrequency);
+        }
+
+        public void StartReplicatingSideBySideIndexAsync(IndexToAdd indexToAdd)
+        {
+            if (indexToAdd.Name.StartsWith(Constants.SideBySideIndexNamePrefix))
+                indexToAdd.Name = indexToAdd.Name.Substring(Constants.SideBySideIndexNamePrefix.Length);
+
+            sideBySideIndexesToReplicate.TryAdd(indexToAdd.Definition.IndexId, indexToAdd);
+
+            ReplicateSideBySideIndexes();
+        }
+
+        public void ReplicateSideBySideIndexes()
+        {
+            var currentWorkCount = Interlocked.Increment(ref sideBySideWorkCounter);
+
+            if (interlockedLock.TryEnter() == false)
+            {
+                //already replicating side by side indexes
+                return;
+            }
+
+            if (sideBySideIndexesToReplicate.Count == 0)
+            {
+                //nothing to do
+                interlockedLock.Exit();
+                return;
+            }
+
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    var failedToReplicate = false;
+                    var commonReplicatedIndexIds = new HashSet<int>();
+                    var replicationDestinations = replication.GetReplicationDestinations();
+                    
+                    foreach (var destination in replicationDestinations)
+                    {
+                        var url = destination.ConnectionStringOptions.Url;
+
+                        var replicatedIndexIds = replicatedSideBySideIndexIds.GetOrAdd(url, new ConcurrentSet<int>());
+                        var indexesToReplicate = sideBySideIndexesToReplicate
+                            .Where(x => replicatedIndexIds.Contains(x.Key) == false).ToList();
+
+                        if (indexesToReplicate.Count == 0)
+                            continue;
+
+                        try
+                        {
+                            ReplicateSideBySideIndexesMultiPut(destination, indexesToReplicate.Select(x => x.Value).ToList());
+                            foreach (var index in indexesToReplicate)
+                            {
+                                replicatedIndexIds.TryAdd(index.Key);
+                            }
+
+                            if (commonReplicatedIndexIds.Count == 0)
+                            {
+                                commonReplicatedIndexIds.UnionWith(replicatedIndexIds);
+                            }
+                            else
+                            {
+                                commonReplicatedIndexIds.IntersectWith(replicatedIndexIds);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            failedToReplicate = true;
+                            Log.ErrorException("Failed to replicate side by side index to " + destination, e);
+                        }
+                    }
+
+                    if (failedToReplicate)
+                        return;
+
+                    //since we replicated the side by side indexes for all destinations,
+                    //there won't be any need to replicate them again
+                    foreach (var indexId in commonReplicatedIndexIds)
+                    {
+                        IndexToAdd _;
+                        sideBySideIndexesToReplicate.TryRemove(indexId, out _);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Log.ErrorException("Failed to replicate side by side indexes", e);
+                }
+                finally
+                {
+                    interlockedLock.Exit();
+
+                    var newCount = Interlocked.Read(ref sideBySideWorkCounter);
+                    if (currentWorkCount != newCount)
+                    {
+                        //handling a race condition where we get a new side by side index to replicate
+                        //and exiting while thinking that this index will be handled
+                        ReplicateSideBySideIndexes();
+                    }
+                }
+            }, TaskCreationOptions.LongRunning);
+        }
+
+        private void OnDocumentChange(DocumentDatabase db, DocumentChangeNotification notification, RavenJObject doc)
+        {
+            var docId = notification.Id;
+            if (docId == null)
+                return;
+
+            if (docId.StartsWith(Constants.IndexReplacePrefix, StringComparison.OrdinalIgnoreCase) == false)
+                return;
+
+            if (notification.Type != DocumentChangeTypes.Put)
+                return;
+
+            var replaceIndexName = docId.Substring(Constants.IndexReplacePrefix.Length);
+            var instance = database.IndexStorage.GetIndexInstance(replaceIndexName);
+            if (instance == null)
+                return;
+
+            var indexDefinition = database.Indexes.GetIndexDefinition(replaceIndexName);
+            if (indexDefinition == null)
+                return;
+
+            var indexToAdd = new IndexToAdd
+            {
+                Name = replaceIndexName,
+                Definition = indexDefinition,
+                Priority = instance.Priority,
+            };
+
+            SetIndexReplaceInfo(replaceIndexName, indexToAdd);
+
+            StartReplicatingSideBySideIndexAsync(indexToAdd);
+        }
+
+        private void SetIndexReplaceInfo(string indexName, IndexToAdd indexToAdd)
+        {
+            var key = Constants.IndexReplacePrefix + indexName;
+            var replaceDoc = database.Documents.Get(key, null);
+            if (replaceDoc == null)
+                return;
+
+            try
+            {
+                var indexReplaceInformation = replaceDoc.DataAsJson.JsonDeserialization<IndexReplaceDocument>();
+                indexToAdd.MinimumEtagBeforeReplace = indexReplaceInformation.MinimumEtagBeforeReplace;
+                indexToAdd.ReplaceTimeUtc = indexReplaceInformation.ReplaceTimeUtc;
+            }
+            catch (Exception)
+            {
+                //the index was already replaced or the document was deleted
+                //anyway, we'll try to replicate this index with default settings
+            }
         }
 
         public bool Execute(Func<ReplicationDestination, bool> shouldSkipDestinationPredicate = null)
@@ -61,6 +249,14 @@ namespace Raven.Bundles.Replication.Tasks
 
             if (Monitor.TryEnter(indexReplicationLock) == false)
                 return false;
+
+            if (sideBySideIndexesToReplicate.Count > 0)
+            {
+                //we do replicate side by side indexes on creation
+                //this handles the case when we aren't able to connect to a certain destination
+                //we need to retry until we succeed
+                ReplicateSideBySideIndexes();
+            }
 
             try
             {
@@ -85,30 +281,56 @@ namespace Raven.Bundles.Replication.Tasks
 
                             ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
 
-                            var candidatesForReplication = new List<Tuple<IndexDefinition, IndexingPriority>>();
+                            var indexesToAdd = new List<IndexToAdd>();
 
-                            if (database.Indexes.Definitions.Length > 0)
+                            var indexDefinitions = database.Indexes.Definitions;
+                            if (indexDefinitions.Length > 0)
                             {
-                                var sideBySideIndexes = database.Indexes.Definitions.Where(x => x.IsSideBySideIndex)
-                                                                                 .ToDictionary(x => x.Name, x => x);
-                                //filtering system indexes like Raven/DocumentsByEntityName and Raven/ConflictDocuments
-                                foreach (var indexDefinition in database.Indexes.Definitions.Where(x => !x.IsSideBySideIndex && !x.Name.StartsWith("Raven/")))
+                                var replicatedIds = replicatedSideBySideIndexIds.GetOrAdd(destination.ConnectionStringOptions.Url, new ConcurrentSet<int>());
+
+                                var sideBySideIndexNamesToReplicate = indexDefinitions
+                                    .Where(x => replicatedIds.Contains(x.IndexId) == false &&
+                                                x.Name.StartsWith(Constants.SideBySideIndexNamePrefix))
+                                    .Select(x => x.Name).ToList();
+
+                                //filtering system indexes like Raven/DocumentsByEntityName and Raven/ConflictDocuments and side by side indexes
+                                var indexesToReplicate = indexDefinitions.Where(x =>
+                                    x.Name.StartsWith(Constants.SideBySideIndexNamePrefix) == false
+                                    && x.Name.StartsWith("Raven/") == false);
+
+                                foreach (var indexDefinition in indexesToReplicate)
                                 {
-                                    IndexDefinition sideBySideIndexDefinition;
-                                    if (sideBySideIndexes.TryGetValue("ReplacementOf/" + indexDefinition.Name, out sideBySideIndexDefinition))
-                                        ReplicateSingleSideBySideIndex(destination, indexDefinition, sideBySideIndexDefinition);
-                                    else
-                                        candidatesForReplication.Add(Tuple.Create(indexDefinition, database.IndexStorage.GetIndexInstance(indexDefinition.Name).Priority));
+                                    if (sideBySideIndexNamesToReplicate.Contains(Constants.SideBySideIndexNamePrefix + indexDefinition.Name))
+                                    {
+                                        //the side by side index for this index wasn't replicated,
+                                        //no need to replicate the original index yet
+                                        continue;
+                                    }
+
+                                    var instance = database.IndexStorage.GetIndexInstance(indexDefinition.Name);
+                                    if (instance == null)
+                                    {
+                                        //probably deleted
+                                        continue;
+                                    }
+
+                                    indexesToAdd.Add(new IndexToAdd
+                                    {
+                                        Name = indexDefinition.Name,
+                                        Definition = indexDefinition,
+                                        Priority = instance.Priority
+                                    });
                                 }
 
-                                ReplicateIndexesMultiPut(destination, candidatesForReplication);
+                                ReplicateIndexesMultiPut(destination, indexesToAdd);
                             }
 
                             database.TransactionalStorage.Batch(actions =>
                             {
                                 foreach (var indexTombstone in replicatedIndexTombstones)
                                 {
-                                    if (indexTombstone.Value != replicationDestinations.Length && database.IndexStorage.HasIndex(indexTombstone.Key) == false)
+                                    if (indexTombstone.Value != replicationDestinations.Length &&
+                                        database.IndexStorage.HasIndex(indexTombstone.Key) == false)
                                     {
                                         continue;
                                     }
@@ -164,67 +386,102 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 foreach (var destination in destinations)
                 {
-                    ReplicateIndexesMultiPut(destination, new List<Tuple<IndexDefinition, IndexingPriority>>()
+                    var instance = database.IndexStorage.GetIndexInstance(definition.Name);
+                    if (instance == null)
+                        continue;
+
+                    ReplicateIndexesMultiPut(destination, new List<IndexToAdd>
                     {
-                        Tuple.Create(definition, database.IndexStorage.GetIndexInstance(definition.Name).Priority)
+                        new IndexToAdd
+                        {
+                            Name = definition.Name,
+                            Definition = definition,
+                            Priority = instance.Priority
+                        }
                     });
                 }
             }
         }
 
-        private void OnIndexChange(DocumentDatabase documentDatabase, IndexChangeNotification eventArgs)
+        private void OnIndexChange(DocumentDatabase documentDatabase, IndexChangeNotification notification)
         {
-            switch (eventArgs.Type)
+            var indexName = notification.Name;
+            switch (notification.Type)
             {
                 case IndexChangeTypes.IndexAdded:
+                    if (notification.Version.HasValue == false)
+                        return;
+
                     //if created index with the same name as deleted one, we should prevent its deletion replication
                     database.TransactionalStorage.Batch(
                         accessor =>
                         {
-                            var li = accessor.Lists.Read(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
-                            if (li == null) return;
+                            var li = accessor.Lists.Read(Constants.RavenReplicationIndexesTombstones, indexName);
+                            if (li == null)
+                                return;
+
                             int version;
-                            string versionStr = li.Data.Value<string>("IndexVersion");
+                            var versionStr = li.Data.Value<string>("IndexVersion");
                             if (int.TryParse(versionStr, out version))
                             {
-                                if (eventArgs.Version.HasValue && version < eventArgs.Version.Value)
+                                if (version < notification.Version.Value)
                                 {
-                                    accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
+                                    accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexName);
                                 }
                             }
                             else
                             {
-                                Log.Error("Failed to parse index version of index {0}",eventArgs.Name);
+                                Log.Error("Failed to parse index version of index {0}", indexName);
                             }					        
                         });
                     break;
                 case IndexChangeTypes.IndexRemoved:
+                    var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+                    if (indexDefinition != null)
+                    {
+                        //the side by side index was deleted
+                        IndexToAdd _;
+                        sideBySideIndexesToReplicate.TryRemove(indexDefinition.IndexId, out _);
+                    }
+                    
                     //If we don't have any destination to replicate to (we are probably slave node)
                     //we shouldn't keep a tombstone since we are not going to remove it anytime
                     //and keeping it prevents us from getting that index created again.
                     if (replication.GetReplicationDestinations().Length == 0)
                         return;
+
                     var metadata = new RavenJObject
                     {
                         {Constants.RavenIndexDeleteMarker, true},
                         {Constants.RavenReplicationSource, database.TransactionalStorage.Id.ToString()},
                         {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(database)},
-                        {"IndexVersion",eventArgs.Version }
+                        {"IndexVersion", notification.Version }
                     };
                     
-                    database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
+                    database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, indexName, metadata, UuidType.Indexing));
                     break;
             }
         }
 
-        private void ReplicateIndexesMultiPut(ReplicationStrategy destination, List<Tuple<IndexDefinition, IndexingPriority>> candidatesForReplication)
+        private void ReplicateIndexesMultiPut(ReplicationStrategy destination, List<IndexToAdd> indexesToAdd)
         {
-            var indexesToAdd = candidatesForReplication
-                .Select(x => new IndexToAdd { Definition = x.Item1, Name = x.Item1.Name, Priority = x.Item2 })
-                .ToArray();
-
-            var serializedIndexDefinitions = RavenJToken.FromObject(indexesToAdd);
+            var serializedIndexDefinitions = RavenJToken.FromObject(indexesToAdd.ToArray());
             var url = string.Format("{0}/indexes?{1}", destination.ConnectionStringOptions.Url, GetDebugInformation());
+
+            var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, replication.GetRequestBuffering(destination));
+            replicationRequest.Write(serializedIndexDefinitions);
+            replicationRequest.ExecuteRequest();
+        }
+
+        private void ReplicateSideBySideIndexesMultiPut(ReplicationStrategy destination, List<IndexToAdd> indexes)
+        {
+            var sideBySideIndexes = new SideBySideIndexes
+            {
+                IndexesToAdd = indexes.ToArray()
+            };
+
+            var serializedIndexDefinitions = RavenJToken.FromObject(sideBySideIndexes);
+            var url = $"{destination.ConnectionStringOptions.Url}/side-by-side-indexes?{GetDebugInformation()}";
 
             var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, replication.GetRequestBuffering(destination));
             replicationRequest.Write(serializedIndexDefinitions);

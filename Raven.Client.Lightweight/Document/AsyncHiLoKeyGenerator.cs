@@ -54,7 +54,7 @@ namespace Raven.Client.Document
                 return CompletedTask.With(incrementedCurrent);
             }
 
-            if (Interlocked.CompareExchange(ref lockStatus, Locked, UnLocked) == Locked)
+            if (interlockedLock.TryEnter() == false)
             {
                 Interlocked.Increment(ref threadsWaitingForRangeUpdate);
                 mre.WaitOne();
@@ -70,7 +70,7 @@ namespace Raven.Client.Document
                 {
                     // Lock was contended, and the max has already been changed.
                     mre.Set();
-                    Interlocked.Exchange(ref lockStatus, UnLocked);
+                    interlockedLock.Exit();
                     return NextIdAsync(databaseCommands);
                 }
                     
@@ -84,7 +84,7 @@ namespace Raven.Client.Document
                         finally
                         {
                             mre.Set();
-                            Interlocked.Exchange(ref lockStatus, UnLocked);
+                            interlockedLock.Exit();
                         }
 
                         return NextIdAsync(databaseCommands);
@@ -95,7 +95,7 @@ namespace Raven.Client.Document
                 // We only unlock in exceptional cases (and not in a finally clause) because non exceptional cases will either have already
                 // unlocked or will have started a task that will unlock in the future.
                 mre.Set();
-                Interlocked.Exchange(ref lockStatus, UnLocked);
+                interlockedLock.Exit();
                 throw;
             }
         }

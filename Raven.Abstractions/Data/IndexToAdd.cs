@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Indexing;
 
 namespace Raven.Abstractions.Data
@@ -23,5 +24,15 @@ namespace Raven.Abstractions.Data
         /// Priority of an index
         /// </summary>
         public IndexingPriority Priority { get; set; }
+
+        /// <summary>
+        /// Minimum etag before replacement
+        /// </summary>
+        public Etag MinimumEtagBeforeReplace { get; set; }
+
+        /// <summary>
+        /// UTC time of replacement
+        /// </summary>
+        public DateTime? ReplaceTimeUtc { get; set; }
     }
 }

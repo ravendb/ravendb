@@ -55,7 +55,7 @@ namespace Raven.Client.Document
                 if (current <= myRange.Max)
                     return current;
 
-                if (Interlocked.CompareExchange(ref lockStatus, Locked, UnLocked) == Locked)
+                if (interlockedLock.TryEnter() == false)
                 {
                     Interlocked.Increment(ref threadsWaitingForRangeUpdate);
                     mre.WaitOne();
@@ -76,7 +76,7 @@ namespace Raven.Client.Document
                 finally
                 {
                     mre.Set();
-                    Interlocked.Exchange(ref lockStatus, UnLocked);
+                    interlockedLock.Exit();
                 }
             }
         }

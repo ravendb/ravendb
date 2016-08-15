@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 
 namespace Raven.Client.Document
@@ -21,9 +22,7 @@ namespace Raven.Client.Document
         protected DateTime lastRequestedUtc1, lastRequestedUtc2;
 
         protected readonly ManualResetEvent mre = new ManualResetEvent(false);
-        protected int lockStatus = 0;
-        protected const int Locked = 1;
-        protected const int UnLocked = 0;
+        protected InterlockedLock interlockedLock = new InterlockedLock();
         protected long threadsWaitingForRangeUpdate = 0;
 
         protected HiLoKeyGeneratorBase(string tag, long capacity)
