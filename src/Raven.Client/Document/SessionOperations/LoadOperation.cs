@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Data;
@@ -11,7 +9,7 @@ namespace Raven.Client.Document.SessionOperations
 {
     public class LoadOperation
     {
-        private readonly static ILog log = LogManager.GetLogger(typeof(LoadOperation));
+        private static readonly ILog log = LogManager.GetLogger(typeof(LoadOperation));
 
         private readonly InMemoryDocumentSessionOperations sessionOperations;
         internal Func<IDisposable> disableAllCaching { get; set; }

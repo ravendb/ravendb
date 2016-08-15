@@ -45,6 +45,8 @@ namespace Raven.Client.Document
 
         private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
 
+        private readonly ConcurrentDictionary<string, RequestExecuter> _requestExecuters = new ConcurrentDictionary<string, RequestExecuter>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// The current session id - only used during construction
         /// </summary>
@@ -131,8 +133,6 @@ namespace Raven.Client.Document
             SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
             Conventions = new DocumentConvention();
         }
-
-        public RequestExecuter RequestExecuter { get; private set; }
 
         private string identifier;
 
@@ -278,11 +278,10 @@ namespace Raven.Client.Document
             currentSessionId = sessionId;
             try
             {
-                var session = new DocumentSession(options.Database, this, Listeners, sessionId,
-                    SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
-                    {
-                        DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
-                    };
+                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+                var requestExecuter = _requestExecuters.GetOrAdd(databaseName, new RequestExecuter(Url, databaseName, ApiKey));
+                var session = new DocumentSession(databaseName, this, Listeners, sessionId,
+                    SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
                 AfterSessionCreated(session);
                 return session;
             }
@@ -331,7 +330,6 @@ namespace Raven.Client.Document
             AssertValidConfiguration();
 
             jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent, Conventions.AuthenticationScheme);
-            RequestExecuter = new RequestExecuter(this);
 
             try
             {
@@ -610,10 +608,9 @@ namespace Raven.Client.Document
                 if (AsyncDatabaseCommands == null)
                     throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-                var session = new AsyncDocumentSession(options.Database, this, asyncDatabaseCommands, Listeners, sessionId)
-                {
-                    DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
-                };
+                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+                var requestExecuter = _requestExecuters.GetOrAdd(databaseName, new RequestExecuter(Url, databaseName, ApiKey));
+                var session = new AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, requestExecuter, Listeners, sessionId);
                 AfterSessionCreated(session);
                 return session;
             }

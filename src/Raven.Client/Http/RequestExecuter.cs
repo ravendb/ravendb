@@ -25,7 +25,6 @@ namespace Raven.Client.Http
     {
         private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
 
-        private readonly DocumentStore _store;
         private readonly JsonContextPool _contextPoll;
 
         public class AggresiveCacheOptions
@@ -48,16 +47,15 @@ namespace Raven.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
-        public RequestExecuter(DocumentStore store)
+        public RequestExecuter(string url, string databaseName, string apiKey)
         {
-            _store = store;
             _topology = new Topology
             {
                 LeaderNode = new ServerNode
                 {
-                    Database = _store.DefaultDatabase,
-                    ApiKey = _store.ApiKey,
-                    Url = _store.Url,
+                    Url = url,
+                    Database = databaseName,
+                    ApiKey = apiKey,
                 },
                 Etag = int.MinValue
             };

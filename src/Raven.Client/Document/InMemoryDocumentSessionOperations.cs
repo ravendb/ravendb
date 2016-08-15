@@ -23,6 +23,7 @@ using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.Linq;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -36,28 +37,20 @@ namespace Raven.Client.Document
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
-        private readonly static ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
+        private static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
 
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
         protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-        private static int counter;
 
-        private readonly int hash = Interlocked.Increment(ref counter);
+        private static int _instancesCounter;
+        private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
 
         protected bool GenerateDocumentKeysOnStore = true;
+
         /// <summary>
         /// The session id 
         /// </summary>
         public Guid Id { get; private set; }
-
-        /// <summary>
-        /// The database name for this session
-        /// </summary>
-        public virtual string DatabaseName
-        {
-            get { return _databaseName ?? MultiDatabase.GetDatabaseName(DocumentStore.Url); }
-            internal set { _databaseName = value; }
-        }
 
         /// <summary>
         /// The entities waiting to be deleted
@@ -88,10 +81,12 @@ namespace Raven.Client.Document
         /// <summary>
         /// Translate between a key and its associated entity
         /// </summary>
-        protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        protected readonly Dictionary<string, object> EntitiesByKey = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-        protected readonly string dbName;
+        protected readonly string databaseName;
         private readonly DocumentStoreBase documentStore;
+
+        public string DatabaseName => databaseName;
 
         /// <summary>
         /// all the listeners for this session
@@ -136,13 +131,13 @@ namespace Raven.Client.Document
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
         /// </summary>
         protected InMemoryDocumentSessionOperations(
-            string dbName,
+            string databaseName,
             DocumentStoreBase documentStore,
             DocumentSessionListeners listeners,
             Guid id)
         {
             Id = id;
-            this.dbName = dbName;
+            this.databaseName = databaseName;
             this.documentStore = documentStore;
             this.theListeners = listeners;
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
@@ -244,7 +239,7 @@ namespace Raven.Client.Document
 
         protected DocumentMetadata GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
         {
-            entitiesByKey[id] = instance;
+            EntitiesByKey[id] = instance;
             return entitiesAndMetadata[instance] = new DocumentMetadata
             {
                 ETag = UseOptimisticConcurrency ? (long?)0 : null,
@@ -264,7 +259,7 @@ namespace Raven.Client.Document
         {
             if (IsDeleted(id))
                 return false;
-            return entitiesByKey.ContainsKey(id) || includedDocumentsByKey.ContainsKey(id);
+            return EntitiesByKey.ContainsKey(id) || includedDocumentsByKey.ContainsKey(id);
         }
 
         /// <summary>
@@ -324,16 +319,13 @@ namespace Raven.Client.Document
         public void IncrementRequestCount()
         {
             if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
-                throw new InvalidOperationException(
-                    string.Format(
-                        @"The maximum number of requests ({0}) allowed for this session has been reached.
+                throw new InvalidOperationException($@"The maximum number of requests ({MaxNumberOfRequestsPerSession}) allowed for this session has been reached.
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
 Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
 advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.
-",
-                        MaxNumberOfRequestsPerSession));
+");
         }
 
         /// <summary>
@@ -414,7 +406,7 @@ more responsive application.
             }
             document.Remove("@metadata");
             object entity;
-            if ((entitiesByKey.TryGetValue(key, out entity) == false))
+            if ((EntitiesByKey.TryGetValue(key, out entity) == false))
             {
                 entity = ConvertToEntity(entityType, key, document, metadata);
             }
@@ -437,7 +429,7 @@ more responsive application.
                     Key = key
                 };
 
-                entitiesByKey[key] = entity;
+                EntitiesByKey[key] = entity;
             }
 
             return entity;
@@ -591,7 +583,7 @@ more responsive application.
         {
             if (id == null) throw new ArgumentNullException("id");
             object entity;
-            if (entitiesByKey.TryGetValue(id, out entity))
+            if (EntitiesByKey.TryGetValue(id, out entity))
             {
                 if (EntityChanged(entity, entitiesAndMetadata[entity]))
                 {
@@ -785,12 +777,12 @@ more responsive application.
                 ForceConcurrencyCheck = forceConcurrencyCheck
             });
             if (id != null)
-                entitiesByKey[id] = entity;
+                EntitiesByKey[id] = entity;
         }
 
         protected virtual void AssertNoNonUniqueInstance(object entity, string id)
         {
-            if (id == null || id.EndsWith("/") || !entitiesByKey.ContainsKey(id) || ReferenceEquals(entitiesByKey[id], entity))
+            if (id == null || id.EndsWith("/") || !EntitiesByKey.ContainsKey(id) || ReferenceEquals(EntitiesByKey[id], entity))
                 return;
 
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
@@ -870,7 +862,7 @@ more responsive application.
                     continue;
 
                 batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag);
-                entitiesByKey[batchResult.Key] = entity;
+                EntitiesByKey[batchResult.Key] = entity;
                 documentMetadata.ETag = batchResult.Etag;
                 documentMetadata.Key = batchResult.Key;
                 documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
@@ -935,7 +927,7 @@ more responsive application.
                 }
                 result.Entities.Add(entity.Key);
                 if (entity.Value.Key != null)
-                    entitiesByKey.Remove(entity.Value.Key);
+                    EntitiesByKey.Remove(entity.Value.Key);
                 result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
             }
         }
@@ -996,12 +988,12 @@ more responsive application.
                     long? etag = null;
                     object existingEntity;
                     DocumentMetadata metadata = null;
-                    if (entitiesByKey.TryGetValue(key, out existingEntity))
+                    if (EntitiesByKey.TryGetValue(key, out existingEntity))
                     {
                         if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
                             etag = metadata.ETag;
                         entitiesAndMetadata.Remove(existingEntity);
-                        entitiesByKey.Remove(key);
+                        EntitiesByKey.Remove(key);
                     }
 
                     etag = UseOptimisticConcurrency ? etag : null;
@@ -1098,7 +1090,7 @@ more responsive application.
             if (entitiesAndMetadata.TryGetValue(entity, out value))
             {
                 entitiesAndMetadata.Remove(entity);
-                entitiesByKey.Remove(value.Key);
+                EntitiesByKey.Remove(value.Key);
             }
             deletedEntities.Remove(entity);
         }
@@ -1111,7 +1103,7 @@ more responsive application.
         {
             entitiesAndMetadata.Clear();
             deletedEntities.Clear();
-            entitiesByKey.Clear();
+            EntitiesByKey.Clear();
             knownMissingIds.Clear();
         }
 
@@ -1268,7 +1260,7 @@ more responsive application.
 
         public override int GetHashCode()
         {
-            return hash;
+            return _hash;
         }
 
         public override bool Equals(object obj)
@@ -1387,7 +1379,7 @@ more responsive application.
                     continue;
 
                 object data;
-                if (entitiesByKey.TryGetValue(id, out data) == false)
+                if (EntitiesByKey.TryGetValue(id, out data) == false)
                     return false;
                 DocumentMetadata value;
                 if (entitiesAndMetadata.TryGetValue(data, out value) == false)

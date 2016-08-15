@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
+using Raven.Client.Http;
 
 namespace Raven.Client.Document
 {
@@ -29,6 +30,8 @@ namespace Raven.Client.Document
     public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
+        private readonly RequestExecuter _requestExecuter;
+
         /// <summary>
         /// Gets the database commands.
         /// </summary>
@@ -54,12 +57,10 @@ namespace Raven.Client.Document
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore,
-                               DocumentSessionListeners listeners,
-                               Guid id,
-                               IDatabaseCommands databaseCommands)
+        public DocumentSession(string dbName, DocumentStore documentStore, DocumentSessionListeners listeners, Guid id, IDatabaseCommands databaseCommands, RequestExecuter requestExecuter)
             : base(dbName, documentStore, listeners, id)
         {
+            _requestExecuter = requestExecuter;
             DatabaseCommands = databaseCommands;
         }
 
@@ -259,7 +260,7 @@ namespace Raven.Client.Document
                 return default(T);
             object existingEntity;
 
-            if (entitiesByKey.TryGetValue(id, out existingEntity))
+            if (EntitiesByKey.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
             }
@@ -493,7 +494,7 @@ namespace Raven.Client.Document
 
         protected override string GenerateKey(object entity)
         {
-            return Conventions.GenerateDocumentKey(dbName, DatabaseCommands, entity);
+            return Conventions.GenerateDocumentKey(databaseName, DatabaseCommands, entity);
         }
 
         protected override Task<string> GenerateKeyAsync(object entity)

@@ -24,18 +24,15 @@ namespace Raven.Client.Shard
         protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
 
 
-        protected BaseShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+        protected BaseShardedDocumentSession(string databaseName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
             ShardStrategy shardStrategy, IDictionary<string, TDatabaseCommands> shardDbCommands)
-            : base(dbName, documentStore, listeners, id)
+            : base(databaseName, documentStore, listeners, id)
         {
             this.shardStrategy = shardStrategy;
             this.shardDbCommands = shardDbCommands;
         }
 
-        public override string DatabaseName
-        {
-            get { return _databaseName; }
-        }
+        public new string DatabaseName => _databaseName;
 
         #region Sharding support methods
 

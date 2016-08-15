@@ -23,6 +23,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
+using Raven.Client.Http;
 
 namespace Raven.Client.Document.Async
 {
@@ -31,17 +32,16 @@ namespace Raven.Client.Document.Async
     /// </summary>
     public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
+        private readonly RequestExecuter _requestExecuter;
         private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore,
-                                    IAsyncDatabaseCommands asyncDatabaseCommands,
-                                    DocumentSessionListeners listeners,
-                                    Guid id)
+        public AsyncDocumentSession(string dbName, DocumentStore documentStore, IAsyncDatabaseCommands asyncDatabaseCommands, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id)
             : base(dbName, documentStore, listeners, id)
         {
+            _requestExecuter = requestExecuter;
             AsyncDatabaseCommands = asyncDatabaseCommands;
             GenerateDocumentKeysOnStore = false;
             asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, (key, entity, metadata) => key);
@@ -715,7 +715,7 @@ namespace Raven.Client.Document.Async
             if (id == null)
                 throw new ArgumentNullException("id", "The document id cannot be null");
             object entity;
-            if (entitiesByKey.TryGetValue(id, out entity))
+            if (EntitiesByKey.TryGetValue(id, out entity))
             {
                 return (T)entity;
             }
@@ -996,7 +996,7 @@ namespace Raven.Client.Document.Async
 
         protected override Task<string> GenerateKeyAsync(object entity)
         {
-            return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
+            return Conventions.GenerateDocumentKeyAsync(databaseName, AsyncDatabaseCommands, entity);
         }
 
         public async Task RefreshAsync<T>(T entity, CancellationToken token = default(CancellationToken))

@@ -149,7 +149,7 @@ namespace Raven.Client.Shard
             }
 
             object existingEntity;
-            if (entitiesByKey.TryGetValue(id, out existingEntity))
+            if (EntitiesByKey.TryGetValue(id, out existingEntity))
             {
                 return CompletedTask.With((T)existingEntity);
             }
@@ -358,7 +358,7 @@ namespace Raven.Client.Shard
             return ids.Select(id => // so we get items that were skipped because they are already in the session cache
             {
                 object val;
-                entitiesByKey.TryGetValue(id, out val);
+                EntitiesByKey.TryGetValue(id, out val);
                 return (T)val;
             }).ToArray();
         }
@@ -749,7 +749,7 @@ namespace Raven.Client.Shard
             IAsyncDatabaseCommands value;
             if (shardDbCommands.TryGetValue(shardId, out value) == false)
                 throw new InvalidOperationException("Could not find shard: " + shardId);
-            return Conventions.GenerateDocumentKeyAsync(dbName, value, entity);
+            return Conventions.GenerateDocumentKeyAsync(databaseName, value, entity);
         }
 
         public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default (CancellationToken))
