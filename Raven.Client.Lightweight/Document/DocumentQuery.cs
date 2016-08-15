@@ -1241,6 +1241,20 @@ namespace Raven.Client.Document
             return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
         }
 
+        public Lazy<FacetResults> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery(true);
+            var lazyFacetsOperation = new LazyFacetsOperation(IndexQueried, facetSetupDoc, q, start, pageSize);
+            return ((DocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null);
+        }
+
+        public Lazy<FacetResults> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize)
+        {
+            var q = GetIndexQuery(true);
+            var lazyFacetsOperation = new LazyFacetsOperation(IndexQueried, facets, q, start, pageSize);
+            return ((DocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null);
+        }
+
         protected virtual void ExecuteActualQuery()
         {
             theSession.IncrementRequestCount();

@@ -270,11 +270,6 @@ namespace Raven.Bundles.Replication.Tasks
                 IsRunning = false;
             }
         }
-        /// <summary>
-        /// Indicats that we got work notifications while busy processing old notifications.
-        /// We use this instand of having to poll the destination semaphores
-        /// </summary>
-        private int onCompleteReplicationRunReplicationAgain;
 
         public Task ExecuteReplicationOnce(bool runningBecauseOfDataModifications)
         {
@@ -327,7 +322,6 @@ namespace Raven.Bundles.Replication.Tasks
                         {
                             log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
                         }
-                        Interlocked.Exchange(ref onCompleteReplicationRunReplicationAgain, 1);
                         continue;
                     }
 
@@ -377,16 +371,14 @@ namespace Raven.Bundles.Replication.Tasks
                             if (t.Result == null)
                                 return;
 
-                            if (Interlocked.CompareExchange(ref onCompleteReplicationRunReplicationAgain, 0, 1) == 1)
+                            docDb.TransactionalStorage.Batch(actions =>
                             {
-                                docDb.TransactionalStorage.Batch(actions =>
-                                {
-                                    // only wake replciation if there is a change since we are done
-                                    if (t.Result.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
-                                        actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag)
-                                        docDb.WorkContext.ReplicationResetEvent.Set();
-                                });
-                            }
+                                var shouldRunAgain = t.Result.LastReplicatedDocumentEtag != Etag.InvalidEtag &&
+                                                        actions.Staleness.GetMostRecentDocumentEtag() != t.Result.LastReplicatedDocumentEtag;
+                                // only wake replciation if there is a change since we are done
+                                if (shouldRunAgain)
+                                    docDb.WorkContext.ReplicationResetEvent.Set();
+                            });                            
                         });
                 }
                 Task.WhenAll(startedTasks)
