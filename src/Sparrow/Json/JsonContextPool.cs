@@ -1,6 +1,4 @@
-﻿using Sparrow.Json;
-
-namespace Raven.Server.ServerWide.Context
+﻿namespace Sparrow.Json
 {
     public class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
     {

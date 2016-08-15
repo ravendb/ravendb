@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using Sparrow.Json;
 using Sparrow.Utils;
 
-namespace Raven.Server.ServerWide.Context
+namespace Sparrow.Json
 {
     public abstract class JsonContextPoolBase<T>
         where T : JsonOperationContext

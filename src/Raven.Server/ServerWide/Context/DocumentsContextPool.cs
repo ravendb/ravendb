@@ -7,6 +7,7 @@
 using System.Diagnostics;
 
 using Raven.Server.Documents;
+using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Context
 {

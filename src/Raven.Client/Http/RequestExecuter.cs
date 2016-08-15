@@ -26,7 +26,7 @@ namespace Raven.Client.Http
         private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
 
         private readonly DocumentStore _store;
-        private readonly JsonOperationContext _context;
+        private readonly JsonContextPool _contextPoll;
 
         public class AggresiveCacheOptions
         {
@@ -65,10 +65,7 @@ namespace Raven.Client.Http
             var handler = new HttpClientHandler();
             _httpClient = new HttpClient(handler);
 
-            //TODO: This need to be taken from the context pool
-            //TODO: context has to be single threaded, but is used 
-            //TODO: in multiple threads
-            _context = new JsonOperationContext(1024*1024, 16*1024);
+            _contextPoll = new JsonContextPool();
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -76,44 +73,55 @@ namespace Raven.Client.Http
 
         private void UpdateTopologyCallback(object _)
         {
-            // Use server side conventions
-            if (_store.Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-                return;
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            UpdateTopology();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        }
 
-            var node = _topology.LeaderNode;
-
-            var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
-
-            if (_firstTimeTryLoadFromTopologyCache)
+        private async Task UpdateTopology()
+        {
+            JsonOperationContext context;
+            using (_contextPoll.AllocateOperationContext(out context))
             {
-                _firstTimeTryLoadFromTopologyCache = false;
+                var node = _topology.LeaderNode;
 
-                var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, _context);
-                if (cachedTopology != null)
+                var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
+
+                if (_firstTimeTryLoadFromTopologyCache)
                 {
-                    _topology = cachedTopology;
-                    // we have cached topology, but we need to verify it is up to date, we'll check in 
-                    // 1 second, and let the rest of the system start
-                    _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
-                    return;
+                    _firstTimeTryLoadFromTopologyCache = false;
+
+                    var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
+                    if (cachedTopology != null)
+                    {
+                        _topology = cachedTopology;
+                        // we have cached topology, but we need to verify it is up to date, we'll check in 
+                        // 1 second, and let the rest of the system start
+                        _updateTopologyTimer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
+                        return;
+                    }
+                }
+
+                var command = new GetTopologyCommand();
+                try
+                {
+                    await ExecuteAsync(new ChoosenNode {Node = node}, context, command);
+                    if (_topology.Etag != command.Result.Etag)
+                    {
+                        _topology = command.Result;
+                        TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, context);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Failed to update topology", ex);
+                }
+                finally
+                {
+                    _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
                 }
             }
-
-            var command = new GetTopologyCommand();
-            ExecuteAsync(new ChoosenNode {Node = node }, _context, command)
-                .ContinueWith(task =>
-                {
-                    if (task.IsFaulted == false)
-                    {
-                        if (_topology.Etag != command.Result.Etag)
-                        {
-                            _topology = command.Result;
-                            TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _topology, _context);
-                        }
-                    }
-
-                    _updateTopologyTimer.Change(TimeSpan.FromMinutes(5), Timeout.InfiniteTimeSpan);
-                });
         }
 
         public async Task ExecuteAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command)
@@ -354,14 +362,14 @@ namespace Raven.Client.Http
 
             if (command.IsReadRequest)
             {
-                if (topology.ReadBehavior == ReadBehavior.ReadFromLeaderOnly)
+                if (topology.ReadBehavior == ReadBehavior.LeaderOnly)
                 {
                     if (command.IsFailedWithNode(leaderNode) == false)
                         return new ChoosenNode {Node = leaderNode};
                     throw new HttpRequestException("Leader not was failed to make this request. The current ReadBehavior is set to Leader to we won't failover to a differnt node.", exception);
                 }
 
-                if (topology.ReadBehavior == ReadBehavior.ReadFromRandomNode)
+                if (topology.ReadBehavior == ReadBehavior.RoundRobin)
                 {
                     if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
                         return new ChoosenNode {Node = leaderNode};
@@ -382,7 +390,7 @@ namespace Raven.Client.Http
                     throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
                 }
 
-                if (topology.ReadBehavior == ReadBehavior.ReadFromLeaderWithFailoverWhenRequestTimeSlaThresholdIsReached)
+                if (topology.ReadBehavior == ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached)
                 {
                     if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false && leaderNode.IsRateSurpassed(topology.SLA.RequestTimeThresholdInMilliseconds))
                         return new ChoosenNode {Node = leaderNode};
@@ -409,14 +417,14 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException($"Invalid ReadBehaviour value: {topology.ReadBehavior}");
             }
 
-            if (topology.WriteBehavior == WriteBehavior.WriteToLeaderOnly)
+            if (topology.WriteBehavior == WriteBehavior.LeaderOnly)
             {
                 if (command.IsFailedWithNode(leaderNode) == false)
                     return new ChoosenNode {Node = leaderNode};
                 throw new HttpRequestException("Leader not was failed to make this request. The current WriteBehavior is set to Leader to we won't failover to a differnt node.", exception);
             }
 
-            if (topology.WriteBehavior == WriteBehavior.WriteToLeaderWithFailover)
+            if (topology.WriteBehavior == WriteBehavior.LeaderWithFailover)
             {
                 if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
                     return new ChoosenNode {Node = leaderNode};
@@ -461,21 +469,25 @@ namespace Raven.Client.Http
 
         private void UpdateCurrentTokenCallback(object _)
         {
-            var topology = _topology;
-
-            var leaderNode = topology.LeaderNode;
-            if (leaderNode != null)
+            JsonOperationContext context;
+            using (_contextPoll.AllocateOperationContext(out context))
             {
-#pragma warning disable 4014
-                HandleUnauthorized(null, leaderNode, _context, shouldThrow: false);
-#pragma warning restore 4014
-            }
+                var topology = _topology;
 
-            foreach (var node in topology.Nodes)
-            {
+                var leaderNode = topology.LeaderNode;
+                if (leaderNode != null)
+                {
 #pragma warning disable 4014
-                HandleUnauthorized(null, node, _context, shouldThrow: false);
+                    HandleUnauthorized(null, leaderNode, context, shouldThrow: false);
 #pragma warning restore 4014
+                }
+
+                foreach (var node in topology.Nodes)
+                {
+#pragma warning disable 4014
+                    HandleUnauthorized(null, node, context, shouldThrow: false);
+#pragma warning restore 4014
+                }
             }
         }
 
@@ -559,7 +571,7 @@ namespace Raven.Client.Http
         {
             _cache.Dispose();
             _authenticator.Dispose();
-            _context.Dispose();
+            _contextPoll.Dispose();
         }
     }
 }

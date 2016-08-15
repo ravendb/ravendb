@@ -2,7 +2,7 @@
 {
     public enum WriteBehavior
     {
-        WriteToLeaderOnly,
-        WriteToLeaderWithFailover
+        LeaderOnly,
+        LeaderWithFailover
     }
 }
