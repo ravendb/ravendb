@@ -304,6 +304,7 @@
     <Compile Include="Indexing\LuceneAST.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
+    <Compile Include="Plugins\Builtins\CheckPageFileOnHDD.cs" />
     <Compile Include="Plugins\Builtins\HotSpareReplicationBehavior.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseBundleScalarObjectBase.cs" />

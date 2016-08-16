@@ -598,13 +598,9 @@ namespace Raven.Database.Indexing
                             //since this exception can happen during normal code-flow
                             throw;
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
-                            var invalidSpatialShapeException = e as InvalidSpatialShapException;
-                            var invalidDocId = (invalidSpatialShapeException == null) ?
-                                null :
-                                invalidSpatialShapeException.InvalidDocumentId;
-                            context.AddError(indexId, indexDefinition.Name, invalidDocId, e, "Write");
+                            //errors are handled in upper level 
                             throw;
                         }
 

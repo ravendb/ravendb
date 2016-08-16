@@ -814,7 +814,9 @@ namespace Raven.Database.Indexing
                 }
 
                 Log.WarnException($"Failed to index documents for index: {batchForIndex.Index.PublicName}", e);
-                context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, e);
+                var invalidSpatialShapeException = e as InvalidSpatialShapException;
+                var invalidDocId = invalidSpatialShapeException?.InvalidDocumentId;
+                context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, invalidDocId, e);
             }
             finally
             {
