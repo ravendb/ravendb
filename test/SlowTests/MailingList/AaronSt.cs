@@ -3,22 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Raven.Client.Document;
-using Raven.Tests.Common;
 
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class AaronSt : RavenTest
+    public class AaronSt : RavenTestBase
     {
         [Fact]
-        public void CanDoDistinctOnProject()
+        public async Task CanDoDistinctOnProject()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -26,7 +25,7 @@ namespace Raven.Tests.MailingList
                     {
                         session.Store(new MKSession
                         {
-                            User = new TesterInfo{AnonymousId = "abc"}
+                            User = new TesterInfo { AnonymousId = "abc" }
                         });
                     }
                     session.SaveChanges();
@@ -34,22 +33,24 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var z = session.Query<MKSession>().Customize(x => x.WaitForNonStaleResults())
-                        .Select(x => x.User.AnonymousId).Distinct()
+                    var z = session.Query<MKSession>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Select(x => x.User.AnonymousId)
+                        .Distinct()
                         .ToList();
 
                     Assert.Equal(1, z.Count);
-                } 
+                }
             }
         }
 
-        public class TesterInfo
+        private class TesterInfo
         {
             public string AnonymousId { get; set; }
             public string ContactEmail { get; set; }
         }
 
-        public class MKSession
+        private class MKSession
         {
             public string Id { get; set; }
             public DateTimeOffset Start { get; set; }
