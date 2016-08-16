@@ -29,143 +29,167 @@ namespace Voron.Impl.Backup
             public StorageEnvironment Env { get; set; }
         }
 
-        // The last StorageEnvironment in envs needs to be the DocumentsStorage StorageEnvironment//
+        public void ToFile(StorageEnvironment env, string backupPath,
+            CompressionLevel compression = CompressionLevel.Optimal,
+            Action<string> infoNotify = null,
+            Action backupStarted = null)
+        {
+            infoNotify = infoNotify ?? (s => { });
+
+            infoNotify("Voron backup db started");
+
+            using (var file = new FileStream(backupPath, FileMode.Create))
+            {
+                using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    infoNotify("Voron backup started");
+                    var dataPager = env.Options.DataPager;
+                    var copier = new DataCopier(env.Options.PageSize*16);
+                    Backup(env, compression, infoNotify, backupStarted, dataPager, package, string.Empty,
+                        copier);
+
+                    file.Flush(true); // make sure that we fully flushed to disk
+                }
+            }
+
+            infoNotify("Voron backup db finished");
+        }
+        /// <summary>
+        /// Do a full backup of a set of environments. Note that the order of the environments matter!
+        /// </summary>
         public void ToFile(IEnumerable<StorageEnvironmentInformation> envs, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
             Action<string> infoNotify = null,
             Action backupStarted = null)
         {
             infoNotify = infoNotify ?? (s => { });
 
-            LowLevelTransaction txr = null;
-            try
+            infoNotify("Voron backup db started");
+
+            using (var file = new FileStream(backupPath, FileMode.Create))
             {
-                infoNotify("Voron backup db started");
-
-                using (var file = new FileStream(backupPath, FileMode.Create))
+                using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
-                    using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
+                    foreach (var e in envs)
                     {
-                        foreach (var e in envs)
-                        {
-                            infoNotify("Voron backup " + e.Name + "started");
-                            var basePath = Path.Combine(e.Folder, e.Name);
-                            var env = e.Env;
-                            var dataPager = env.Options.DataPager;
-                            var copier = new DataCopier(env.Options.PageSize * 16);
-                            txr = Backup(env, compression, infoNotify, backupStarted, txr, dataPager, package, basePath,
-                                copier);
-                        }
-
-                        file.Flush(true); // make sure that we fully flushed to disk
+                        infoNotify("Voron backup " + e.Name + "started");
+                        var basePath = Path.Combine(e.Folder, e.Name);
+                        var env = e.Env;
+                        var dataPager = env.Options.DataPager;
+                        var copier = new DataCopier(env.Options.PageSize * 16);
+                        Backup(env, compression, infoNotify, backupStarted, dataPager, package, basePath,
+                            copier);
                     }
+
+                    file.Flush(true); // make sure that we fully flushed to disk
                 }
             }
-            finally
-            {
-                if (txr != null)
-                    txr.Dispose();
-            }
 
-            infoNotify(string.Format("Voron backup db finished"));
+            infoNotify("Voron backup db finished");
         }
 
-        private static unsafe LowLevelTransaction Backup(StorageEnvironment env, CompressionLevel compression, Action<string> infoNotify,
-            Action backupStarted, LowLevelTransaction txr, AbstractPager dataPager, ZipArchive package, string basePath, DataCopier copier)
+        private static void Backup(
+            StorageEnvironment env, CompressionLevel compression, Action<string> infoNotify,
+            Action backupStarted, AbstractPager dataPager, ZipArchive package, string basePath, DataCopier copier)
         {
-            long allocatedPages;
-
-            ImmutableAppendOnlyList<JournalFile> files; // thread safety copy
             var usedJournals = new List<JournalFile>();
             long lastWrittenLogPage = -1;
             long lastWrittenLogFile = -1;
-            using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
-            {
-                txr = env.NewLowLevelTransaction(TransactionFlags.Read); // now have snapshot view
-                allocatedPages = dataPager.NumberOfAllocatedPages;
-
-                Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
-                infoNotify("Voron copy headers");
-                VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options, basePath);
-
-                // journal files snapshot
-                files = env.Journal.Files;
-
-                JournalInfo journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
-                for (var journalNum = journalInfo.CurrentJournal - journalInfo.JournalFilesCount + 1;
-                    journalNum <= journalInfo.CurrentJournal;
-                    journalNum++)
-                {
-                    var journalFile = files.FirstOrDefault(x => x.Number == journalNum);
-                        // first check journal files currently being in use
-                    if (journalFile == null)
-                    {
-                        long journalSize;
-                        using (var pager = env.Options.OpenJournalPager(journalNum))
-                        {
-                            journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages*env.Options.PageSize);
-                        }
-
-                        journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
-                    }
-
-                    journalFile.AddRef();
-                    usedJournals.Add(journalFile);
-                }
-
-                if (env.Journal.CurrentFile != null)
-                {
-                    lastWrittenLogFile = env.Journal.CurrentFile.Number;
-                    lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition - 1;
-                }
-
-                // txw.Commit(); intentionally not committing
-            }
-
-            if (backupStarted != null)
-                backupStarted();
-
-            // data file backup
-            var dataPart = package.CreateEntry(basePath + "/" + Constants.DatabaseFilename, compression);
-            Debug.Assert(dataPart != null);
-
-            if (allocatedPages > 0) //only true if dataPager is still empty at backup start
-            {
-                using (var dataStream = dataPart.Open())
-                {
-                    // now can copy everything else
-                    var firstDataPage = dataPager.Read(null, 0);
-
-                    copier.ToStream(firstDataPage.Base, env.Options.PageSize*allocatedPages, dataStream);
-                }
-            }
-
+            LowLevelTransaction txr = null; 
             try
             {
-                foreach (var journalFile in usedJournals)
+                long allocatedPages;
+                using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
                 {
-                    var journalPart = package.CreateEntry(basePath + "/" + StorageEnvironmentOptions.JournalName(journalFile.Number), compression);
+                    txr = env.NewLowLevelTransaction(TransactionFlags.Read);// now have snapshot view
+                    allocatedPages = dataPager.NumberOfAllocatedPages;
 
-                    Debug.Assert(journalPart != null);
+                    Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
+                    infoNotify("Voron copy headers for " + basePath);
+                    VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options, basePath);
 
-                    long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
-                    if (journalFile.Number == lastWrittenLogFile)
-                        pagesToCopy = lastWrittenLogPage + 1;
+                    // journal files snapshot
+                    var files = env.Journal.Files; // thread safety copy
 
-                    using (var stream = journalPart.Open())
+                    JournalInfo journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
+                    for (var journalNum = journalInfo.CurrentJournal - journalInfo.JournalFilesCount + 1;
+                        journalNum <= journalInfo.CurrentJournal;
+                        journalNum++)
                     {
-                        copier.ToStream(env, journalFile, 0, pagesToCopy, stream);
-                        infoNotify(string.Format("Voron copy journal file {0} ", journalFile));
+                        var journalFile = files.FirstOrDefault(x => x.Number == journalNum);
+                        // first check journal files currently being in use
+                        if (journalFile == null)
+                        {
+                            long journalSize;
+                            using (var pager = env.Options.OpenJournalPager(journalNum))
+                            {
+                                journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * env.Options.PageSize);
+                            }
+
+                            journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                        }
+
+                        journalFile.AddRef();
+                        usedJournals.Add(journalFile);
+                    }
+
+                    if (env.Journal.CurrentFile != null)
+                    {
+                        lastWrittenLogFile = env.Journal.CurrentFile.Number;
+                        lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition - 1;
+                    }
+
+                    // txw.Commit(); intentionally not committing
+                }
+
+                backupStarted?.Invoke();
+
+                // data file backup
+                var dataPart = package.CreateEntry(Path.Combine(basePath,Constants.DatabaseFilename), compression);
+                Debug.Assert(dataPart != null);
+
+                if (allocatedPages > 0) //only true if dataPager is still empty at backup start
+                {
+                    using (var dataStream = dataPart.Open())
+                    {
+                        // now can copy everything else
+                        var firstDataPage = dataPager.Read(null, 0);
+
+                        copier.ToStream(firstDataPage.Base, env.Options.PageSize * allocatedPages, dataStream);
+                    }
+                }
+
+                try
+                {
+                    foreach (JournalFile journalFile in usedJournals)
+                    {
+                        var entryName = Path.Combine(basePath, StorageEnvironmentOptions.JournalName(journalFile.Number));
+                        var journalPart = package.CreateEntry(entryName, compression);
+
+                        Debug.Assert(journalPart != null);
+
+                        long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
+                        if (journalFile.Number == lastWrittenLogFile)
+                            pagesToCopy = lastWrittenLogPage + 1;
+
+                        using (var stream = journalPart.Open())
+                        {
+                            copier.ToStream(env, journalFile, 0, pagesToCopy, stream);
+                            infoNotify(string.Format("Voron copy journal file {0}", entryName));
+                        }
+                    }
+                }
+                finally
+                {
+                    foreach (var journalFile in usedJournals)
+                    {
+                        journalFile.Release();
                     }
                 }
             }
             finally
             {
-                foreach (var journalFile in usedJournals)
-                {
-                    journalFile.Release();
-                }
+                txr?.Dispose();
             }
-            return txr;
         }
 
         public void Restore(string backupPath, string voronDataDir, string journalDir = null)

@@ -52,15 +52,7 @@ namespace SlowTests.Voron
 
             Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
 
-            var storageEnvironmentInformation = new FullBackup.StorageEnvironmentInformation
-            {
-                Env = Env,
-                Folder = "documents",
-                Name = "Test"
-            };
-            var list = new LinkedList<FullBackup.StorageEnvironmentInformation>();
-            list.AddFirst(storageEnvironmentInformation);
-            BackupMethods.Full.ToFile(list, Path.Combine(DataDir, "voron-test.backup"));
+            BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"));
 
             BackupMethods.Full.Restore(Path.Combine(DataDir, "voron-test.backup"), Path.Combine(DataDir, "backup-test.data"));
 
