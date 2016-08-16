@@ -658,15 +658,8 @@ namespace Raven.Client.FileSystem
                 streamConsumed = true;
             }, size, metadata, etag);
         }
+
         public Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long? size, RavenJObject metadata = null, Etag etag = null)
-        {
-            return UploadAsync(filename, s =>
-            {
-                source(s);
-                return new CompletedTask();
-            }, prepareStream, size, metadata, etag);
-        }
-        public Task UploadAsync(string filename, Func<Stream,Task> source, Action prepareStream, long? size, RavenJObject metadata = null, Etag etag = null)
         {
             if (metadata == null)
                 metadata = new RavenJObject();
