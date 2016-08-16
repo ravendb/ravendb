@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Replication.Messages;
+using Raven.Json.Linq;
 using Raven.Server.Documents.Replication;
 using Xunit;
 
@@ -157,23 +157,19 @@ namespace FastTests.Server.Documents.Replication
 		{
 			var dbName1 = DbName + "-1";
 			var dbName2 = DbName + "-2";
-			var dbName3 = DbName + "-3";
 			using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
 			using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
-			using (var store3 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName3))
 			{
 				store1.DefaultDatabase = dbName1;
 				store2.DefaultDatabase = dbName2;
-				store3.DefaultDatabase = dbName2;
 
-				//TODO : finish
+				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
+				store2.DatabaseCommands.ForDatabase(dbName2).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
 
 				SetupReplication(dbName2, store1, store2);
-				SetupReplication(dbName2, store1, store3);
 				SetupReplication(dbName1, store2, store1);
-				SetupReplication(dbName1, store2, store3);
-				SetupReplication(dbName3, store3, store1);
-				SetupReplication(dbName3, store3, store2);
+
+				WaitForDocumentToReplicate<dynamic>(store2, "foo/bar", 10000);
 			}
 		}
 	}
