@@ -7,7 +7,7 @@ namespace Voron.Impl.Backup
 {
     internal static unsafe class VoronBackupUtil
     {
-        internal static void CopyHeaders(CompressionLevel compression, ZipArchive package, DataCopier copier, StorageEnvironmentOptions storageEnvironmentOptions)
+        internal static void CopyHeaders(CompressionLevel compression, ZipArchive package, DataCopier copier, StorageEnvironmentOptions storageEnvironmentOptions, string basePath)
         {
             foreach (var headerFileName in HeaderAccessor.HeaderFileNames)
             {
@@ -16,7 +16,7 @@ namespace Voron.Impl.Backup
                 if (!storageEnvironmentOptions.ReadHeader(headerFileName, header))
                     continue;
 
-                var headerPart = package.CreateEntry(headerFileName, compression);
+                var headerPart = package.CreateEntry(basePath + "/" + headerFileName, compression);
                 Debug.Assert(headerPart != null);
 
                 using (var headerStream = headerPart.Open())
