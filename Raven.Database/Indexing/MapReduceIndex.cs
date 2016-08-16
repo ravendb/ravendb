@@ -153,6 +153,9 @@ namespace Raven.Database.Indexing
 
             var parallelProcessingStart = SystemTime.UtcNow;
 
+            if (context.Database.MappingThreadPool == null)
+                throw new OperationCanceledException();
+
             context.Database.MappingThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
             {
                 token.ThrowIfCancellationRequested();
@@ -278,6 +281,9 @@ namespace Raven.Database.Indexing
                 reduceKeyToCount[reduceKey] = reduceKeyToCount.GetOrDefault(reduceKey) + singleDeleted.Value;
             }
 
+            if (context.Database.MappingThreadPool == null)
+                throw new OperationCanceledException();
+
             context.Database.MappingThreadPool.ExecuteBatch(reduceKeyStats, enumerator =>
                 context.TransactionalStorage.Batch(accessor =>
                 {
@@ -311,6 +317,9 @@ namespace Raven.Database.Indexing
 
             var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
             var parallelReductionStart = SystemTime.UtcNow;
+
+            if (context.Database.MappingThreadPool == null)
+                throw new OperationCanceledException();
 
             context.Database.MappingThreadPool.ExecuteBatch(changed, enumerator =>
                 context.TransactionalStorage.Batch(accessor =>

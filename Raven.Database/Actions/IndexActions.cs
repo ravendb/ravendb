@@ -905,7 +905,9 @@ namespace Raven.Database.Actions
                 if (clearErrors)
                     WorkContext.ClearErrorsFor(instance.Name);
 
-                if (removeIndexReplaceDocument && instance.IsSideBySideIndex)
+                var isSideBySide = instance.IsSideBySideIndex ||
+                                   instance.Name.StartsWith(Constants.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
+                if (removeIndexReplaceDocument && isSideBySide)
                 {
                     Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }

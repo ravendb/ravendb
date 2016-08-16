@@ -53,7 +53,8 @@ class eventsCollector {
     reportViewModel(view: any) {
         this.internalLog((ga) => {
             var viewName = view.__moduleId__;
-            ga('set', 'location', 'http://raven.studio/' + viewName);
+
+            ga('set', 'location', `http://raven.studio/${ viewName }${ document.location.search }`);
             ga('send', 'pageview');
         });
     }
@@ -74,7 +75,6 @@ class eventsCollector {
         }
         action(ga);
     }
-
 }
 
 export = eventsCollector;
