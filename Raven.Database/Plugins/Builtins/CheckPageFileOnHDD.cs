@@ -80,7 +80,7 @@ namespace Raven.Database.Plugins.Builtins
                     hddDrivesWithPageFile.Add(currentDriveLetter);
                 }
 
-                if (ssdDriveCount > 0)
+                if (ssdDriveCount > 0 && hddDrivesWithPageFile.Count > 0)
                 {
                     //the system has no ssd drives
                     return;
