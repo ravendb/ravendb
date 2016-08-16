@@ -1569,8 +1569,9 @@ namespace Raven.Client.Connection.Async
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader );
 
                     if (options?.WaitForReplicas == true)
-                        request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout+";" + 
-                            options.ThrowOnTimeoutInWaitForReplicas);
+                        request.AddHeader("Raven-Write-Assurance", options.NumberOfReplicasToWaitFor + ";" + options.WaitForReplicasTimout + ";" +
+                                                                   options.ThrowOnTimeoutInWaitForReplicas + ";" +
+                                                                   (options.Majority ? "majority" : "exact"));
 
                     if (options?.WaitForIndexes == true)
                     {
@@ -2685,12 +2686,13 @@ namespace Raven.Client.Connection.Async
         }
 
         internal async Task WithWriteAssurance(OperationMetadata operationMetadata,
-            IRequestTimeMetric requestTimeMetric, Etag etag, TimeSpan? timeout = null, int replicas = 1)
+            IRequestTimeMetric requestTimeMetric, Etag etag, TimeSpan? timeout = null, int replicas = 1, bool majority = false)
         {
             var sb = new StringBuilder(operationMetadata.Url + "/replication/writeAssurance?");
             sb.Append("etag=").Append(etag).Append("&");
             sb.Append("replicas=").Append(replicas).Append("&");
             sb.Append("timeout=").Append(timeout);
+            sb.Append("majority=").Append(majority);
 
 
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethod.Get, operationMetadata.Credentials, convention, requestTimeMetric);

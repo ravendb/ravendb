@@ -210,6 +210,7 @@ namespace Raven.Database.Server.Controllers
             var replicas = int.Parse(parts[0]);
             var timeout = TimeSpan.Parse(parts[1]);
             var throwOnTimeout = bool.Parse(parts[2]);
+            var majority = parts[3] == "majority";
             var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
             if (replicationTask == null)
             {
@@ -221,7 +222,7 @@ namespace Raven.Database.Server.Controllers
             }
             if (lastResultWithEtag != null)
             {
-                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas,throwOnTimeout).ConfigureAwait(false);
+                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas, majority, throwOnTimeout).ConfigureAwait(false);
             }
         }
 

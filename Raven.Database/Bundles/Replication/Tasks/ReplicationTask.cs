@@ -49,7 +49,7 @@ namespace Raven.Bundles.Replication.Tasks
         public bool IsRunning { get; private set; }
 
         private volatile bool shouldPause;
-
+        public int NumberOfActiveReplicationDestinations { get; private set; }
         public const int SystemDocsLimitForRemoteEtagUpdate = 15;
         public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
 
@@ -276,6 +276,8 @@ namespace Raven.Bundles.Replication.Tasks
             using (docDb.DisableAllTriggersForCurrentThread())
             {
                 var destinations = GetReplicationDestinations();
+
+                NumberOfActiveReplicationDestinations = destinations.Length;
 
                 if (destinations.Length == 0)
                 {
@@ -1077,9 +1079,14 @@ namespace Raven.Bundles.Replication.Tasks
 
         private readonly ConcurrentSet<WaitForReplicationState> waitForReplicationTasks = new ConcurrentSet<WaitForReplicationState>();
 
-        public async Task WaitForReplicationAsync(Etag etag, TimeSpan timeout, int replicas, bool throwOnTimeout)
+        public async Task WaitForReplicationAsync(Etag etag, TimeSpan timeout, int replicas, bool majority, bool throwOnTimeout)
         {
-            
+            if (majority)
+            {
+                var numberOfActiveReplicationDestinations = NumberOfActiveReplicationDestinations;
+                replicas = Math.Max(numberOfActiveReplicationDestinations/2 + 1, replicas);
+                replicas = Math.Min(replicas, numberOfActiveReplicationDestinations);
+            }
             if (ReplicatedPast(etag) >= replicas)
                 return;
 

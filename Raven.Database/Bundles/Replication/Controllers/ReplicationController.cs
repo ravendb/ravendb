@@ -549,7 +549,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         [HttpGet]
         [RavenRoute("replication/writeAssurance")]
         [RavenRoute("databases/{databaseName}/replication/writeAssurance")]
-        public async Task<HttpResponseMessage> ReplicationWriteAssurance(string etag, int replicas, TimeSpan timeout)
+        public async Task<HttpResponseMessage> ReplicationWriteAssurance(string etag, int replicas, bool majority, TimeSpan timeout)
         {
             if (etag == null)
             {
@@ -568,7 +568,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 replicas = Math.Min(destinations.Length, replicas);
             }
             Etag innerEtag = Etag.Parse(etag);
-            await ReplicationTask.WaitForReplicationAsync(innerEtag, timeout, replicas, true).ConfigureAwait(false);
+            await ReplicationTask.WaitForReplicationAsync(innerEtag, timeout, replicas, majority, true).ConfigureAwait(false);
 
             return GetEmptyMessage();
         }

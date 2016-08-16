@@ -997,12 +997,13 @@ more responsive application.
             }
         }
 
-        public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1)
+        public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1, bool majority = false)
         {
             var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (saveChangesOptions == null)
                 saveChangesOptions = new BatchOptions();
             saveChangesOptions.WaitForReplicas = true;
+            saveChangesOptions.Majority = majority;
             saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
             saveChangesOptions.WaitForReplicasTimout = realTimeout;
             saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;

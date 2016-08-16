@@ -43,8 +43,9 @@ namespace Raven.Client.Document
         /// <param name="timeout">Optional timeout - by default, 30 seconds</param>
         /// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
         /// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
+        /// <param name="majority">Use majority as the number of replicas</param>
         /// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
-        public async Task WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
+        public async Task WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2, bool majority = false)
         {
             etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
             if (etag == Etag.Empty || etag == null)
@@ -59,7 +60,7 @@ namespace Raven.Client.Document
             asyncDatabaseCommands.ForceReadFromMaster();
 
             await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get,
-                (operationMetadata, requestTimeMetric) => asyncDatabaseCommands.WithWriteAssurance(operationMetadata, requestTimeMetric, etag, timeout, replicas)).ConfigureAwait(false);
+                (operationMetadata, requestTimeMetric) => asyncDatabaseCommands.WithWriteAssurance(operationMetadata, requestTimeMetric, etag, timeout, replicas, majority)).ConfigureAwait(false);
 
         }
     }
