@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -86,7 +87,15 @@ namespace FastTests.Voron.Backups
                     tx.Commit();
                 }
 
-                new FullBackup().ToFile(envToSnapshot, Path.Combine(DataDir, "full.backup"));
+                var storageEnvironmentInformation = new FullBackup.StorageEnvironmentInformation
+                {
+                    Env = Env,
+                    Folder = "documents",
+                    Name = "Test"
+                };
+                var list = new LinkedList<FullBackup.StorageEnvironmentInformation>();
+                list.AddFirst(storageEnvironmentInformation);
+                new FullBackup().ToFile(list, Path.Combine(DataDir, "full.backup"));
 
                 using (var tx = envToSnapshot.WriteTransaction())
                 {
