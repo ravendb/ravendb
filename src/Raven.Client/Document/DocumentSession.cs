@@ -22,6 +22,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
+using Sparrow.Json;
 
 namespace Raven.Client.Document
 {
@@ -31,8 +32,6 @@ namespace Raven.Client.Document
     public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
-        private readonly RequestExecuter _requestExecuter;
-
         /// <summary>
         /// Gets the database commands.
         /// </summary>
@@ -59,9 +58,8 @@ namespace Raven.Client.Document
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
         public DocumentSession(string dbName, DocumentStore documentStore, DocumentSessionListeners listeners, Guid id, IDatabaseCommands databaseCommands, RequestExecuter requestExecuter)
-            : base(dbName, documentStore, listeners, id)
+            : base(dbName, documentStore, requestExecuter, listeners, id)
         {
-            _requestExecuter = requestExecuter;
             DatabaseCommands = databaseCommands;
         }
 
@@ -255,10 +253,16 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public T Load<T>(string id)
         {
-            var loadOeration = new LoadOperation1(this);
-            var command = loadOeration.ById<T>(id);
-            _requestExecuter.Execute(command);
-            loadOeration.SetResult(command.Result);
+            var loadOeration = new NewLoadOperation(this);
+            loadOeration.ById(id);
+
+            var command = loadOeration.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                loadOeration.SetResult(command.Result);
+            }
+
             return loadOeration.GetDocument<T>();
         }
 
@@ -268,10 +272,16 @@ namespace Raven.Client.Document
         /// <param name="ids">The ids.</param>
         public T[] Load<T>(IEnumerable<string> ids)
         {
-            var loadOeration = new LoadOperation1(this);
-            var command = loadOeration.ByIds<T>(ids.ToArray());
-            _requestExecuter.Execute(command);
-            loadOeration.SetResult(command.Result);
+            var loadOeration = new NewLoadOperation(this);
+            loadOeration.ByIds(ids);
+
+            var command = loadOeration.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                loadOeration.SetResult(command.Result);
+            }
+
             return loadOeration.GetDocuments<T>();
         }
 

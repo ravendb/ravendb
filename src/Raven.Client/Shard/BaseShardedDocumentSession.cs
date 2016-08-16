@@ -8,6 +8,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
+using Raven.Client.Http;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Json.Linq;
@@ -24,9 +25,9 @@ namespace Raven.Client.Shard
         protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
 
 
-        protected BaseShardedDocumentSession(string databaseName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+        protected BaseShardedDocumentSession(string databaseName, ShardedDocumentStore documentStore, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id,
             ShardStrategy shardStrategy, IDictionary<string, TDatabaseCommands> shardDbCommands)
-            : base(databaseName, documentStore, listeners, id)
+            : base(databaseName, documentStore, requestExecuter, listeners, id)
         {
             this.shardStrategy = shardStrategy;
             this.shardDbCommands = shardDbCommands;

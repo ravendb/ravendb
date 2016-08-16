@@ -29,6 +29,7 @@ using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Sparrow.Json;
 
 namespace Raven.Client.Document
 {
@@ -74,6 +75,15 @@ namespace Raven.Client.Document
             ShouldCacheRequest = url => true;
             FindIdentityProperty = q => q.Name == "Id";
             FindClrType = (id, doc, metadata) => metadata.Value<string>(Constants.Headers.RavenClrType);
+            FindClrTypeNew = (id, doc) =>
+            {
+                string clrType;
+                if (doc.TryGet(Constants.Headers.RavenClrType, out clrType))
+                {
+                    return clrType;
+                }
+                return null;
+            };
 
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
             TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
@@ -363,6 +373,8 @@ namespace Raven.Client.Document
         /// </summary>
         public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
 
+        public Func<string, BlittableJsonReaderObject, string> FindClrTypeNew { get; set; }
+
         /// <summary>
         /// Gets or sets the function to find the clr type name from a clr type
         /// </summary>
@@ -615,6 +627,14 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Get the CLR type (if exists) from the document
+        /// </summary>
+        public string GetClrType(string id, BlittableJsonReaderObject document)
+        {
+            return FindClrTypeNew(id, document);
+        }
+
+        /// <summary>
         ///  Get the CLR type name to be stored in the entity metadata
         /// </summary>
         public string GetClrTypeName(Type entityType)
@@ -792,6 +812,10 @@ namespace Raven.Client.Document
             }
         }
 
+        public object JsonDeserialize(Type type, BlittableJsonReaderObject document)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     [Flags]

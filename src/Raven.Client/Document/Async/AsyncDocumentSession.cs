@@ -32,16 +32,14 @@ namespace Raven.Client.Document.Async
     /// </summary>
     public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
-        private readonly RequestExecuter _requestExecuter;
         private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
         public AsyncDocumentSession(string dbName, DocumentStore documentStore, IAsyncDatabaseCommands asyncDatabaseCommands, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id)
-            : base(dbName, documentStore, listeners, id)
+            : base(dbName, documentStore, requestExecuter, listeners, id)
         {
-            _requestExecuter = requestExecuter;
             AsyncDatabaseCommands = asyncDatabaseCommands;
             GenerateDocumentKeysOnStore = false;
             asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, (key, entity, metadata) => key);
@@ -712,44 +710,32 @@ namespace Raven.Client.Document.Async
         /// <returns></returns>
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default(CancellationToken))
         {
-            if (id == null)
-                throw new ArgumentNullException("id", "The document id cannot be null");
-            object entity;
-            if (EntitiesByKey.TryGetValue(id, out entity))
-            {
-                return (T)entity;
-            }
-            JsonDocument value;
-            if (IncludedDocumentsByKey.TryGetValue(id, out value))
-            {
-                IncludedDocumentsByKey.Remove(id);
-                return TrackEntity<T>(value);
-            }
-            if (IsDeleted(id))
-                return default(T);
+            var loadOeration = new NewLoadOperation(this);
+            loadOeration.ById(id);
 
-            IncrementRequestCount();
-            var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-            return await CompleteLoadAsync<T>(id, loadOperation, token).ConfigureAwait(false);
+            var command = loadOeration.CreateRequest();
+            if (command != null)
+            {
+                await RequestExecuter.ExecuteAsync(command, Context);
+                loadOeration.SetResult(command.Result);
+            }
+
+            return loadOeration.GetDocument<T>();
         }
 
-        private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default(CancellationToken))
+        public async Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default(CancellationToken))
         {
-            loadOperation.LogOperation();
-            using (loadOperation.EnterLoadContext())
+            var loadOeration = new NewLoadOperation(this);
+            loadOeration.ByIds(ids);
+
+            var command = loadOeration.CreateRequest();
+            if (command != null)
             {
-                var result = await AsyncDatabaseCommands.GetAsync(id, token: token).ConfigureAwait(false);
-
-                if (loadOperation.SetResult(result) == false)
-                    return loadOperation.Complete<T>().FirstOrDefault();
-
-                return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token).ConfigureAwait(false);
+                await RequestExecuter.ExecuteAsync(command, Context);
+                loadOeration.SetResult(command.Result);
             }
-        }
 
-        public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default(CancellationToken))
-        {
-            return LoadAsyncInternal<T>(ids.ToArray(), token);
+            return loadOeration.GetDocuments<T>();
         }
 
         public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default(CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()

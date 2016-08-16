@@ -10,12 +10,11 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Util;
 using Raven.Client.Exceptions;
 using Sparrow.Logging;
 
@@ -25,7 +24,7 @@ namespace Raven.Client.Http
     {
         private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
 
-        private readonly JsonContextPool _contextPoll;
+        public readonly JsonContextPool ContextPool;
 
         public class AggresiveCacheOptions
         {
@@ -63,7 +62,7 @@ namespace Raven.Client.Http
             var handler = new HttpClientHandler();
             _httpClient = new HttpClient(handler);
 
-            _contextPoll = new JsonContextPool();
+            ContextPool = new JsonContextPool();
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -79,7 +78,7 @@ namespace Raven.Client.Http
         private async Task UpdateTopology()
         {
             JsonOperationContext context;
-            using (_contextPoll.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out context))
             {
                 var node = _topology.LeaderNode;
 
@@ -122,25 +121,16 @@ namespace Raven.Client.Http
             }
         }
 
-        public void Execute<TResult>(RavenCommand<TResult> command)
+        public void Execute<TResult>(RavenCommand<TResult> command, JsonOperationContext context)
         {
-            var choosenNode = ChooseNodeForRequest(command);
-            JsonOperationContext context;
-            using (_contextPoll.AllocateOperationContext(out context))
-            {
-                ExecuteAsync(choosenNode, context, command).Wait();
-            }
+            AsyncHelpers.RunSync(() => ExecuteAsync(command, context));
         }
 
-        public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command)
+        public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command, JsonOperationContext context)
         {
             var choosenNode = ChooseNodeForRequest(command);
 
-            JsonOperationContext context;
-            using (_contextPoll.AllocateOperationContext(out context))
-            {
-                await ExecuteAsync(choosenNode, context, command);
-            }
+            await ExecuteAsync(choosenNode, context, command);
         }
 
         public async Task ExecuteAsync<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command)
@@ -497,7 +487,7 @@ namespace Raven.Client.Http
         private void UpdateCurrentTokenCallback(object _)
         {
             JsonOperationContext context;
-            using (_contextPoll.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out context))
             {
                 var topology = _topology;
 
@@ -598,7 +588,7 @@ namespace Raven.Client.Http
         {
             _cache.Dispose();
             _authenticator.Dispose();
-            _contextPoll.Dispose();
+            ContextPool.Dispose();
         }
     }
 }

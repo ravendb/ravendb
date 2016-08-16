@@ -24,6 +24,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Document.Batches;
+using Raven.Client.Http;
 
 namespace Raven.Client.Shard
 {
@@ -42,9 +43,9 @@ namespace Raven.Client.Shard
         /// <param name="dbName">The db name.</param>
         /// <param name="documentStore"></param>
         /// <param name="listeners"></param>
-        public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+        public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id,
                                       ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
-            : base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands) { }
+            : base(dbName, documentStore, requestExecuter, listeners, id, shardStrategy, shardDbCommands) { }
 
         protected override JsonDocument GetJsonDocument(string documentKey)
         {
@@ -127,7 +128,7 @@ namespace Raven.Client.Shard
         public T Load<T>(string id)
         {
             object existingEntity;
-            if (EntitiesByKey.TryGetValue(id, out existingEntity))
+            if (EntitiesById.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
             }
@@ -387,7 +388,7 @@ namespace Raven.Client.Shard
             return ids.Select(id => // so we get items that were skipped because they are already in the session cache
             {
                 object val;
-                EntitiesByKey.TryGetValue(id, out val);
+                EntitiesById.TryGetValue(id, out val);
                 return (T)val;
             }).ToArray();
         }

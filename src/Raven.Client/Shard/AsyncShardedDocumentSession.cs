@@ -38,7 +38,7 @@ namespace Raven.Client.Shard
 
         public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
                                            ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
-            : base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands)
+            : base(dbName, documentStore, null, listeners, id, shardStrategy, shardDbCommands)
         {
             GenerateDocumentKeysOnStore = false;
             asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, ModifyObjectId);
@@ -143,13 +143,13 @@ namespace Raven.Client.Shard
 
         public Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
         {
-            if (knownMissingIds.Contains(id))
+            if (KnownMissingIds.Contains(id))
             {
                 return CompletedTask.With(default(T));
             }
 
             object existingEntity;
-            if (EntitiesByKey.TryGetValue(id, out existingEntity))
+            if (EntitiesById.TryGetValue(id, out existingEntity))
             {
                 return CompletedTask.With((T)existingEntity);
             }
@@ -358,7 +358,7 @@ namespace Raven.Client.Shard
             return ids.Select(id => // so we get items that were skipped because they are already in the session cache
             {
                 object val;
-                EntitiesByKey.TryGetValue(id, out val);
+                EntitiesById.TryGetValue(id, out val);
                 return (T)val;
             }).ToArray();
         }

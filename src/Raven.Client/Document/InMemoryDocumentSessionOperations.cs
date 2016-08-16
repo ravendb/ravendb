@@ -29,6 +29,7 @@ using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+using Sparrow.Json;
 
 namespace Raven.Client.Document
 {
@@ -37,6 +38,10 @@ namespace Raven.Client.Document
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
+        public readonly RequestExecuter RequestExecuter;
+        private readonly IDisposable _releaseOperationContext;
+        protected readonly JsonOperationContext Context;
+
         private static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
 
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
@@ -60,7 +65,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
         /// </summary>
-        protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        protected readonly HashSet<string> KnownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, object> externalState;
 
@@ -78,10 +83,12 @@ namespace Raven.Client.Document
 
         protected readonly Dictionary<string, JsonDocument> includedDocumentsByKey = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
 
+        internal readonly Dictionary<string, BlittableJsonReaderObject> DocumentsById = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Translate between a key and its associated entity
         /// </summary>
-        protected readonly Dictionary<string, object> EntitiesByKey = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, object> EntitiesById = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         protected readonly string databaseName;
         private readonly DocumentStoreBase documentStore;
@@ -133,12 +140,15 @@ namespace Raven.Client.Document
         protected InMemoryDocumentSessionOperations(
             string databaseName,
             DocumentStoreBase documentStore,
+            RequestExecuter requestExecuter,
             DocumentSessionListeners listeners,
             Guid id)
         {
             Id = id;
             this.databaseName = databaseName;
             this.documentStore = documentStore;
+            RequestExecuter = requestExecuter;
+            _releaseOperationContext = requestExecuter.ContextPool.AllocateOperationContext(out Context);
             this.theListeners = listeners;
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
@@ -239,7 +249,7 @@ namespace Raven.Client.Document
 
         protected DocumentMetadata GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
         {
-            EntitiesByKey[id] = instance;
+            EntitiesById[id] = instance;
             return entitiesAndMetadata[instance] = new DocumentMetadata
             {
                 ETag = UseOptimisticConcurrency ? (long?)0 : null,
@@ -259,7 +269,12 @@ namespace Raven.Client.Document
         {
             if (IsDeleted(id))
                 return false;
-            return EntitiesByKey.ContainsKey(id) || includedDocumentsByKey.ContainsKey(id);
+            return IsLoadedOrDeleted(id);
+        }
+
+        internal bool IsLoadedOrDeleted(string id)
+        {
+            return EntitiesById.ContainsKey(id) || DocumentsById.ContainsKey(id) || includedDocumentsByKey.ContainsKey(id) || IsDeleted(id);
         }
 
         /// <summary>
@@ -268,7 +283,7 @@ namespace Raven.Client.Document
         /// </summary>
         public bool IsDeleted(string id)
         {
-            return knownMissingIds.Contains(id);
+            return KnownMissingIds.Contains(id);
         }
 
         /// <summary>
@@ -406,7 +421,7 @@ more responsive application.
             }
             document.Remove("@metadata");
             object entity;
-            if ((EntitiesByKey.TryGetValue(key, out entity) == false))
+            if (EntitiesById.TryGetValue(key, out entity) == false)
             {
                 entity = ConvertToEntity(entityType, key, document, metadata);
             }
@@ -429,7 +444,7 @@ more responsive application.
                     Key = key
                 };
 
-                EntitiesByKey[key] = entity;
+                EntitiesById[key] = entity;
             }
 
             return entity;
@@ -506,6 +521,42 @@ more responsive application.
             }
         }
 
+        /// <summary>
+        /// Converts the json document to an entity.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="id">The id.</param>
+        /// <param name="documentFound">The document found.</param>
+        /// <returns></returns>
+        public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject documentFound)
+        {
+            try
+            {
+                var defaultValue = GetDefaultValue(entityType);
+                var entity = defaultValue;
+
+                var documentType = Conventions.GetClrType(id, documentFound);
+                if (documentType != null)
+                {
+                    var type = Type.GetType(documentType);
+                    if (type != null)
+                        entity = Conventions.JsonDeserialize(type, documentFound);
+                }
+
+                if (Equals(entity, defaultValue))
+                {
+                    entity = Conventions.JsonDeserialize(entityType, documentFound);
+                }
+                GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not convert document {id} to entity of type {entityType}", ex);
+            }
+        }
+
         private void RegisterMissingProperties(object o, string key, object value)
         {
             Dictionary<string, JToken> dictionary;
@@ -560,7 +611,7 @@ more responsive application.
             if (value.OriginalMetadata.ContainsKey(Constants.Headers.RavenReadOnly) && value.OriginalMetadata.Value<bool>(Constants.Headers.RavenReadOnly))
                 throw new InvalidOperationException(entity + " is marked as read only and cannot be deleted");
             deletedEntities.Add(entity);
-            knownMissingIds.Add(value.Key);
+            KnownMissingIds.Add(value.Key);
         }
 
         /// <summary>
@@ -583,7 +634,7 @@ more responsive application.
         {
             if (id == null) throw new ArgumentNullException("id");
             object entity;
-            if (EntitiesByKey.TryGetValue(id, out entity))
+            if (EntitiesById.TryGetValue(id, out entity))
             {
                 if (EntityChanged(entity, entitiesAndMetadata[entity]))
                 {
@@ -593,7 +644,7 @@ more responsive application.
                 return;
             }
             includedDocumentsByKey.Remove(id);
-            knownMissingIds.Add(id);
+            KnownMissingIds.Add(id);
 
             Defer(new DeleteCommandData { Key = id });
         }
@@ -692,7 +743,7 @@ more responsive application.
             if (tag != null)
                 metadata.Add(Constants.Headers.RavenEntityName, tag);
             if (id != null)
-                knownMissingIds.Remove(id);
+                KnownMissingIds.Remove(id);
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
         }
 
@@ -765,7 +816,7 @@ more responsive application.
         {
             deletedEntities.Remove(entity);
             if (id != null)
-                knownMissingIds.Remove(id);
+                KnownMissingIds.Remove(id);
 
             entitiesAndMetadata.Add(entity, new DocumentMetadata
             {
@@ -777,12 +828,12 @@ more responsive application.
                 ForceConcurrencyCheck = forceConcurrencyCheck
             });
             if (id != null)
-                EntitiesByKey[id] = entity;
+                EntitiesById[id] = entity;
         }
 
         protected virtual void AssertNoNonUniqueInstance(object entity, string id)
         {
-            if (id == null || id.EndsWith("/") || !EntitiesByKey.ContainsKey(id) || ReferenceEquals(EntitiesByKey[id], entity))
+            if (id == null || id.EndsWith("/") || !EntitiesById.ContainsKey(id) || ReferenceEquals(EntitiesById[id], entity))
                 return;
 
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
@@ -862,7 +913,7 @@ more responsive application.
                     continue;
 
                 batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag);
-                EntitiesByKey[batchResult.Key] = entity;
+                EntitiesById[batchResult.Key] = entity;
                 documentMetadata.ETag = batchResult.Etag;
                 documentMetadata.Key = batchResult.Key;
                 documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
@@ -927,7 +978,7 @@ more responsive application.
                 }
                 result.Entities.Add(entity.Key);
                 if (entity.Value.Key != null)
-                    EntitiesByKey.Remove(entity.Value.Key);
+                    EntitiesById.Remove(entity.Value.Key);
                 result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
             }
         }
@@ -988,12 +1039,12 @@ more responsive application.
                     long? etag = null;
                     object existingEntity;
                     DocumentMetadata metadata = null;
-                    if (EntitiesByKey.TryGetValue(key, out existingEntity))
+                    if (EntitiesById.TryGetValue(key, out existingEntity))
                     {
                         if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
                             etag = metadata.ETag;
                         entitiesAndMetadata.Remove(existingEntity);
-                        EntitiesByKey.Remove(key);
+                        EntitiesById.Remove(key);
                     }
 
                     etag = UseOptimisticConcurrency ? etag : null;
@@ -1090,7 +1141,7 @@ more responsive application.
             if (entitiesAndMetadata.TryGetValue(entity, out value))
             {
                 entitiesAndMetadata.Remove(entity);
-                EntitiesByKey.Remove(value.Key);
+                EntitiesById.Remove(value.Key);
             }
             deletedEntities.Remove(entity);
         }
@@ -1103,8 +1154,8 @@ more responsive application.
         {
             entitiesAndMetadata.Clear();
             deletedEntities.Clear();
-            EntitiesByKey.Clear();
-            knownMissingIds.Clear();
+            EntitiesById.Clear();
+            KnownMissingIds.Clear();
         }
 
         private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
@@ -1137,6 +1188,7 @@ more responsive application.
         /// </summary>
         public virtual void Dispose()
         {
+            _releaseOperationContext.Dispose();
         }
 
         /// <summary>
@@ -1227,11 +1279,11 @@ more responsive application.
 
         public void RegisterMissing(string id)
         {
-            knownMissingIds.Add(id);
+            KnownMissingIds.Add(id);
         }
         public void UnregisterMissing(string id)
         {
-            knownMissingIds.Remove(id);
+            KnownMissingIds.Remove(id);
         }
 
         public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, ICollection<string> includes)
@@ -1375,11 +1427,11 @@ more responsive application.
         {
             foreach (var id in ids)
             {
-                if (knownMissingIds.Contains(id))
+                if (KnownMissingIds.Contains(id))
                     continue;
 
                 object data;
-                if (EntitiesByKey.TryGetValue(id, out data) == false)
+                if (EntitiesById.TryGetValue(id, out data) == false)
                     return false;
                 DocumentMetadata value;
                 if (entitiesAndMetadata.TryGetValue(data, out value) == false)
