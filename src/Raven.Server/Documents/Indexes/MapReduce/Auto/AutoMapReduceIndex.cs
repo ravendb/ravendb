@@ -146,17 +146,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 _reduceKeyProcessor.Process(result);
             }
 
-            var reduceHashKey = _reduceKeyProcessor.Hash;
+            var mappedresult = indexContext.ReadObject(mappedResult, document.Key);
 
-            using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
-            {
-                var mapResult = _singleOutputList[0];
+            var mapResult = _singleOutputList[0];
 
-                mapResult.Data = mappedresult;
-                mapResult.ReduceKeyHash = reduceHashKey;
+            mapResult.Data = mappedresult;
+            mapResult.ReduceKeyHash = _reduceKeyProcessor.Hash;
 
-                PutMapResults(document.Key, _singleOutputList, indexContext);
-            }
+            PutMapResults(document.Key, _singleOutputList, indexContext);
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }
