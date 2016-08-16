@@ -720,9 +720,9 @@ namespace Raven.Client.Document.Async
                 return (T)entity;
             }
             JsonDocument value;
-            if (includedDocumentsByKey.TryGetValue(id, out value))
+            if (IncludedDocumentsByKey.TryGetValue(id, out value))
             {
-                includedDocumentsByKey.Remove(id);
+                IncludedDocumentsByKey.Remove(id);
                 return TrackEntity<T>(value);
             }
             if (IsDeleted(id))

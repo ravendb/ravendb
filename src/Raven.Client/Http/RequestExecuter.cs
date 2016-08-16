@@ -122,10 +122,25 @@ namespace Raven.Client.Http
             }
         }
 
-        public async Task ExecuteAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command)
+        public void Execute<TResult>(RavenCommand<TResult> command)
         {
             var choosenNode = ChooseNodeForRequest(command);
-            await ExecuteAsync(choosenNode, context, command);
+            JsonOperationContext context;
+            using (_contextPoll.AllocateOperationContext(out context))
+            {
+                ExecuteAsync(choosenNode, context, command).Wait();
+            }
+        }
+
+        public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command)
+        {
+            var choosenNode = ChooseNodeForRequest(command);
+
+            JsonOperationContext context;
+            using (_contextPoll.AllocateOperationContext(out context))
+            {
+                await ExecuteAsync(choosenNode, context, command);
+            }
         }
 
         public async Task ExecuteAsync<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command)
@@ -136,7 +151,7 @@ namespace Raven.Client.Http
             long cachedEtag;
             BlittableJsonReaderObject cachedValue;
             HttpCache.ReleaseCacheItem cachedItem;
-            using (cachedItem = _cache.Get(context, url, out cachedEtag, out cachedValue))
+            using (cachedItem = GetFromCache(context, command, request, url, out cachedEtag, out cachedValue))
             {
                 if (cachedEtag != 0)
                 {
@@ -207,6 +222,20 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
+        {
+            if (command.IsReadRequest)
+            {
+                if (request.Method != HttpMethod.Get)
+                    url = request.Method + "-" + url;
+                return _cache.Get(context, url, out cachedEtag, out cachedValue);
+            }
+
+            cachedEtag = 0;
+            cachedValue = null;
+            return new HttpCache.ReleaseCacheItem();
         }
 
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)

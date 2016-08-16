@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 
 namespace Raven.Client.Document
@@ -254,35 +255,11 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public T Load<T>(string id)
         {
-            if (id == null)
-                throw new ArgumentNullException("id", "The document id cannot be null");
-            if (IsDeleted(id))
-                return default(T);
-            object existingEntity;
-
-            if (EntitiesByKey.TryGetValue(id, out existingEntity))
-            {
-                return (T)existingEntity;
-            }
-            JsonDocument value;
-            if (includedDocumentsByKey.TryGetValue(id, out value))
-            {
-                includedDocumentsByKey.Remove(id);
-                return TrackEntity<T>(value);
-            }
-
-            IncrementRequestCount();
-            var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, id);
-            bool retry;
-            do
-            {
-                loadOperation.LogOperation();
-                using (loadOperation.EnterLoadContext())
-                {
-                    retry = loadOperation.SetResult(DatabaseCommands.Get(id));
-                }
-            } while (retry);
-            return loadOperation.Complete<T>().FirstOrDefault();
+            var loadOeration = new LoadOperation1(this);
+            var command = loadOeration.ById<T>(id);
+            _requestExecuter.Execute(command);
+            loadOeration.SetResult(command.Result);
+            return loadOeration.GetDocument<T>();
         }
 
         /// <summary>
@@ -291,7 +268,11 @@ namespace Raven.Client.Document
         /// <param name="ids">The ids.</param>
         public T[] Load<T>(IEnumerable<string> ids)
         {
-            return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
+            var loadOeration = new LoadOperation1(this);
+            var command = loadOeration.ByIds<T>(ids.ToArray());
+            _requestExecuter.Execute(command);
+            loadOeration.SetResult(command.Result);
+            return loadOeration.GetDocuments<T>();
         }
 
         /// <summary>

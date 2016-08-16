@@ -11,6 +11,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
+using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
@@ -176,7 +177,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName(("Results"));
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
 
                 if (transformer != null)
                 {
@@ -195,7 +196,7 @@ namespace Raven.Server.Documents.Handlers
                 includeDocs.Fill(includes);
 
                 writer.WriteComma();
-                writer.WritePropertyName(("Includes"));
+                writer.WritePropertyName(nameof(GetDocumentResult.Includes));
 
                 if (includePaths.Count > 0)
                 {
@@ -203,6 +204,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                 {
+                    // TODO: Why is this needed? WriteDocuments will emit empty array
                     writer.WriteStartArray();
                     writer.WriteEndArray();
                 }

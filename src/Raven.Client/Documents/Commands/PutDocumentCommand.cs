@@ -21,7 +21,10 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
-                Content = new BlittableJsonContent(Document, Context),
+                Content = new BlittableJsonContent(stream =>
+                {
+                    Context.Write(stream, Document);
+                }),
             };
 
             return request;
