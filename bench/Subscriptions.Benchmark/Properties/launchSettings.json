@@ -1,7 +1,8 @@
 {
   "profiles": {
     "Subscriptions.Benchmark": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "Url=http://10.0.0.61:8080 par=5 ipar=1 reconnect=true"
     }
   }
 }

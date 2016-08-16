@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     Database.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(writer, context, id);
+                    writer.Flush();
                 }
             }
             return Task.CompletedTask;
@@ -170,6 +171,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     Database.SubscriptionStorage.GetAllSubscriptions(writer, context, start, take);
+                    writer.Flush();
                 }
             }
             return Task.CompletedTask;

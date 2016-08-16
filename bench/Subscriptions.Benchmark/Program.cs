@@ -24,7 +24,8 @@ namespace SubscriptionsBenchmark
     {
         public static void Main(string[] args)
         {
-            var paramDictionary = new Dictionary<string, string>();
+            
+            var paramDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
             foreach (var arg in args)
             {
                 var keyValue = arg.Split('=');
@@ -48,42 +49,45 @@ namespace SubscriptionsBenchmark
 
                 proccessStartedHandle.Set();
                 canProcceedToStressHandle.WaitOne();
-                Parallel.For(0, innerParallelism,new ParallelOptions()
-                {
-                    MaxDegreeOfParallelism = innerParallelism
-                } , x =>
-                {
-                    int retries = 0;
-                    int successfullAttempts = 0;
+                var tasks = new List<Task>();
 
-                    var benchmark = new SingleSubscriptionBenchmark(batchSize, url);
-                    
-                    while (true)
+                for (var i = 0; i < innerParallelism; i++)
+                {
+                    tasks.Add(Task.Run(async () =>
                     {
-                        if (reconnect == false)
-                        {
-                            benchmark?.Dispose();
-                            benchmark = new SingleSubscriptionBenchmark(batchSize, url);
-                        }
-                        try
-                        {
-                            benchmark.PerformBenchmark();
-                            Console.Write($"Attempt {successfullAttempts} succeeded");
-                        }
-                        catch (Exception e)
-                        {
-                            retries++;
-                            Console.WriteLine($"Operation Failed, retries: {retries}, Exception: {e}");
-                            benchmark?.Dispose();
-                            benchmark = new SingleSubscriptionBenchmark(batchSize, url);
-                            Thread.Sleep(100);
-                        }
-                    }
-                });
+                        int retries = 0;
+                        int successfullAttempts = 0;
 
+                        var benchmark = new SingleSubscriptionBenchmark(batchSize, url);
+
+                        while (true)
+                        {
+                            if (reconnect == false)
+                            {
+                                benchmark?.Dispose();
+                                benchmark = new SingleSubscriptionBenchmark(batchSize, url);
+                            }
+                            try
+                            {
+                                await benchmark.PerformBenchmark().ConfigureAwait(false);
+                                Console.Write($"Attempt {successfullAttempts} succeeded");
+                            }
+                            catch (Exception e)
+                            {
+                                retries++;
+                                Console.WriteLine($"Operation Failed, retries: {retries}, Exception: {e}");
+                                benchmark?.Dispose();
+                                benchmark = new SingleSubscriptionBenchmark(batchSize, url);
+                                Thread.Sleep(100);
+                            }
+                        }
+                    }));
+                }
+                Task.WaitAll(tasks.ToArray());
             }
             else if (args.Length <6)
             {
+                Console.ReadLine();
                 string url;
                 string parallelism;
                 string innerParallelism;
@@ -121,9 +125,19 @@ namespace SubscriptionsBenchmark
                         Console.WriteLine($"Creating Proccess {i}");
                         string hasProccessBeganMreName= $"SubsStress.ProccessStarted{ i}";
                         var hasProccessBegan = new EventWaitHandle(false,EventResetMode.ManualReset,hasProccessBeganMreName);
+                        string benchmarkPath;
+                        if (Debugger.IsAttached)
+                        {
+                            benchmarkPath = "bin\\Debug\\netcoreapp1.0\\Subscriptions.Benchmark.dll";
+                        }
+                        else
+                        {
+                            benchmarkPath = "Subscriptions.Benchmark.dll";
+                        }
+
                         var proc = Process.Start(new ProcessStartInfo()
                         {
-                            Arguments = $"Subscriptions.Benchmark.dll url={url} batch={batchSize} ipar={innerParallelism} procceed={canProcceedToStressMre} started={hasProccessBeganMreName} reconnect={reconnect}",
+                            Arguments = $"{benchmarkPath} url={url} batch={batchSize} ipar={innerParallelism} procceed={canProcceedToStressMre} started={hasProccessBeganMreName} reconnect={reconnect}",
                             FileName = "dotnet"
                         });
 

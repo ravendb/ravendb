@@ -15,15 +15,15 @@ namespace Raven.Server.Documents
             BytesRate = new MeterMetric();
             AckRate = new MeterMetric();
         }
-        public long WaitedForConnection;
-        public long ConnectedAt;
-
-        public long LastMessageSentAt;
         
-        public long LastSentEtag;
+        public DateTime ConnectedAt;
 
-        public long LastAckReceivedAt;
-        public long LastAckedEtag;
+        public DateTime LastMessageSentAt;
+        
+        public DateTime LastSentEtag;
+
+        public DateTime LastAckReceivedAt;
+        public DateTime LastAckedEtag;
 
         internal readonly MeterMetric DocsRate;
         public MeterMetric BytesRate;

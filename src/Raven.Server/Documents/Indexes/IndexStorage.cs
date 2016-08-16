@@ -66,18 +66,18 @@ namespace Raven.Server.Documents.Indexes
 
                 var typeInt = (int)_index.Type;
 
-                var statsTree = tx.InnerTransaction.CreateTree(Schema.StatsTree);
-                statsTree.Add(Schema.TypeSlice, Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int)));
+                var statsTree = tx.InnerTransaction.CreateTree(IndexSchema.StatsTree);
+                statsTree.Add(IndexSchema.TypeSlice, Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int)));
 
-                if (statsTree.ReadVersion(Schema.CreatedTimestampSlice) == 0)
+                if (statsTree.ReadVersion(IndexSchema.CreatedTimestampSlice) == 0)
                 {
                     var binaryDate = SystemTime.UtcNow.ToBinary();
-                    statsTree.Add(Schema.CreatedTimestampSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
+                    statsTree.Add(IndexSchema.CreatedTimestampSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
                 }
 
-                tx.InnerTransaction.CreateTree(Schema.EtagsTree);
-                tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
-                tx.InnerTransaction.CreateTree(Schema.References);
+                tx.InnerTransaction.CreateTree(IndexSchema.EtagsTree);
+                tx.InnerTransaction.CreateTree(IndexSchema.EtagsTombstoneTree);
+                tx.InnerTransaction.CreateTree(IndexSchema.References);
 
                 _index.Definition.Persist(context, _environment.Options);
 
@@ -91,9 +91,9 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+                var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
                 var priorityInt = (int)priority;
-                statsTree.Add(Schema.PrioritySlice, Slice.External(context.Allocator, (byte*)&priorityInt, sizeof(int)));
+                statsTree.Add(IndexSchema.PrioritySlice, Slice.External(context.Allocator, (byte*)&priorityInt, sizeof(int)));
 
                 tx.Commit();
             }
@@ -101,8 +101,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexingPriority ReadPriority(RavenTransaction tx)
         {
-            var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
-            var priority = statsTree.Read(Schema.PrioritySlice);
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+            var priority = statsTree.Read(IndexSchema.PrioritySlice);
             if (priority == null)
                 return IndexingPriority.Normal;
 
@@ -170,27 +170,27 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexStats ReadStats(RavenTransaction tx)
         {
-            var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
             var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
 
             var stats = new IndexStats();
             stats.IsInMemory = _environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions;
-            stats.CreatedTimestamp = DateTime.FromBinary(statsTree.Read(Schema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
+            stats.CreatedTimestamp = DateTime.FromBinary(statsTree.Read(IndexSchema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
             stats.ErrorsCount = (int)table.NumberOfEntries;
 
-            var lastIndexingTime = statsTree.Read(Schema.LastIndexingTimeSlice);
+            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
             if (lastIndexingTime != null)
             {
                 stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
-                stats.MapAttempts = statsTree.Read(Schema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
-                stats.MapErrors = statsTree.Read(Schema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
-                stats.MapSuccesses = statsTree.Read(Schema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapErrors = statsTree.Read(IndexSchema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapSuccesses = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
 
                 if (_index.Type.IsMapReduce())
                 {
-                    stats.ReduceAttempts = statsTree.Read(Schema.ReduceAttemptsSlice).Reader.ReadLittleEndianInt32();
-                    stats.ReduceErrors = statsTree.Read(Schema.ReduceErrorsSlice).Reader.ReadLittleEndianInt32();
-                    stats.ReduceSuccesses = statsTree.Read(Schema.ReduceSuccessesSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceAttempts = statsTree.Read(IndexSchema.ReduceAttemptsSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceSuccesses = statsTree.Read(IndexSchema.ReduceSuccessesSlice).Reader.ReadLittleEndianInt32();
                 }
 
                 stats.LastIndexedEtags = new Dictionary<string, long>();
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, Schema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection));
+            return ReadLastEtag(tx, IndexSchema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
         public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, string referencedCollection)
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, Schema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection));
+            return ReadLastEtag(tx, IndexSchema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
         public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, string referencedCollection, long etag)
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
+            WriteLastEtag(tx, IndexSchema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
         }
 
         public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, string referencedCollection, long etag)
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void WriteLastIndexedEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
+            WriteLastEtag(tx, IndexSchema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
         }
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
@@ -290,21 +290,21 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
 
-                var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+                var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-                statsTree.Increment(Schema.MapAttemptsSlice, stats.MapAttempts);
-                statsTree.Increment(Schema.MapSuccessesSlice, stats.MapSuccesses);
-                statsTree.Increment(Schema.MapErrorsSlice, stats.MapErrors);
+                statsTree.Increment(IndexSchema.MapAttemptsSlice, stats.MapAttempts);
+                statsTree.Increment(IndexSchema.MapSuccessesSlice, stats.MapSuccesses);
+                statsTree.Increment(IndexSchema.MapErrorsSlice, stats.MapErrors);
 
                 if (_index.Type.IsMapReduce())
                 {
-                    statsTree.Increment(Schema.ReduceAttemptsSlice, stats.ReduceAttempts);
-                    statsTree.Increment(Schema.ReduceSuccessesSlice, stats.ReduceSuccesses);
-                    statsTree.Increment(Schema.ReduceErrorsSlice, stats.ReduceErrors);
+                    statsTree.Increment(IndexSchema.ReduceAttemptsSlice, stats.ReduceAttempts);
+                    statsTree.Increment(IndexSchema.ReduceSuccessesSlice, stats.ReduceSuccesses);
+                    statsTree.Increment(IndexSchema.ReduceErrorsSlice, stats.ReduceErrors);
                 }
 
                 var binaryDate = indexingTime.ToBinary();
-                statsTree.Add(Schema.LastIndexingTimeSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
+                statsTree.Add(IndexSchema.LastIndexingTimeSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
 
                 if (stats.Errors != null)
                 {
@@ -346,11 +346,11 @@ namespace Raven.Server.Documents.Indexes
         {
             using (var tx = environment.ReadTransaction())
             {
-                var statsTree = tx.ReadTree(Schema.StatsTree);
+                var statsTree = tx.ReadTree(IndexSchema.StatsTree);
                 if (statsTree == null)
                     throw new InvalidOperationException($"Index '{indexId}' does not contain 'Stats' tree.");
 
-                var result = statsTree.Read(Schema.TypeSlice);
+                var result = statsTree.Read(IndexSchema.TypeSlice);
                 if (result == null)
                     throw new InvalidOperationException($"Stats tree does not contain 'Type' entry in index '{indexId}'.");
 
@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe void WriteReferences(CurrentIndexingScope indexingScope, RavenTransaction tx)
         {
-            // Schema:
+            // IndexSchema:
             // having 'Users' and 'Addresses' we will end up with
             //
             // #Users (tree) - splitted by collection so we can easily return all items of same collection to the indexing function
@@ -395,7 +395,7 @@ namespace Raven.Server.Documents.Indexes
             // |- Addresses (key) -> 5
             if (indexingScope.ReferencesByCollection != null)
             {
-                var referencesTree = tx.InnerTransaction.ReadTree(Schema.References);
+                var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
 
                 foreach (var collections in indexingScope.ReferencesByCollection)
                 {
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void RemoveReferences(Slice key, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
         {
-            var referencesTree = tx.InnerTransaction.ReadTree(Schema.References);
+            var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
 
             List<Slice> referenceKeys;
             using (var it = referencesTree.MultiRead(key))
@@ -478,7 +478,7 @@ namespace Raven.Server.Documents.Indexes
             return Slice.External(tx.InnerTransaction.Allocator, key.Buffer, key.Size);
         }
 
-        private class Schema
+        private class IndexSchema
         {
             public const string StatsTree = "Stats";
 
