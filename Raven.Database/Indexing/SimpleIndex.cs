@@ -118,6 +118,9 @@ namespace Raven.Database.Indexing
                     var parallelOperations = new ConcurrentQueue<ParallelBatchStats>();
 
                     var parallelProcessingStart = SystemTime.UtcNow;
+                    if (context.Database.MappingThreadPool == null)
+                        throw new OperationCanceledException();
+
                     context.Database.MappingThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
                     {
                         token.ThrowIfCancellationRequested();

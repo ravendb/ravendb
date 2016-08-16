@@ -409,6 +409,9 @@ namespace Raven.Database.Indexing
 
                 var parallelProcessingStart = SystemTime.UtcNow;
 
+                if (context.Database.ReducingThreadPool == null)
+                    throw new OperationCanceledException();
+
                 context.Database.ReducingThreadPool.ExecuteBatch(keysToReduce, enumerator =>
                 {
                     var parallelStats = new ParallelBatchStats
@@ -681,6 +684,9 @@ namespace Raven.Database.Indexing
                 var indexesToWorkOn = mapReduceIndexes.Where(x => currentlyRunning.Contains(x.IndexId) == false).ToList();
 
                 reducingBatchInfo = context.ReportReducingBatchStarted(indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
+
+                if (context.Database.ReducingThreadPool == null)
+                    throw new OperationCanceledException();
 
                 context.Database.ReducingThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
                 {

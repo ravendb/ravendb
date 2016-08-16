@@ -456,6 +456,9 @@ namespace Raven.Database.Indexing
             {
                 context.MetricsCounters.IndexedPerSecond.Mark(indexBatchOperations.Keys.Count);
 
+                if (context.Database.MappingThreadPool == null)
+                    throw new OperationCanceledException();
+
                 context.Database.MappingThreadPool.ExecuteBatch(indexBatchOperations.Keys.ToList(),
                     indexBatchOperation =>
                     {
@@ -490,6 +493,9 @@ namespace Raven.Database.Indexing
         {
             bool operationWasCancelled = false;
 
+            if (context.Database.MappingThreadPool == null)
+                throw new OperationCanceledException();
+
             context.Database.MappingThreadPool.ExecuteBatch(groupedIndexes,
                 indexingGroup =>
                 {
@@ -512,6 +518,9 @@ namespace Raven.Database.Indexing
 
                         context.CancellationToken.ThrowIfCancellationRequested();
                         var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(curGroupJsonDocs);
+                        if (lastByEtag == null)
+                            return;
+
                         var lastModified = lastByEtag.LastModified.Value;
                         var lastEtag = lastByEtag.Etag;
                         List<IndexToWorkOn> filteredOutIndexes;
@@ -947,6 +956,10 @@ namespace Raven.Database.Indexing
 
             var results = new ConcurrentQueue<IndexingBatchForIndex>();
             var actions = new ConcurrentQueue<Tuple<Action<IStorageActionsAccessor>, IndexToWorkOn>>();
+
+            if (context.Database.MappingThreadPool == null)
+                throw new OperationCanceledException();
+
             context.Database.MappingThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
             {
                 try
