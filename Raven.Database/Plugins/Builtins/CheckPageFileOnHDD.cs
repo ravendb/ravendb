@@ -49,7 +49,7 @@ namespace Raven.Database.Plugins.Builtins
                     .ToList();
 
                 var hddDrivesWithPageFile = new List<string>();
-                var hasSsdDrive = false;
+                var ssdDriveCount = 0;
                 for (var i = 0; i < drives.Count; i++)
                 {
                     var fullDriveName = drives[i].RootDirectory.FullName;
@@ -62,7 +62,7 @@ namespace Raven.Database.Plugins.Builtins
                     switch (driveType)
                     {
                         case RavenDriveType.SSD:
-                            hasSsdDrive = true;
+                            ssdDriveCount++;
                             continue;
                         case RavenDriveType.HDD:
                             break;
@@ -80,15 +80,15 @@ namespace Raven.Database.Plugins.Builtins
                     hddDrivesWithPageFile.Add(currentDriveLetter);
                 }
 
-                if (hasSsdDrive == false)
+                if (ssdDriveCount > 0)
                 {
                     //the system has no ssd drives
                     return;
                 }
 
                 var message = $"A page file was found on HDD drive{(hddDrivesWithPageFile.Count > 1 ? "s" : string.Empty)}: " +
-                              $"{string.Join(", ", hddDrivesWithPageFile)} while there is an SSD drive. " +
-                              $"This can cause a slowdown, consider moving it to an SSD";
+                              $"{string.Join(", ", hddDrivesWithPageFile)} while there is {ssdDriveCount} " +
+                              $"SSD drive{(ssdDriveCount > 1 ? "s" : string.Empty)}. This can cause a slowdown, consider moving it to SSD";
 
                 log.Warn(message);
 
