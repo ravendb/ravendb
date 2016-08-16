@@ -170,8 +170,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public bool MoveNext()
                 {
-                    Current.Data?.Dispose();
-
                     if (_enumerator.MoveNext() == false)
                         return false;
 
@@ -216,7 +214,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public void Dispose()
                 {
-                    Current.Data?.Dispose();
                 }
             }
         }

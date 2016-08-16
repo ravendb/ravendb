@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -13,15 +12,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public unsafe class MapReduceResultsStore : IDisposable
     {
         private readonly ulong _reduceKeyHash;
-        public MapResultsStorageType Type { get; private set; }
         private readonly TransactionOperationContext _indexContext;
         private readonly MapReduceIndexingContext _mapReduceContext;
+        private readonly Slice _nestedValueKey;
+        private readonly Transaction _tx;
+
+        private NestedMapResultsSection _nestedSection;
+
+        public MapResultsStorageType Type { get; private set; }
 
         public Tree Tree;
         public HashSet<long> ModifiedPages;
         public HashSet<long> FreedPages;
-        private readonly Slice _nestedValueKey;
-        private readonly Transaction _tx;
 
         public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create)
         {
@@ -80,18 +82,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _mapReduceContext.EntryDeleted(id);
         }
 
-        public void Add(long id, BlittableJsonReaderObject result, bool isUpdate)
+        public void Add(long id, BlittableJsonReaderObject result)
         {
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
-                    var pos = Tree.DirectAdd(Slice.External(_indexContext.Allocator, (byte*)&id, sizeof(long)), result.Size);
-                    result.CopyTo(pos);
+                    using (result)
+                    {
+                        var pos = Tree.DirectAdd(Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long)),
+                            result.Size);
+                        result.CopyTo(pos);
+                    }
+
                     break;
                 case MapResultsStorageType.Nested:
                     var section = GetNestedResultsSection();
 
-                    section.Add(id, result, isUpdate);
+                    section.Add(id, result);
 
                     if (_mapReduceContext.MapEntries.ShouldGoToOverflowPage(_nestedSection.Size))
                     {
@@ -121,11 +128,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             foreach (var mapResult in section.GetResults())
             {
-                Add(mapResult.Key, mapResult.Value, false);
+                Add(mapResult.Key, mapResult.Value);
             }
         }
-
-        private NestedMapResultsSection _nestedSection;
 
         public NestedMapResultsSection GetNestedResultsSection()
         {
@@ -134,11 +139,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var read = _mapReduceContext.MapEntries.Read(_nestedValueKey);
 
-            _nestedSection = read == null ? new NestedMapResultsSection(_indexContext) : new NestedMapResultsSection(read.Reader.Base, read.Reader.Length, _indexContext);
+            _nestedSection = read == null ? new NestedMapResultsSection() : new NestedMapResultsSection(read.Reader.Base, read.Reader.Length, _indexContext);
 
             return _nestedSection;
         }
 
+        public void FlushNestedValues()
+        {
+            if (_nestedSection.Size > 0)
+            {
+                var pos = _mapReduceContext.MapEntries.DirectAdd(_nestedValueKey, _nestedSection.Size);
+
+                _nestedSection.CopyTo(pos);
+            }
+            else
+            {
+                _mapReduceContext.MapEntries.Delete(_nestedValueKey);
+            }
+        }
 
         public void Dispose()
         {
@@ -147,13 +165,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _nestedSection.Dispose();
                 _nestedSection = null;
             }
-        }
-
-        public void FlushNestedValues()
-        {
-            var pos = _mapReduceContext.MapEntries.DirectAdd(_nestedValueKey, _nestedSection.Size);
-
-            _nestedSection.CopyTo(pos);
         }
     }
 }
