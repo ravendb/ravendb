@@ -42,6 +42,12 @@ namespace Raven.Server.Utils
             if (value is bool)
                 return value;
 
+            if (value is int || value is long || value is double)
+                return value;
+
+            if (value is LazyDoubleValue)
+                return value;
+
             if (value is DateTime)
                 return value;
 
