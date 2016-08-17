@@ -14,6 +14,7 @@ import initializeNewClusterCommand = require("commands/database/cluster/initiali
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
 import removeClusteringCommand = require("commands/database/cluster/removeClusteringCommand");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import updateRaftClusterCommand = require("commands/database/cluster/updateRaftClusterCommand");
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
 import shell = require("viewmodels/shell");
@@ -29,11 +30,13 @@ class cluster extends viewModelBase {
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>(); 
     isLeavingCluster = ko.observable<boolean>(); 
+    isReplicationChecksEnabled = ko.observable<boolean>();
 
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     clusterMode: KnockoutComputed<boolean>;
     settingsAccess = new settingsAccessAuthorizer();
+    clusterConfiguration: clusterConfigurationDto;
 
     constructor() {
         super();
@@ -50,7 +53,7 @@ class cluster extends viewModelBase {
             deferred.resolve({ can: true });
         } else {
             var db = appUrl.getSystemDatabase();
-            $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
+            $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db), this.fetchClusterConfiguration(db))
                 .done(() => {
                     deferred.resolve({ can: true });
                     if (this.clusterMode()) {
@@ -73,6 +76,24 @@ class cluster extends viewModelBase {
         eventsCollector.default.reportEvent("cluster", "refresh");
         return this.fetchClusterTopology(appUrl.getSystemDatabase())
             .done(() => this.fetchStatus(appUrl.getSystemDatabase()));
+    }
+
+    toggleReplicationChecks() {
+        var self = this;
+        this.clusterConfiguration = {
+            EnableReplication: this.clusterConfiguration.EnableReplication,
+            DisableReplicationStateChecks: !this.clusterConfiguration.DisableReplicationStateChecks,
+            DatabaseSettings: this.clusterConfiguration.DatabaseSettings
+        };
+        new saveClusterConfigurationCommand(this.clusterConfiguration,
+                appUrl.getSystemDatabase())
+            .execute()
+            .done(() => { self.isReplicationChecksEnabled(!self.isReplicationChecksEnabled()); })
+            .fail(() => messagePublisher.reportError("Unable to toggle replication checks."));
+    }
+
+    isReplicationCheckEnabled() {
+        return this.isReplicationChecksEnabled();
     }
 
     fetchClusterTopology(db: database): JQueryPromise<any> {
@@ -154,7 +175,7 @@ class cluster extends viewModelBase {
                 .done(() => {
                     shell.clusterMode(true);
                     setTimeout(() => this.refresh(), 500);
-                    new saveClusterConfigurationCommand({ EnableReplication: true }, appUrl.getSystemDatabase())
+                    new saveClusterConfigurationCommand({ EnableReplication: true,DisableReplicationStateChecks:false }, appUrl.getSystemDatabase())
                         .execute();
                 });
 
@@ -212,6 +233,20 @@ class cluster extends viewModelBase {
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
     }
+
+    private fetchClusterConfiguration(db): JQueryPromise<clusterConfigurationDto> {
+
+        var currentConfiguration: JQueryPromise<clusterConfigurationDto> = new
+            getDocumentWithMetadataCommand("Raven/Cluster/Configuration", appUrl.getSystemDatabase(), true)
+            .execute()
+            .done((result: clusterConfigurationDto) => {
+                this.clusterConfiguration = result;
+                this.isReplicationChecksEnabled(!result.DisableReplicationStateChecks);
+            });
+
+        return currentConfiguration;
+    }
+
 }
 
 export = cluster;

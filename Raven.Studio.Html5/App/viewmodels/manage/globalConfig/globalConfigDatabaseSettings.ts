@@ -44,7 +44,8 @@ class globalConfigDatabaseSettings extends viewModelBase {
         });
 
         new saveClusterConfigurationCommand({
-                    EnableReplication: this.loadedClusterConfigurationDto().EnableReplication,
+            EnableReplication: this.loadedClusterConfigurationDto().EnableReplication,
+                    DisableReplicationStateChecks: this.loadedClusterConfigurationDto().DisableReplicationStateChecks,
                     DatabaseSettings: customSettings
                 },
                 appUrl.getSystemDatabase())
