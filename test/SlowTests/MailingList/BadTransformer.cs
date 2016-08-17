@@ -1,30 +1,31 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class BadTransformer : RavenTestBase
     {
         [Fact]
-        public void CanCreateTransformer()
+        public async Task CanCreateTransformer()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new UserOrderSummaryTransformer().Execute(store);
             }
         }
 
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public IEnumerable<string> MerchantOrders { get; set; }
         }
 
-        public class MerchantOrder
+        private class MerchantOrder
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -32,19 +33,19 @@ namespace Raven.Tests.MailingList
             public IEnumerable<MerchantOrderItem> Items { get; set; }
         }
 
-        public class MerchantOrderItem
+        private class MerchantOrderItem
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class Merchant
+        private class Merchant
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class UserOrderSummaryTransformer : AbstractTransformerCreationTask<Order>
+        private class UserOrderSummaryTransformer : AbstractTransformerCreationTask<Order>
         {
             public UserOrderSummaryTransformer()
             {
@@ -71,7 +72,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class UserOrderSummary
+        private class UserOrderSummary
         {
             public int MerchantCount { get; set; }
             public IEnumerable<UserMerchantOrderSummary> MerchantOrders { get; set; }
@@ -79,7 +80,7 @@ namespace Raven.Tests.MailingList
             public int ItemCount { get; set; }
         }
 
-        public class UserMerchantOrderSummary
+        private class UserMerchantOrderSummary
         {
             public string MerchantId { get; set; }
             public string MerchantName { get; set; }

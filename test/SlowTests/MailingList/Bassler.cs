@@ -3,28 +3,29 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Bassler : RavenTest
+    public class Bassler : RavenTestBase
     {
-        [Fact]
-        public void Test()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task Test()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new App_WaiverWaitlistItemSearch().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new WaiverWaitlistItem {Id = "waiverwaitlistitems/1", ClientId = "clients/1", ScreeningDate = DateTime.Today, GroupNumber = "5"});
+                    session.Store(new WaiverWaitlistItem { Id = "waiverwaitlistitems/1", ClientId = "clients/1", ScreeningDate = DateTime.Today, GroupNumber = "5" });
                     session.Store(new WaiverWaitlistItem { Id = "waiverwaitlistitems/2", ClientId = "clients/1", ScreeningDate = DateTime.Today.AddDays(7), GroupNumber = "1" });
                     session.Store(new TestClient { ClientProfile = { PersonName = new TestPersonName("John", "Able") }, Id = "clients/1" });
                     session.Store(new TestClient { ClientProfile = { PersonName = new TestPersonName("Joe", "Cain") }, Id = "clients/2" });
@@ -91,7 +92,7 @@ namespace Raven.Tests.MailingList
             public string Suffix { get; private set; }
         }
 
-        public class App_WaiverWaitlistItemSearch : AbstractMultiMapIndexCreationTask<App_WaiverWaitlistItemSearch.IndexResult>
+        private class App_WaiverWaitlistItemSearch : AbstractMultiMapIndexCreationTask<App_WaiverWaitlistItemSearch.IndexResult>
         {
             public class IndexResult
             {

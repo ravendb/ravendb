@@ -3,26 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class AutoGenIndexLinqQuery : RavenTest
+    public class AutoGenIndexLinqQuery : RavenTestBase
     {
-        public class Book
+        private class Book
         {
             public String Name { get; set; }
 
             public List<BookPost> Posts { get; set; }
         }
 
-        public class BookPost
+        private class BookPost
         {
             public string Title { get; set; }
 
@@ -35,11 +36,11 @@ namespace Raven.Tests.MailingList
                 BooPost3
             }
         }
-  
+
         [Fact]
-        public void ShouldWork()
+        public async Task ShouldWork()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = await GetDocumentStore())
             {
                 var bookName = "Book";
                 using (var session = documentStore.OpenSession())
@@ -84,7 +85,7 @@ namespace Raven.Tests.MailingList
 
                 }
             }
-            
+
         }
     }
 }

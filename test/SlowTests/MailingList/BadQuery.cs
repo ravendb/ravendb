@@ -3,26 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class BadQuery : RavenTestBase
     {
-        [Serializable]
-        public class Entity
+        private class Entity
         {
             public string Id { get; set; }
             public string Number { get; set; }
         }
+
         [Fact]
-        public void ShouldNotNull()
+        public async Task ShouldNotNull()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
