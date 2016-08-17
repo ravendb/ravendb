@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(ServerNode.Database)] = Database.Name,
                     },
                     [nameof(Topology.Nodes)] = new DynamicJsonArray(),
-                    [nameof(Topology.ReadBehavior)] = ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached,
-                    [nameof(Topology.WriteBehavior)] =  WriteBehavior.LeaderOnly,
+                    [nameof(Topology.ReadBehavior)] = ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
+                    [nameof(Topology.WriteBehavior)] =  WriteBehavior.LeaderOnly.ToString(),
                     [nameof(Topology.SLA)] = new DynamicJsonValue
                     {
                         [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
