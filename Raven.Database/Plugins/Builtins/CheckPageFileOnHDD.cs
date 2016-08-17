@@ -33,17 +33,6 @@ namespace Raven.Database.Plugins.Builtins
 
             try
             {
-                /*var dataDirectory = Path.GetFullPath(database.Configuration.DataDirectory);
-                var rootDataDirectoryDriveName = Directory.GetParent(dataDirectory).Root.FullName.Substring(0, 1);
-
-                var dataDirectoryPhysicalDriveNumber = GetPhysicalDriveNumber(rootDataDirectoryDriveName);
-                if (dataDirectoryPhysicalDriveNumber != null && 
-                    GetDriveType(dataDirectoryPhysicalDriveNumber.Value) == RavenDriveType.HDD)
-                {
-                    //the raven data file is on HDD
-                    return;
-                }*/
-
                 var drives = DriveInfo.GetDrives()
                     .Where(x => x.DriveType == DriveType.Fixed)
                     .ToList();
@@ -80,9 +69,9 @@ namespace Raven.Database.Plugins.Builtins
                     hddDrivesWithPageFile.Add(currentDriveLetter);
                 }
 
-                if (ssdDriveCount > 0 && hddDrivesWithPageFile.Count > 0)
+                if (ssdDriveCount > 0 && hddDrivesWithPageFile.Count == 0)
                 {
-                    //the system has no ssd drives
+                    //the system has ssd drives and has no hdd drives with a page file on them
                     return;
                 }
 
