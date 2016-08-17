@@ -263,17 +263,22 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
             var metadata = metadataBuffer.ToJObject();
 
-            RavenJObject dataAsJson;
-            using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-            {
-                using (var aggregateStream = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
-                {
-                    var streamInUse = aggregateStream;
-                    if (streamInUse != stream)
-                        streamInUse = new CountingStream(aggregateStream);
+            var colSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+            if (readDocBuffer == null || readDocBuffer.Length < colSize)
+                readDocBuffer = new byte[colSize];
 
-                    dataAsJson = streamInUse.ToJObject();
-                    docSize = (int)Math.Max(streamInUse.Position, stream.Position);
+            Api.JetRetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"],
+                readDocBuffer, colSize,
+                0, out colSize, RetrieveColumnGrbit.None, null);
+
+            RavenJObject dataAsJson;
+            using (Stream stream = new MemoryStream(readDocBuffer, 0, colSize, writable: false))
+            {
+                docSize = (int)stream.Length;
+
+                using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+                {
+                    dataAsJson = columnStream.ToJObject();
                 }
             }
 
