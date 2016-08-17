@@ -11,6 +11,7 @@
   "buildOptions": {
     "allowUnsafe": true,
     "emitEntryPoint": true,
+    "warningsAsErrors": true,
     "define": [ "PORTABLE" ],
     "compile": {
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/metrics.net/Src/Metrics/**/*.cs" ]

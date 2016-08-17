@@ -6,8 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -16,7 +14,7 @@ namespace Raven.Server.Documents
 {
     public class NotificationsClientConnection : IDisposable
     {
-        private static long _counter = 0;
+        private static long _counter;
 
         private readonly WebSocket _webSocket;
         private readonly DocumentDatabase _documentDatabase;
@@ -39,14 +37,7 @@ namespace Raven.Server.Documents
         private readonly ConcurrentSet<string> _matchingDocumentsOfType =
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<string> _matchingBulkInserts =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        private int watchAllDocuments;
-        private int watchAllIndexes;
-        private int watchAllTransformers;
-        private int watchAllReplicationConflicts;
-        private int watchAllDataSubscriptions;
+        private int _watchAllDocuments;
 
         public NotificationsClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase)
         {
@@ -71,12 +62,12 @@ namespace Raven.Server.Documents
 
         public void WatchAllDocuments()
         {
-            Interlocked.Increment(ref watchAllDocuments);
+            Interlocked.Increment(ref _watchAllDocuments);
         }
 
         public void UnwatchAllDocuments()
         {
-            Interlocked.Decrement(ref watchAllDocuments);
+            Interlocked.Decrement(ref _watchAllDocuments);
         }
 
         public void WatchDocumentPrefix(string name)
@@ -111,7 +102,7 @@ namespace Raven.Server.Documents
 
         public void SendDocumentChanges(DocumentChangeNotification notification)
         {
-            if (watchAllDocuments > 0)
+            if (_watchAllDocuments > 0)
             {
                 Send(notification);
                 return;
@@ -344,9 +335,9 @@ namespace Raven.Server.Documents
                 ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
                 ["SubProtocol"] = _webSocket.SubProtocol,
                 ["Age"] = Age,
-                ["WatchAllDocuments"] = watchAllDocuments > 0,
-                ["WatchAllIndexes"] = watchAllIndexes > 0,
-                ["WatchAllTransformers"] = watchAllTransformers > 0,
+                ["WatchAllDocuments"] = _watchAllDocuments > 0,
+                ["WatchAllIndexes"] = false,
+                ["WatchAllTransformers"] = false,
                 /*["WatchConfig"] = _watchConfig > 0,
                 ["WatchConflicts"] = _watchConflicts > 0,
                 ["WatchSync"] = _watchSync > 0,*/

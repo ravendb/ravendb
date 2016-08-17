@@ -9,9 +9,13 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var f = new FastTests.Server.Documents.Replication.ReplicationBasicTests())
+            for (int i = 0; i < 100; i++)
             {
-                f.Master_slave_replication_with_multiple_PUTS_should_work().Wait();
+                Console.WriteLine(i);
+                using (var f = new FastTests.Server.Documents.Queries.Dynamic.MapReduce.BasicDynamicMapReduceQueries())
+                {
+                    f.Group_by_does_not_support_custom_equality_comparer().Wait();
+                }
             }
 
         }

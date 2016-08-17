@@ -9,9 +9,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
-using Raven.Client.Smuggler;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;
@@ -54,6 +51,30 @@ namespace Raven.Server.Documents.PeriodicExport
         private string _azureStorageAccount, _azureStorageKey;
 
         private Task _runningTask;
+
+        public string AwsAccessKey
+        {
+            get { return _awsAccessKey; }
+            set { _awsAccessKey = value; }
+        }
+
+        public string AwsSecretKey
+        {
+            get { return _awsSecretKey; }
+            set { _awsSecretKey = value; }
+        }
+
+        public string AzureStorageAccount
+        {
+            get { return _azureStorageAccount; }
+            set { _azureStorageAccount = value; }
+        }
+
+        public string AzureStorageKey
+        {
+            get { return _azureStorageKey; }
+            set { _azureStorageKey = value; }
+        }
 
         private PeriodicExportRunner(DocumentDatabase database, PeriodicExportConfiguration configuration, PeriodicExportStatus status)
         {
