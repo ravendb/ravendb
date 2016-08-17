@@ -27,6 +27,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 {
     public partial class DocumentStorageActions : IDocumentStorageActions
     {
+        [ThreadStatic]
+        private static byte[] readDocBuffer;
+
         public long GetDocumentsCount()
         {
             if (Api.TryMoveFirst(session, Details))
@@ -110,10 +113,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
                 if (existingCachedDocument != null)
                 {
-                    using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
-                    {
-                        size = (int)stream.Length;
-                    }
+                    size = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
                     return existingCachedDocument.Metadata;
                 }
 
@@ -127,11 +127,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        [ThreadStatic]
-        private static byte[] _readDocBuffer;
-
-        
-
         private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata, Reference<int> size)
         {
             try
@@ -144,14 +139,14 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
                     
                 var colSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
-                if (_readDocBuffer == null || _readDocBuffer.Length < colSize)
-                    _readDocBuffer = new byte[colSize];
+                if (readDocBuffer == null || readDocBuffer.Length < colSize)
+                    readDocBuffer = new byte[colSize];
 
                 Api.JetRetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["data"], 
-                    _readDocBuffer, colSize, 
+                    readDocBuffer, colSize, 
                     0, out colSize, RetrieveColumnGrbit.None, null);
 
-                using (Stream stream = new MemoryStream(_readDocBuffer, 0, colSize, writable: false))
+                using (Stream stream = new MemoryStream(readDocBuffer, 0, colSize, writable: false))
                 {
                     var documentSize = (int)stream.Length;
                     size.Value = documentSize;
