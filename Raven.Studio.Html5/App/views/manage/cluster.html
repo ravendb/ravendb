@@ -47,8 +47,8 @@
                             <li><a href="#" data-bind="click: initializeNewCluster">Secede from cluster - rude step down into a single node cluster</a></li>
                             <li><a href="#" data-bind="click: addAnotherServerToCluster.bind($root, true)">Kidnap node into cluster - force a node to the current cluster</a></li>
                             <li><a href="#" data-bind="click: removeClustering.bind($root)">Remove cluster entirely and perform cleanup.</a></li>
-                            <li data-bind="visible: !isReplicationCheckEnabled()"><a href="#" data-bind="click: toggleReplicationChecks.bind($root)">Disable replication state sync.</a></li>
-                            <li data-bind="visible: isReplicationCheckEnabled()"><a href="#" data-bind="click: toggleReplicationChecks.bind($root)">Prevent out of date leaders.</a></li>
+                            <li data-bind="visible: !isReplicationCheckEnabled()"><a href="#" data-bind="click: toggleReplicationChecks.bind($root)">Allow leaders without up to date replication state</a></li>
+                            <li data-bind="visible: isReplicationCheckEnabled()"><a href="#" data-bind="click: toggleReplicationChecks.bind($root)">Require leaders to have up to date replication state</a></li>
                         </ul>
                     </div>
                 </div>
