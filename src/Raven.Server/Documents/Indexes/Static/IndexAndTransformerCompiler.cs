@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
         private const string TransformerNamespace = "Raven.Server.Documents.Transformers.Generated";
-        
+
         private const string IndexExtension = ".index";
 
         private const string TransformerExtension = ".transformer";
@@ -39,8 +39,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private static readonly UsingDirectiveSyntax[] Usings =
         {
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections.Generic")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Linq")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Text.RegularExpressions")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Linq")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Extensions"))
@@ -56,6 +58,8 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
+            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Collections")).Location),
+            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location)
         };
 
         public static TransformerBase Compile(TransformerDefinition definition)
@@ -129,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var pdb = EnableDebugging ? new MemoryStream() : null;
 
             var result = compilation.Emit(asm, pdb);
-            
+
             if (result.Success == false)
             {
                 IEnumerable<Diagnostic> failures = result.Diagnostics
@@ -188,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var map = maps[i];
                 statements.AddRange(HandleMap(map, fieldNamesValidator));
             }
-            
+
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
                 string[] groupByFields;
@@ -203,7 +207,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
-            
+
             return RoslynHelper.PublicClass(name)
                 .WithBaseClass<StaticIndexBase>()
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));

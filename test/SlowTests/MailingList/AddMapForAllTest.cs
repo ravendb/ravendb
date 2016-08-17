@@ -1,39 +1,39 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class AddMapForAllTest : RavenTest
+    public class AddMapForAllTest : RavenTestBase
     {
         // Parent class whose children will be indexed.
-        public abstract class Animal
+        private abstract class Animal
         {
             public string Name { get; set; }
         }
 
-        public class Rhino : Animal
+        private class Rhino : Animal
         {
         }
 
-        public class Tiger : Animal
+        private class Tiger : Animal
         {
         }
 
-        public abstract class Equine : Animal
+        private abstract class Equine : Animal
         {
         }
 
-        public class Horse : Equine
+        private class Horse : Equine
         {
         }
 
-        public class AnimalsByName : AbstractMultiMapIndexCreationTask<Animal>
+        private class AnimalsByName : AbstractMultiMapIndexCreationTask<Animal>
         {
             public AnimalsByName()
             {
@@ -46,17 +46,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-        {
-            base.CreateDefaultIndexes(documentStore);
-            new AnimalsByName().Execute(documentStore);
-        }
-
         [Fact]
-        public void IndexOnAbstractParentIndexesChildClasses()
+        public async Task IndexOnAbstractParentIndexesChildClasses()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
+                new AnimalsByName().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Rhino { Name = "Ronald" });

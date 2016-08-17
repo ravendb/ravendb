@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -12,6 +13,33 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private DynamicLambdaExpressionsRewriter()
         {
+        }
+
+        public override SyntaxNode VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node)
+        {
+            if (node.Parent == null)
+                return base.VisitParenthesizedLambdaExpression(node);
+
+            var argument = node.Parent as ArgumentSyntax;
+            if (argument == null)
+                return base.VisitParenthesizedLambdaExpression(node);
+
+            var argumentList = argument.Parent as ArgumentListSyntax;
+            if (argumentList == null)
+                return base.VisitParenthesizedLambdaExpression(node);
+
+            var invocation = argumentList.Parent as InvocationExpressionSyntax;
+            if (invocation == null)
+                return base.VisitParenthesizedLambdaExpression(node);
+
+            var identifier = invocation.Expression
+                .DescendantNodes(descendIntoChildren: syntaxNode => true)
+                .LastOrDefault(x => x.IsKind(SyntaxKind.IdentifierName)) as IdentifierNameSyntax;
+
+            if (identifier == null)
+                return base.VisitParenthesizedLambdaExpression(node);
+
+            return HandleMethod(node, invocation, identifier.Identifier.Text);
         }
 
         public override SyntaxNode VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
@@ -38,14 +66,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (identifier == null)
                 return base.VisitSimpleLambdaExpression(node);
 
-            var method = identifier.Identifier.Text;
+            return HandleMethod(node, invocation, identifier.Identifier.Text);
+        }
 
+        private SyntaxNode HandleMethod(LambdaExpressionSyntax node, InvocationExpressionSyntax invocation, string method)
+        {
             switch (method)
             {
                 case "Select":
+                case "ToDictionary":
+                case "GroupBy":
                     return Visit(ModifyLambdaForSelect(node, invocation));
                 case "SelectMany":
-                    return Visit(ModifyLambdaForSelectMany(node));
+                    return ModifyLambdaForSelectMany(node, invocation);
                 case "Sum":
                 case "Average":
                     return Visit(ModifyLambdaForNumerics(node));
@@ -62,20 +95,29 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     return Visit(ModifyLambdaForBools(node));
             }
 
-            return base.VisitSimpleLambdaExpression(node);
+            return node;
         }
 
-        private static SyntaxNode ModifyLambdaForBools(SimpleLambdaExpressionSyntax node)
+        private static SyntaxNode ModifyLambdaForBools(LambdaExpressionSyntax node)
         {
             return SyntaxFactory.ParseExpression($"(Func<dynamic, bool>)({node})");
         }
 
-        private static SyntaxNode ModifyLambdaForSelectMany(SimpleLambdaExpressionSyntax node)
+        private SyntaxNode ModifyLambdaForSelectMany(LambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
         {
-            return SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})");
+            if (currentInvocation.ArgumentList.Arguments.Count == 0)
+                return node;
+
+            if (currentInvocation.ArgumentList.Arguments.Count > 0 && currentInvocation.ArgumentList.Arguments[0].Expression == node)
+                return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
+
+            if (currentInvocation.ArgumentList.Arguments.Count > 1 && currentInvocation.ArgumentList.Arguments[1].Expression == node)
+                return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})"));
+
+            return node;
         }
 
-        private static SyntaxNode ModifyLambdaForSelect(SimpleLambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
+        private static SyntaxNode ModifyLambdaForSelect(LambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
         {
             var parentMethod = GetParentMethod(currentInvocation);
             switch (parentMethod)
@@ -97,18 +139,22 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return member?.Name.Identifier.Text;
         }
 
-        private static SyntaxNode ModifyLambdaForNumerics(SimpleLambdaExpressionSyntax node)
+        private static SyntaxNode ModifyLambdaForNumerics(LambdaExpressionSyntax node)
         {
-            var alreadyCasted = node.Body as CastExpressionSyntax;
+            var lambda = node as SimpleLambdaExpressionSyntax;
+            if (lambda == null)
+                throw new InvalidOperationException($"Invalid lambda expression: {node}");
+
+            var alreadyCasted = lambda.Body as CastExpressionSyntax;
 
             if (alreadyCasted != null)
             {
-                return SyntaxFactory.ParseExpression($"(Func<dynamic, {alreadyCasted.Type}>)({node})");
+                return SyntaxFactory.ParseExpression($"(Func<dynamic, {alreadyCasted.Type}>)({lambda})");
             }
 
-            var cast = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(decimal){node.Body}");
+            var cast = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(decimal){lambda.Body}");
 
-            return SyntaxFactory.ParseExpression($"(Func<dynamic, decimal>)({node.WithBody(cast)})");
+            return SyntaxFactory.ParseExpression($"(Func<dynamic, decimal>)({lambda.WithBody(cast)})");
         }
     }
 }
