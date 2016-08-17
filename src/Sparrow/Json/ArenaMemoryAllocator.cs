@@ -14,7 +14,7 @@ namespace Sparrow.Json
         private int _allocated;
         private int _used;
 
-        private List<IntPtr> _unusedBuffers;
+        private List<IntPtr> _olderBuffers;
 
         private bool _isDisposed;
         private static readonly Logger _log = LogManager.GetLogger(nameof(ArenaMemoryAllocator));
@@ -56,32 +56,42 @@ namespace Sparrow.Json
 
         private void ThrowAlreadyDisposedException()
         {
-            throw new ObjectDisposedException($"This ArenaMemoryAllocator is already disposed");
+            throw new ObjectDisposedException("This ArenaMemoryAllocator is already disposed");
         }
 
         public void GrowArena(int requestedSize)
         {
-            while (_used + requestedSize > _allocated)
+            if (requestedSize >= 1024 * 1024 * 1024)
+                throw new ArgumentOutOfRangeException(nameof(requestedSize));
+
+            int newSize=0;
+            do
             {
-                var newSize = _allocated * 2;
-                if(newSize < _allocated)
-                    throw new OverflowException("Arena size overflowed");
-
-                if (_log.IsDebugEnabled)
-                    _log.Debug($"ArenaMemoryAllocator doubled size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}");
-                _allocated = newSize;
-            }
-
+                newSize = _allocated * 2;
+                if (newSize < _allocated) // Overflow
+                {
+                    // int.MaxValue = 2147483647 which is not a power of 2. The largest power of 2 contained in a signed int is 1GB.
+                    // Since we want to allocate in blocks of powers of 2 the max buffer size will be 1GB
+                    newSize = _allocated;
+                    if (_log.IsWarnEnabled)
+                        _log.Warn("Arena main buffer reached maximum size of 1GB, check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
+                }
+            } while (requestedSize > newSize);
             
-            var newBuffer = (byte*) Marshal.AllocHGlobal(_allocated).ToPointer();
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
             
-            // Save the old buffer pointer to be released at a more convenient time
-            if (_unusedBuffers == null)
-                _unusedBuffers = new List<IntPtr>();
-            _unusedBuffers.Add(new IntPtr(_ptrStart));
+            var newBuffer = (byte*) Marshal.AllocHGlobal(newSize).ToPointer();
+            _allocated = newSize;
+
+            // Save the old buffer pointer to be released when the arena is reset
+            if (_olderBuffers == null)
+                _olderBuffers = new List<IntPtr>();
+            _olderBuffers.Add(new IntPtr(_ptrStart));
 
             _ptrStart = newBuffer;
             _ptrCurrent = _ptrStart;
+            _used = 0;
         }
 
         public void ResetArena()
@@ -91,13 +101,13 @@ namespace Sparrow.Json
             _used = 0;
 
             // Free old buffers not being used anymore
-            if (_unusedBuffers != null)
+            if (_olderBuffers != null)
             {
-                foreach (var unusedBuffer in _unusedBuffers)
+                foreach (var unusedBuffer in _olderBuffers)
                 {
                     Marshal.FreeHGlobal(unusedBuffer);
                 }
-                _unusedBuffers = null;
+                _olderBuffers = null;
             }
         }
 
