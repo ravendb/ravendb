@@ -1,20 +1,19 @@
 using System.Linq;
-using Raven.Client.Embedded;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenTest
+    public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenTestBase
     {
         [Fact]
-        public void it_fails_but_should_not()
+        public async Task it_fails_but_should_not()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                new Roots_ByUserId().Execute(store);	
+                new Roots_ByUserId().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -39,7 +38,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Roots_ByUserId : AbstractIndexCreationTask<Root>
+        private class Roots_ByUserId : AbstractIndexCreationTask<Root>
         {
             public Roots_ByUserId()
             {
@@ -51,16 +50,16 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Root : Identifiable
+        private class Root : Identifiable
         {
             public UserReference User { get; set; }
         }
 
-        public class UserReference : Identifiable
+        private class UserReference : Identifiable
         {
         }
 
-        public class Identifiable
+        private class Identifiable
         {
             public string Id { get; set; }
         }

@@ -1,35 +1,34 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class AnyBugTest : RavenTest
+    public class AnyBugTest : RavenTestBase
     {
-        public class AnyBug
+        private class AnyBug
         {
             public string Id { get; set; }
             public string[] Bugs { get; set; }
         }
 
-        public class MyIndex : AbstractIndexCreationTask<AnyBug>
+        private class MyIndex : AbstractIndexCreationTask<AnyBug>
         {
             public MyIndex()
             {
                 Map = bugs => from anyBug in bugs
                               from bug in anyBug.Bugs
-                              select new {Bugs = bug};
+                              select new { Bugs = bug };
             }
         }
 
         [Fact]
-        public void FailTest()
+        public async Task FailTest()
         {
-            using (var docStore = NewDocumentStore())
+            using (var docStore = await GetDocumentStore())
             {
                 //Create Data
                 CreateAnyOperatorBug(docStore);
@@ -41,7 +40,7 @@ namespace Raven.Tests.MailingList
                 using (var session = docStore.OpenSession())
                 {
                     var q = session.Query<AnyBug, MyIndex>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Bugs.Any(y => y.StartsWith("roles/1") && y.EndsWith("staffs/2")));
 
                     int resultCount = q.ToList().Count();
@@ -55,15 +54,15 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void PassTest()
+        public async Task PassTest()
         {
-            using (IDocumentStore docStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 //Create Data
-                CreateAnyOperatorBug(docStore);
+                CreateAnyOperatorBug(store);
 
                 //Good Query if processed by client side LINQ
-                using (var session = docStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     int resultCount = session.Query<AnyBug>()
                     .ToList()

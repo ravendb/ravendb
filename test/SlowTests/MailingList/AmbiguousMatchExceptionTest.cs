@@ -3,39 +3,39 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class AmbiguousMatchExceptionTest : NoDisposalNeeded
     {
-        public class GeneralThing
+        private class GeneralThing
         {
             public string Name { get; set; }
         }
 
-        public class SpecificThing : GeneralThing
+        private class SpecificThing : GeneralThing
         {
             public string SpecificProperty { get; set; }
         }
 
-        public class GeneralThingOwner
+        private class GeneralThingOwner
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public GeneralThing Thing { get; set; }
         }
 
-        public class SpecificThingOwner : GeneralThingOwner
+        private class SpecificThingOwner : GeneralThingOwner
         {
             public new SpecificThing Thing { get; set; }
         }
 
-        public class SpecificThingOwners_AndTheirThings : AbstractIndexCreationTask<SpecificThingOwner>
+        private class SpecificThingOwners_AndTheirThings : AbstractIndexCreationTask<SpecificThingOwner>
         {
             public SpecificThingOwners_AndTheirThings()
             {
@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SpecificThingOwners_AndTheirThingsTransformer : AbstractTransformerCreationTask<SpecificThingOwner>
+        private class SpecificThingOwners_AndTheirThingsTransformer : AbstractTransformerCreationTask<SpecificThingOwner>
         {
             public SpecificThingOwners_AndTheirThingsTransformer()
             {
@@ -63,7 +63,6 @@ namespace Raven.Tests.MailingList
                     });
             }
         }
-
 
         [Fact]
         public void CanGenerateIndex()

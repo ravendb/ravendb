@@ -3,25 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Arun : RavenTest
+    public class Arun : RavenTestBase
     {
-        public void SaveDynamicEntityWithStronglyTypedProperties()
+        [Fact]
+        public async Task SaveDynamicEntityWithStronglyTypedProperties()
         {
             RavenQueryStatistics stats = null;
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new BookSearch().Execute(store);
 
@@ -55,7 +57,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    string[] searchTerms = {"Will", "Wayne", "Jack"};
+                    string[] searchTerms = { "Will", "Wayne", "Jack" };
 
 
                     var ravenQueryable = session.Query<Book, BookSearch>()
@@ -71,7 +73,7 @@ namespace Raven.Tests.MailingList
             Assert.Equal(1, stats.TotalResults);
         }
 
-        public class Book
+        private class Book
         {
             public string Keywords { get; set; }
 
@@ -101,37 +103,37 @@ namespace Raven.Tests.MailingList
             public string Code { get; set; }
         }
 
-        public class Contributor
+        private class Contributor
         {
             public string Name { get; set; }
         }
 
-        public class Price
+        private class Price
         {
             public string price { get; set; }
         }
 
-        public class Tag
+        private class Tag
         {
             public string Name { get; set; }
         }
 
-        public class BookSearch : AbstractIndexCreationTask<Book, BookSearch.Result>
+        private class BookSearch : AbstractIndexCreationTask<Book, BookSearch.Result>
         {
             public BookSearch()
             {
                 Map = books => from book in books
                                select new
                                {
-                                Keywords = new object[]
+                                   Keywords = new object[]
                                 {
                                     book.Title,
                                     book.Contributors.Select(contributor => contributor.Name),
                                     book.Tags.Select(tag => tag.Name),
                                     book.Subjects.Select(subject => subject.Code)
                                 },
-                                Publisher = book.Publisher,
-                                Prices_CountryCodes = book.Prices.Select(price => price.price)
+                                   Publisher = book.Publisher,
+                                   Prices_CountryCodes = book.Prices.Select(price => price.price)
                                };
                 Analyzers.Add(book => book.Keywords, "Lucene.Net.Analysis.Standard.StandardAnalyzer");
                 Index(book => book.Keywords, FieldIndexing.Analyzed);

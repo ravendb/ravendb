@@ -1,22 +1,29 @@
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class AllPropertiesIndex : RavenTest
+    public class AllPropertiesIndex : RavenTestBase
     {
-        public class Users_AllProperties : AbstractIndexCreationTask<User, Users_AllProperties.Result>
+        private class User
+        {
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+        }
+
+        private class Users_AllProperties : AbstractIndexCreationTask<User, Users_AllProperties.Result>
         {
             public class Result
             {
                 public string Query { get; set; }
             }
+
             public Users_AllProperties()
             {
                 Map = users =>
@@ -25,18 +32,18 @@ namespace Raven.Tests.MailingList
                       {
                           Query = AsDocument(user).Select(x => x.Value)
                       };
-                Index(x=>x.Query, FieldIndexing.Analyzed);
+                Index(x => x.Query, FieldIndexing.Analyzed);
             }
         }
 
         [Fact]
-        public void CanSearchOnAllProperties()
+        public async Task CanSearchOnAllProperties()
         {
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new Users_AllProperties().Execute(store);
 
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User
                     {
@@ -50,8 +57,8 @@ namespace Raven.Tests.MailingList
                 using (var s = store.OpenSession())
                 {
                     Assert.NotEmpty(s.Query<Users_AllProperties.Result, Users_AllProperties>()
-                                        .Customize(x=>x.WaitForNonStaleResults())
-                                        .Where(x=>x.Query == "Ayende")
+                                        .Customize(x => x.WaitForNonStaleResults())
+                                        .Where(x => x.Query == "Ayende")
                                         .As<User>()
                                         .ToList());
 
@@ -63,8 +70,8 @@ namespace Raven.Tests.MailingList
 
                 }
             }
-            
+
         }
-         
+
     }
 }

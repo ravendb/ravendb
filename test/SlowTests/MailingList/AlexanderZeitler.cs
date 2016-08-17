@@ -1,16 +1,13 @@
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class AlexanderZeitler : RavenTest
+    public class AlexanderZeitler : RavenTestBase
     {
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string CustomerId { get; set; }
@@ -18,7 +15,7 @@ namespace Raven.Tests.MailingList
             public double TotalPrice { get; set; }
         }
 
-        public class Customer
+        private class Customer
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -28,7 +25,7 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void It_should_be_found()
+        public async Task It_should_be_found()
         {
             var customer = new Customer()
             {
@@ -38,14 +35,8 @@ namespace Raven.Tests.MailingList
             Order order = null;
 
             // red
-            using (IDocumentStore documentStore = new EmbeddableDocumentStore()
+            using (var store = await GetDocumentStore())
             {
-                RunInMemory = true
-            }.Initialize())
-            {
-
-                new RavenDocumentsByEntityName().Execute(documentStore);
-
                 // green
                 //var documentStore = new DocumentStore()
                 //{
@@ -55,7 +46,7 @@ namespace Raven.Tests.MailingList
                 //documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery());
 
 
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(customer);
                     session.SaveChanges();
@@ -69,7 +60,7 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     order = session.Include<Order>(x => x.CustomerId)
                         .Load(order.Id);
@@ -81,7 +72,7 @@ namespace Raven.Tests.MailingList
                 }
 
 
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
                         .Customize(x => x.Include<Order>(o => o.CustomerId))
