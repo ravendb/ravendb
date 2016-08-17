@@ -6,13 +6,30 @@
 
 using System;
 using System.Net;
+using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 
 namespace Rachis.Transport
 {
     public class NodeConnectionInfo
     {
-        public Uri Uri { get; set; }
+        private Uri uri;
+        public Uri Uri
+        {
+            get { return uri; }
+            set
+            {
+                uri = value;
+                absoluteUri = uri.AbsoluteUri[uri.AbsoluteUri.Length - 1] == '/' ? uri.AbsoluteUri : uri.AbsoluteUri + '/';
+            }
+        }
+        [JsonIgnore]
+        private string absoluteUri;
+        /// <summary>
+        /// Returns the absoluteUri of the node, making sure that under iis the uri ends with '/'
+        /// </summary>
+        [JsonIgnore]
+        public string AbsoluteUri => absoluteUri;
 
         public string Name { get; set; }
 
