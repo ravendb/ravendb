@@ -121,7 +121,6 @@ namespace SubscriptionsBenchmark
             
                 using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
                 {
-                    MaxDocsPerBatch = 20,
                     SubscriptionId = _subscriptionId.Value,
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))

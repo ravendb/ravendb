@@ -285,7 +285,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     out criteria, out startEtag);
 
                 var replyFromClientTask = _multiDocumentParser.ParseToMemoryAsync("client reply");
-               
                 using (RegisterForNotificationOnNewDocuments(criteria))
                 {
                     var patch = SetupFilterScript(criteria);
@@ -300,7 +299,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             var documents = _database.DocumentsStorage.GetDocumentsAfter(dbContext,
                                 criteria.Collection,
-                                startEtag + 1, 0, _options.MaxDocsPerBatch);
+                                startEtag+1, 0, _options.MaxDocsPerBatch);
                             _buffer.SetLength(0);
                             var docsToFlush = 0;
 
@@ -380,6 +379,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             switch (clientReply.Type)
                             {
                                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
+                                    Console.WriteLine($"{clientReply.Etag != startEtag}: Got {clientReply.Etag} when send {startEtag}");
                                     _database.SubscriptionStorage.AcknowledgeBatchProcessed(_options.SubscriptionId,
                                         clientReply.Etag);
                                     Stats.LastAckReceivedAt = DateTime.UtcNow;

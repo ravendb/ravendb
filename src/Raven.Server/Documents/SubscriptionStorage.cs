@@ -42,11 +42,14 @@ namespace Raven.Server.Documents
         public SubscriptionStorage(DocumentDatabase db)
         {
             _db = db;
-            
+
             var options = _db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"));
+            
+
             options.SchemaVersion = 1;
+            options.TransactionsMode=TransactionsMode.Lazy;
             _environment = new StorageEnvironment(options);
             _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");
 
@@ -225,6 +228,7 @@ namespace Raven.Server.Documents
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
             {
+                subscriptionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
                 subscriptionState.RegisterRejectedConnection(subscriptionState.Connection,
                     new SubscriptionClosedException("Closed by request"));
                 subscriptionState.Connection.CancellationTokenSource.Cancel();
