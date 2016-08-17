@@ -20,6 +20,7 @@ import getClusterNodesStatusCommand = require("commands/database/cluster/getClus
 import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import license = require("models/auth/license");
+import ClusterConfiguration = require("models/database/cluster/clusterConfiguration");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
 import eventsCollector = require("common/eventsCollector");
@@ -240,8 +241,9 @@ class cluster extends viewModelBase {
             getDocumentWithMetadataCommand("Raven/Cluster/Configuration", appUrl.getSystemDatabase(), true)
             .execute()
             .done((result: clusterConfigurationDto) => {
-                this.clusterConfiguration = result;
-                this.isReplicationChecksEnabled(!result.DisableReplicationStateChecks);
+                var notNullResult = result === null ? ClusterConfiguration.empty().toDto() : result;
+                this.clusterConfiguration = notNullResult;
+                this.isReplicationChecksEnabled(!notNullResult.DisableReplicationStateChecks);
             });
 
         return currentConfiguration;
