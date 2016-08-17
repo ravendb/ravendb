@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using NLog;
+using Sparrow.Logging;
 
 namespace Sparrow.Json
 {
@@ -17,7 +17,7 @@ namespace Sparrow.Json
         private List<IntPtr> _olderBuffers;
 
         private bool _isDisposed;
-        private static readonly Logger _log = LogManager.GetLogger(nameof(ArenaMemoryAllocator));
+        private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
 
         public int Allocated => _allocated;
 
@@ -27,8 +27,8 @@ namespace Sparrow.Json
             _allocated = initialSize;
             _used = 0;
 
-            if (_log.IsDebugEnabled)
-                _log.Debug($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
         }
 
         public AllocatedMemoryData Allocate(int size)
@@ -48,8 +48,8 @@ namespace Sparrow.Json
             _ptrCurrent += size;
             _used += size;
 
-            if (_log.IsDebugEnabled)
-                _log.Debug($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
 
             return allocation;
         }
@@ -73,13 +73,13 @@ namespace Sparrow.Json
                     // int.MaxValue = 2147483647 which is not a power of 2. The largest power of 2 contained in a signed int is 1GB.
                     // Since we want to allocate in blocks of powers of 2 the max buffer size will be 1GB
                     newSize = _allocated;
-                    if (_log.IsWarnEnabled)
-                        _log.Warn("Arena main buffer reached maximum size of 1GB, check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Arena main buffer reached maximum size of 1GB, check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
                 }
             } while (requestedSize > newSize);
             
-            if (_log.IsDebugEnabled)
-                _log.Debug($"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
             
             var newBuffer = (byte*) Marshal.AllocHGlobal(newSize).ToPointer();
             _allocated = newSize;
@@ -113,8 +113,8 @@ namespace Sparrow.Json
 
         ~ArenaMemoryAllocator()
         {
-            if (_log.IsWarnEnabled)
-                _log.Warn($"ArenaMemoryAllocator wasn't properly disposed");
+            if (_logger.IsInfoEnabled)
+                _logger.Info("ArenaMemoryAllocator wasn't properly disposed");
 
             Dispose();
         }
