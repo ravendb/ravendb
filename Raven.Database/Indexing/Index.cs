@@ -2074,7 +2074,7 @@ namespace Raven.Database.Indexing
             }
 
             logIndexing.Warn("Out of memory exception occured in storage during indexing process. " +
-                             $"Try increasing '{configurationKey}' value in configuration");
+                             $"Consider increasing '{configurationKey}' value in configuration");
 
             context.Database.AddAlert(new Alert
             {
@@ -2083,7 +2083,7 @@ namespace Raven.Database.Indexing
                 Title = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception for index '{PublicName}', id: {IndexId}",
                 UniqueKey = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception",
                 Message = $"Out of memory exception occured in storage during indexing process for index '{PublicName}'. " +
-                          $"Will try to reduce batch size. Try increasing '{configurationKey}' value in configuration. Error: {e.Message}"
+                          $"Will try to reduce batch size. Consider increasing '{configurationKey}' value in configuration. Error: {e.Message}"
             });
         }
 
