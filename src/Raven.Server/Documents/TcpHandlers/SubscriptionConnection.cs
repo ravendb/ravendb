@@ -379,7 +379,6 @@ namespace Raven.Server.Documents.TcpHandlers
                             switch (clientReply.Type)
                             {
                                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                                    Console.WriteLine($"{clientReply.Etag != startEtag}: Got {clientReply.Etag} when send {startEtag}");
                                     _database.SubscriptionStorage.AcknowledgeBatchProcessed(_options.SubscriptionId,
                                         clientReply.Etag);
                                     Stats.LastAckReceivedAt = DateTime.UtcNow;
