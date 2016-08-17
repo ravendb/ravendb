@@ -77,7 +77,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
         private T DocumentByKeyInternal<T>(string key, Func<JsonDocumentMetadata, int, Func<string, Etag, RavenJObject, Reference<int>, RavenJObject>, T> createResult)
             where T : class
         {
-
             Api.JetSetCurrentIndex(session, Documents, "by_key");
             Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
@@ -139,8 +138,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
             {
                 var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
                 if (existingCachedDocument != null)
+                {
+                    size.Value = existingCachedDocument.Size;
                     return existingCachedDocument.Document;
-
+                }
+                    
                 var colSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
                 if (_readDocBuffer == null || _readDocBuffer.Length < colSize)
                     _readDocBuffer = new byte[colSize];
