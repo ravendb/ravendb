@@ -5,7 +5,6 @@ using System.Dynamic;
 using System.Linq;
 using Raven.Client.Linq;
 using Raven.Server.Utils;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -13,9 +12,14 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly IEnumerable<object> _inner;
 
-        public DynamicArray(IEnumerable<object> array)
+        public DynamicArray(IEnumerable inner)
+            : this(inner.Cast<object>())
         {
-            _inner = array;
+        }
+
+        public DynamicArray(IEnumerable<object> inner)
+        {
+            _inner = inner;
         }
 
         public int Length => _inner.Count();
@@ -63,12 +67,37 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerable<object> Select(Func<IGrouping<object, object>, object> func)
         {
-            throw new NotImplementedException();
+            return new DynamicArray(Enumerable.Select(this, o => func((IGrouping<object, object>)o)));
         }
 
         public IEnumerable<object> Select(Func<object, int, object> func)
         {
-            throw new NotImplementedException();
+            return new DynamicArray(Enumerable.Select(this, func));
+        }
+
+        public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
+        {
+            return new DynamicArray(Enumerable.SelectMany(this, func));
+        }
+
+        public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func, Func<object, object, object> selector)
+        {
+            return new DynamicArray(Enumerable.SelectMany(this, func, selector));
+        }
+
+        public IEnumerable<object> SelectMany(Func<object, int, IEnumerable<object>> func)
+        {
+            return new DynamicArray(Enumerable.SelectMany(this, func));
+        }
+
+        public dynamic GroupBy(Func<dynamic, dynamic> keySelector)
+        {
+            return new DynamicArray(Enumerable.GroupBy(this, keySelector).Select(x => new DynamicGrouping(x)));
+        }
+
+        public dynamic GroupBy(Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> selector)
+        {
+            return new DynamicArray(Enumerable.GroupBy(this, keySelector, selector).Select(x => new DynamicGrouping(x)));
         }
 
         public decimal Sum(Func<object, decimal> selector)
@@ -133,6 +162,24 @@ namespace Raven.Server.Documents.Indexes.Static
         public override int GetHashCode()
         {
             return _inner?.GetHashCode() ?? 0;
+        }
+
+        private class DynamicGrouping : DynamicArray, IGrouping<object, object>
+        {
+            private readonly IGrouping<dynamic, dynamic> _grouping;
+
+            public DynamicGrouping(IGrouping<dynamic, dynamic> grouping)
+                : base(grouping)
+            {
+                _grouping = grouping;
+            }
+
+            public dynamic Key => _grouping.Key;
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
         }
     }
 }

@@ -159,7 +159,6 @@ namespace SlowTests.MailingList
 
                     var result = session.Query<ResourceViewModel, ResourceViewModels_ByTag>().ToList();
 
-                    WaitForUserToContinueTheTest(store);
                     TestHelper.AssertNoIndexErrors(store);
                     Assert.NotEmpty(result);
                 }
