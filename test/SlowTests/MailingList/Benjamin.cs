@@ -1,30 +1,28 @@
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Benjamin : RavenTest
+    public class Benjamin : RavenTestBase
     {
-
-        public class Person
+        private class Person
         {
             public PersonFace Face;
         }
 
-        public class PersonFace
+        private class PersonFace
         {
             public string Color { get; set; }
         }
 
-
         [Fact]
-        public void Can_project_nested_objects()
+        public async Task Can_project_nested_objects()
         {
-            using(var store = NewRemoteDocumentStore(fiddler:true))
+            using (var store = await GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Person
                     {
@@ -39,14 +37,13 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var faces = session.Query<Person>()
-                        .Customize(x=>x.WaitForNonStaleResults())
-                        .Select(x=>x.Face)
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Select(x => x.Face)
                         .ToList();
 
                     Assert.Equal("Green", faces[0].Color);
                 }
             }
         }
-         
     }
 }

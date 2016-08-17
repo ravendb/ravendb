@@ -1,18 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
-using Lucene.Net.Messages;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class BooleanCollection : RavenTest
+    public class BooleanCollection : RavenTestBase
     {
-        public class Message
+        private class Message
         {
             public class Recipient
             {
@@ -31,7 +29,7 @@ namespace Raven.Tests.MailingList
             public IList<Recipient> Recipients { get; set; }
         }
 
-        public class MessageIndex : AbstractIndexCreationTask<Message>
+        private class MessageIndex : AbstractIndexCreationTask<Message>
         {
             public MessageIndex()
             {
@@ -50,7 +48,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public void Setup(IDocumentStore store)
+        private void Setup(IDocumentStore store)
         {
             new MessageIndex().Execute(store);
 
@@ -78,9 +76,9 @@ namespace Raven.Tests.MailingList
 
 
         [Fact]
-        public void IndexShouldAllowToQueryOnBooleanSubcollectionProperty()
+        public async Task IndexShouldAllowToQueryOnBooleanSubcollectionProperty()
         {
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 Setup(store);
 
@@ -98,9 +96,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void IndexShouldAllowToQueryOnIntegerSubcollectionProperty()
+        public async Task IndexShouldAllowToQueryOnIntegerSubcollectionProperty()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 Setup(store);
 

@@ -1,19 +1,18 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class bikkies : RavenTest
+    public class bikkies : RavenTestBase
     {
         [Fact]
-        public void ShouldGetCategoryValues()
+        public async Task ShouldGetCategoryValues()
         {
-            using(var store= NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new Activity_WithCategory().Execute(store);
                 new Activity_WithCategoryTransformer().Execute(store);
@@ -21,7 +20,7 @@ namespace Raven.Tests.MailingList
 
                 WaitForIndexing(store);
 
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     var activityVms = s.Query<ActivityVM, Activity_WithCategory>().TransformWith<Activity_WithCategoryTransformer, ActivityVM>().ToArray();
                     foreach (var activityVm in activityVms)
@@ -34,14 +33,15 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Activity
+        private class Activity
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public CategoryRef Category { get; set; }
 
         }
-        public class ActivityVM
+
+        private class ActivityVM
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -50,12 +50,14 @@ namespace Raven.Tests.MailingList
             public string CatId { get; set; }
 
         }
-        public class CategoryRef
+
+        private class CategoryRef
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
-        public class Category
+
+        private class Category
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -85,7 +87,7 @@ namespace Raven.Tests.MailingList
 
 
         }
-        public class Activity_WithCategory : AbstractIndexCreationTask<Activity>
+        private class Activity_WithCategory : AbstractIndexCreationTask<Activity>
         {
             public Activity_WithCategory()
             {
@@ -94,20 +96,20 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Activity_WithCategoryTransformer : AbstractTransformerCreationTask<Activity>
+        private class Activity_WithCategoryTransformer : AbstractTransformerCreationTask<Activity>
         {
             public Activity_WithCategoryTransformer()
             {
                 TransformResults = activities => from a2 in activities
-                                                       let c = LoadDocument<Category>(a2.Category.Id)
-                                                       select new
-                                                       {
-                                                           a2.Id,
-                                                           a2.Name,
-                                                           CatId = a2.Category.Id,
-                                                           CategoryName = c.Name,
-                                                           CategoryColor = c.Color
-                                                       };
+                                                 let c = LoadDocument<Category>(a2.Category.Id)
+                                                 select new
+                                                 {
+                                                     a2.Id,
+                                                     a2.Name,
+                                                     CatId = a2.Category.Id,
+                                                     CategoryName = c.Name,
+                                                     CategoryColor = c.Color
+                                                 };
 
 
             }

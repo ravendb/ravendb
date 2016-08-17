@@ -4,33 +4,31 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Raven.Client;
-using Raven.Client.Indexes;
-
 using System;
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Brett : RavenTest
+    public class Brett : RavenTestBase
     {
         [Fact]
-        public void TestMultiMap()
+        public async Task TestMultiMap()
         {
             Guid accountId = Guid.NewGuid();
 
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
 
                 //Load Test Data
                 using (IDocumentSession session = store.OpenSession())
                 {
                     session.Store(new OrderHardware()
-                    {Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Pending", CustomerDetails = "Si & Co"});
+                    { Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Pending", CustomerDetails = "Si & Co" });
                     session.Store(new OrderHardware()
                     {
                         Id = Guid.NewGuid().ToString(),
@@ -39,7 +37,7 @@ namespace Raven.Tests.MailingList
                         CustomerDetails = "Baileyish"
                     });
                     session.Store(new OrderHardware()
-                    {Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Delay", CustomerDetails = "Babu Ltd"});
+                    { Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Delay", CustomerDetails = "Babu Ltd" });
                     session.Store(new OrderSubscription()
                     {
                         Id = Guid.NewGuid().ToString(),
@@ -55,13 +53,13 @@ namespace Raven.Tests.MailingList
                         NewSimNumber = "1122344324343"
                     });
                     session.Store(new OrderSiteInstall()
-                    {Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Cancelled", OrderDetails = "10 Handsets"});
+                    { Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Cancelled", OrderDetails = "10 Handsets" });
                     session.Store(new OrderSiteInstall()
-                    {Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "InProgress", OrderDetails = "20 Handsets"});
+                    { Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "InProgress", OrderDetails = "20 Handsets" });
                     session.Store(new OrderSiteInstall()
-                    {Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Submitted", OrderDetails = "Data Only"});
+                    { Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Submitted", OrderDetails = "Data Only" });
                     session.Store(new OrderSiteInstall()
-                    {Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Fulfilling", OrderDetails = "20 iPhone"});
+                    { Id = Guid.NewGuid().ToString(), AccountId = accountId, RequestStatus = "Fulfilling", OrderDetails = "20 iPhone" });
 
                     session.SaveChanges();
                     session.Query<OrderSiteInstall>().Customize(x => x.WaitForNonStaleResults()).Any();
@@ -83,22 +81,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-
-        protected void DeleteAll<T>(IDocumentStore documentStore)
-        {
-            using (IDocumentSession session = documentStore.OpenSession())
-            {
-                foreach (var doc in session.Query<T>().ToList())
-                {
-                    session.Delete(doc);
-                }
-
-                session.SaveChanges();
-                session.Query<T>().Customize(x => x.WaitForNonStaleResults()).Any();
-            }
-        }
-
-        public class OrderHardware : IListItem
+        private class OrderHardware : IListItem
         {
             public string Id { get; set; }
             public Guid AccountId { get; set; }
@@ -106,7 +89,7 @@ namespace Raven.Tests.MailingList
             public string CustomerDetails { get; set; }
         }
 
-        public class OrderSubscription : IListItem
+        private class OrderSubscription : IListItem
         {
             public string Id { get; set; }
             public Guid AccountId { get; set; }
@@ -115,7 +98,7 @@ namespace Raven.Tests.MailingList
             public string NewSimNumber { get; set; }
         }
 
-        public class OrderSiteInstall : IListItem
+        private class OrderSiteInstall : IListItem
         {
             public string Id { get; set; }
             public Guid AccountId { get; set; }
@@ -124,7 +107,7 @@ namespace Raven.Tests.MailingList
         }
 
         // This interface is the compromise 
-        public interface IListItem
+        private interface IListItem
         {
             string Id { get; set; }
             Guid AccountId { get; set; }
@@ -132,14 +115,14 @@ namespace Raven.Tests.MailingList
         }
 
         // This interface is what I want to get
-        public class GridListItem
+        private class GridListItem
         {
             string Id { get; set; }
             Guid AccountId { get; set; }
             string RequestStatus { get; set; }
         }
 
-        public class ListItemIndex : AbstractMultiMapIndexCreationTask<ListItemIndex.Result>
+        private class ListItemIndex : AbstractMultiMapIndexCreationTask<ListItemIndex.Result>
         {
             public class Result
             {
