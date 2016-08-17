@@ -59,29 +59,28 @@ namespace Sparrow.Json
             throw new ObjectDisposedException("This ArenaMemoryAllocator is already disposed");
         }
 
-        public void GrowArena(int requestedSize)
+        private void GrowArena(int requestedSize)
         {
             if (requestedSize >= 1024 * 1024 * 1024)
                 throw new ArgumentOutOfRangeException(nameof(requestedSize));
 
-            int newSize=0;
+            int newSize = _allocated;
             do
             {
-                newSize = _allocated * 2;
-                if (newSize < _allocated) // Overflow
-                {
-                    // int.MaxValue = 2147483647 which is not a power of 2. The largest power of 2 contained in a signed int is 1GB.
-                    // Since we want to allocate in blocks of powers of 2 the max buffer size will be 1GB
-                    newSize = _allocated;
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Arena main buffer reached maximum size of 1GB, check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
-                }
-            } while (requestedSize > newSize);
-            
+                newSize = Math.Max(1024*1024*1024/*overflow*/, newSize*2);
+            } while (newSize < requestedSize);
+
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
-            
-            var newBuffer = (byte*) Marshal.AllocHGlobal(newSize).ToPointer();
+            {
+                if (newSize > 512 * 1024 * 1024)
+                    _logger.Info(
+                        $"Arena main buffer reached size of {newSize:#,#;0} bytes (previously {_allocated:#,#;0} bytes), check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
+                _logger.Info(
+                    $"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
+            }
+
+                
+            var newBuffer = (byte*)Marshal.AllocHGlobal(newSize).ToPointer();
             _allocated = newSize;
 
             // Save the old buffer pointer to be released when the arena is reset
