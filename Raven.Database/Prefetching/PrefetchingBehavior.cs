@@ -17,6 +17,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Util;
@@ -311,7 +312,7 @@ namespace Raven.Database.Prefetching
         private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag, int? take)
         {
             var result = new List<JsonDocument>();
-            bool docsLoaded;
+            var docsLoaded = false;
             int prefetchingQueueSizeInBytes;
             var prefetchingDurationTimer = Stopwatch.StartNew();
             var lastTryMaybeAddFutureBatch = 1000L;
@@ -358,12 +359,17 @@ namespace Raven.Database.Prefetching
                             //we can look for the next etag in the future batches
                             firstEtagInQueue = GetMinimumEtagFromFutureBatches(Abstractions.Util.EtagUtil.Increment(etag, 1));
                         }
-                        // if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
-                        LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
+
+                        //if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
+                        docsLoaded = LoadDocumentsFromDisk(etag, firstEtagInQueue, result); // here we _intentionally_ use the current etag, not the next one
                     }
                 }
 
-                docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
+                if (docsLoaded == false)
+                {
+                    //we didn't load the docs from the disk, let's try to get them from the prefetching queue
+                    docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
+                }
 
                 if (docsLoaded)
                 {
@@ -409,25 +415,33 @@ namespace Raven.Database.Prefetching
             return Math.Max(numberOfItemsToProcessInSingleBatch, context.Configuration.InitialNumberOfItemsToProcessInSingleBatch);
         }
 
-        private void LoadDocumentsFromDisk(Etag etag, Etag untilEtag)
+        private bool LoadDocumentsFromDisk(Etag etag, Etag untilEtag, List<JsonDocument> items)
         {
             var sp = Stopwatch.StartNew();
-            var jsonDocs = GetJsonDocsFromDisk(context.CancellationToken, etag, untilEtag);
+            int? numberOfDocsToFetch = null;
+            if (items.Count > 0)
+            {
+                //we already loaded some documents
+                numberOfDocsToFetch = Math.Max(1, GetNumberOfItemsToProcessInSingleBatch() - items.Count);
+            }
+
+            var jsonDocs = GetJsonDocsFromDisk(context.CancellationToken, etag, untilEtag, numberOfDocsToFetch: numberOfDocsToFetch);
             if (log.IsDebugEnabled)
             {
                 log.Debug("Loaded {0} documents ({3:#,#;;0} kb) from disk, starting from etag {1}, took {2}ms", jsonDocs.Count, etag, sp.ElapsedMilliseconds,
                     jsonDocs.Sum(x => x.SerializedSizeOnDisk) / 1024);
             }
 
-            // if we are forced to load from disk in a sync fashion, let us start the process
-            // of making sure that we don't need to do this next time by starting an async load
+            //if we are forced to load from disk in a sync fashion, let us start the process
+            //of making sure that we don't need to do this next time by starting an async load
             MaybeAddFutureBatch(jsonDocs);
 
-            using (prefetchingQueue.EnterWriteLock())
-            {
-                foreach (var jsonDocument in jsonDocs)
-                    prefetchingQueue.Add(jsonDocument);
-            }
+            //we're loading the document directly from disk starting from 'etag'.
+            //we made sure that the amount that we load doesn't exceed the number 
+            //of docs that we are allowed to load in a single batch
+            items.AddRange(jsonDocs);
+
+            return jsonDocs.Count > 0;
         }
 
         private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items, int? take)
@@ -636,7 +650,8 @@ namespace Raven.Database.Prefetching
             }
         }
 
-        private List<JsonDocument> GetJsonDocsFromDisk(CancellationToken cancellationToken, Etag etag, Etag untilEtag, Reference<bool> earlyExit = null)
+        private List<JsonDocument> GetJsonDocsFromDisk(CancellationToken cancellationToken, 
+            Etag etag, Etag untilEtag, Reference<bool> earlyExit = null, int? numberOfDocsToFetch = null)
         {
             List<JsonDocument> jsonDocs = null;
 
@@ -664,12 +679,30 @@ namespace Raven.Database.Prefetching
                     jsonDocs = actions.Documents
                         .GetDocumentsAfter(
                             etag,
-                            GetNumberOfItemsToProcessInSingleBatch(),
+                            numberOfDocsToFetch ?? GetNumberOfItemsToProcessInSingleBatch(),
                             cancellationToken,
                             maxSize,
                             untilEtag,
                             autoTuner.FetchingDocumentsFromDiskTimeout,
-                            earlyExit: earlyExit
+                            earlyExit: earlyExit,
+                            failedToGetHandler: (errors) =>
+                            {
+                                if (errors.Count == 0)
+                                    return;
+
+                                var error = $"Failed to get {errors.Count} document{(errors.Count > 1 ? "s" : string.Empty)} in {GetType().FullName}";
+                                var exceptions = errors.Select(x => x.Exception).ToList();
+                                context.Database.AddAlert(new Alert
+                                {
+                                    AlertLevel = AlertLevel.Error,
+                                    Exception = exceptions.Count == 1 ? exceptions.First().ToString() : new AggregateException(exceptions).ToString(),
+                                    CreatedAt = SystemTime.UtcNow,
+                                    Message = $"{error}, skipping document key{(errors.Count > 1 ? "s" : string.Empty)}: " +
+                                              $"{string.Join(", ", errors.Select(x => x.Key))}",
+                                    UniqueKey = error,
+                                    Title = error
+                                });
+                            }
                         )
                         .Where(x => x != null)
                         .Select(doc =>

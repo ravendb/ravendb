@@ -46,7 +46,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             Reference<SnapshotReader> snapshot,
             TableStorage tableStorage,
             IBufferPool bufferPool,
-            bool SkipConsistencyCheck = false)
+            bool skipConsistencyCheck = false)
             : base(snapshot, bufferPool)
         {
             this.uuidGenerator = uuidGenerator;
@@ -54,7 +54,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             this.documentCacher = documentCacher;
             this.writeBatch = writeBatch;
             this.tableStorage = tableStorage;
-            this.SkipConsistencyCheck = SkipConsistencyCheck;
+            this.SkipConsistencyCheck = skipConsistencyCheck;
             metadataIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.Metadata);
         }
 
@@ -152,8 +152,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
-            Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, 
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedDocument = null, Reference<bool> earlyExit = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
         {
             if (earlyExit != null)
                 earlyExit.Value = false;
@@ -169,7 +170,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
             Stopwatch duration = null;
             if (timeout != null)
                 duration = Stopwatch.StartNew();
-
 
             Etag lastDocEtag = null;
             using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
@@ -190,6 +190,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 Etag docEtag = etag;
 
+                var errors = new List<DocumentFetchError>();
+                var skipDocumentGetErrors = failedToGetHandler != null;
                 do
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -225,7 +227,26 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         }
                     }
 
-                    var document = DocumentByKey(key);
+                    JsonDocument document;
+                    try
+                    {
+                        document = DocumentByKey(key);
+                    }
+                    catch (Exception e)
+                    {
+                        if (skipDocumentGetErrors)
+                        {
+                            errors.Add(new DocumentFetchError
+                            {
+                                Key = key,
+                                Exception = e
+                            });
+                            continue;
+                        }
+
+                        throw;
+                    }
+
                     if (document == null) //precaution - should never be true
                     {
                         if (SkipConsistencyCheck) continue;
@@ -258,6 +279,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         break;
                     }
                 } while (iterator.MoveNext());
+
+                if (skipDocumentGetErrors && errors.Count > 0)
+                {
+                    failedToGetHandler(errors);
+                }
             }
 
             // We notify the last that we considered.
@@ -316,9 +342,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, 
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
         {
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, 
+                maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit, failedToGetHandler);
         }
 
         private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)

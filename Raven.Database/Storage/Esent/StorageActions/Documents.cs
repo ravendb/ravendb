@@ -317,8 +317,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return ReadCurrentDocument(key);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
-            Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, 
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedDocument = null, Reference<bool> earlyExit = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
         {
             if (earlyExit != null)
                 earlyExit.Value = false;
@@ -337,6 +338,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
             Etag lastDocEtag = null;
             Etag docEtag = etag;
 
+            var errors = new List<DocumentFetchError>();
+            var skipDocumentGetErrors = failedToGetHandler != null;
             do
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -372,7 +375,25 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     }                        
                 }
 
-                var readCurrentDocument = ReadCurrentDocument(key);
+                JsonDocument readCurrentDocument;
+                try
+                {
+                    readCurrentDocument = ReadCurrentDocument(key);
+                }
+                catch (Exception e)
+                {
+                    if (skipDocumentGetErrors)
+                    {
+                        errors.Add(new DocumentFetchError
+                        {
+                            Key = key,
+                            Exception = e
+                        });
+                        continue;
+                    }
+
+                    throw;
+                }
 
                 totalSize += readCurrentDocument.SerializedSizeOnDisk;
                 fetchedDocumentCount++;
@@ -395,6 +416,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
             } 
             while (Api.TryMoveNext(session, Documents));
+
+            if (skipDocumentGetErrors && errors.Count > 0)
+            {
+                failedToGetHandler(errors);
+            }
 
             // We notify the last that we considered.
             if (lastProcessedDocument != null)
@@ -437,9 +463,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
             } while (Api.TryMoveNext(session, Documents));
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take,
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
         {
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, 
+                timeout, lastProcessedOnFailure, earlyExit, failedToGetHandler);
         }
 
         public Etag GetBestNextDocumentEtag(Etag etag)
