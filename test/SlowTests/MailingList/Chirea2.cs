@@ -3,21 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Chirea2 : RavenTest
+    public class Chirea2 : RavenTestBase
     {
-        [Fact]
-        public void MulitplyDecimal()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task MulitplyDecimal()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 var index = new Orders_Search();
 
@@ -58,11 +60,11 @@ namespace Raven.Tests.MailingList
                 }
 
                 WaitForIndexing(store);
-                Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                TestHelper.AssertNoIndexErrors(store);
             }
         }
 
-        public sealed class Product
+        private sealed class Product
         {
             public decimal Price
             {
@@ -77,7 +79,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public sealed class Order
+        private sealed class Order
         {
             public IList<Product> Products
             {
@@ -91,7 +93,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public sealed class Orders_Search : AbstractIndexCreationTask<Order>
+        private sealed class Orders_Search : AbstractIndexCreationTask<Order>
         {
             public Orders_Search()
             {

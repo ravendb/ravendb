@@ -25,7 +25,9 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
@@ -107,7 +109,7 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             IndexPersistence = new LuceneIndexPersistence(this);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
-       }
+        }
 
         public static Index Open(int indexId, DocumentDatabase documentDatabase)
         {
@@ -425,7 +427,7 @@ namespace Raven.Server.Documents.Indexes
                     while (true)
                     {
                         if (_logger.IsInfoEnabled)
-                           _logger.Info($"Starting indexing for '{Name} ({IndexId})'.");
+                            _logger.Info($"Starting indexing for '{Name} ({IndexId})'.");
 
                         _mre.Reset();
 
@@ -729,6 +731,8 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
+
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
             {
@@ -880,6 +884,44 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 return result;
+            }
+        }
+
+        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryServerSide query)
+        {
+            if (string.IsNullOrWhiteSpace(query.Query) == false)
+            {
+                var setOfFields = SimpleQueryParser.GetFields(query);
+                foreach (var field in setOfFields)
+                {
+                    var f = field;
+
+                    if (IndexPersistence.ContainsField(f) == false &&
+                        IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+                        throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
+                }
+            }
+            if (query.SortedFields != null)
+            {
+                foreach (var sortedField in query.SortedFields)
+                {
+                    var f = sortedField.Field;
+                    //if (f == Constants.TemporaryScoreValue)
+                    //    continue;
+
+                    if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
+                        continue;
+
+                    if (f.StartsWith(Constants.AlphaNumericFieldName))
+                    {
+                        f = SortFieldHelper.CustomField(f).Name;
+                        if (string.IsNullOrEmpty(f))
+                            throw new ArgumentException("Alpha numeric sorting requires a field name");
+                    }
+
+                    if (IndexPersistence.ContainsField(f) == false && f.StartsWith(Constants.DistanceFieldName) == false && IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+                        throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+                }
             }
         }
 

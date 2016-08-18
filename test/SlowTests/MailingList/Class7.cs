@@ -1,18 +1,18 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class Class7 : RavenTestBase
     {
         [Fact]
-        public void ThrowsOnUnindexedSorts()
+        public async Task ThrowsOnUnindexedSorts()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new PersonIndex().Execute(store);
 
@@ -63,13 +63,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Person
+        private class Person
         {
             public string Name { get; set; }
             public string Surname { get; set; }
         }
 
-        public class PersonIndex : AbstractIndexCreationTask<Person>
+        private class PersonIndex : AbstractIndexCreationTask<Person>
         {
             public PersonIndex()
             {

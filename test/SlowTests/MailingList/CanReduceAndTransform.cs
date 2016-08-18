@@ -3,16 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class CanReduceAndTransform : RavenTestBase
     {
@@ -22,8 +23,7 @@ namespace Raven.Tests.MailingList
             public string LastName { get; set; }
         }
 
-        public class PersonnelAll
-            : AbstractMultiMapIndexCreationTask<PersonnelAll.Mapping>
+        private class PersonnelAll : AbstractMultiMapIndexCreationTask<PersonnelAll.Mapping>
         {
             public PersonnelAll()
             {
@@ -47,12 +47,12 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from result in results
                                     group result by result.Id
                                         into g
-                                        select new Mapping
-                                        {
-                                            Id = g.Select(a => a.Id).FirstOrDefault(a => a != null),
-                                            LastName = g.Select(a => a.LastName).FirstOrDefault(a => a != null),
-                                            Roles = g.SelectMany(a => a.Roles)
-                                        };
+                                    select new Mapping
+                                    {
+                                        Id = g.Select(a => a.Id).FirstOrDefault(a => a != null),
+                                        LastName = g.Select(a => a.LastName).FirstOrDefault(a => a != null),
+                                        Roles = g.SelectMany(a => a.Roles)
+                                    };
             }
 
             public class Mapping
@@ -71,10 +71,10 @@ namespace Raven.Tests.MailingList
             public string RoleId { get; set; }
         }
 
-        [Fact]
-        public void WillTransform()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task WillTransform()
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (IDocumentSession session = store.OpenSession())
                 {
@@ -98,14 +98,13 @@ namespace Raven.Tests.MailingList
                                                                        .TransformWith<PersonnelTransformer, PersonnelTransformer.Result>()
                                                                        .ToList();
 
-                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    TestHelper.AssertNoIndexErrors(store);
                     Assert.Equal("Ayende", results.First().FullName);
                 }
             }
         }
 
-        public class PersonnelTransformer
-            : AbstractTransformerCreationTask<PersonnelAll.Mapping>
+        private class PersonnelTransformer : AbstractTransformerCreationTask<PersonnelAll.Mapping>
         {
             public PersonnelTransformer()
             {
