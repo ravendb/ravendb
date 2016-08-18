@@ -23,7 +23,9 @@ class getDocumentsPreviewCommand extends commandBase {
             return new pagedResultSet(items, collection.totalResults);
         };
         var url = "/doc-preview";
-        return this.query(url, args, this.database, resultsSelector);
+        var query = this.query(url, args, this.database, resultsSelector);
+        query.fail((response: JQueryXHR) => this.reportError("Failed to get documents preview", response.responseText, response.statusText));
+        return query;
     }
 }
 
