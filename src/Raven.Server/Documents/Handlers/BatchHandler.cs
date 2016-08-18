@@ -31,13 +31,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            DocumentsOperationContext readBatchCommandContext;
+            DocumentsOperationContext readDocumentsContext;
+            using (ContextPool.AllocateOperationContext(out readBatchCommandContext))
+            using (ContextPool.AllocateOperationContext(out readDocumentsContext))
             {
                 BlittableJsonReaderArray commands;
                 try
                 {
-                    commands = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "bulk/docs",
+                    commands = await readBatchCommandContext.ParseArrayToMemoryAsync(RequestBodyStream(), "bulk/docs",
                         // we will prepare the docs to disk in the actual PUT command
                         BlittableJsonDocumentBuilder.UsageMode.None);
                 }
@@ -81,7 +83,7 @@ namespace Raven.Server.Documents.Handlers
                             // we need to split this document to an independent blittable document
                             // and this time, we'll prepare it for disk.
                             doc.PrepareForStorage();
-                            parsedCommands[i].Document = context.ReadObject(doc, parsedCommands[i].Key,
+                            parsedCommands[i].Document = readDocumentsContext.ReadObject(doc, parsedCommands[i].Key,
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             break;
                         case "PATCH":
@@ -107,8 +109,8 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.StatusCode = 201;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, mergedCmd.Reply);
+                using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
+                    readBatchCommandContext.Write(writer, mergedCmd.Reply);
             }
         }
 
