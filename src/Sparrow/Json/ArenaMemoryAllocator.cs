@@ -67,7 +67,9 @@ namespace Sparrow.Json
             int newSize = _allocated;
             do
             {
-                newSize = Math.Max(1024*1024*1024/*overflow*/, newSize*2);
+                newSize *= 2;
+                if (newSize < 0)
+                    newSize = 1024*1024*1024;
             } while (newSize < requestedSize);
 
             if (_logger.IsInfoEnabled)
