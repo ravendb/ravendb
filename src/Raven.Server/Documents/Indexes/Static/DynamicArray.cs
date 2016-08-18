@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Linq;
 using Raven.Client.Linq;
 using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -48,6 +49,31 @@ namespace Raven.Server.Documents.Indexes.Static
 
             result = TypeConverter.DynamicConvert(resultObject);
             return true;
+        }
+
+        public override bool TryConvert(ConvertBinder binder, out object result)
+        {
+            if (binder.ReturnType.IsArray)
+            {
+                var elementType = binder.ReturnType.GetElementType();
+                var count = Count;
+                var array = Array.CreateInstance(elementType, count);
+
+                for (var i = 0; i < count; i++)
+                {
+                    var item = _inner.ElementAt(i);
+                    if (elementType == typeof(string) && (item is LazyStringValue || item is LazyCompressedStringValue))
+                        array.SetValue(item.ToString(), i);
+                    else
+                        array.SetValue(Convert.ChangeType(item, elementType), i);
+                }
+
+                result = array;
+
+                return true;
+            }
+
+            return base.TryConvert(binder, out result);
         }
 
         public IEnumerator<object> GetEnumerator()

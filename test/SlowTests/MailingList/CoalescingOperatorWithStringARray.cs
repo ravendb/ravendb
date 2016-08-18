@@ -3,22 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using System.Threading;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class CoalescingOperatorWithStringArray : RavenTest
+    public class CoalescingOperatorWithStringArray : RavenTestBase
     {
-
         [Fact]
-        public void CanQueryIndexContainingStringArray()
+        public async Task CanQueryIndexContainingStringArray()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new MyIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -33,9 +33,7 @@ namespace Raven.Tests.MailingList
 
                 WaitForIndexing(store);
 
-                var ravenErrors = store.DatabaseCommands.GetStatistics().Errors;
-                Assert.True(ravenErrors.Length == 0);
-                Assert.True(store.DatabaseCommands.GetStatistics().Indexes.All(x => x.IndexingErrors == 0));
+                TestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -45,21 +43,19 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class A
+        private class A
         {
             public string Id { get; set; }
             public B[] Bs { get; set; }
         }
 
-        public class B
+        private class B
         {
             public string Id { get; set; }
             public string[] Values { get; set; }
         }
 
-
-
-        public class MyIndex : AbstractIndexCreationTask<A, MyIndex.ReduceResult>
+        private class MyIndex : AbstractIndexCreationTask<A, MyIndex.ReduceResult>
         {
             public class ReduceResult
             {
@@ -83,13 +79,13 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from r in results
                                     group r by new { r.AId, r.BId }
                                         into rGroup
-                                        select new
-                                        {
-                                            rGroup.Key.AId,
-                                            rGroup.Key.BId,
-                                            rGroup.First().Values,
-                                            Count = rGroup.Sum(x => x.Count)
-                                        };
+                                    select new
+                                    {
+                                        rGroup.Key.AId,
+                                        rGroup.Key.BId,
+                                        rGroup.First().Values,
+                                        Count = rGroup.Sum(x => x.Count)
+                                    };
             }
         }
     }
