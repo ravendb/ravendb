@@ -4,6 +4,7 @@ using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Config.Categories;
@@ -154,6 +155,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public bool ContainsField(string field)
         {
+            if (field == Constants.DocumentIdFieldName)
+                return _index.Type.IsMap();
+
             if (field.EndsWith("_Range"))
                 field = field.Substring(0, field.Length - 6);
 
