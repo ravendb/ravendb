@@ -1,13 +1,13 @@
-using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
-using Xunit;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Indexes;
+using SlowTests.Utils;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class CanLoadDocumentArray : RavenTestBase
     {
@@ -18,8 +18,7 @@ namespace Raven.Tests.MailingList
             public IEnumerable<string> Friends { get; set; }
         }
 
-        private class Students_WithFriends
-            : AbstractIndexCreationTask<Student, Students_WithFriends.Mapping>
+        private class Students_WithFriends : AbstractIndexCreationTask<Student, Students_WithFriends.Mapping>
         {
             public class Mapping
             {
@@ -43,9 +42,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void WillSupportLoadDocumentArray()
+        public async Task WillSupportLoadDocumentArray()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -69,7 +68,7 @@ namespace Raven.Tests.MailingList
                                          .Customize(customization => customization.WaitForNonStaleResults())
                                          .ToList();
 
-                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    TestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(3, results.Count);
                 }
             }

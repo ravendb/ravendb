@@ -1,14 +1,13 @@
 using System.Linq;
-using Raven.Client.Embedded;
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class BuildStarted : RavenTest
+    public class BuildStarted : RavenTestBase
     {
-        public class TestModel
+        private class TestModel
         {
             public int Id { get; set; }
         }
@@ -17,12 +16,12 @@ namespace Raven.Tests.MailingList
         //database. It returns null which that variable is assigned a new value
         //storing that new value, however, fails.
         [Fact]
-        public void DocumentStoreFailsWhenGrabbingNonExistingItemAndStoringNewOne()
+        public async Task DocumentStoreFailsWhenGrabbingNonExistingItemAndStoringNewOne()
         {
-            using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true  }.Initialize())
+            using (var store = await GetDocumentStore())
             {
-                documentStore.Conventions.AllowQueriesOnId = true;
-                using (var session = documentStore.OpenSession())
+                store.Conventions.AllowQueriesOnId = true;
+                using (var session = store.OpenSession())
                 {
                     TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 1) ??
                                               new TestModel { Id = 1 };
@@ -31,10 +30,10 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var list = session.Query<TestModel>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
                     Assert.Equal(1, list.Count());
                 }
@@ -46,12 +45,12 @@ namespace Raven.Tests.MailingList
         //non existing item. Sets the variable to a new value and stores it.
         //works like expected
         [Fact]
-        public void DocumentStoreWorksWhenAddingItemAndThenGrabbingNonExistingItemAndStoringNewOne()
+        public async Task DocumentStoreWorksWhenAddingItemAndThenGrabbingNonExistingItemAndStoringNewOne()
         {
-            using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true  }.Initialize())
+            using (var store = await GetDocumentStore())
             {
-                documentStore.Conventions.AllowQueriesOnId = true; 
-                using (var session = documentStore.OpenSession())
+                store.Conventions.AllowQueriesOnId = true;
+                using (var session = store.OpenSession())
                 {
                     session.Store(new TestModel { Id = 1 });
                     session.SaveChanges();
@@ -63,7 +62,7 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
 
                     var list = session.Query<TestModel>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
                     Assert.Equal(2, list.Count());
                 }
@@ -74,12 +73,12 @@ namespace Raven.Tests.MailingList
         //performs a lookup on a non existing item. Sets the variable to a new 
         //value and stores it, however, fails.
         [Fact]
-        public void DocumentStoreWorksWhenAddingItemThenDeletingItAndThenGrabbingNonExistingItemAndStoringNewOne()
+        public async Task DocumentStoreWorksWhenAddingItemThenDeletingItAndThenGrabbingNonExistingItemAndStoringNewOne()
         {
-            using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+            using (var store = await GetDocumentStore())
             {
-                documentStore.Conventions.AllowQueriesOnId = true;
-                using (var session = documentStore.OpenSession())
+                store.Conventions.AllowQueriesOnId = true;
+                using (var session = store.OpenSession())
                 {
                     var deletedModel = new TestModel { Id = 1 };
                     session.Store(deletedModel);

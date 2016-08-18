@@ -2,22 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Extensions;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Tests.Helpers;
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class CanHaveNullableDoubleProperty : RavenTestBase
     {
-        [Fact]
-        public void WillSupportNullableDoubles()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task WillSupportNullableDoubles()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -35,26 +36,22 @@ namespace Raven.Tests.MailingList
                         .Where(e => e.StartDate == DateTime.Now.Date)
                         .ToList();
 
-                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    TestHelper.AssertNoIndexErrors(store);
                     Assert.True(results.Count > 0);
                 }
             }
         }
 
-        [Fact]
-        public void WillSupportNullableDoubles2()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task WillSupportNullableDoubles2()
         {
-            using (var documentStore = new EmbeddableDocumentStore
+            using (var store = await GetDocumentStore())
             {
-                RunInMemory = true,
-                Conventions = { MaxNumberOfRequestsPerSession = int.MaxValue }
-            })
-            {
-                documentStore.RegisterListener(new NoStaleQueriesAllowed());
-                documentStore.Initialize();
-                new Events_ByActiveStagingPublishOnSaleAndStartDate().Execute(documentStore);
+                store.RegisterListener(new NoStaleQueriesAllowed());
+                store.Initialize();
+                new Events_ByActiveStagingPublishOnSaleAndStartDate().Execute(store);
 
-                using (var documentSession = documentStore.OpenSession())
+                using (var documentSession = store.OpenSession())
                 {
                     new ConfigForNotificationSender(documentSession).PopulateData();
 
@@ -63,13 +60,13 @@ namespace Raven.Tests.MailingList
                         .Where(e => e.StartDate == DateTime.Now.Date)
                         .ToList();
 
-                    Assert.Empty(documentStore.DatabaseCommands.GetStatistics().Errors);
+                    TestHelper.AssertNoIndexErrors(store);
                     Assert.True(results.Count > 0);
                 }
             }
         }
 
-        class NoStaleQueriesAllowed : IDocumentQueryListener
+        private class NoStaleQueriesAllowed : IDocumentQueryListener
         {
             public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
             {
@@ -78,7 +75,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        public class Event : Document
+        private class Event : Document
         {
             public Event()
             {
@@ -111,7 +108,7 @@ namespace Raven.Tests.MailingList
             public IEnumerable<TicketSupplier> TicketSuppliers { get; set; }
         }
 
-        public abstract class Document : IEquatable<Document>
+        private abstract class Document : IEquatable<Document>
         {
             protected Document()
             {
@@ -164,7 +161,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Performer : Document
+        private class Performer : Document
         {
             public Performer()
             {
@@ -183,7 +180,7 @@ namespace Raven.Tests.MailingList
             public bool PastEventsRetrieved { get; set; }
         }
 
-        public class Alias : IEquatable<Alias>
+        private class Alias : IEquatable<Alias>
         {
             public string Name { get; set; }
 
@@ -213,7 +210,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public enum DataSource
+        private enum DataSource
         {
             [Description("Last.fm")]
             LFM,
@@ -233,7 +230,7 @@ namespace Raven.Tests.MailingList
             TM,
         }
 
-        public class DataSourceId : IEquatable<DataSourceId>
+        private class DataSourceId : IEquatable<DataSourceId>
         {
             public DataSource Source { get; set; }
             public string Id { get; set; }
@@ -271,7 +268,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class TicketSupplier : IEquatable<TicketSupplier>
+        private class TicketSupplier : IEquatable<TicketSupplier>
         {
             public DataSource Source { get; set; }
 
@@ -310,7 +307,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Venue : Document
+        private class Venue : Document
         {
             public Venue()
             {
@@ -336,7 +333,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Location
+        private class Location
         {
             public string Address01 { get; set; }
             public string Address02 { get; set; }
@@ -352,7 +349,7 @@ namespace Raven.Tests.MailingList
             public string Timezone { get; set; }
         }
 
-        public class Events_ByActiveStagingPublishOnSaleAndStartDate : AbstractIndexCreationTask<Event>
+        private class Events_ByActiveStagingPublishOnSaleAndStartDate : AbstractIndexCreationTask<Event>
         {
             public Events_ByActiveStagingPublishOnSaleAndStartDate()
             {
@@ -372,7 +369,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        class ConfigForNotificationSender
+        private class ConfigForNotificationSender
         {
             static DateTime _lastRun;
             readonly IDocumentSession _documentSession;

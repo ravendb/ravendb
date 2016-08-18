@@ -3,41 +3,40 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class CanExcludedNullItems : RavenTestBase
     {
-        [Fact]
-        public void WillSupportLast()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task WillSupportLast()
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    session.Store(new Student {Email = "support@hibernatingrhinos.com"});
-                    session.Store(new Student {Email = "support@hibernatingrhinos.com", PersonId = 1});
+                    session.Store(new Student { Email = "support@hibernatingrhinos.com" });
+                    session.Store(new Student { Email = "support@hibernatingrhinos.com", PersonId = 1 });
                     session.SaveChanges();
                 }
 
                 new Students_ByEmailDomain().Execute(store);
                 WaitForUserToContinueTheTest(store);
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var results =
-                        session.Query<Students_ByEmailDomain.Result,Students_ByEmailDomain>()
+                        session.Query<Students_ByEmailDomain.Result, Students_ByEmailDomain>()
                                .Customize(customization => customization.WaitForNonStaleResults())
                                .ToList();
 
-                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    TestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(1, results.Count);
                 }
             }

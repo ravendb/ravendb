@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Bruno : RavenTest
+    public class Bruno : RavenTestBase
     {
         [Fact]
-        public void StrangeReduceOnNestedItems()
+        public async System.Threading.Tasks.Task StrangeReduceOnNestedItems()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new TasksCount_ForPerson().Execute(store);
 
@@ -82,7 +82,7 @@ namespace Raven.Tests.MailingList
                             .Customize(c => c.WaitForNonStaleResults())
                             .ToList();
 
-                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                    TestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(tasksForUserA, result.Single(s => s.OwnerId == userA.Id).Count);
                     Assert.Equal(tasksForUserB, result.Single(s => s.OwnerId == userB.Id).Count);
@@ -113,7 +113,7 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-        public class TasksCount_ForPerson : AbstractIndexCreationTask<Project, TasksCount_ForPerson.Result>
+        private class TasksCount_ForPerson : AbstractIndexCreationTask<Project, TasksCount_ForPerson.Result>
         {
             public class Result
             {
@@ -127,8 +127,8 @@ namespace Raven.Tests.MailingList
                                   from task in project.Activities.SelectMany(a => a.Tasks)
                                   select new
                                   {
-                                    OwnerId = task.Owner.Id,
-                                    Count = 1
+                                      OwnerId = task.Owner.Id,
+                                      Count = 1
                                   };
 
                 Reduce =
@@ -142,7 +142,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Project
+        private class Project
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -154,7 +154,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Activity
+        private class Activity
         {
             public string Name { get; set; }
             public Person Owner { get; set; }
@@ -166,14 +166,14 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Task
+        private class Task
         {
             public string Name { get; set; }
             public Person Owner { get; set; }
             public bool Done { get; set; }
         }
 
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
             public string Name { get; set; }
