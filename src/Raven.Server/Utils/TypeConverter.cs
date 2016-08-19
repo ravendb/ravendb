@@ -48,7 +48,7 @@ namespace Raven.Server.Utils
             if (value is LazyDoubleValue)
                 return value;
 
-            if (value is DateTime)
+            if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
                 return value;
 
             var dictionary = value as IDictionary;

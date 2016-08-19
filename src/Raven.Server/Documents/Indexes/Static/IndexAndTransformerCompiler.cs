@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
-                var expression = SyntaxFactory.ParseExpression(transformResults);
+                var expression = SyntaxFactory.ParseExpression(transformResults).NormalizeWhitespace();
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
-                var expression = SyntaxFactory.ParseExpression(map);
+                var expression = SyntaxFactory.ParseExpression(map).NormalizeWhitespace();
 
                 fieldNamesValidator.Validate(map, expression);
 
@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
-                var expression = SyntaxFactory.ParseExpression(reduce);
+                var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
 
                 fieldNamesValidator.Validate(reduce, expression);
 

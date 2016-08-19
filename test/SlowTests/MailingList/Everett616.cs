@@ -1,20 +1,19 @@
-using System;
-using System.IO;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Everett616 : RavenTest
+    public class Everett616 : RavenTestBase
     {
         [Fact]
-        public void CanIndexWithNoErrors_DatetimeOffset()
+        public async Task CanIndexWithNoErrors_DatetimeOffset()
         {
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.Put("test/1", null,
                                            RavenJObject.Parse(
@@ -35,7 +34,7 @@ namespace Raven.Tests.MailingList
 }"),
                                            new RavenJObject
                                            {
-                                            {Constants.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
                                            });
 
                 store.DatabaseCommands.Put("test/2", null,
@@ -57,17 +56,17 @@ namespace Raven.Tests.MailingList
 }"),
                                        new RavenJObject
                                            {
-                                            {Constants.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
                                            });
 
 
                 store.DatabaseCommands.PutIndex("test",
                                                 new IndexDefinition
                                                 {
-                                                    Map =
+                                                    Maps = {
                                                     @"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
-",
+" },
                                                     Reduce =
                                                     @"results
     .GroupBy(result => result.AccountId)
@@ -76,14 +75,14 @@ namespace Raven.Tests.MailingList
                                                 });
 
                 WaitForIndexing(store);
-                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                TestHelper.AssertNoIndexErrors(store);
             }
         }
 
         [Fact]
-        public void CanIndexWithNoErrors_Datetime()
+        public async Task CanIndexWithNoErrors_Datetime()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.Put("test/1", null,
                                            RavenJObject.Parse(
@@ -104,7 +103,7 @@ namespace Raven.Tests.MailingList
 }"),
                                            new RavenJObject
                                            {
-                                            {Constants.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
                                            });
 
                 store.DatabaseCommands.Put("test/2", null,
@@ -126,17 +125,17 @@ namespace Raven.Tests.MailingList
 }"),
                                        new RavenJObject
                                            {
-                                            {Constants.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
                                            });
 
 
                 store.DatabaseCommands.PutIndex("test",
                                                 new IndexDefinition
                                                 {
-                                                    Map =
+                                                    Maps = {
                                                     @"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
-",
+" },
                                                     Reduce =
                                                     @"results
     .GroupBy(result => result.AccountId)
@@ -145,13 +144,8 @@ namespace Raven.Tests.MailingList
                                                 });
 
                 WaitForIndexing(store);
-
-                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                TestHelper.AssertNoIndexErrors(store);
             }
-        }
-        
-        protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
-        {
         }
     }
 }
