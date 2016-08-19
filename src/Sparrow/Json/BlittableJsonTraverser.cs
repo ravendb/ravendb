@@ -8,14 +8,18 @@ namespace Sparrow.Json
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
 
-        private const char PropertySeparator = '.';
-        private const char CollectionSeparator = ',';
+        public const char PropertySeparator = '.';
+        public const char CollectionSeparator = ',';
+
+        public static readonly char[] PropertySeparators =
+        {
+            PropertySeparator
+        };
 
         private readonly char[] _separators =
         {
             PropertySeparator,
             CollectionSeparator
-
         };
 
         public BlittableJsonTraverser(char[] nonDefaultSeparators = null)
@@ -24,7 +28,17 @@ namespace Sparrow.Json
                 _separators = nonDefaultSeparators;
         }
 
-        public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result)
+        public object Read(BlittableJsonReaderObject docReader, StringSegment path)
+        {
+            object result;
+            StringSegment leftPath;
+            if (TryRead(docReader, path, out result, out leftPath) == false)
+                throw new InvalidOperationException($"Invalid path: {path}.");
+
+            return result;
+        }
+
+        public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result, out StringSegment leftPath)
         {
             var indexOfFirstSeparator = path.IndexOfAny(_separators, 0);
             object reader;
@@ -32,12 +46,14 @@ namespace Sparrow.Json
             //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
             if (docReader.TryGetMember(path.SubSegment(0, indexOfFirstSeparator), out reader) == false)
             {
+                leftPath = path;
                 result = null;
                 return false;
             }
 
             if (indexOfFirstSeparator == -1)
             {
+                leftPath = path;
                 result = reader;
                 return true;
             }
@@ -49,50 +65,16 @@ namespace Sparrow.Json
                 case PropertySeparator:
                     var subObject = reader as BlittableJsonReaderObject;
                     if (subObject != null)
-                    {
-                        return TryRead(subObject, pathSegment, out result);
-                    }
+                        return TryRead(subObject, pathSegment, out result, out leftPath);
 
-                    BlittableJsonReaderArray array;
-                    switch (pathSegment)
-                    {
-                        case "Length":
-                            var lazyStringValue = reader as LazyStringValue;
-                            if (lazyStringValue != null)
-                            {
-                                result = lazyStringValue.Size;
-                                return true;
-                            }
-
-                            var lazyCompressedStringValue = reader as LazyCompressedStringValue;
-                            if (lazyCompressedStringValue != null)
-                            {
-                                result = lazyCompressedStringValue.UncompressedSize;
-                                return true;
-                            }
-
-                            array = reader as BlittableJsonReaderArray;
-                            if (array != null)
-                            {
-                                result = array.Length;
-                                return true;
-                            }
-                            break;
-                        case "Count":
-                            array = reader as BlittableJsonReaderArray;
-                            if (array != null)
-                            {
-                                result = array.Length;
-                                return true;
-                            }
-                            break;
-                    }
-
-                    throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader?.GetType()?.FullName ?? "null"} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}.");
+                    leftPath = pathSegment;
+                    result = reader;
+                    return false;
                 case CollectionSeparator:
                     var subArray = reader as BlittableJsonReaderArray;
                     if (subArray != null)
                     {
+                        leftPath = pathSegment;
                         result = ReadArray(subArray, pathSegment);
                         return true;
                     }
@@ -113,7 +95,8 @@ namespace Sparrow.Json
                 if (arrayObject != null)
                 {
                     object result;
-                    if (TryRead(arrayObject, pathSegment, out result))
+                    StringSegment leftPath;
+                    if (TryRead(arrayObject, pathSegment, out result, out leftPath))
                     {
                         var enumerable = result as IEnumerable;
 

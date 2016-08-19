@@ -1,23 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Document;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Daniel : RavenTest
+    public class Daniel : RavenTestBase
     {
-        [Fact]
-        public void Run()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task Run()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new Matches_PlayerStats().Execute(store);
-                store.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
                 using (var session = store.OpenSession())
                 {
                     session.Store(Create4x4Match());
@@ -31,7 +29,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public static Match4x4 Create4x4Match()
+        private static Match4x4 Create4x4Match()
         {
             var series = new List<Serie4x4>
             {
@@ -60,7 +58,8 @@ namespace Raven.Tests.MailingList
             };
             return match;
         }
-        public class Match4x4
+
+        private class Match4x4
         {
             public List<Team4x4> Teams { get; set; }
 
@@ -68,17 +67,17 @@ namespace Raven.Tests.MailingList
             public string Location { get; set; }
             public DateTimeOffset Date { get; set; }
         }
-        public class Team4x4
+        private class Team4x4
         {
             public List<Serie4x4> Series { get; set; }
             public string Name { get; set; }
             public int Score { get; set; }
         }
-        public class Serie4x4
+        private class Serie4x4
         {
             public List<Game4x4> Games { get; set; }
         }
-        public class Game4x4
+        private class Game4x4
         {
             public int? Strikes { get; set; }
             public int? Misses { get; set; }
@@ -89,7 +88,7 @@ namespace Raven.Tests.MailingList
             public int Pins { get; set; }
             public int Score { get; set; }
         }
-        public class Matches_PlayerStats : AbstractMultiMapIndexCreationTask<Matches_PlayerStats.Result>
+        private class Matches_PlayerStats : AbstractMultiMapIndexCreationTask<Matches_PlayerStats.Result>
         {
             public Matches_PlayerStats()
             {

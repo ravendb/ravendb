@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -9,33 +11,42 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
     public class PropertyAccessor
     {
-        public readonly Dictionary<string, DynamicGetter> Properties = new Dictionary<string, DynamicGetter>();
+        public readonly Dictionary<string, Accessor> Properties = new Dictionary<string, Accessor>();
 
         public static PropertyAccessor Create(Type type)
         {
-            if (type.GetTypeInfo().IsValueType)
-                throw new InvalidOperationException("We cannot create property accessor for value type: " + type.Name);
-
-            var accessor = new PropertyAccessor();
-
-            foreach (var prop in type.GetProperties())
-            {
-                accessor.Properties.Add(prop.Name, CreateGetMethod(prop, type));
-            }
-
-            return accessor;
+            return new PropertyAccessor(type);
         }
 
         public object GetValue(string name, object target)
         {
-            DynamicGetter getterMethod;
-            if (Properties.TryGetValue(name, out getterMethod))
-                return getterMethod(target);
+            Accessor accessor;
+            if (Properties.TryGetValue(name, out accessor))
+                return accessor.GetValue(target);
 
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        private static DynamicGetter CreateGetMethod(PropertyInfo propertyInfo, Type type)
+        private PropertyAccessor(Type type)
+        {
+            var isValueType = type.GetTypeInfo().IsValueType;
+            foreach (var prop in type.GetProperties())
+            {
+                var getMethod = isValueType
+                    ? (Accessor)CreateGetMethodForValueType(prop, type)
+                    : CreateGetMethodForClass(prop, type);
+
+                Properties.Add(prop.Name, getMethod);
+            }
+        }
+
+        private static ValueTypeAccessor CreateGetMethodForValueType(PropertyInfo prop, Type type)
+        {
+            var binder = Binder.GetMember(CSharpBinderFlags.None, prop.Name, type, new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) });
+            return new ValueTypeAccessor(CallSite<Func<CallSite, object, object>>.Create(binder));
+        }
+
+        private static ClassAccessor CreateGetMethodForClass(PropertyInfo propertyInfo, Type type)
         {
             var getMethod = propertyInfo.GetGetMethod();
 
@@ -60,7 +71,42 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             generator.Emit(OpCodes.Ret);
 
-            return (DynamicGetter)getterMethod.CreateDelegate(typeof(DynamicGetter));
+            return new ClassAccessor((DynamicGetter)getterMethod.CreateDelegate(typeof(DynamicGetter)));
+        }
+
+        private class ValueTypeAccessor : Accessor
+        {
+            private readonly CallSite<Func<CallSite, object, object>> _callSite;
+
+            public ValueTypeAccessor(CallSite<Func<CallSite, object, object>> callSite)
+            {
+                _callSite = callSite;
+            }
+
+            public override object GetValue(object target)
+            {
+                return _callSite.Target(_callSite, target);
+            }
+        }
+
+        private class ClassAccessor : Accessor
+        {
+            private readonly DynamicGetter _dynamicGetter;
+
+            public ClassAccessor(DynamicGetter dynamicGetter)
+            {
+                _dynamicGetter = dynamicGetter;
+            }
+
+            public override object GetValue(object target)
+            {
+                return _dynamicGetter(target);
+            }
+        }
+
+        public abstract class Accessor
+        {
+            public abstract object GetValue(object target);
         }
     }
 }

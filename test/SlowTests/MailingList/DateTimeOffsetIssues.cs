@@ -1,15 +1,14 @@
 using System;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class DateTimeOffsetIssues : RavenTest
+    public class DateTimeOffsetIssues : RavenTestBase
     {
-        public class Book
+        private class Book
         {
             public string Id { get; set; }
             public string Author { get; set; }
@@ -17,18 +16,18 @@ namespace Raven.Tests.MailingList
 
         [Theory]
         [InlineData("2011-11-05T13:09:17.5402774")]
-        [InlineData("2011-11-05T13:09:17.540277")]	
+        [InlineData("2011-11-05T13:09:17.540277")]
 
-        public void Adding_DateTimeOffset_To_metadata_should_fetch_it_as_DateTimeOffset(string expectedDateTimeString)
+        public async Task Adding_DateTimeOffset_To_metadata_should_fetch_it_as_DateTimeOffset(string expectedDateTimeString)
         {
-            using (var _documentStore = NewRemoteDocumentStore(runInMemory: false))
+            using (var store = await GetDocumentStore())
             {
 
                 // Arrange
                 string bookId;
                 var expectedDateTime = DateTimeOffset.Parse(expectedDateTimeString);
 
-                using (var session = _documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var entity = new Book { Author = "dane" };
                     session.Store(entity);
@@ -38,7 +37,7 @@ namespace Raven.Tests.MailingList
 
                 // Act
                 // Add metadata to the entity
-                using (var session = _documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var book = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(book);
@@ -47,7 +46,7 @@ namespace Raven.Tests.MailingList
                 }
 
                 // Try get metadata
-                using (var session = _documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
@@ -57,7 +56,7 @@ namespace Raven.Tests.MailingList
                 }
 
                 // Change the entity
-                using (var session = _documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var book = session.Load<Book>(bookId);
                     book.Author = "Jane Doe";
@@ -66,13 +65,12 @@ namespace Raven.Tests.MailingList
 
                 // Assert
                 // Try to get the metadata back as DateTime
-                using (var session = _documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    var result = new DateTimeOffset();
-                    Assert.DoesNotThrow(() => result = metadata.Value<DateTimeOffset>("DateTime-ToCheck")); // An exception should not be thrown here, after changing the entity
+                    var result = metadata.Value<DateTimeOffset>("DateTime-ToCheck"); // An exception should not be thrown here, after changing the entity
 
                     Assert.Equal(expectedDateTime, result);
                 }
@@ -83,11 +81,11 @@ namespace Raven.Tests.MailingList
         [Theory]
         [InlineData("2011-11-05T13:09:17.5402774")]
         [InlineData("2011-11-05T13:09:17.540277")]
-        public void Adding_DateTime_to_metadata_should_fetch_it_as_DateTime(string expectedDateTimeString)
+        public async Task Adding_DateTime_to_metadata_should_fetch_it_as_DateTime(string expectedDateTimeString)
         {
-            using(var _documentStore = NewRemoteDocumentStore(runInMemory:false))
+            using (var _documentStore = await GetDocumentStore())
             {
-                
+
                 // Arrange
                 string bookId;
                 var expectedDateTime = DateTime.Parse(expectedDateTimeString);
@@ -117,12 +115,12 @@ namespace Raven.Tests.MailingList
                     var metadata = session.Advanced.GetMetadataFor(entity);
                     var result = metadata.Value<DateTime>("DateTime-ToCheck"); // No exception is thrown here
                     Assert.IsType<DateTime>(result);
-                    Assert.Equal(expectedDateTime,result);
+                    Assert.Equal(expectedDateTime, result);
                 }
 
                 // Change the entity
                 using (var session = _documentStore.OpenSession())
-                {		
+                {
                     var book = session.Load<Book>(bookId);
                     book.Author = "Jane Doe";
                     session.SaveChanges();
@@ -134,10 +132,9 @@ namespace Raven.Tests.MailingList
                 {
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
-                    
-                    var result = new DateTime();
-                    Assert.DoesNotThrow(() => result = metadata.Value<DateTime>("DateTime-ToCheck")); // An exception should not be thrown here, after changing the entity
-                                        
+
+                    var result = metadata.Value<DateTime>("DateTime-ToCheck"); // An exception should not be thrown here, after changing the entity
+
                     Assert.Equal(expectedDateTime, result);
                 }
             }

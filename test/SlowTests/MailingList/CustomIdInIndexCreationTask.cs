@@ -3,24 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class CustomIdInIndexCreationTask : RavenTest
+    public class CustomIdInIndexCreationTask : RavenTestBase
     {
-
-        public class Task
+        private class Task
         {
             public string id { get; set; }
             public string Name { get; set; }
         }
 
-        public class Task_Index : AbstractIndexCreationTask<Task, Task_Index.TaskIndexData>
+        private class Task_Index : AbstractIndexCreationTask<Task, Task_Index.TaskIndexData>
         {
             public class TaskIndexData
             {
@@ -52,21 +52,20 @@ namespace Raven.Tests.MailingList
                 Conventions = convention
             }.CreateIndexDefinition();
 
-            Assert.Contains("__document_id", indexDefinition.Map);
+            Assert.Contains("__document_id", indexDefinition.Maps.First());
         }
 
 
         [Fact]
-        public void GenerateCorrectIndex()
+        public async System.Threading.Tasks.Task GenerateCorrectIndex()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.Conventions.FindIdentityProperty = info => info.Name == "id";
                 new Task_Index().Execute(store);
 
                 var indexDefinition = store.DatabaseCommands.GetIndex("Task/Index");
-                Assert.Contains("__document_id", indexDefinition.Map);
-        
+                Assert.Contains("__document_id", indexDefinition.Maps.First());
             }
         }
     }

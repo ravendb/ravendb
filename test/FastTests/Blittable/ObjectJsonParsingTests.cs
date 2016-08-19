@@ -57,8 +57,7 @@ namespace FastTests.Blittable
                         [Constants.DocumentIdFieldName] = "tracks/1",
                     };
 
-                    object value;
-                    traverser.TryRead(inputJson, "Title", out value);
+                    var value = traverser.Read(inputJson, "Title");
 
                     output["Title"] = value;
 

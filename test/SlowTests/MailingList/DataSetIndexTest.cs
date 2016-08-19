@@ -2,29 +2,24 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-using Raven.Tests.Helpers.Util;
-
+using Raven.Server.Config;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class DataSetIndexTest : RavenTestBase
     {
         private const int MaxNumberOfItemsInDataSet = 50;
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        [Fact(Skip = "Missing feature: CreateField")]
+        public async Task can_execute_query_default()
         {
-            configuration.Modify(x => x.Indexing.MaxSimpleIndexOutputsPerDocument, 100);
-        }
-
-        [Fact]
-        public void can_execute_query_default()
-        {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
             {
                 new DataSetIndex().Execute(store);
 
@@ -49,10 +44,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
-        public void can_execute_query_lazily()
+        [Fact(Skip = "Missing feature: CreateField")]
+        public async Task can_execute_query_lazily()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
             {
                 new DataSetIndex().Execute(store);
 
@@ -86,7 +81,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class DataSet
+        private class DataSet
         {
             public string Id { get; set; }
             public List<Item> Items { get; set; }
@@ -94,13 +89,13 @@ namespace Raven.Tests.MailingList
             public DateTime Date { get; set; }
         }
 
-        public class Item
+        private class Item
         {
             public List<Attribute> Attributes { get; set; }
             public string SongId { get; set; }
         }
 
-        public class Attribute
+        private class Attribute
         {
             public Attribute() { }
             public Attribute(string name, object value)
@@ -136,7 +131,7 @@ namespace Raven.Tests.MailingList
             session.SaveChanges();
         }
 
-        public class DataSetIndex : AbstractIndexCreationTask<DataSet, DataSetIndex.Result>
+        private class DataSetIndex : AbstractIndexCreationTask<DataSet, DataSetIndex.Result>
         {
             public class Result
             {
@@ -166,15 +161,15 @@ namespace Raven.Tests.MailingList
                          from result in results
                          group result by new { result.SongId, result.StationId }
                              into g
-                             select new
-                             {
-                                 SongId = g.Key.SongId,
-                                 StationId = g.Key.StationId,
-                                 Date = g.OrderByDescending(x => x.Date).Select(x => x.Date).FirstOrDefault(),
-                                 SetId = g.OrderByDescending(x => x.Date).Select(x => x.SetId).FirstOrDefault(),
-                                 Attributes = g.OrderByDescending(x => x.Date).First().Attributes,
-                                 _ = g.OrderByDescending(x => x.Date).First().Attributes.Select(x => CreateField(x.Name, x.Value))
-                             };
+                         select new
+                         {
+                             SongId = g.Key.SongId,
+                             StationId = g.Key.StationId,
+                             Date = g.OrderByDescending(x => x.Date).Select(x => x.Date).FirstOrDefault(),
+                             SetId = g.OrderByDescending(x => x.Date).Select(x => x.SetId).FirstOrDefault(),
+                             Attributes = g.OrderByDescending(x => x.Date).First().Attributes,
+                             _ = g.OrderByDescending(x => x.Date).First().Attributes.Select(x => CreateField(x.Name, x.Value))
+                         };
 
                 Sort(x => x.Date, SortOptions.String);
 

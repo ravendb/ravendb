@@ -77,7 +77,7 @@ namespace Raven.Server.Utils
 
             foreach (var property in accessor.Properties)
             {
-                var propertyValue = property.Value(value);
+                var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
                 {
@@ -91,7 +91,7 @@ namespace Raven.Server.Utils
             return inner;
         }
 
-        public static unsafe dynamic DynamicConvert(object value)
+        public static dynamic DynamicConvert(object value)
         {
             if (value == null)
                 return DynamicNullObject.Null;
@@ -103,6 +103,14 @@ namespace Raven.Server.Utils
             var jsonArray = value as BlittableJsonReaderArray;
             if (jsonArray != null)
                 return new DynamicArray(jsonArray);
+
+            return ConvertForIndexing(value);
+        }
+
+        public static unsafe object ConvertForIndexing(object value)
+        {
+            if (value == null)
+                return null;
 
             var lazyString = value as LazyStringValue;
             if (lazyString == null)
@@ -120,7 +128,7 @@ namespace Raven.Server.Utils
                 var firstChar = (char)lazyString.Buffer[0];
 
                 //optimizations, don't try to call TryParse if first char isn't a digit or '-'
-                if (Char.IsDigit(firstChar) == false && firstChar != '-')
+                if (char.IsDigit(firstChar) == false && firstChar != '-')
                     return value;
 
                 // optimize this
@@ -214,7 +222,7 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException(String.Format("Unable to find suitable conversion for {0} since it is not predefined ", value), e);
+                throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value), e);
             }
         }
 

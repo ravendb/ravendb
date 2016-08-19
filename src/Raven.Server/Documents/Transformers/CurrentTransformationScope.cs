@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Transformers
 
             foreach (var property in accessor.Properties)
             {
-                var propertyValue = property.Value(value);
+                var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
                 {

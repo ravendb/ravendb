@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     foreach (var field in _fields)
                     {
-                        var value = accessor.Properties[field](document);
+                        var value = accessor.Properties[field].GetValue(document);
                         mapResult[field] = TypeConverter.ConvertType(value, _parent._indexContext);
 
                         if (_groupByFields.Contains(field))

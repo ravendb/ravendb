@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Transformers
                         var value = new DynamicJsonValue();
                         foreach (var property in accessor.Properties)
                         {
-                            var propertyValue = property.Value(transformedResult);
+                            var propertyValue = property.Value.GetValue(transformedResult);
                             value[property.Key] = TypeConverter.ConvertType(propertyValue, _context);
                         }
 
