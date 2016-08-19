@@ -3,23 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing.Collation.Cultures;
-using Raven.Tests.Common;
-
-using Xunit;
 using Raven.Client.Linq;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation.Cultures;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Groenewoud : RavenTest
+    public class Groenewoud : RavenTestBase
     {
-        public struct ZipCityStateCountry
+        private struct ZipCityStateCountry
         {
             public string ZipCode { get; set; }
 
@@ -35,15 +34,17 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class ZC_CountryCityStateCodeACIndex : AbstractIndexCreationTask<ZipCityStateCountry,
+        private class ZC_CountryCityStateCodeACIndex : AbstractIndexCreationTask<ZipCityStateCountry,
             ZC_CountryCityStateCodeACIndex.Result>
         {
             public class Result
             {
+#pragma warning disable 649
                 public string City;
                 public string CountryCode;
                 public string StateCode;
                 public string CityOrder;
+#pragma warning restore 649
             }
 
             public ZC_CountryCityStateCodeACIndex()
@@ -61,14 +62,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
-        {
-        }
-
         [Fact]
-        public void CanSortInGerman()
+        public async Task CanSortInGerman()
         {
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ZC_CountryCityStateCodeACIndex().Execute(store);
                 using (var session = store.OpenSession())

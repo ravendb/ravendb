@@ -1,31 +1,29 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Gal : RavenTest
+    public class Gal : RavenTestBase
     {
-        public class BlogPost
+        private class BlogPost
         {
             public Guid Id { get; set; }
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void UsingInQuery()
+        [Fact(Skip = "TODO arek: how to handle queries with @in<__document_id>() only")]
+        public async Task UsingInQuery()
         {
-
             var id1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var id2 = Guid.Parse("00000000-0000-0000-0000-000000000002");
             var id3 = Guid.Parse("00000000-0000-0000-0000-000000000003");
 
-
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

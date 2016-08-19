@@ -3,29 +3,30 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class FirstOrDefaultNullableDate : RavenTest
+    public class FirstOrDefaultNullableDate : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public DateTime? At { get; set; }
-        } 
+        }
 
-        public class Index : AbstractIndexCreationTask<Item, Item>
+        private class Index : AbstractIndexCreationTask<Item, Item>
         {
             public Index()
             {
                 Map = items =>
                       from item in items
-                      select new {item.At};
+                      select new { item.At };
                 Reduce = items =>
                          from item in items
                          group item by 1
@@ -37,10 +38,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
-        public void ShouldWork()
+        [Fact(Skip = "TODO: arek - group by 1")]
+        public async Task ShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new Index().Execute(store);
             }

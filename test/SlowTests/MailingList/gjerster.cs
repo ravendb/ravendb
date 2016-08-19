@@ -1,27 +1,23 @@
-using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class gjerster : RavenTest
+    public class gjerster : RavenTestBase
     {
         [Theory]
         [InlineData("singa*")]
         [InlineData("pte")]
         [InlineData("ltd")]
         [InlineData("*inga*")]
-        public void CanSearchWithPrefixWildcard(string query)
+        public async Task CanSearchWithPrefixWildcard(string query)
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new SampleDataIndex().Execute(store);
 
@@ -47,45 +43,45 @@ namespace Raven.Tests.MailingList
                             .As<SampleData>()
                             .Take(10)
                             .ToList();
-                    if(result.Count == 0)
+                    if (result.Count == 0)
                     {
-                        
+
                     }
                     Assert.NotEmpty(result);
                 }
             }
         }
-    }
 
-    public class SampleData
-    {
-        public string Name { get; set; }
-        public string Description { get; set; }
-    }
-
-    public class SampleDataIndex : AbstractIndexCreationTask<SampleData, SampleDataIndex.ReducedResult>
-    {
-        public SampleDataIndex()
+        private class SampleData
         {
-            Map = docs => from doc in docs
-                          select new
-                          {
-                              Query = new object[]
+            public string Name { get; set; }
+            public string Description { get; set; }
+        }
+
+        private class SampleDataIndex : AbstractIndexCreationTask<SampleData, SampleDataIndex.ReducedResult>
+        {
+            public SampleDataIndex()
+            {
+                Map = docs => from doc in docs
+                              select new
                               {
+                                  Query = new object[]
+                                  {
                                   doc.Name,
                                   doc.Description
-                              }
-                          };
-            Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+                                  }
+                              };
+                Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+            }
+
+            #region Nested type: ReducedResult
+
+            public class ReducedResult
+            {
+                public string Query { get; set; }
+            }
+
+            #endregion
         }
-
-        #region Nested type: ReducedResult
-
-        public class ReducedResult
-        {
-            public string Query { get; set; }
-        }
-
-        #endregion
     }
 }

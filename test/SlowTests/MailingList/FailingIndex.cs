@@ -3,34 +3,44 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class FailingAuthIndex : RavenTest
+    public class FailingAuthIndex : RavenTestBase
     {
-        public class Team
+        private class Team
         {
+#pragma warning disable 649
             public string OwnerId;
             public Developer[] Developers;
-        }
-        public class Developer
-        {
-            public string UserId;
+#pragma warning restore 649
         }
 
-         [Fact]
-         public void ShouldBeAbleToCreate()
-         {
-             using (var store = NewDocumentStore())
-             {
+        private class Developer
+        {
+#pragma warning disable 649
+            public string UserId;
+#pragma warning restore 649
+        }
+
+        public class User
+        {
+            public string Id { get; set; }
+        }
+
+        [Fact]
+        public async Task ShouldBeAbleToCreate()
+        {
+            using (var store = await GetDocumentStore())
+            {
                 using (var session = store.OpenSession())
                 {
-                    var user = new User {Id = "users/1234"};
+                    var user = new User { Id = "users/1234" };
 
                     var teams = from team in session.Query<Team>()
                                 where team.Developers.Any(d => d.UserId == user.Id)
@@ -39,12 +49,12 @@ namespace Raven.Tests.MailingList
                     teams.ToArray();
 
                     teams = from team in session.Query<Team>().Customize(x => x.Include<Team>(t => t.OwnerId))
-                                where team.OwnerId == user.Id || team.Developers.Any(d => d.UserId == user.Id)
-                                select team;
+                            where team.OwnerId == user.Id || team.Developers.Any(d => d.UserId == user.Id)
+                            select team;
 
                     teams.ToArray();
                 }
-             }
-         }
+            }
+        }
     }
 }

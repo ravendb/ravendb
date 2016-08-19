@@ -1,95 +1,96 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class FormOpensByDateAndMediaSourceAndVersionTest : RavenTest
+    public class FormOpensByDateAndMediaSourceAndVersionTest : RavenTestBase
     {
-        private readonly IDocumentStore store;
-
-
-        public FormOpensByDateAndMediaSourceAndVersionTest()
-        {
-            store = NewDocumentStore();
-            store.DatabaseCommands.DisableAllCaching();
-            store.ExecuteIndex(new FormOpensByDateAndMediaSourceAndVersion());
-        }
-
         [Fact]
-        public void ShouldWork()
+        public async Task ShouldWork()
         {
-            InitData();
-            using (var session = store.OpenSession())
+            using (var store = await GetDocumentStore())
             {
-                var queryable = session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
-                    FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
-                    .Customize(x => x.WaitForNonStaleResults());
-                var list = queryable.ToList();
-                PrintOutMapReduceResults(list);
-                Assert.True(list.Any());
-            }
-        }
-
-        [Fact]
-        public void Should_return_18_after_aggregation()
-        {
-            InitData();
-            IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
-            int value = 0;
-            using (var session = store.OpenSession())
-            {
-                queryable =
-                    session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
+                InitData(store);
+                using (var session = store.OpenSession())
+                {
+                    var queryable = session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
                         FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
                         .Customize(x => x.WaitForNonStaleResults());
-                value = Aggregate(queryable);
+                    var list = queryable.ToList();
+                    PrintOutMapReduceResults(list);
+                    Assert.True(list.Any());
+                }
             }
-            Assert.Equal(18, value);
         }
 
         [Fact]
-        public void Should_return_12_after_aggregating_all_GOO()
+        public async Task Should_return_18_after_aggregation()
         {
-            InitData();
-            IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
-            int value = 0;
-            using (var session = store.OpenSession())
+            using (var store = await GetDocumentStore())
             {
-                queryable =
-                    session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
-                        FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.MediaSource == "GOO");
-                value = Aggregate(queryable);
+                InitData(store);
+                IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
+                int value = 0;
+                using (var session = store.OpenSession())
+                {
+                    queryable =
+                        session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
+                                FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
+                            .Customize(x => x.WaitForNonStaleResults());
+                    value = Aggregate(queryable);
+                }
+                Assert.Equal(18, value);
             }
-            Assert.Equal(12, value);
         }
 
         [Fact]
-        public void Should_return_3_after_aggregating_all_GOO_Version_5_on_20120902()
+        public async Task Should_return_12_after_aggregating_all_GOO()
         {
-            InitData();
-            IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
-            int value = 0;
-            using (var session = store.OpenSession())
+            using (var store = await GetDocumentStore())
             {
-                queryable =
-                    session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
-                        FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.MediaSource == "GOO")
-                        .Where(x => x.Version == "5");
-                value = Aggregate(queryable, new DateTime(2012, 9, 2, 1, 1, 1));
+                InitData(store);
+                IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
+                int value = 0;
+                using (var session = store.OpenSession())
+                {
+                    queryable =
+                        session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
+                                FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.MediaSource == "GOO");
+                    value = Aggregate(queryable);
+                }
+                Assert.Equal(12, value);
             }
-            Assert.Equal(3, value);
+        }
+
+        [Fact]
+        public async Task Should_return_3_after_aggregating_all_GOO_Version_5_on_20120902()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                InitData(store);
+                IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
+                int value = 0;
+                using (var session = store.OpenSession())
+                {
+                    queryable =
+                        session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
+                            FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.MediaSource == "GOO")
+                            .Where(x => x.Version == "5");
+                    value = Aggregate(queryable, new DateTime(2012, 9, 2, 1, 1, 1));
+                }
+                Assert.Equal(3, value);
+            }
         }
 
         private static void PrintOutMapReduceResults(
@@ -104,7 +105,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public int Aggregate(IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable)
+        private int Aggregate(IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable)
         {
             return queryable
                 .Take(1024)
@@ -112,7 +113,7 @@ namespace Raven.Tests.MailingList
                 .Sum(x => x.Count);
         }
 
-        public int Aggregate(IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable,
+        private int Aggregate(IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable,
                              DateTime date)
         {
             return queryable
@@ -132,8 +133,11 @@ namespace Raven.Tests.MailingList
             return queryable.Where(x => startDate <= x.Date && x.Date < endDate).ToList();
         }
 
-        private void InitData()
+        private void InitData(IDocumentStore store)
         {
+            store.DatabaseCommands.DisableAllCaching();
+            store.ExecuteIndex(new FormOpensByDateAndMediaSourceAndVersion());
+
             var date0901 = new DateTime(2012, 9, 1, 1, 2, 3);
             var date0902 = new DateTime(2012, 9, 2, 1, 2, 3);
             var date0903 = new DateTime(2012, 9, 3, 1, 2, 3);
@@ -280,7 +284,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        public class FormOpensByDateAndMediaSourceAndVersion :
+        private class FormOpensByDateAndMediaSourceAndVersion :
             AbstractMultiMapIndexCreationTask
                 <CountByDateAndMediaSourceAndVersion_MapReduceResult>
         {
@@ -313,21 +317,21 @@ namespace Raven.Tests.MailingList
                     group result by
                         new { result.Date, result.Year, result.Month, result.Day, result.MediaSource, result.Version }
                         into agg
-                        select
-                            new
-                            {
-                                Date = agg.Key.Date,
-                                Year = agg.Key.Year,
-                                Month = agg.Key.Month,
-                                Day = agg.Key.Day,
-                                MediaSource = agg.Key.MediaSource,
-                                Version = agg.Key.Version,
-                                Count = agg.Sum(x => x.Count)
-                            };
+                    select
+                        new
+                        {
+                            Date = agg.Key.Date,
+                            Year = agg.Key.Year,
+                            Month = agg.Key.Month,
+                            Day = agg.Key.Day,
+                            MediaSource = agg.Key.MediaSource,
+                            Version = agg.Key.Version,
+                            Count = agg.Sum(x => x.Count)
+                        };
             }
         }
 
-        public class CountByDateAndMediaSourceAndVersion_MapReduceResult
+        private class CountByDateAndMediaSourceAndVersion_MapReduceResult
         {
             public DateTime Date { get; set; }
             public int Year { get; set; }
@@ -338,7 +342,7 @@ namespace Raven.Tests.MailingList
             public int Count { get; set; }
         }
 
-        public class FormOpen
+        private class FormOpen
         {
             public string Id { get; set; }
             public MetaData MetaData { get; set; }
@@ -346,7 +350,7 @@ namespace Raven.Tests.MailingList
             public Visit Visit { get; set; }
         }
 
-        public class MetaData
+        private class MetaData
         {
             public string Version { get; set; }
             public DateTime CreatedDate { get; set; }
@@ -367,7 +371,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Visit
+        private class Visit
         {
             public string Id { get; set; }
             public MetaData MetaData { get; set; }

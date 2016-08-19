@@ -1,17 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class FilterIndexTest : RavenTestBase
     {
-        public class Appointment
+        private class Appointment
         {
             public string Id { get; set; }
             public List<string> ProductIds { get; set; }
@@ -31,9 +30,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void CanFilterByProductId()
+        public async Task CanFilterByProductId()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 var productIds = new string[] { "products/1", "products/2" };
                 var productIds2 = new string[] { "products/3", "products/4" };

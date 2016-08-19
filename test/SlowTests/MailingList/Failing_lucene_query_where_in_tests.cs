@@ -1,32 +1,33 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Failing_lucene_query_where_in_tests : RavenTest
+    public class Failing_lucene_query_where_in_tests : RavenTestBase
     {
-        public class Contract
+        private class Contract
         {
             public string Cno { get; set; }
             public IEnumerable<ContractDetail> ContractDetails { get; set; }
             public string Id { get; set; }
         }
 
-
-        public class ContractDetail
+        private class ContractDetail
         {
             public int DetailsId { get; set; }
             public string Grade { get; set; }
         }
 
-        public class ContractDto
+        private class ContractDto
         {
             public string Cno { get; set; }
             public int DetailsId { get; set; }
@@ -34,7 +35,7 @@ namespace Raven.Tests.MailingList
             public string Id { get; set; }
         }
 
-        public class Contract_ToContractListViewModel : AbstractIndexCreationTask<Contract, ContractDto>
+        private class Contract_ToContractListViewModel : AbstractIndexCreationTask<Contract, ContractDto>
         {
             public Contract_ToContractListViewModel()
             {
@@ -69,24 +70,21 @@ namespace Raven.Tests.MailingList
             };
         }
 
-        protected override void ModifyStore(Client.Embedded.EmbeddableDocumentStore documentStore)
+        protected override void ModifyStore(DocumentStore store)
         {
-            documentStore.RegisterListener(new NonStaleQueryListener());
-        }
-
-        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-        {
-            new Contract_ToContractListViewModel().Execute(documentStore);
+            store.RegisterListener(new NonStaleQueryListener());
         }
 
         [Fact]
-        public void Failing_query_using_embedded_store_but_works_against_real_database()
+        public async Task Failing_query_using_embedded_store_but_works_against_real_database()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
+                new Contract_ToContractListViewModel().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(contract);
@@ -98,9 +96,9 @@ namespace Raven.Tests.MailingList
                 {
                     var contractDetails = new[] { 1, 2 };
 
-                    var query =
-                        session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>()
-                               .WhereIn(c => c.DetailsId, contractDetails);
+                    var query = session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>()
+                            .Projection<Contract, ContractDto>()
+                            .WhereIn(c => c.DetailsId, contractDetails);
 
                     // returns --> "@in<DetailsId>:(1,2)"
 
@@ -114,13 +112,15 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void Failing_lucene_query_where_in()
+        public async Task Failing_lucene_query_where_in()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
+                new Contract_ToContractListViewModel().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(contract);
@@ -134,12 +134,12 @@ namespace Raven.Tests.MailingList
                     var contractA = session.Load<Contract>("contracts-1");
                     Assert.Equal(2, contractA.ContractDetails.Count());
 
-
                     var contractDetails = new int[] { };
 
                     var query =
-                        session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>()
-                               .WhereIn(c => c.DetailsId, contractDetails);
+                        session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>()
+                            .Projection<Contract, ContractDto>()
+                            .WhereIn(c => c.DetailsId, contractDetails);
 
                     var results = query.ToList();
 
@@ -152,19 +152,20 @@ namespace Raven.Tests.MailingList
 
 
         [Fact]
-        public void Failing_query_using_embedded_store1()
+        public async Task Failing_query_using_embedded_store1()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
+                new Contract_ToContractListViewModel().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(contract);
                     session.SaveChanges();
                 }
-
 
                 using (var session = store.OpenSession())
                 {
@@ -183,19 +184,20 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void Failing_query_using_embedded_store2()
+        public async Task Failing_query_using_embedded_store2()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
+                new Contract_ToContractListViewModel().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(contract);
                     session.SaveChanges();
                 }
-
 
                 using (var session = store.OpenSession())
                 {
@@ -203,7 +205,9 @@ namespace Raven.Tests.MailingList
                     Assert.Equal(2, contractA.ContractDetails.Count());
 
                     // Act
-                    var queryB = session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>().ToList();
+                    var queryB = session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>()
+                        .Projection<Contract, ContractDto>()
+                        .ToList();
 
                     // Assert
                     // This works against the real database, but not using the NewDocumentStore
@@ -226,7 +230,7 @@ namespace Raven.Tests.MailingList
     {
         public static IDocumentQuery<TS> Projection<T, TS>(this IDocumentQuery<T> query)
         {
-            return query.SelectFields<TS>(typeof(TS).GetProperties().Select(x => x.Name).ToArray());
+            return query.SelectFields<TS>(typeof(TS).GetTypeInfo().GetProperties().Select(x => x.Name).ToArray());
         }
     }
 }
