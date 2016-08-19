@@ -1,24 +1,25 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class EnumAsInts : RavenTest
+    public class EnumAsInts : RavenTestBase
     {
-        public enum Flags
+        private enum Flags
         {
             One = 1,
             Two = 2,
             Four = 4
         }
-        public class Item
+        private class Item
         {
             public Flags Flags { get; set; }
         }
-        public class Index : AbstractIndexCreationTask<Item>
+
+        private class Index : AbstractIndexCreationTask<Item>
         {
             public Index()
             {
@@ -28,10 +29,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
-        public void CanWork()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task CanWork()
         {
-            using(var store = NewDocumentStore())
+            using(var store = await GetDocumentStore())
             {
                 store.Conventions.SaveEnumsAsIntegers = true;
                 new Index().Execute(store);

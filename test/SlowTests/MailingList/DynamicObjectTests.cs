@@ -1,6 +1,3 @@
-using Raven.Client;
-using Raven.Client.Indexes;
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,13 +5,13 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class DynamicObjectTests : RavenTestBase
     {
@@ -24,9 +21,9 @@ namespace Raven.Tests.MailingList
         /// some interesting exceptions
         /// </summary>
         [Fact]
-        public void GetAllRecordsWithXtraFields()
+        public async Task GetAllRecordsWithXtraFields()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new FakeObjsIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -52,9 +49,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void GetAllRecordsWithOutXtraFields()
+        public async Task GetAllRecordsWithOutXtraFields()
         {
-            using (var store = NewDocumentStore(runInMemory: false))
+            using (var store = await GetDocumentStore())
             {
                 new FakeObjsIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -109,7 +106,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        public abstract class FakeDynamicRecordBase : System.Dynamic.DynamicObject
+        private abstract class FakeDynamicRecordBase : System.Dynamic.DynamicObject
         {
             public event PropertyChangedEventHandler PropertyChanged;
             private Dictionary<string, object> vals = new Dictionary<string, object>();
@@ -224,7 +221,7 @@ namespace Raven.Tests.MailingList
 
         }
 
-        public abstract class FakeSecondLevelBase : FakeDynamicRecordBase
+        private abstract class FakeSecondLevelBase : FakeDynamicRecordBase
         {
             public enum AgeReturnUnits
             {
@@ -296,12 +293,12 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class FinalFakeObj : FakeSecondLevelBase
+        private class FinalFakeObj : FakeSecondLevelBase
         {
             public FinalFakeObj() : base("FinalFakeObj") { }
         }
 
-        public class FakeObjsIndex : AbstractMultiMapIndexCreationTask
+        private class FakeObjsIndex : AbstractMultiMapIndexCreationTask
         {
             public FakeObjsIndex()
             {

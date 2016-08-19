@@ -3,25 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using Raven.Tests.Common;
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class DicWithDateTimeKeys : RavenTest
+    public class DicWithDateTimeKeys : RavenTestBase
     {
-        public class A
+        private class A
         {
             public IDictionary<DateTimeOffset, string> Items { get; set; }
         }
 
-
         [Fact]
-        public void CanSaveAndLoad()
+        public async Task CanSaveAndLoad()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 var dateTimeOffset = DateTimeOffset.Now;
                 using (var session = store.OpenSession())

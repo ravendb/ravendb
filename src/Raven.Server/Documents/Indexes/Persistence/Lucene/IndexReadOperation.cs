@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _searcher.SetDefaultFieldSortScoring(true, false);
                 try
                 {
-                    return _searcher.Search(documentQuery, null, minPageSize, sort); ;
+                    return _searcher.Search(documentQuery, null, minPageSize, sort);
                 }
                 finally
                 {

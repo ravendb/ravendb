@@ -3,19 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Embedded;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class DistinctBug : RavenTest
+    public class DistinctBug : RavenTestBase
     {
-
-        public class TestClass
+        private class TestClass
         {
             public string Id { get; set; }
 
@@ -24,18 +24,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void DistinctByValue()
+        public async Task DistinctByValue()
         {
-            var str = new EmbeddableDocumentStore
-            {
-                RunInMemory = true,
-                Conventions = { IdentityPartsSeparator = "-" },
-                UseEmbeddedHttpServer = true,
-
-            };
-            str.Configuration.Storage.AllowOn32Bits = true;
-            using (var store = str
-                 .Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

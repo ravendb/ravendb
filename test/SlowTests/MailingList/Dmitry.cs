@@ -1,26 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Dmitry : RavenTest
+    public class Dmitry : RavenTestBase
     {
         [Fact]
         public void DeepEqualsWorksWithTimeSpan()
         {
             var content = new MusicContent
             {
-                Title = String.Format("Song # {0}", 1),
-                Album = String.Format("Album # {0}", 1)
+                Title = string.Format("Song # {0}", 1),
+                Album = string.Format("Album # {0}", 1)
             };
             content.Keywords.Add("new");
 
@@ -31,9 +30,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void TimeSpanWontTriggerPut()
+        public async Task TimeSpanWontTriggerPut()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new MusicSearchIndex().Execute(store);
 
@@ -43,12 +42,12 @@ namespace Raven.Tests.MailingList
                     for (int i = 0; i < 100; i++)
                     {
                         var content = new MusicContent
-                                        {
-                                            Title = String.Format("Song # {0}", i + 1),
-                                            Album = String.Format("Album # {0}", (i%8) + 1)
-                                        };
+                        {
+                            Title = string.Format("Song # {0}", i + 1),
+                            Album = string.Format("Album # {0}", (i % 8) + 1)
+                        };
 
-                        if (i > 0 && i%10 == 0)
+                        if (i > 0 && i % 10 == 0)
                         {
                             content.Keywords.Add("new");
                         }
@@ -73,11 +72,10 @@ namespace Raven.Tests.MailingList
 
                     Assert.False(session.Advanced.HasChanges);
                 }
-
             }
         }
 
-        public class MusicSearchIndex : AbstractIndexCreationTask<MusicContent, MusicSearchIndex.ReduceResult>
+        private class MusicSearchIndex : AbstractIndexCreationTask<MusicContent, MusicSearchIndex.ReduceResult>
         {
             public class ReduceResult
             {
@@ -105,7 +103,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public abstract class Content
+        private abstract class Content
         {
             protected Content()
             {
@@ -119,7 +117,7 @@ namespace Raven.Tests.MailingList
             public ICollection<string> Keywords { get; protected set; }
         }
 
-        public class MusicContent : Content
+        private class MusicContent : Content
         {
             public string Album { get; set; }
         }

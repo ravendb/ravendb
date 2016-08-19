@@ -1,27 +1,24 @@
 using System.Globalization;
-using System.Threading;
-
-using Raven.Tests.Common;
-using Raven.Tests.Common.Attributes;
-using Raven.Tests.Common.Util;
-
-using Xunit;
 using System.Linq;
-using Xunit.Extensions;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Server.Utils;
+using SlowTests.Utils.Attributes;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class DecimalQueries : RavenTest
+    public class DecimalQueries : RavenTestBase
     {
-        public class Money
+        private class Money
         {
             public decimal Amount { get; set; }
         }
 
-        [Fact]
-        public void CanQuery()
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        public async Task CanQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -46,11 +43,11 @@ namespace Raven.Tests.MailingList
 
         [Theory]
         [CriticalCultures]
-        public void CanQueryWithOtherCulture(CultureInfo culture)
+        public async Task CanQueryWithOtherCulture(CultureInfo culture)
         {
-            using(new TemporaryCulture(culture))
+            using (CultureHelper.EnsureCulture(culture))
             {
-                using (var store = NewDocumentStore())
+                using (var store = await GetDocumentStore())
                 {
                     using (var session = store.OpenSession())
                     {

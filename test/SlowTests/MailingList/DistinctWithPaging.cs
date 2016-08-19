@@ -3,24 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using System.Linq;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class DistinctWithPaging : RavenTest
+    public class DistinctWithPaging : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public int Val { get; set; }
         }
 
-        public class ItemIndex : AbstractIndexCreationTask<Item>
+        private class ItemIndex : AbstractIndexCreationTask<Item>
         {
             public ItemIndex()
             {
@@ -28,14 +29,14 @@ namespace Raven.Tests.MailingList
                       from item in items
                       select new { item.Val };
                 Store(x => x.Val, FieldStorage.Yes);
-                Sort(x => x.Val, SortOptions.Int);
+                Sort(x => x.Val, SortOptions.NumericDefault);
             }
         }
 
         [Fact]
-        public void CanWorkProperly()
+        public async Task CanWorkProperly()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new ItemIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -63,17 +64,17 @@ namespace Raven.Tests.MailingList
 
                     Assert.Equal(Enumerable.Range(1, 10), results);
 
+                    var skippedResults = stats.SkippedResults;
                     results = session.Query<Item, ItemIndex>()
                                         .Statistics(out stats)
                                         .OrderBy(t => t.Val)
                                         .Select(t => t.Val)
                                         .Distinct()
-                                        .Skip(results.Count)
+                                        .Skip(results.Count + skippedResults)
                                         .Take(10)
                                         .ToList();
 
                     Assert.Equal(Enumerable.Range(11, 10), results);
-
                 }
             }
         }

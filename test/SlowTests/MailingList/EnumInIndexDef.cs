@@ -1,37 +1,36 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class EnumInIndexDef : RavenTest
+    public class EnumInIndexDef : RavenTestBase
     {
         [Fact]
-        public void QueryById()
+        public async Task QueryById()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new SomeDocumentIndex().Execute(store);
             }
         }
 
-        public class SomeDocument
+        private class SomeDocument
         {
             public string Id { get; set; }
             public string Text { get; set; }
         }
 
-        public enum SomeEnum
+        private enum SomeEnum
         {
             Value1 = 1,
             Value2 = 2
         }
 
-        public class SomeDocumentIndex : AbstractIndexCreationTask<SomeDocument, SomeDocumentIndex.IndexResult>
+        private class SomeDocumentIndex : AbstractIndexCreationTask<SomeDocument, SomeDocumentIndex.IndexResult>
         {
             public class IndexResult
             {
