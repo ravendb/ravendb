@@ -1,22 +1,20 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Linq.Indexing;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class HierarchyTests : RavenTest
+    public class HierarchyTests : RavenTestBase
     {
         [Fact]
-        public void CanQueryByNavigationItemHierarchy()
+        public async Task CanQueryByNavigationItemHierarchy()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = await GetDocumentStore())
             {
                 documentStore.Initialize();
 
@@ -73,56 +71,56 @@ namespace Raven.Tests.MailingList
                 session.SaveChanges();
             }
         }
-    }
 
-    public class Navigation_ByNavigationId : AbstractIndexCreationTask<Navigation, Navigation_ByNavigationId.Result>
-    {
-        public class Result
+        private class Navigation_ByNavigationId : AbstractIndexCreationTask<Navigation, Navigation_ByNavigationId.Result>
         {
-            public string NavigationId { get; set; }
-        }
+            public class Result
+            {
+                public string NavigationId { get; set; }
+            }
 
-        public Navigation_ByNavigationId()
-        {
-            Map = navigations => from navigation in navigations
-                                 select new
-                                 {
-                                     NavigationId = new object[]
-                                    {
+            public Navigation_ByNavigationId()
+            {
+                Map = navigations => from navigation in navigations
+                                     select new
+                                     {
+                                         NavigationId = new object[]
+                                        {
                                         navigation.Id,
                                         Recurse(navigation, x=>x.NavigationItems.AsEnumerable())
                                             .Select(x=>x.Id)
-                                    }
-                                 };
+                                        }
+                                     };
 
+            }
         }
-    }
 
-    public class Navigation
-    {
-        public Navigation()
+        private class Navigation
         {
-            NavigationItems = new List<NavigationItem>();
+            public Navigation()
+            {
+                NavigationItems = new List<NavigationItem>();
+            }
+
+            public string Id { get; set; }
+
+            public string Customer { get; set; }
+
+            public IList<NavigationItem> NavigationItems { get; set; }
         }
 
-        public string Id { get; set; }
-
-        public string Customer { get; set; }
-
-        public IList<NavigationItem> NavigationItems { get; set; }
-    }
-
-    public class NavigationItem
-    {
-        public NavigationItem()
+        private class NavigationItem
         {
-            NavigationItems = new List<NavigationItem>();
+            public NavigationItem()
+            {
+                NavigationItems = new List<NavigationItem>();
+            }
+
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+
+            public IList<NavigationItem> NavigationItems { get; set; }
         }
-
-        public string Id { get; set; }
-
-        public string Name { get; set; }
-
-        public IList<NavigationItem> NavigationItems { get; set; }
     }
 }

@@ -1,18 +1,15 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-//using Raven.Abstractions.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class RecursiveFunction
     {
-        private static readonly DynamicJsonArray Empty = new DynamicJsonArray(Enumerable.Empty<object>());
+        private static readonly DynamicArray Empty = new DynamicArray(Enumerable.Empty<object>());
 
-        private readonly DynamicJsonArray _result = new DynamicJsonArray();
+        private readonly List<object> _result = new List<object>();
 
         private readonly object _item;
         private readonly Func<object, object> _func;
@@ -34,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (current == null)
             {
                 _result.Add(_item);
-                return _result;
+                return new DynamicArray(_result);
             }
 
             _queue.Enqueue(_item);
@@ -52,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     AddItem(current);
             }
 
-            return _result;
+            return new DynamicArray(_result);
         }
 
         private void AddItem(object current)
@@ -76,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (enumerator.MoveNext() == false)
                 return null;
 
-            return new DynamicJsonArray(Yield(enumerator));
+            return Yield(enumerator);
         }
 
         private static IEnumerable<object> Yield(IEnumerator<object> enumerator)
