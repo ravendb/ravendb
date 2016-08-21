@@ -24,7 +24,7 @@ namespace Sparrow
         public static extern IntPtr GetCurrentThread();
     }
 
-    public enum ThreadPriority:int
+    public enum ThreadPriority
     {
         Lowest = -2,
         BelowNormal = -1,
@@ -46,6 +46,4 @@ namespace Sparrow
         Impersonate = (0x0100),
         DirectImpersonation = (0x0200),
     }
-
-
 }

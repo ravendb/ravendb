@@ -134,25 +134,18 @@ namespace Sparrow
 
         private static ThreadPriority FixPosixPriority(int priority)
         {
-            ThreadPriority fixPriority;
-            switch (priority)
-            {
-                case 1:
-                    fixPriority = ThreadPriority.Lowest;
-                    break;
-                case 25:
-                    fixPriority = ThreadPriority.BelowNormal;
-                    break;
-                case 50:
-                    fixPriority = ThreadPriority.AboveNormal;
-                    break;
-                case 99:
-                    fixPriority = ThreadPriority.Highest;
-                    break;
-                default:
-                    fixPriority = ThreadPriority.Normal;
-                    break;
-            }
+
+            ThreadPriority fixPriority = ThreadPriority.Normal;
+
+            if(priority >= 1 && priority <= 24)
+                fixPriority = ThreadPriority.Lowest;
+            else if(priority >=25 && priority <= 49)
+                fixPriority = ThreadPriority.BelowNormal;
+            else if (priority >= 50 && priority <= 74)
+                fixPriority = ThreadPriority.AboveNormal;
+            else if (priority >= 75 && priority <= 99)
+                fixPriority = ThreadPriority.Highest;
+
             return fixPriority;
         }
     }

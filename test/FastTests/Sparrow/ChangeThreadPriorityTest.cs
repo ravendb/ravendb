@@ -1,7 +1,5 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Threading;
-using System.Threading.Tasks;
 using Sparrow;
 using Xunit;
 
@@ -12,41 +10,25 @@ namespace FastTests.Sparrow
         [Fact]
         public void StartChangeThreadPriority()
         {
-            Task first = Task.Run(() => ChangeThreadPriorityCheck("First"));
-            Task second = Task.Run(() => ChangeThreadPriorityCheck("Second"));
-            Task third = Task.Run(() => ChangeThreadPriorityCheck("Third"));
-
-            Task.WaitAll(first, second, third);
-
-        }
-
-        private void ChangeThreadPriorityCheck(string threadName)
-        {
-            try
+            ThreadPriority threadPriority = ThreadPriority.Normal;
+            Thread thread = new Thread(() =>
             {
-                Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Normal);
-
-                switch (threadName)
+                try
                 {
-                    case "First":
-                        ThreadMethods.SetThreadPriority(ThreadPriority.Highest);
-                        Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Highest);
-                        break;
-                    case "Second":
-                        ThreadMethods.SetThreadPriority(ThreadPriority.BelowNormal);
-                        Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.BelowNormal);
-                        break;
-                    case "Third":
-                        ThreadMethods.SetThreadPriority(ThreadPriority.Lowest);
-                        Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Lowest);
-                        break;
+                    Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Normal);
+                    ThreadMethods.SetThreadPriority(ThreadPriority.Highest);
+                    threadPriority = ThreadMethods.GetThreadPriority();
+
                 }
-            }
-            catch (Win32Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
-            
+                catch (Win32Exception ex)
+                {
+                    throw new Win32Exception(ex.Message, ex);
+                }
+            });
+            thread.Start();
+            thread.Join();
+            Assert.True(threadPriority == ThreadPriority.Highest);
+
         }
     }
 }
