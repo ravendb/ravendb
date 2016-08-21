@@ -13,36 +13,30 @@ namespace Sparrow.Collections
     {
         public class DebugProxy
         {
-            private ConcurrentSet<T> parent;
+            private readonly ConcurrentSet<T> _parent;
 
             public DebugProxy(ConcurrentSet<T> parent)
             {
-                this.parent = parent;
+                _parent = parent;
             }
 
             [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-            public object[] Items
-            {
-                get { return parent.Cast<object>().ToArray(); }
-            }
+            public object[] Items => _parent.Cast<object>().ToArray();
         }
 
-        private readonly ConcurrentDictionary<T, object> inner;
+        private readonly ConcurrentDictionary<T, object> _inner;
 
         public ConcurrentSet()
         {
-            inner = new ConcurrentDictionary<T, object>();
+            _inner = new ConcurrentDictionary<T, object>();
         }
 
         public ConcurrentSet(IEqualityComparer<T> comparer)
         {
-            inner = new ConcurrentDictionary<T, object>(comparer);
+            _inner = new ConcurrentDictionary<T, object>(comparer);
         }
 
-        public int Count
-        {
-            get { return inner.Count; }
-        }
+        public int Count => _inner.Count;
 
         public void Add(T item)
         {
@@ -51,23 +45,23 @@ namespace Sparrow.Collections
 
         public bool TryAdd(T item)
         {
-            return inner.TryAdd(item, null);
+            return _inner.TryAdd(item, null);
         }
 
         public bool Contains(T item)
         {
-            return inner.ContainsKey(item);
+            return _inner.ContainsKey(item);
         }
 
         public bool TryRemove(T item)
         {
             object _;
-            return inner.TryRemove(item, out _);
+            return _inner.TryRemove(item, out _);
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            return inner.Keys.GetEnumerator();
+            return _inner.Keys.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -75,10 +69,9 @@ namespace Sparrow.Collections
             return GetEnumerator();
         }
 
-
         public void Clear()
         {
-            inner.Clear();
+            _inner.Clear();
         }
 
         public override string ToString()
@@ -86,5 +79,4 @@ namespace Sparrow.Collections
             return Count.ToString("#,#", CultureInfo.InvariantCulture);
         }
     }
-
 }
