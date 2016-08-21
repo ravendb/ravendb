@@ -13,23 +13,8 @@ namespace Rachis.Transport
 {
     public class NodeConnectionInfo
     {
-        private Uri uri;
-        public Uri Uri
-        {
-            get { return uri; }
-            set
-            {
-                uri = value;
-                absoluteUri = uri.AbsoluteUri[uri.AbsoluteUri.Length - 1] == '/' ? uri.AbsoluteUri : uri.AbsoluteUri + '/';
-            }
-        }
-        [JsonIgnore]
-        private string absoluteUri;
-        /// <summary>
-        /// Returns the absoluteUri of the node, making sure that under iis the uri ends with '/'
-        /// </summary>
-        [JsonIgnore]
-        public string AbsoluteUri => absoluteUri;
+
+        public Uri Uri { get; set; }
 
         public string Name { get; set; }
 
@@ -99,6 +84,11 @@ namespace Rachis.Transport
         public bool HasCredentials()
         {
             return !string.IsNullOrEmpty(ApiKey) || Username != null;
+        }
+
+        public string GetAbsoluteUri()
+        {
+            return Uri.AbsoluteUri.EndsWith("/") ? Uri.AbsoluteUri : Uri.AbsoluteUri + '/';
         }
     }
 }
