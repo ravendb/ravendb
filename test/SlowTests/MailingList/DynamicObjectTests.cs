@@ -41,7 +41,6 @@ namespace SlowTests.MailingList
 
                     sw.Stop();
                     var ts = sw.Elapsed;
-                    Console.WriteLine("Total time: " + ts.TotalMilliseconds + " ms");
                     Assert.Equal<bool>(true, (records.Count() == 50));
                     Assert.NotInRange<double>(ts.TotalMilliseconds, 1200, 30000);
                 }
@@ -69,7 +68,6 @@ namespace SlowTests.MailingList
 
                     sw.Stop();
                     var ts = sw.Elapsed;
-                    Console.WriteLine("Total time: " + ts.TotalMilliseconds + " ms");
                     Assert.Equal<bool>(true, (records.Count() == 50));
                     Assert.NotInRange<double>(ts.TotalMilliseconds, 1200, 30000);
                 }

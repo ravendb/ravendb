@@ -24,7 +24,6 @@ namespace SlowTests.MailingList
                         FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
                         .Customize(x => x.WaitForNonStaleResults());
                     var list = queryable.ToList();
-                    PrintOutMapReduceResults(list);
                     Assert.True(list.Any());
                 }
             }

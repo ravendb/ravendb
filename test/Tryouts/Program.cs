@@ -12,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var f = new FastTests.Server.Documents.Queries.Dynamic.MapReduce.BasicDynamicMapReduceQueries())
+                using (var f = new SlowTests.Tests.Views.MapReduce())
                 {
-                    f.Group_by_does_not_support_custom_equality_comparer().Wait();
+                    f.DoesNotOverReduce().Wait();
                 }
             }
 
