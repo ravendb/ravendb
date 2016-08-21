@@ -175,6 +175,7 @@ namespace Raven.Server.Documents.Replication
 								_database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
 								break;
 		                    case ConflictStatus.ShouldResolveConflict:
+							
 								_context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
 								goto case ConflictStatus.Update;
 							case ConflictStatus.Conflict:
@@ -359,6 +360,12 @@ namespace Raven.Server.Documents.Replication
 			var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, key);
 			if (conflicts.Count > 0)
 			{
+				foreach (var existingConflict in conflicts)
+				{
+					if(GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+						return ConflictStatus.Conflict;
+				}
+
 				return ConflictStatus.ShouldResolveConflict;
 			}
 
@@ -383,37 +390,45 @@ namespace Raven.Server.Documents.Replication
 		}
 
 		public static ConflictStatus GetConflictStatus(ChangeVectorEntry[] remote, ChangeVectorEntry[] local)
-	    {			
-
-		    var remoteHasLargerEntries = local.Length < remote.Length;
+	    {
+			//any missing entries from a change vector are assumed to have zero value
+			var remoteHasLargerEntries = local.Length < remote.Length; 
 		    var localHasLargerEntries = remote.Length < local.Length;
 
+		    int remoteEntriesTakenIntoAccount = 0;
 		    for (int index = 0; index < local.Length; index++)
 		    {
-			    if (remote[index].DbId == local[index].DbId)
+			    if (remote.Length < index && remote[index].DbId == local[index].DbId)
 			    {
 				    remoteHasLargerEntries |= remote[index].Etag > local[index].Etag;
 					localHasLargerEntries |= local[index].Etag > remote[index].Etag;
+					remoteEntriesTakenIntoAccount++;
 				}
 			    else
 			    {
+				    var updated = false;
 				    for (var remoteIndex = 0; remoteIndex < remote.Length; remoteIndex++)
 				    {
 					    if (remote[remoteIndex].DbId == local[index].DbId)
 					    {
 							remoteHasLargerEntries |= remote[remoteIndex].Etag > local[index].Etag;
 							localHasLargerEntries |= local[index].Etag > remote[remoteIndex].Etag;
-							break;
+						    remoteEntriesTakenIntoAccount++;
+							updated = true;
 						}
 					}
+
+				    if (!updated)
+					    localHasLargerEntries = true;
 			    }
 		    }
+			remoteHasLargerEntries |= remoteEntriesTakenIntoAccount < remote.Length;
 
-			if(remoteHasLargerEntries && localHasLargerEntries)
+			if (remoteHasLargerEntries && localHasLargerEntries)
 				return ConflictStatus.Conflict;
 
-			if(!remoteHasLargerEntries && localHasLargerEntries)
-				return ConflictStatus.AlreadyMerged;
+		    if (!remoteHasLargerEntries && localHasLargerEntries)
+			    return ConflictStatus.AlreadyMerged;
 
 		    return ConflictStatus.Update;
 	    }

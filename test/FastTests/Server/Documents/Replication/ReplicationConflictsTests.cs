@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Replication;
+using Voron.Tests;
 using Xunit;
 
 namespace FastTests.Server.Documents.Replication
@@ -41,7 +47,7 @@ namespace FastTests.Server.Documents.Replication
 		}
 
 		[Fact]
-		public void All_remote_etags_lower_than_local_should_return_RequireUpdate_at_conflict_status()
+		public void All_local_etags_lower_than_remote_should_return_Update_at_conflict_status()
 		{
 			var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -107,7 +113,7 @@ namespace FastTests.Server.Documents.Replication
 		}
 
 		[Fact]
-		public void Remote_change_vector_larger_than_local_should_return_RequireUpdate_at_conflict_status()
+		public void Remote_change_vector_larger_size_than_local_should_return_Update_at_conflict_status()
 		{
 			var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -129,8 +135,25 @@ namespace FastTests.Server.Documents.Replication
 			Assert.Equal(IncomingReplicationHandler.ConflictStatus.Update, IncomingReplicationHandler.GetConflictStatus(remote, local));
 		}
 
+	    [Fact]
+	    public void Remote_change_vector_with_different_dbId_set_than_local_should_return_Conflict_at_conflict_status()
+	    {
+		    var dbIds = new List<Guid> {Guid.NewGuid(), Guid.NewGuid()};
+			var local = new[]
+			{
+				new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
+			};
+
+			var remote = new[]
+			{
+				new ChangeVectorEntry { DbId = dbIds[1], Etag = 10 }
+			};
+
+			Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+		}
+
 		[Fact]
-		public void Remote_change_vector_smaller_than_local_should_return_Conflict_at_conflict_status()
+		public void Remote_change_vector_smaller_than_local_and_all_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
 		{
 			var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -139,20 +162,44 @@ namespace FastTests.Server.Documents.Replication
 				new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
 				new ChangeVectorEntry { DbId = dbIds[1], Etag = 20 },
 				new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
-				new ChangeVectorEntry { DbId = dbIds[2], Etag = 40 }
+				new ChangeVectorEntry { DbId = dbIds[3], Etag = 40 }
 			};
 
 			var remote = new[]
 			{
+				new ChangeVectorEntry { DbId = dbIds[0], Etag = 1 },
+				new ChangeVectorEntry { DbId = dbIds[1], Etag = 2 },
+				new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 }
+			};
+
+			Assert.Equal(IncomingReplicationHandler.ConflictStatus.AlreadyMerged, IncomingReplicationHandler.GetConflictStatus(remote, local));
+		}
+
+		[Fact]
+		public void Remote_change_vector_smaller_than_local_and_some_remote_etags_higher_than_local_should_return_Conflict_at_conflict_status()
+		{
+			var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+
+			var local = new[]
+			{
 				new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
 				new ChangeVectorEntry { DbId = dbIds[1], Etag = 20 },
-				new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 }
+				new ChangeVectorEntry { DbId = dbIds[2], Etag = 3000 },
+				new ChangeVectorEntry { DbId = dbIds[3], Etag = 40 }
+			};
+
+			var remote = new[]
+			{
+				new ChangeVectorEntry { DbId = dbIds[0], Etag = 100 },
+				new ChangeVectorEntry { DbId = dbIds[1], Etag = 200 },
+				new ChangeVectorEntry { DbId = dbIds[2], Etag = 300 }
 			};
 
 			Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
 		}
 
-		[Fact(Skip = "conflict code is not yet finished")]
+
+		[Fact]
 		public async Task Conflict_should_occur_after_changes_to_the_same_document_on_two_nodes_at_the_same_time()
 		{
 			var dbName1 = DbName + "-1";
@@ -162,15 +209,27 @@ namespace FastTests.Server.Documents.Replication
 			{
 				store1.DefaultDatabase = dbName1;
 				store2.DefaultDatabase = dbName2;
-
-				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
+				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());				
 				store2.DatabaseCommands.ForDatabase(dbName2).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
 
 				SetupReplication(dbName2, store1, store2);
-				SetupReplication(dbName1, store2, store1);
 
 				WaitForDocumentToReplicate<dynamic>(store2, "foo/bar", 10000);
+
+				Assert.True(await HasConflicts(store2, dbName2, "foo/bar"));
 			}
 		}
+
+	    private async Task<bool> HasConflicts(DocumentStore store, string dbName,string docId)
+	    {
+		    var url = $"{store.Url}/databases/{dbName}/replication/conflicts?docId={docId}";
+			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+			{
+				request.ExecuteRequest();
+				var conflictsJson = RavenJObject.Parse(await request.Response.Content.ReadAsStringAsync());
+				return conflictsJson.Count > 0;
+			}		    
+	    }
 	}
 }

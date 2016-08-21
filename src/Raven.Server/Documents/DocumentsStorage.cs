@@ -5,11 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
-using Raven.Server.Documents.Replication;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -55,13 +51,24 @@ namespace Raven.Server.Documents
             _name = _documentDatabase.Name;
             _logger = LoggerSetup.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
 
-	        _conflictsSchema.DefineKey(new TableSchema.SchemaIndexDef
-	        {
-		        StartIndex = 0,
-		        Count = 2,
-		        IsGlobal = false,
-		        Name = "KeyAndChangeVector"
-	        });
+			_conflictsSchema.DefineKey(
+				new TableSchema.SchemaIndexDef
+				{
+					StartIndex = 0,
+					Count = 1,
+					IsGlobal = false,
+					Name = "Key"
+				});
+
+			//not sure that this is needed, probably needs to be deleted
+			_conflictsSchema.DefineIndex("KeyAndChangeVector",
+				new TableSchema.SchemaIndexDef
+				{
+					StartIndex = 0,
+					Count = 2,
+					IsGlobal = true,
+					Name = "KeyAndChangeVector"
+				});
 
 			// The documents schema is as follows
 			// 4 fields (lowered key, etag, lazy string key, document, change vector)
@@ -92,16 +99,19 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
                 Name = "Tombstones"
             });
+
             _tombstonesSchema.DefineFixedSizeIndex("CollectionEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = false
             });
+
             _tombstonesSchema.DefineFixedSizeIndex("AllTombstonesEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = true
             });
+
             _tombstonesSchema.DefineFixedSizeIndex("DeletedEtags", new TableSchema.FixedSizeSchemaIndexDef()
             {
                 StartIndex = 2,
@@ -381,15 +391,22 @@ namespace Raven.Server.Documents
 				throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
 			var loweredKey = GetSliceFromKey(context, key);
+			return GetDocumentOrTombstone(context,loweredKey);
+	    }
 
-		    var doc = Get(context, loweredKey);
-		    if (doc != null)
-			    return Tuple.Create<Document, DocumentTombstone>(doc, null);
+		public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey)
+		{
+			if (context.Transaction == null)
+				throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
+
+			var doc = Get(context, loweredKey);
+			if (doc != null)
+				return Tuple.Create<Document, DocumentTombstone>(doc, null);
 
 			var tombstoneTable = new Table(_tombstonesSchema, context.Transaction.InnerTransaction);
-		    var tvr = tombstoneTable.ReadByKey(loweredKey);
+			var tvr = tombstoneTable.ReadByKey(loweredKey);
 			return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, tvr));
-	    }
+		}
 
 		public Document Get(DocumentsOperationContext context, string key)
         {
@@ -405,7 +422,7 @@ namespace Raven.Server.Documents
 
         public Document Get(DocumentsOperationContext context, Slice loweredKey)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+			var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
 
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
@@ -672,14 +689,20 @@ namespace Raven.Server.Documents
 
         public bool Delete(DocumentsOperationContext context, Slice loweredKey, long? expectedEtag, ChangeVectorEntry[] changeVector = null)
         {
-            var doc = Get(context, loweredKey);
-            if (doc == null)
+	        var result = GetDocumentOrTombstone(context, loweredKey);
+	        if (result.Item2 != null)
+		        return false; //NOP, already deleted
+
+			var doc = result.Item1;
+			if (doc == null)
             {
-                if (expectedEtag != null)
+				if (expectedEtag != null)
                     throw new ConcurrencyException(
                         $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+
                 return false;
             }
+
             if (expectedEtag != null && doc.Etag != expectedEtag)
             {
                 throw new ConcurrencyException(
@@ -723,8 +746,12 @@ namespace Raven.Server.Documents
 		    etagTree.Add(LastEtagSlice, Slice.External(context.Allocator, (byte*) &etag, sizeof(long)));
 	    }
 
-	    private void CreateTombstone(DocumentsOperationContext context, Table collectionDocsTable, Document doc, string collectionName, ChangeVectorEntry[] changeVector)
-        {
+	    private void CreateTombstone(DocumentsOperationContext context, 
+			Table collectionDocsTable, 
+			Document doc, 
+			string collectionName, 
+			ChangeVectorEntry[] changeVector)
+	    {
             int size;
             var ptr = collectionDocsTable.DirectRead(doc.StorageId, out size);
             var tvr = new TableValueReader(ptr, size);
@@ -741,8 +768,12 @@ namespace Raven.Server.Documents
 
             if (changeVector == null)
             {
-                changeVector = UpdateChangeVectorWithLocalChange(newEtag, doc.ChangeVector);
-            }
+				changeVector = GetMergedConflictChangeVectorsAndDeleteConflicts(
+						context,
+						Slice.External(context.Allocator, lowerKey, lowerSize), 
+						newEtag,
+						doc.ChangeVector);
+			}
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
@@ -780,7 +811,7 @@ namespace Raven.Server.Documents
 	    }
 
 
-		public List<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, Slice loweredKey)
+		public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, Slice loweredKey)
 	    {
 		    var conflictsTable = new Table(_conflictsSchema, "Conflicts", context.Transaction.InnerTransaction);
 		    var list = new List<ChangeVectorEntry[]>();
@@ -809,9 +840,8 @@ namespace Raven.Server.Documents
 				    return list;
 		    }
 	    }
-
-
-	    public List<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
+		
+		public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
 	    {
 			var conflictsTable = new Table(_conflictsSchema, "Conflicts", context.Transaction.InnerTransaction);
 
@@ -821,34 +851,40 @@ namespace Raven.Server.Documents
 			int keySize;
 			GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-		    var items = new List<DocumentConflict>();
+		    var items = new List<DocumentConflict>();			
+			foreach (var result in conflictsTable.SeekForwardFrom(
+				_conflictsSchema.Indexes["KeyAndChangeVector"],
+				Slice.External(context.Allocator, lowerKey, lowerSize),true))
+			{
+				foreach (var tvr in result.Results)
+				{
 
-		    foreach (var tvr in conflictsTable.SeekByPrimaryKey(Slice.External(context.Allocator, lowerKey, lowerSize), startsWith: true))
-		    {
-				int conflictKeySize;
-				var conflictKey = tvr.Read(0, out conflictKeySize);
+					int conflictKeySize;
+					var conflictKey = tvr.Read(0, out conflictKeySize);
 
-				if (conflictKeySize != lowerSize)
-					break;
+					if (conflictKeySize != lowerSize)
+						break;
 
-				var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
-				if(compare != 0)
-					break;
+					var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
+					if (compare != 0)
+						break;
 
-			    int size;
-			    items.Add(new DocumentConflict
-			    {
-				    ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1),
-				    Key = new LazyStringValue(key, tvr.Read(2, out size), size,context),
-				    StorageId = tvr.Id,
-				    Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context)
-			    });
-		    }
+					int size;
+					items.Add(new DocumentConflict
+					{
+						ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1),
+						Key = new LazyStringValue(key, tvr.Read(2, out size), size, context),
+						StorageId = tvr.Id,
+						Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context)
+					});
+				}
+			}
+
 			return items;
 	    }
 
-		public void AddConflict(DocumentsOperationContext context, string key, BlittableJsonReaderObject doc,
-		    ChangeVectorEntry[] changeVector)
+		public void AddConflict(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc,
+		    ChangeVectorEntry[] incomingChangeVector)
 	    {
 		    var conflictsTable = new Table(_conflictsSchema,"Conflicts", context.Transaction.InnerTransaction);
 
@@ -867,20 +903,22 @@ namespace Raven.Server.Documents
 				    conflictsTable.Set(new TableValueBuilder
 				    {
 					    {lowerKey, lowerSize},
-					    {(byte*) pChangeVector, existingDoc .ChangeVector.Length*sizeof(ChangeVectorEntry)},
-					    {existingDoc .Key.Buffer, existingDoc .Key.Size},
-					    {existingDoc .Data.BasePointer, existingDoc .Data.Size}
+					    {(byte*) pChangeVector, existingDoc.ChangeVector.Length*sizeof(ChangeVectorEntry)},
+					    {existingDoc.Key.Buffer, existingDoc.Key.Size},
+					    {existingDoc.Data.BasePointer, existingDoc.Data.Size}
 				    });
 
-					// we delete the data directly, without generating a tombstone, because we have a 
-					// conflict instead
-					EnsureLastEtagIsPersisted(context, existingDoc.Etag);
-					bool isSystemDocument;
+				    // we delete the data directly, without generating a tombstone, because we have a 
+				    // conflict instead
+				    EnsureLastEtagIsPersisted(context, existingDoc.Etag);
+				    bool isSystemDocument;
 				    var collectionName = Document.GetCollectionName(existingDoc.Data, out isSystemDocument);
-					var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
-				    table.Delete(existingDoc.StorageId);
+
+				    //make sure that the relevant collection tree exists
+				    var table = new Table(_docsSchema, $"@{collectionName}", context.Transaction.InnerTransaction);
+				    table.Delete(existingDoc.StorageId);				    
 			    }
-			}
+		    }
 		    if (existing.Item2 != null)
 		    {
 				var existingTombstone = existing.Item2;
@@ -901,14 +939,14 @@ namespace Raven.Server.Documents
 				}
 			}
 
-		    fixed (ChangeVectorEntry* pChangeVector = changeVector)
+		    fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
 		    {
 			    conflictsTable.Set(new TableValueBuilder
 			    {
 				    {lowerKey, lowerSize},
-				    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
+				    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
 					{keyPtr, keySize},
-				    {doc.BasePointer, doc.Size}
+				    {incomingDoc.BasePointer, incomingDoc.Size}
 			    });
 		    }
 	    }
@@ -1027,60 +1065,67 @@ namespace Raven.Server.Documents
 			DocumentsOperationContext context, Slice loweredKey, 
 			TableValueReader oldValue, long newEtag)
         {
-			ChangeVectorEntry[] changeVector;
 	        if (oldValue != null)
 	        {
-		        changeVector = GetChangeVectorEntriesFromTableValueReader(oldValue, 4);
+		        var changeVector = GetChangeVectorEntriesFromTableValueReader(oldValue, 4);
 		        return UpdateChangeVectorWithLocalChange(newEtag, changeVector);
 	        }
 
-			var conflictChangeVectors = DeleteConflictsFor(context, loweredKey);
-	        if (conflictChangeVectors.Count == 0)
-	        {
-		        return new[]
-		        {
-					new ChangeVectorEntry
-					{
-						Etag = newEtag,
-						DbId = Environment.DbId
-					}, 
-		        };
-	        }
-
-			// need to merge the conflict change vectors
-			var maxEtags = new Dictionary<Guid, long>
-	        {
-		        [Environment.DbId] = newEtag
-	        };
-
-	        foreach (var conflictChangeVector in conflictChangeVectors)
-	        {
-		        for (int i = 0; i < conflictChangeVector.Length; i++)
-		        {
-			        long etag;
-			        var cve = conflictChangeVector[i];
-			        if (maxEtags.TryGetValue(cve.DbId, out etag) == false ||
-			            etag < cve.Etag)
-			        {
-				        maxEtags[cve.DbId] = cve.Etag;
-			        }
-		        }
-	        }
-
-			changeVector = new ChangeVectorEntry[maxEtags.Count];
-
-	        var index = 0;
-	        foreach (var maxEtag in maxEtags)
-	        {
-		        changeVector[index].DbId = maxEtag.Key;
-		        changeVector[index].Etag = maxEtag.Value;
-		        index++;
-	        }
-
-			return changeVector;
+	        return GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
         }
 
-        private ChangeVectorEntry[] UpdateChangeVectorWithLocalChange(long newEtag, ChangeVectorEntry[] changeVector)
+	    private ChangeVectorEntry[] GetMergedConflictChangeVectorsAndDeleteConflicts(
+			DocumentsOperationContext context,
+			Slice loweredKey,
+		    long newEtag,
+			ChangeVectorEntry[] existing = null)
+	    {
+		    var conflictChangeVectors = DeleteConflictsFor(context, loweredKey);
+		    if (conflictChangeVectors.Count == 0)
+		    {
+			    if (existing != null)
+				    return UpdateChangeVectorWithLocalChange(newEtag, existing);
+
+			    return new[]
+			    {
+				    new ChangeVectorEntry
+				    {
+					    Etag = newEtag,
+					    DbId = Environment.DbId
+				    }
+			    };
+		    }
+
+		    // need to merge the conflict change vectors
+		    var maxEtags = new Dictionary<Guid, long>
+		    {
+			    [Environment.DbId] = newEtag
+		    };
+
+		    foreach (var conflictChangeVector in conflictChangeVectors)
+			    foreach (var entry in conflictChangeVector)
+			    {
+				    long etag;
+				    if (maxEtags.TryGetValue(entry.DbId, out etag) == false ||
+				        etag < entry.Etag)
+				    {
+					    maxEtags[entry.DbId] = entry.Etag;
+				    }
+			    }
+
+		    var changeVector = new ChangeVectorEntry[maxEtags.Count];
+
+		    var index = 0;
+		    foreach (var maxEtag in maxEtags)
+		    {
+			    changeVector[index].DbId = maxEtag.Key;
+			    changeVector[index].Etag = maxEtag.Value;
+			    index++;
+		    }
+		    return changeVector;
+	    }
+
+	    private ChangeVectorEntry[] UpdateChangeVectorWithLocalChange(long newEtag, ChangeVectorEntry[] changeVector)
         {
             var length = changeVector.Length;
             for (int i = 0; i < length; i++)

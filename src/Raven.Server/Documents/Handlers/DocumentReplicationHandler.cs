@@ -5,12 +5,40 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationtHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/replication/topology", "GET")]
+		//get conflicts for specified document
+		[RavenAction("/databases/*/replication/conflicts", "GET", 
+			"/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
+		public Task GetReplicationConflictsByDocument()
+		{
+			var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
+			DocumentsOperationContext context;
+			using (ContextPool.AllocateOperationContext(out context))
+			using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+			using (context.OpenReadTransaction())
+			{
+				var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+				foreach (var conflict in conflicts)
+				{
+					context.Write(writer,
+						new DynamicJsonValue
+						{
+							["Key"] = conflict.Key,
+							["ChangeVector"] = conflict.ChangeVector.ToJson(),
+						});
+				}
+
+				HttpContext.Response.StatusCode = 200;
+				return Task.CompletedTask;
+			}
+		}
+
+		[RavenAction("/databases/*/replication/topology", "GET")]
         public Task GetReplicationTopology()
         {
             // TODO: Remove this, use "/databases/*/topology" isntead

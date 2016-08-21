@@ -2,12 +2,26 @@
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Replication.Messages;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
     {
-        public static bool GreaterThen(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
+	    public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
+	    {
+		    var results = new DynamicJsonArray();
+			foreach(var entry in self)
+				results.Add(new DynamicJsonValue
+				{
+					["DbId"] = entry.DbId.ToString(),
+					["Etag"] = entry.Etag
+				});
+		    return results;
+	    }
+
+
+		public static bool GreaterThen(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
         {
             for (int i = 0; i < self.Length; i++)
             {

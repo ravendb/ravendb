@@ -255,7 +255,6 @@ namespace Raven.Server.Documents.Replication
             var readTx = _context.OpenReadTransaction();
             try
             {
-
                 var replicationBatch = new List<Document>();
                 var lastEtag = _lastSentEtag;
 
@@ -266,8 +265,9 @@ namespace Raven.Server.Documents.Replication
                 var timeout = Debugger.IsAttached ? 60*1000 : 1000;
                 while (sp.ElapsedMilliseconds < timeout)
                 {
-                    _cts.Token.ThrowIfCancellationRequested();
-                    foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(_context, lastEtag, 0, 1024))
+                    _cts.Token.ThrowIfCancellationRequested();					
+
+					foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(_context, lastEtag, 0, 1024))
                     {
                         if (sp.ElapsedMilliseconds > timeout)
                             break;
