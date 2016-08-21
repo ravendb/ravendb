@@ -68,7 +68,7 @@ namespace Voron.Platform.Win32
 
             bool writeSuccess;
             var nNumberOfBytesToWrite = numberOfPages * _options.PageSize;
-            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.Write, nNumberOfBytesToWrite))
+            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.WriteUsingSyscall, nNumberOfBytesToWrite))
             {
                 int written;
                 writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, nNumberOfBytesToWrite,
