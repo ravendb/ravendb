@@ -40,11 +40,15 @@ namespace Sparrow
             }
             else
             {
-                uint threadId = Win32ThreadsMethods.GetCurrentThreadId();
-                IntPtr handle = Win32ThreadsMethods.OpenThread(ThreadAccess.SetInformation, false, threadId);
+                IntPtr handle = IntPtr.Zero;
                 try
                 {
-                    var success = Win32ThreadsMethods.SetThreadPriority(handle, (int)priority);
+                    uint threadId = Win32ThreadsMethods.GetCurrentThreadId();
+                    handle = Win32ThreadsMethods.OpenThread(ThreadAccess.SetInformation, false, threadId);
+                    if (handle == IntPtr.Zero)
+                        throw new Win32Exception("Failed to setup thread priority, couldn't open the current thread");
+
+                    var success = Win32ThreadsMethods.SetThreadPriority(handle, (int) priority);
                     if (success == 0)
                     {
                         int lastWin32ErrorCode = Marshal.GetLastWin32Error();

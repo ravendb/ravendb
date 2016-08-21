@@ -1,4 +1,7 @@
-﻿using System.Threading;
+﻿using System;
+using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using Sparrow;
 using Xunit;
 
@@ -7,36 +10,43 @@ namespace FastTests.Sparrow
     public class ChangeThreadPriorityTest
     {
         [Fact]
-        public static void StartChangeThreadPriority()
+        public void StartChangeThreadPriority()
         {
-            Thread first = new Thread(() => ChangeThreadPriorityCheck("First"));
-            Thread second = new Thread(() => ChangeThreadPriorityCheck("Second"));
-            Thread third = new Thread(() => ChangeThreadPriorityCheck("Third"));
+            Task first = Task.Run(() => ChangeThreadPriorityCheck("First"));
+            Task second = Task.Run(() => ChangeThreadPriorityCheck("Second"));
+            Task third = Task.Run(() => ChangeThreadPriorityCheck("Third"));
 
-            first.Start();
-            second.Start();
-            third.Start();
+            Task.WaitAll(first, second, third);
+
         }
 
-        private static void ChangeThreadPriorityCheck(string threadName)
+        private void ChangeThreadPriorityCheck(string threadName)
         {
-            Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Normal);
-
-            switch (threadName)
+            try
             {
-                case "First":
-                    ThreadMethods.SetThreadPriority(ThreadPriority.Highest);
-                    Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Highest);
-                    break;
-                case "Second":
-                    ThreadMethods.SetThreadPriority(ThreadPriority.BelowNormal);
-                    Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.BelowNormal);
-                    break;
-                case "Third":
-                    ThreadMethods.SetThreadPriority(ThreadPriority.Lowest);
-                    Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Lowest);
-                    break;
+                Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Normal);
+
+                switch (threadName)
+                {
+                    case "First":
+                        ThreadMethods.SetThreadPriority(ThreadPriority.Highest);
+                        Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Highest);
+                        break;
+                    case "Second":
+                        ThreadMethods.SetThreadPriority(ThreadPriority.BelowNormal);
+                        Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.BelowNormal);
+                        break;
+                    case "Third":
+                        ThreadMethods.SetThreadPriority(ThreadPriority.Lowest);
+                        Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Lowest);
+                        break;
+                }
             }
+            catch (Win32Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            
         }
     }
 }
