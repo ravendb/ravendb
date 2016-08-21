@@ -23,15 +23,17 @@ namespace Raven.Server.Documents.Handlers
 			using (context.OpenReadTransaction())
 			{
 				var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+				var array = new DynamicJsonArray();
 				foreach (var conflict in conflicts)
 				{
-					context.Write(writer,
-						new DynamicJsonValue
-						{
-							["Key"] = conflict.Key,
-							["ChangeVector"] = conflict.ChangeVector.ToJson(),
-						});
+					array.Add(new DynamicJsonValue
+					{
+						["Key"] = conflict.Key.String,
+						["ChangeVector"] = conflict.ChangeVector.ToJson(),
+					});					
 				}
+
+				context.Write(writer,array);
 
 				HttpContext.Response.StatusCode = 200;
 				return Task.CompletedTask;

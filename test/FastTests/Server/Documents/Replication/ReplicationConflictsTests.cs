@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -9,6 +11,7 @@ using Raven.Client.Document;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Extensions;
 using Voron.Tests;
 using Xunit;
 
@@ -200,7 +203,7 @@ namespace FastTests.Server.Documents.Replication
 
 
 		[Fact]
-		public async Task Conflict_should_occur_after_changes_to_the_same_document_on_two_nodes_at_the_same_time()
+		public async Task Conflict_should_occur_after_changes_to_the_same_document_on_two_nodes_at_the_same_time_with_master_slave()
 		{
 			var dbName1 = DbName + "-1";
 			var dbName2 = DbName + "-2";
@@ -209,26 +212,87 @@ namespace FastTests.Server.Documents.Replication
 			{
 				store1.DefaultDatabase = dbName1;
 				store2.DefaultDatabase = dbName2;
-				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());				
+				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
 				store2.DatabaseCommands.ForDatabase(dbName2).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
 
 				SetupReplication(dbName2, store1, store2);
 
-				WaitForDocumentToReplicate<dynamic>(store2, "foo/bar", 10000);
-
-				Assert.True(await HasConflicts(store2, dbName2, "foo/bar"));
+				var conflicts = await WaitUntilHasConflict(dbName2, store2, "foo/bar");
+				Assert.Equal(2, conflicts["foo/bar"].Count);
 			}
 		}
 
-	    private async Task<bool> HasConflicts(DocumentStore store, string dbName,string docId)
+		
+
+		[Fact]
+		public async Task Conflict_should_occur_after_changes_to_the_same_document_on_two_nodes_at_the_same_time_with_master_master()
+		{
+			var dbName1 = DbName + "-1";
+			var dbName2 = DbName + "-2";
+			using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
+			using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+			{
+				store1.DefaultDatabase = dbName1;
+				store2.DefaultDatabase = dbName2;
+				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
+				store2.DatabaseCommands.ForDatabase(dbName2).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
+
+				SetupReplication(dbName1, store2, store1);
+				SetupReplication(dbName2, store1, store2);
+				
+				var conflicts1 = await WaitUntilHasConflict(dbName1, store1, "foo/bar");
+				var conflicts2 = await WaitUntilHasConflict(dbName2, store2, "foo/bar");
+
+				Assert.Equal(2, conflicts1["foo/bar"].Count);
+				Assert.Equal(2, conflicts2["foo/bar"].Count);
+			}
+		}
+
+		private async Task<Dictionary<string, List<ChangeVectorEntry[]>>>
+			WaitUntilHasConflict(string dbName, DocumentStore store, string docId, int timeout = 10000)
+		{
+			bool hasConflict;
+			Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
+			var sw = Stopwatch.StartNew();
+			do
+			{
+				conflicts = await GetConflicts(store, dbName, docId);
+				hasConflict = conflicts.Count > 0;
+				if (hasConflict == false && sw.ElapsedMilliseconds > timeout)
+					Assert.False(true, "Timed out while waiting for conflicts");
+			} while (hasConflict == false);
+			return conflicts;
+		}
+
+		private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store, string dbName,
+		    string docId)
+	    {
+			var url = $"{store.Url}/databases/{dbName}/replication/conflicts?docId={docId}";
+			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+			{
+				request.ExecuteRequest();
+				var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
+				var conflicts = conflictsJson.Select(x => new
+				{
+					Key = x.Value<string>("Key"),
+					ChangeVector = x.Value<RavenJArray>("ChangeVector").Select(c => c.FromJson()).ToArray()
+				}).GroupBy(x => x.Key).ToDictionary(x => x.Key,x => x.Select(i => i.ChangeVector).ToList());
+
+				return conflicts;
+			}
+		}
+
+
+		private async Task<bool> HasConflicts(DocumentStore store, string dbName,string docId)
 	    {
 		    var url = $"{store.Url}/databases/{dbName}/replication/conflicts?docId={docId}";
 			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
 			{
 				request.ExecuteRequest();
-				var conflictsJson = RavenJObject.Parse(await request.Response.Content.ReadAsStringAsync());
-				return conflictsJson.Count > 0;
+				var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
+				return conflictsJson.Length > 0;
 			}		    
 	    }
 	}

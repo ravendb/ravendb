@@ -2,12 +2,23 @@
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Replication.Messages;
+using Raven.Json.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
     {
+		//note - this is a helper to use in unit tests only
+	    public static ChangeVectorEntry FromJson(this RavenJToken self)
+	    {
+		    return new ChangeVectorEntry
+			{
+				DbId = Guid.Parse(self.Value<string>("DbId")),
+				Etag = long.Parse(self.Value<string>("Etag"))
+			};
+	    }
+
 	    public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
 	    {
 		    var results = new DynamicJsonArray();

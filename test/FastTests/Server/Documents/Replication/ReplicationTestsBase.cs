@@ -19,13 +19,13 @@ namespace FastTests.Server.Documents.Replication
         }
 
 
-        protected T WaitForDocumentToReplicate<T>(DocumentStore store, string id, int timeout)
+        protected T WaitForDocumentToReplicate<T>(DocumentStore store, string id, int timeout, string databaseName = null)
             where T : class
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds <= timeout)
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenSession(databaseName))
                 {
                     var doc = session.Load<T>(id);
                     if (doc != null)
