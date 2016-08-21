@@ -32,7 +32,7 @@ class cluster extends viewModelBase {
     serverUrl = ko.observable<string>(); 
     isLeavingCluster = ko.observable<boolean>(); 
     isReplicationChecksEnabled = ko.observable<boolean>();
-
+    
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     clusterMode: KnockoutComputed<boolean>;
@@ -45,6 +45,7 @@ class cluster extends viewModelBase {
         this.clusterMode = ko.computed(() => {
             return this.topology() && this.topology().clusterMode();
         });
+        shell.globalChangesApi.watchDocsStartingWith("Raven/Cluster/Configuration",(e)=>{this.updateClusterConfiguration(e)});
     }
 
     canActivate(args: any): JQueryPromise<any> {
@@ -245,6 +246,9 @@ class cluster extends viewModelBase {
         return currentConfiguration;
     }
 
+    updateClusterConfiguration(documentChangeNotificationDto: documentChangeNotificationDto) {
+        this.fetchClusterConfiguration(appUrl.getSystemDatabase());
+    }
 }
 
 export = cluster;

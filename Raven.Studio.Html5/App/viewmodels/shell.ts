@@ -176,7 +176,7 @@ class shell extends viewModelBase {
 
     static has40Features = ko.computed(() => shell.serverMainVersion() >= 4);
 
-    private globalChangesApi: changesApi;
+    public static globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {
@@ -192,7 +192,7 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => {
-            this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+            shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
             this.notifications = this.createNotifications();
         });
 
@@ -300,7 +300,7 @@ class shell extends viewModelBase {
                     self.destroyChangesApi();
                 } else {
                     // enable changes api
-                    this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+                    shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
                     this.notifications = this.createNotifications();
                 }
             } else if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
@@ -348,7 +348,7 @@ class shell extends viewModelBase {
 
     private destroyChangesApi() {
         this.cleanupNotifications();
-        this.globalChangesApi.dispose();
+        shell.globalChangesApi.dispose();
         shell.disconnectFromResourceChangesApi();
     }
 
@@ -731,12 +731,12 @@ class shell extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            this.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase, TenantType.Database)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
-            this.globalChangesApi.watchDocument(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
-            this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase, TenantType.Database)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
+            shell.globalChangesApi.watchDocument(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
 
