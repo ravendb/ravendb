@@ -93,10 +93,6 @@ class cluster extends viewModelBase {
             .fail(() => messagePublisher.reportError("Unable to toggle replication checks."));
     }
 
-    isReplicationCheckEnabled() {
-        return this.isReplicationChecksEnabled();
-    }
-
     fetchClusterTopology(db: database): JQueryPromise<any> {
         return new getClusterTopologyCommand(db)
             .execute()
