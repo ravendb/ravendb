@@ -11,6 +11,8 @@ namespace Voron
         public readonly Page Value;
         public readonly bool IsWritable;
 
+        private const int Invalid = -1;
+
         public PageHandlePtr(Page value, bool isWritable)
         {
             this.Value = value;
@@ -20,7 +22,7 @@ namespace Voron
         public long PageNumber
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return IsValid ? Value.PageNumber : -1; }
+            get { return IsValid ? Value.PageNumber : Invalid; }
         }
 
         public bool IsValid

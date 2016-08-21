@@ -11,7 +11,7 @@ namespace Voron
     {
         private readonly LowLevelTransaction _tx;
         private readonly PageHandlePtr[] _cache;
-        private int current = 0;
+        private int _current;
 
         public PageLocator ( LowLevelTransaction tx, int cacheSize = 4)
         {
@@ -23,44 +23,43 @@ namespace Voron
 
         public Page GetReadOnlyPage (long pageNumber)
         {
-            int position = current;
+            int position = _current;
 
             int itemsLeft = _cache.Length;
             while (itemsLeft > 0)
             {
                 int i = position % _cache.Length;
 
-                // If the value is not valid or the page number is not equal
-                if (!_cache[i].IsValid || _cache[i].PageNumber != pageNumber)
+                // If the page number is equal to the page number we are looking for (therefore it's valid)
+                // Will not fail at PageNumber=0 because the accesor will handle that.
+                if (_cache[i].PageNumber != pageNumber)
                 {
-                    // we continue.
                     itemsLeft--;
                     position++;
 
-                    continue;
-                }
+                    continue;                   
+                }            
 
                 return _cache[i].Value;
             }
 
-            current = (++current) % _cache.Length;
-            _cache[current] = new PageHandlePtr(_tx.GetPage(pageNumber), false);
-            return _cache[current].Value;
+            _current = (++_current) % _cache.Length;
+            _cache[_current] = new PageHandlePtr(_tx.GetPage(pageNumber), false);
+            return _cache[_current].Value;
         }
-
-        private const int Invalid = -1;
 
         public Page GetWritablePage(long pageNumber)
         {
-            int position = current;
+            int position = _current;
 
             int itemsLeft = _cache.Length;
             while (itemsLeft > 0)
             {
                 int i = position % _cache.Length;
 
-                // If the value is not valid or the page number is not equal
-                if (!_cache[i].IsValid || _cache[i].PageNumber != pageNumber)
+                // If the page number is equal to the page number we are looking for (therefore it's valid)
+                // Will not fail at PageNumber=0 because the accesor will handle that.
+                if (_cache[i].PageNumber != pageNumber)
                 {
                     // we continue.
                     itemsLeft--;
@@ -75,9 +74,9 @@ namespace Voron
                 return _cache[i].Value;
             }
 
-            current = (++current) % _cache.Length;
-            _cache[current] = new PageHandlePtr(_tx.ModifyPage(pageNumber), true);
-            return _cache[current].Value;
+            _current = (++_current) % _cache.Length;
+            _cache[_current] = new PageHandlePtr(_tx.ModifyPage(pageNumber), true);
+            return _cache[_current].Value;
         }
 
         public void Clear ()
@@ -89,7 +88,7 @@ namespace Voron
         {
             for (int i = 0; i < _cache.Length; i++)
             {
-                if (_cache[i].IsValid && _cache[i].PageNumber == pageNumber)
+                if (_cache[i].PageNumber == pageNumber)
                 {
                     _cache[i] = new PageHandlePtr();
                     return;

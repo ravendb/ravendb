@@ -108,7 +108,7 @@ namespace Voron.Impl
             _freeSpaceHandling = freeSpaceHandling;
             _allocator = context ?? new ByteStringContext();
             _disposeAllocator = context == null;
-            _pageCache = new PageCache(this, 8);
+            _pageCache = new PageCache(8);
 
             Flags = flags;
             PageSize = _dataPager.PageSize;
@@ -724,15 +724,11 @@ namespace Voron.Impl
 
         private class PageCache
         {
-            private readonly LowLevelTransaction _tx;
             private readonly PageHandlePtr[] _cache;
-            private int current = 0;
+            private int _current = 0;
 
-            public PageCache(LowLevelTransaction tx, int cacheSize = 8)
+            public PageCache(int cacheSize = 8)
             {
-                Debug.Assert(tx != null);
-
-                this._tx = tx;
                 this._cache = new PageHandlePtr[cacheSize];
             }
 
@@ -740,30 +736,29 @@ namespace Voron.Impl
             {
                 // We initiate the check from the 1 modulus upward to ensure that we don't need to 
                 // reset pages on addition. Since we will always pick the last one added. 
-                int position = current + _cache.Length;
+                int position = _current + _cache.Length;
 
                 int itemsLeft = _cache.Length;
                 while (itemsLeft > 0)
                 {
                     int i = position % _cache.Length;
 
-                    // If the value is not valid or the page number is not equal
-                    if (!_cache[i].IsValid || _cache[i].PageNumber != pageNumber)
+                    // If the page number is equal to the page number we are looking for (therefore it's valid)
+                    // Will not fail at PageNumber=0 because the accesor will handle that.
+                    if (_cache[i].PageNumber != pageNumber)
                     {
-                        // we continue.
                         itemsLeft--;
                         position--;
 
                         continue;
                     }
 
+                    // we continue.
                     return _cache[i].Value;
                 }
 
                 return null;
             }
-
-            private const int Invalid = -1;
 
             public Page TryGetWritablePage(long pageNumber, out bool isReadOnly)
             {
@@ -771,15 +766,16 @@ namespace Voron.Impl
 
                 // We initiate the check from the 1 modulus upward to ensure that we don't need to 
                 // reset pages on addition. Since we will always pick the last one added. 
-                int position = current + _cache.Length;
+                int position = _current + _cache.Length;
 
                 int itemsLeft = _cache.Length;
                 while (itemsLeft > 0)
                 {
                     int i = position % _cache.Length;
 
-                    // If the value is not valid or the page number is not equal
-                    if (!_cache[i].IsValid || _cache[i].PageNumber != pageNumber)
+                    // If the page number is equal to the page number we are looking for (therefore it's valid)
+                    // Will not fail at PageNumber=0 because the accesor will handle that.
+                    if (_cache[i].PageNumber != pageNumber)
                     {
                         // we continue.
                         itemsLeft--;
@@ -805,14 +801,14 @@ namespace Voron.Impl
 
             public void AddWritable(Page page)
             {
-                current = (++current) % _cache.Length;
-                _cache[current] = new PageHandlePtr(page, true);
+                _current = (++_current) % _cache.Length;
+                _cache[_current] = new PageHandlePtr(page, true);
             }
 
             public void AddReadOnly(Page page)
             {
-                current = (++current) % _cache.Length;
-                _cache[current] = new PageHandlePtr(page, false);
+                _current = (++_current) % _cache.Length;
+                _cache[_current] = new PageHandlePtr(page, false);
             }
 
             public void Clear()
@@ -825,10 +821,12 @@ namespace Voron.Impl
                 // There can be multiple instances of the same page in the cache. 
                 for (int i = 0; i < _cache.Length; i++)
                 {
-                    if (_cache[i].IsValid && _cache[i].PageNumber == pageNumber)
+                    if (_cache[i].PageNumber == pageNumber)
                         _cache[i] = new PageHandlePtr();
                 }
             }
         }
+
+
     }
 }
