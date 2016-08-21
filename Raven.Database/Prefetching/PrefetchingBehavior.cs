@@ -322,6 +322,7 @@ namespace Raven.Database.Prefetching
             long currentlyUsedBatchSizesInBytes = autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum();
             do
             {
+                docsLoaded = false;
                 var nextEtagToIndex = GetNextDocEtag(etag);
                 var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
@@ -361,7 +362,7 @@ namespace Raven.Database.Prefetching
                         }
 
                         //if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
-                        docsLoaded = LoadDocumentsFromDisk(etag, firstEtagInQueue, result); // here we _intentionally_ use the current etag, not the next one
+                        docsLoaded = LoadDocumentsFromDisk(etag, firstEtagInQueue, result, take); // here we _intentionally_ use the current etag, not the next one
                     }
                 }
 
@@ -415,17 +416,10 @@ namespace Raven.Database.Prefetching
             return Math.Max(numberOfItemsToProcessInSingleBatch, context.Configuration.InitialNumberOfItemsToProcessInSingleBatch);
         }
 
-        private bool LoadDocumentsFromDisk(Etag etag, Etag untilEtag, List<JsonDocument> items)
+        private bool LoadDocumentsFromDisk(Etag etag, Etag untilEtag, List<JsonDocument> items, int? take)
         {
             var sp = Stopwatch.StartNew();
-            int? numberOfDocsToFetch = null;
-            if (items.Count > 0)
-            {
-                //we already loaded some documents
-                numberOfDocsToFetch = Math.Max(1, GetNumberOfItemsToProcessInSingleBatch() - items.Count);
-            }
-
-            var jsonDocs = GetJsonDocsFromDisk(context.CancellationToken, etag, untilEtag, numberOfDocsToFetch: numberOfDocsToFetch);
+            var jsonDocs = GetJsonDocsFromDisk(context.CancellationToken, etag, untilEtag);
             if (log.IsDebugEnabled)
             {
                 log.Debug("Loaded {0} documents ({3:#,#;;0} kb) from disk, starting from etag {1}, took {2}ms", jsonDocs.Count, etag, sp.ElapsedMilliseconds,
@@ -436,12 +430,38 @@ namespace Raven.Database.Prefetching
             //of making sure that we don't need to do this next time by starting an async load
             MaybeAddFutureBatch(jsonDocs);
 
-            //we're loading the document directly from disk starting from 'etag'.
+            if (jsonDocs.Count == 0)
+                return false;
+
+            //we're loading the document directly from disk.
             //we made sure that the amount that we load doesn't exceed the number 
             //of docs that we are allowed to load in a single batch
-            items.AddRange(jsonDocs);
+            take = take ?? GetNumberOfItemsToProcessInSingleBatch();
+            if (items.Count + jsonDocs.Count < take)
+            {
+                //add all json docs
+                items.AddRange(jsonDocs);
+                return true;
+            }
 
-            return jsonDocs.Count > 0;
+            var count = 0;
+            take = Math.Max(0, take.Value - items.Count);
+            foreach (var doc in jsonDocs)
+            {
+                if (count == take)
+                    break;
+
+                items.Add(doc);
+                count++;
+            }
+
+            using (prefetchingQueue.EnterWriteLock())
+            {
+                for (var i = count; i < jsonDocs.Count; i++)
+                    prefetchingQueue.Add(jsonDocs[i]);
+            }
+
+            return true;
         }
 
         private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items, int? take)
@@ -650,8 +670,7 @@ namespace Raven.Database.Prefetching
             }
         }
 
-        private List<JsonDocument> GetJsonDocsFromDisk(CancellationToken cancellationToken, 
-            Etag etag, Etag untilEtag, Reference<bool> earlyExit = null, int? numberOfDocsToFetch = null)
+        private List<JsonDocument> GetJsonDocsFromDisk(CancellationToken cancellationToken, Etag etag, Etag untilEtag, Reference<bool> earlyExit = null)
         {
             List<JsonDocument> jsonDocs = null;
 
@@ -679,7 +698,7 @@ namespace Raven.Database.Prefetching
                     jsonDocs = actions.Documents
                         .GetDocumentsAfter(
                             etag,
-                            numberOfDocsToFetch ?? GetNumberOfItemsToProcessInSingleBatch(),
+                            GetNumberOfItemsToProcessInSingleBatch(),
                             cancellationToken,
                             maxSize,
                             untilEtag,
