@@ -1,17 +1,97 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Linq;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Transformers;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Utils
 {
     internal class TypeConverter
     {
-        public static unsafe dynamic DynamicConvert(object value)
+        private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
+
+        public static object ConvertType(object value, JsonOperationContext context)
+        {
+            if (value == null || value is DynamicNullObject)
+                return null;
+
+            var dynamicDocument = value as DynamicBlittableJson;
+            if (dynamicDocument != null)
+                return dynamicDocument.BlittableJson;
+
+            var transformerParameter = value as TransformerParameter;
+            if (transformerParameter != null)
+                return transformerParameter.OriginalValue;
+
+            if (value is string)
+                return value;
+
+            if (value is LazyStringValue || value is LazyCompressedStringValue)
+                return value;
+
+            if (value is bool)
+                return value;
+
+            if (value is int || value is long || value is double)
+                return value;
+
+            if (value is LazyDoubleValue)
+                return value;
+
+            if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
+                return value;
+
+            var dictionary = value as IDictionary;
+            if (dictionary != null)
+            {
+                var @object = new DynamicJsonValue();
+                foreach (var key in dictionary.Keys)
+                    @object[key.ToString()] = ConvertType(dictionary[key], context);
+
+                return @object;
+            }
+
+            var objectEnumerable = value as IEnumerable<object>;
+            if (objectEnumerable != null)
+            {
+                if (AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(objectEnumerable))
+                    return new DynamicJsonArray(objectEnumerable.Select(x => ConvertType(x, context)));
+            }
+
+            var charEnumerable = value as IEnumerable<char>;
+            if (charEnumerable != null)
+                return new string(charEnumerable.ToArray());
+
+            var inner = new DynamicJsonValue();
+            var accessor = GetPropertyAccessor(value);
+
+            foreach (var property in accessor.Properties)
+            {
+                var propertyValue = property.Value.GetValue(value);
+                var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
+                if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
+                {
+                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ConvertType(x, context)));
+                    continue;
+                }
+
+                inner[property.Key] = ConvertType(propertyValue, context);
+            }
+
+            return inner;
+        }
+
+        public static dynamic DynamicConvert(object value)
         {
             if (value == null)
                 return DynamicNullObject.Null;
@@ -23,6 +103,14 @@ namespace Raven.Server.Utils
             var jsonArray = value as BlittableJsonReaderArray;
             if (jsonArray != null)
                 return new DynamicArray(jsonArray);
+
+            return ConvertForIndexing(value);
+        }
+
+        public static unsafe object ConvertForIndexing(object value)
+        {
+            if (value == null)
+                return null;
 
             var lazyString = value as LazyStringValue;
             if (lazyString == null)
@@ -136,6 +224,12 @@ namespace Raven.Server.Utils
             {
                 throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value), e);
             }
+        }
+
+        public static PropertyAccessor GetPropertyAccessor(object value)
+        {
+            var type = value.GetType();
+            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
         }
     }
 }

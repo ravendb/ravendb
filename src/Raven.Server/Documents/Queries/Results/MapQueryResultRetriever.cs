@@ -6,7 +6,7 @@ using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -235,7 +235,8 @@ namespace Raven.Server.Documents.Queries.Results
         private static bool TryExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
             object value;
-            if (BlittableJsonTraverser.Default.TryRead(document.Data, fieldToFetch.Name, out value) == false)
+            StringSegment leftPath;
+            if (BlittableJsonTraverser.Default.TryRead(document.Data, fieldToFetch.Name, out value, out leftPath) == false)
                 return false;
 
             toFill[fieldToFetch.Name.Value] = value;

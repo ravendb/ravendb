@@ -345,6 +345,15 @@ namespace Sparrow.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.String;
                     return;
                 }
+                if (current is DateTimeOffset)
+                {
+                    var dateTime = (DateTimeOffset)current;
+                    var s = dateTime.ToString("o");
+
+                    SetStringBuffer(s);
+                    _state.CurrentTokenType = JsonParserToken.String;
+                    return;
+                }
                 if (current is decimal)
                 {
                     var d = (decimal)current;

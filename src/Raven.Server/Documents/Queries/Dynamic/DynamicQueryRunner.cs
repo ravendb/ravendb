@@ -68,19 +68,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _transformerStore, _context))
                 {
                     var fieldsToFetch = new FieldsToFetch(query, null, transformer);
-                    var documents = _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize);
+                    var documents = new CollectionQueryEnumerable(_documents, fieldsToFetch, collection, query, _context);
+
                     var results = scope != null ? scope.Transform(documents) : documents;
 
                     foreach (var document in results)
                     {
                         _token.Token.ThrowIfCancellationRequested();
 
-                        var doc = fieldsToFetch.IsProjection
-                            ? MapQueryResultRetriever.GetProjectionFromDocument(document, fieldsToFetch, _context)
-                            : document;
-
-                        result.Results.Add(doc);
-                        includeDocumentsCommand.Gather(doc);
+                        result.Results.Add(document);
+                        includeDocumentsCommand.Gather(document);
                     }
                 }
 

@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var accessor = GetPropertyAccessor(documentToProcess);
             foreach (var property in accessor.Properties)
             {
-                var value = property.Value(documentToProcess);
+                var value = property.Value.GetValue(documentToProcess);
 
                 IndexField field;
 

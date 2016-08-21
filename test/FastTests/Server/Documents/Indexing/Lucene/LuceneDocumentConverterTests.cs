@@ -79,59 +79,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         }
 
         [Fact]
-        public void Does_not_add_field_to_output_document_if_input_document_has_missing_property_in_first_conversion_run()
-        {
-            _sut = new LuceneDocumentConverter(new IndexField[]
-            {
-                new IndexField
-                {
-                    Name = "Name",
-                    Highlighted = false,
-                    Storage = FieldStorage.No
-                },
-            });
-
-            var doc = create_doc(new DynamicJsonValue
-            {
-            }, "users/1");
-
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
-
-            Assert.Equal(1, result.GetFields().Count);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
-        }
-
-        [Fact]
-        public void Does_not_add_field_to_output_document_if_input_document_has_missing_property_in_next_conversion_run()
-        {
-            _sut = new LuceneDocumentConverter(new IndexField[]
-            {
-                new IndexField
-                {
-                    Name = "Name",
-                    Highlighted = false,
-                    Storage = FieldStorage.No
-                },
-            });
-
-            var docWithName = create_doc(new DynamicJsonValue
-            {
-                ["Name"] = "James"
-            }, "users/1");
-
-            _sut.ConvertToCachedDocument(docWithName.Key, docWithName);
-
-            var docWithoutName = create_doc(new DynamicJsonValue
-            {
-            }, "users/1");
-
-            var result = _sut.ConvertToCachedDocument(docWithoutName.Key, docWithoutName);
-
-            Assert.Equal(1, result.GetFields().Count);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
-        }
-
-        [Fact]
         public void Conversion_of_string_value()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]

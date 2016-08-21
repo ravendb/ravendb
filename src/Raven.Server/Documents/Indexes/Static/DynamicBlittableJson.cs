@@ -53,7 +53,9 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 if (_key == null)
                 {
-                    result = DynamicNullObject.Null;
+                    if (BlittableJson.TryGetMember(name, out result) == false)
+                        result = DynamicNullObject.Null;
+
                     return true;
                 }
 
