@@ -526,9 +526,9 @@ namespace Raven.Server.Documents
             out byte* key, out int keySize)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
-            if (byteCount > 255)
+            if (byteCount > 512)
                 throw new ArgumentException(
-                    $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
+                    $"Key cannot exceed 512 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
                     nameof(str));
 
             // Because we need to also store escape positions for the key when we store it
