@@ -49,7 +49,8 @@ namespace Raven.Server.Utils
             }
 
             object value;
-            if (BlittableJsonTraverser.Default.TryRead(docReader, pathSegment, out value) == false)
+            StringSegment leftPath;
+            if (BlittableJsonTraverser.Default.TryRead(docReader, pathSegment, out value, out leftPath) == false)
                 return;
 
             var collectionOfIds = value as IEnumerable;

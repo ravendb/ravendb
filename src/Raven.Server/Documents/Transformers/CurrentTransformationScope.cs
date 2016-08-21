@@ -9,6 +9,7 @@ using Voron;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using System.Linq;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Transformers
@@ -186,11 +187,11 @@ namespace Raven.Server.Documents.Transformers
                 return value;
 
             var inner = new DynamicJsonValue();
-            var accessor = TransformationScope.GetPropertyAccessor(value);
+            var accessor = TypeConverter.GetPropertyAccessor(value);
 
             foreach (var property in accessor.Properties)
             {
-                var propertyValue = property.Value(value);
+                var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
                 {

@@ -75,30 +75,35 @@ namespace Raven.Server.Documents
             }
             catch (SubscriptionException e)
             {
-                incomingConnection.ConnectionException = e;
-
-                while (_rejectedConnections.Count > 10)
-                {
-                    SubscriptionConnection options;
-                    _rejectedConnections.TryDequeue(out options);
-                }
-
+                RegisterRejectedConnection(incomingConnection, e);
                 throw;
-            }
-
-            while (_recentConnections.Count > 10)
-            {
-                SubscriptionConnection options;
-                _recentConnections.TryDequeue(out options);
             }
 
             _connectionInUse.Reset();
             _currentConnection = incomingConnection;
             return new DisposableAction(() => {
+                while (_recentConnections.Count > 10)
+                {
+                    SubscriptionConnection options;
+                    _recentConnections.TryDequeue(out options);
+                }
                 _recentConnections.Enqueue(incomingConnection);
                 _connectionInUse.SetByAsyncCompletion();
                 _currentConnection = null;
             });
+        }
+
+        public void RegisterRejectedConnection(SubscriptionConnection connection, SubscriptionException exception = null)
+        {
+            if (exception!= null && connection.ConnectionException == null)
+                connection.ConnectionException = exception;
+
+            while (_rejectedConnections.Count > 10)
+            {
+                SubscriptionConnection options;
+                _rejectedConnections.TryDequeue(out options);
+            }
+            _rejectedConnections.Enqueue(connection);
         }
 
         public SubscriptionConnection[] RecentConnections => _recentConnections.ToArray();

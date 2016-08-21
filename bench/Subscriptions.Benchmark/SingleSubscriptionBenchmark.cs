@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -83,7 +84,11 @@ namespace SubscriptionsBenchmark
             _store = new DocumentStore()
             {
                 DefaultDatabase = databaseName,
-                Url = url
+                Url = url,
+                Conventions = new DocumentConvention()
+                {
+                    FailoverBehavior = FailoverBehavior.FailImmediately
+                }
             };
             _store.Initialize();
 
@@ -94,44 +99,52 @@ namespace SubscriptionsBenchmark
             public string Name { get; set; }
         }
 
-        public void PerformBenchmark()
+        public async Task PerformBenchmark()
         {
-            var runResult = SingleTestRun().Result;
+            var runResult = await SingleTestRun().ConfigureAwait(false);
+            
             Console.WriteLine(runResult.DocsProccessed + " " + runResult.DocsRequested + " " + runResult.ElapsedMs);
         }
 
         private async Task<RunResult> SingleTestRun()
         {
-            if (_subscriptionId.HasValue == false)
+            try
             {
-                _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
+                if (_subscriptionId.HasValue == false)
                 {
-                    Collection = _collectionName
-                });
+                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
+                    {
+                        Collection = _collectionName
+                    }).ConfigureAwait(false);
+                }
+            
+            
+                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
+                {
+                    SubscriptionId = _subscriptionId.Value,
+                    Strategy = SubscriptionOpeningStrategy.WaitForFree
+                }))
+                {
+                    var observer = new CounterObserver(_batchSize);
+                    var sp = Stopwatch.StartNew();
+                    subscription.Subscribe(observer);
+                    await subscription.StartAsync().ConfigureAwait(false);
+
+                    await observer.Tcs.Task.ConfigureAwait(false);
+
+                    await subscription.DisposeAsync().ConfigureAwait(false);
+                    return new RunResult
+                    {
+                        DocsProccessed = observer.CurCount,
+                        DocsRequested = _batchSize,
+                        ElapsedMs = sp.ElapsedMilliseconds
+                    };
+                }
             }
-            
-            
-            using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
+            catch (Exception ex)
             {
-                MaxDocsPerBatch = 20,
-                SubscriptionId = _subscriptionId.Value,
-                Strategy = SubscriptionOpeningStrategy.WaitForFree
-            }))
-            {
-                var observer = new CounterObserver(_batchSize);
-                var sp = Stopwatch.StartNew();
-                subscription.Subscribe(observer);
-                await subscription.StartAsync();
-
-                await observer.Tcs.Task;
-
-                await subscription.DisposeAsync();
-                return new RunResult
-                {
-                    DocsProccessed = observer.CurCount,
-                    DocsRequested = _batchSize,
-                    ElapsedMs = sp.ElapsedMilliseconds
-                };
+                Console.WriteLine(ex);
+                throw;
             }
         }
 

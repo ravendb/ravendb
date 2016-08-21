@@ -1471,7 +1471,18 @@ namespace Raven.Client.Indexes
                         Out("dynamic, ");
                     }
                     Out("dynamic>)(");
-                    Out(methodInfo.Name);
+                    if (methodInfo.Name == nameof(AbstractIndexCreationTask.LoadDocument))
+                    {
+                        var type = methodInfo.GetGenericArguments()[0];
+                        var collection = convention.GetTypeTagName(type);
+
+                        Out($"k1 => {methodInfo.Name}(k1, \"{collection}\")");
+                    }
+                    else
+                    {
+                        Out(methodInfo.Name);
+                    }
+                    
                     Out("))");
                     return node;
                 }
@@ -1528,7 +1539,7 @@ namespace Raven.Client.Indexes
             {
                 if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
                 {
-                    Out("new Raven.Abstractions.Linq.DynamicList(");
+                    Out("new DynamicArray(");
                     Visit(node.Arguments[0]);
                     Out(")");
                     return node; // we don't do casting on the server

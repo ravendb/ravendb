@@ -101,8 +101,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 long id;
 
-                bool isUpdate = false;
-
                 Queue<long> availableIds;
                 if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.TryGetValue(reduceKeyHash, out availableIds))
                 {
@@ -111,8 +109,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     if (availableIds.Count == 0)
                         existingIdsPerReduceKey.Remove(reduceKeyHash);
-
-                    isUpdate = true;
                 }
                 else
                 {
@@ -121,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     documentMapEntries.Add(id, Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong)));
                 }
 
-                GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data, isUpdate);
+                GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
             }
 
             if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.Count > 0)

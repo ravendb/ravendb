@@ -86,35 +86,43 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error occured while read bulk insert operation", e.InnerException);
-                _docsToWrite.CompleteAdding();
-                _messagesToClient.CompleteAdding();
-                try
-                {
-                    _insertDocuments.Wait();
-                }
-                catch (Exception insertDocumentsException)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Error in server while inserting bulk documents", insertDocumentsException);
-                    // forcing observation of any potential errors
-                }
-                try
-                {
-                    _replyToCustomer.Wait();
-                }
-                catch (Exception replyToClientException)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Couldn't reply to client with server's error in bulk insert (maybe client was disconnected)", replyToClientException);
-                    // forcing observation of any potential errors
-                }
+                WaitForBackgroundTasks();
                 SendErrorToClient(e.InnerException);
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Server internal error while in bulk insert process", e);
+                WaitForBackgroundTasks();
                 SendErrorToClient(e);
+            }
+        }
+
+        private void WaitForBackgroundTasks()
+        {
+            _docsToWrite.CompleteAdding();
+            _messagesToClient.CompleteAdding();
+
+            try
+            {
+                _insertDocuments.Wait();
+            }
+            catch (Exception insertDocumentsException)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error in server while inserting bulk documents", insertDocumentsException);
+                // forcing observation of any potential errors
+            }
+            try
+            {
+                _replyToCustomer.Wait();
+            }
+            catch (Exception replyToClientException)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Couldn't reply to client with server's error in bulk insert (maybe client was disconnected)",
+                        replyToClientException);
+                // forcing observation of any potential errors
             }
         }
 
@@ -261,9 +269,10 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         _docsToRelease.Add(bulkInsertDoc);
                     }
-                    docsToWrite.Clear();
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents in bulk insert took {sp.ElapsedMilliseconds:#,#} ms");
+                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents in bulk insert took {sp.ElapsedMilliseconds:#,#l;0} ms");
+                    docsToWrite.Clear();
+                    totalSize = 0;
                     return;
                 }
                 catch (ScratchBufferSizeLimitException e)

@@ -12,7 +12,9 @@ namespace SlowTests.Utils
                 ? store.DatabaseCommands
                 : store.DatabaseCommands.ForDatabase(databaseName);
 
-            Assert.Empty(commands.GetIndexErrors().SelectMany(x => x.Errors));
+            var errors = commands.GetIndexErrors();
+
+            Assert.Empty(errors.SelectMany(x => x.Errors));
         }
     }
 }

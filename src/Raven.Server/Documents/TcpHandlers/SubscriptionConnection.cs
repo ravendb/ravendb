@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             _state = _database.SubscriptionStorage.OpenSubscription(this);
             var timeout = 0;
-            long connectionAttemptStart = Stopwatch.GetTimestamp();
+            var connectionAttemptStart = DateTime.UtcNow;
 
             while (true)
             {
@@ -132,8 +132,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         ["Type"] = "CoonectionStatus",
                         ["Status"] = "Accepted"
                     });
-                    Stats.WaitedForConnection = Stopwatch.GetTimestamp() - connectionAttemptStart;
-                    Stats.ConnectedAt = Stopwatch.GetTimestamp();
+                    
+                    Stats.ConnectedAt = DateTime.UtcNow;
 
                     return true;
                 }
@@ -285,7 +285,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     out criteria, out startEtag);
 
                 var replyFromClientTask = _multiDocumentParser.ParseToMemoryAsync("client reply");
-               
                 using (RegisterForNotificationOnNewDocuments(criteria))
                 {
                     var patch = SetupFilterScript(criteria);
@@ -300,7 +299,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             var documents = _database.DocumentsStorage.GetDocumentsAfter(dbContext,
                                 criteria.Collection,
-                                startEtag + 1, 0, _options.MaxDocsPerBatch);
+                                startEtag+1, 0, _options.MaxDocsPerBatch);
                             _buffer.SetLength(0);
                             var docsToFlush = 0;
 
@@ -354,9 +353,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                 await FlushDocsToClient(docsToFlush, true);
                             }
 
-                            _database.SubscriptionStorage.UpdateSubscriptionTimes(_options.SubscriptionId,
-                                updateLastBatch: true, updateClientActivity: false);
-
                             if (anyDocumentsSentInCurrentIteration == false)
                             {
                                 if (await WaitForChangedDocuments(replyFromClientTask))
@@ -385,7 +381,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                                     _database.SubscriptionStorage.AcknowledgeBatchProcessed(_options.SubscriptionId,
                                         clientReply.Etag);
-                                    Stats.LastAckReceivedAt = Stopwatch.GetTimestamp();
+                                    Stats.LastAckReceivedAt = DateTime.UtcNow;
                                     Stats.AckRate.Mark();
                                     await WriteJsonAsync(new DynamicJsonValue
                                     {
@@ -417,7 +413,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _bufferedWriter.Flush();
             var bufferSize = _buffer.Length;
             await FlushBufferToNetwork();
-            Stats.LastMessageSentAt = Stopwatch.GetTimestamp();
+            Stats.LastMessageSentAt = DateTime.UtcNow;
             Stats.DocsRate.Mark(docsToFlush);
             Stats.BytesRate.Mark(bufferSize);
         }

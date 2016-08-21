@@ -89,6 +89,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.LazyString:
                 case ValueType.LazyCompressedString:
                 case ValueType.String:
+                case ValueType.Enum:
                     defaultIndexing = Field.Index.ANALYZED;
                     break;
                 case ValueType.DateTime:
@@ -136,6 +137,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     lazyStringValue = (LazyStringValue)value;
 
                 yield return GetOrCreateField(path, null, lazyStringValue, null, storage, indexing, termVector);
+                yield break;
+            }
+
+            if (valueType == ValueType.Enum)
+            {
+                yield return GetOrCreateField(path, value.ToString(), null, null, storage, indexing, termVector);
                 yield break;
             }
 
@@ -259,6 +266,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var valueString = value as string;
             if (valueString != null)
                 return valueString.Length == 0 ? ValueType.EmptyString : ValueType.String;
+
+            if (value is Enum) return ValueType.Enum;
 
             if (value is bool) return ValueType.Boolean;
 
@@ -450,7 +459,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             DateTime,
 
-            DateTimeOffset
+            DateTimeOffset,
+
+            Enum
         }
     }
 }

@@ -29,7 +29,7 @@ namespace FastTests
     {
         public const string ServerName = "Raven.Tests.Core.Server";
 
-        protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
+        protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
         protected static readonly ConcurrentSet<string> PathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
@@ -43,7 +43,7 @@ namespace FastTests
         private int NonReusedTcpServerPort { get; set; }
         private const int MaxParallelServer = 79;
         private static readonly List<int> _usedServerPorts = new List<int>();
-        private static List<int> _availableServerPorts = Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
+        private static readonly List<int> _availableServerPorts = Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
@@ -196,7 +196,7 @@ namespace FastTests
             store.AfterDispose += (sender, args) =>
             {
                 store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: true);
-                CreatedStores.Remove(store);
+                CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);
             return store;

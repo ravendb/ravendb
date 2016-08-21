@@ -9,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -37,6 +38,7 @@ namespace Raven.Server.Smuggler
             var result = new ImportResult();
 
             var state = new JsonParserState();
+            
             using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
             {
                 string operateOnType = "__top_start_object";
@@ -96,8 +98,8 @@ namespace Raven.Server.Smuggler
                             if (operateOnType == "Docs" && OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
                                 result.DocumentsCount++;
-                                _batchPutCommand.Documents.Add(builder.CreateReader());
-                                await HandleBatchOfDocuments();
+                                _batchPutCommand.Add(builder.CreateReader());
+                                await HandleBatchOfDocuments(context, parser);
                             }
                             else if (operateOnType == "RevisionDocuments" && OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
                             {
@@ -105,8 +107,8 @@ namespace Raven.Server.Smuggler
                                     break;
 
                                 result.RevisionDocumentsCount++;
-                                _batchPutCommand.Documents.Add(builder.CreateReader());
-                                await HandleBatchOfDocuments();
+                                _batchPutCommand.Add(builder.CreateReader());
+                                await HandleBatchOfDocuments(context, parser);
                             }
                             else
                             {
@@ -241,7 +243,7 @@ namespace Raven.Server.Smuggler
             _batchPutCommand = null;
         }
 
-        private async Task HandleBatchOfDocuments()
+        private async Task HandleBatchOfDocuments(DocumentsOperationContext context, UnmanagedJsonParser parser)
         {
             if (_batchPutCommand.Documents.Count >= 16)
             {
@@ -250,12 +252,20 @@ namespace Raven.Server.Smuggler
                     using (_prevCommand)
                     {
                         await _prevCommandTask;
+                        ResetContextAndParser(context, parser);
                     }
                 }
                 _prevCommandTask = _database.TxMerger.Enqueue(_batchPutCommand);
                 _prevCommand = _batchPutCommand;
                 _batchPutCommand = new MergedBatchPutCommand(_database);
             }
+        }
+
+        private static void ResetContextAndParser(DocumentsOperationContext context, UnmanagedJsonParser parser)
+        {
+            parser.ResetStream();
+            context.Reset();
+            parser.SetStream();
         }
 
         private class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
@@ -266,10 +276,13 @@ namespace Raven.Server.Smuggler
             private readonly DocumentDatabase _database;
 
             public readonly List<BlittableJsonReaderObject> Documents = new List<BlittableJsonReaderObject>();
+            private readonly IDisposable _resetContext;
+            private readonly DocumentsOperationContext _context;
 
             public MergedBatchPutCommand(DocumentDatabase database)
             {
                 _database = database;
+                _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
@@ -288,6 +301,11 @@ namespace Raven.Server.Smuggler
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.MetadataDocId);
                     mutatedMetadata.Remove(Constants.MetadataEtagId);
+
+                    if (key.StartsWith("formation"))
+                    {
+                        
+                    }
 
                     if (IsRevision)
                     {
@@ -317,10 +335,14 @@ namespace Raven.Server.Smuggler
 
             public void Dispose()
             {
-                foreach (var documentBuilder in Documents)
-                {
-                    documentBuilder.Dispose();
-                }
+                _resetContext.Dispose();
+            }
+
+            public unsafe void Add(BlittableJsonReaderObject doc)
+            {
+                var mem = _context.GetMemory(doc.Size);
+                Memory.Copy((byte*)mem.Address, doc.BasePointer, doc.Size);
+                Documents.Add(new BlittableJsonReaderObject((byte*)mem.Address, doc.Size, _context));
             }
         }
     }

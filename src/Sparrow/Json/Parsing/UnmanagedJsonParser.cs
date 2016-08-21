@@ -12,9 +12,10 @@ namespace Sparrow.Json.Parsing
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
         private readonly string _debugTag;
-        private readonly UnmanagedWriteBuffer _stringBuffer;
+        private UnmanagedWriteBuffer _stringBuffer;
         private string _doubleStringBuffer;
         private int _currentStrStart;
+        private readonly JsonOperationContext _ctx;
         private readonly JsonParserState _state;
         private int _pos;
         private int _bufSize;
@@ -37,6 +38,7 @@ namespace Sparrow.Json.Parsing
 
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
         {
+            _ctx = ctx;
             _state = state;
             _debugTag = debugTag;
             _stringBuffer = ctx.GetStream();
@@ -636,6 +638,16 @@ namespace Sparrow.Json.Parsing
         public byte ReadByte()
         {
             return _inputBuffer[_pos++];
+        }
+
+        public void ResetStream()
+        {
+            _stringBuffer.Dispose();
+        }
+
+        public void SetStream()
+        {
+            _stringBuffer = _ctx.GetStream();
         }
     }
 }

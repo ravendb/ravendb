@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     {
                         items.Add(LoadDocument(enumerator.Current, collectionName));
                     }
-                    return new DynamicJsonArray(items);
+                    return new DynamicArray(items);
                 }
             }
 

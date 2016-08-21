@@ -92,7 +92,11 @@ namespace Raven.Server.Documents
                         pendingOps.Clear();
                     }
                 }
-                
+
+            }
+            catch (OperationCanceledException)
+            {
+                // clean shutdown, nothing to do
             }
             catch (Exception e)
             {
@@ -198,6 +202,7 @@ namespace Raven.Server.Documents
             _runTransactions = false;
             _waitHandle.Set();
             _txMergingThread?.Join();
+            _waitHandle.Dispose();
         }
 
     }

@@ -25,16 +25,15 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public unsafe class ServerStore : IDisposable
     {
-        private CancellationTokenSource shutdownNotification;
+        private CancellationTokenSource _shutdownNotification;
 
-        public CancellationToken ServerShutdown => shutdownNotification.Token;
+        public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
         private static Logger _logger;
 
         private StorageEnvironment _env;
 
-        private UnmanagedBuffersPool _pool;
-        private TableSchema _itemsSchema;
+        private readonly TableSchema _itemsSchema;
 
         public readonly DatabasesLandlord DatabasesLandlord;
 
@@ -68,7 +67,7 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
-            shutdownNotification = new CancellationTokenSource();
+            _shutdownNotification = new CancellationTokenSource();
 
             AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
 
@@ -173,7 +172,7 @@ namespace Raven.Server.ServerWide
         public void Dispose()
         {
 
-            shutdownNotification.Cancel();
+            _shutdownNotification.Cancel();
 
             ContextPool?.Dispose();
 

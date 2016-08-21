@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             ["Location"] = locations[i%locations.Length]
                         }, $"users/{i}"))
                         {
-                            store.Add(i, mappedResult, false);
+                            store.Add(i, mappedResult);
                         }
                     }
 
@@ -174,7 +174,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             ["Location"] = locations[i % locations.Length]
                         }, $"users/{i}"))
                         {
-                            store.Add(i, mappedResult, true);
+                            store.Add(i, mappedResult);
                         }
                     }
 

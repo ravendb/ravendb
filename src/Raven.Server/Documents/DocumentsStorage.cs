@@ -30,26 +30,8 @@ namespace Raven.Server.Documents
 		private readonly TableSchema _conflictsSchema = new TableSchema();
 		private readonly TableSchema _tombstonesSchema = new TableSchema();
 
-        private readonly Logger _logger;
-        private readonly string _name;
-
-        private static readonly Slice AllDocsEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable);
-        private static readonly Slice LastEtagSlice = Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable);
-        private static readonly Slice HashTagSlice = Slice.From(StorageEnvironment.LabelsContext, "#", ByteStringType.Immutable);
-
-        // this is only modified by write transactions under lock
-        // no need to use thread safe ops
-        private long _lastEtag;
-
-        public string DataDirectory;
-        public DocumentsContextPool ContextPool;
-        private UnmanagedBuffersPool _unmanagedBuffersPool;
-
-        public DocumentsStorage(DocumentDatabase documentDatabase)
+        static DocumentsStorage()
         {
-            _documentDatabase = documentDatabase;
-            _name = _documentDatabase.Name;
-            _logger = LoggerSetup.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
 
 			_conflictsSchema.DefineKey(
 				new TableSchema.SchemaIndexDef
@@ -73,7 +55,7 @@ namespace Raven.Server.Documents
 			// The documents schema is as follows
 			// 4 fields (lowered key, etag, lazy string key, document, change vector)
 			// format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
-			_docsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1,
@@ -86,13 +68,13 @@ namespace Raven.Server.Documents
                 StartIndex = 1,
                 IsGlobal = false
             });
-            _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
+            DocsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = true
             });
 
-            _tombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            TombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1,
@@ -117,6 +99,28 @@ namespace Raven.Server.Documents
                 StartIndex = 2,
                 IsGlobal = false
             });
+        }
+
+        private readonly Logger _logger;
+        private readonly string _name;
+
+        private static readonly Slice AllDocsEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable);
+        private static readonly Slice LastEtagSlice = Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable);
+        private static readonly Slice HashTagSlice = Slice.From(StorageEnvironment.LabelsContext, "#", ByteStringType.Immutable);
+
+        // this is only modified by write transactions under lock
+        // no need to use thread safe ops
+        private long _lastEtag;
+
+        public string DataDirectory;
+        public DocumentsContextPool ContextPool;
+        private UnmanagedBuffersPool _unmanagedBuffersPool;
+
+        public DocumentsStorage(DocumentDatabase documentDatabase)
+        {
+            _documentDatabase = documentDatabase;
+            _name = _documentDatabase.Name;
+            _logger = LoggerSetup.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
         }
 
         public StorageEnvironment Environment { get; private set; }
@@ -182,7 +186,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
-                    _docsSchema.Create(tx, Document.SystemDocumentsCollection);
+                    DocsSchema.Create(tx, Document.SystemDocumentsCollection);
 					_conflictsSchema.Create(tx, "Conflicts");
 					_lastEtag = ReadLastEtag(tx);
 
@@ -266,7 +270,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string prefix, string matches, string exclude, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             var prefixSlice = GetSliceFromKey(context, prefix);
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -294,10 +298,10 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], long.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes["AllDocsEtags"], long.MaxValue))
             {
                 if (start > 0)
                 {
@@ -312,10 +316,10 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, int start, int take)
         {
-            var table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, "@" + collection, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue))
             {
                 if (start > 0)
                 {
@@ -330,10 +334,10 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
             {
                 if (result.Id == etag)
                     continue;
@@ -352,11 +356,14 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
             {
+                if (result.Id == etag)
+                    continue;
+
                 yield return TableValueToDocument(context, result);
             }
         }
@@ -367,11 +374,14 @@ namespace Raven.Server.Documents
             if (context.Transaction.InnerTransaction.ReadTree(collectionName) == null)
                 yield break;
 
-            var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, collectionName, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes["CollectionEtags"], etag))
             {
+                if (result.Id == etag)
+                    continue;
+
                 if (start > 0)
                 {
                     start--;
@@ -422,7 +432,7 @@ namespace Raven.Server.Documents
 
         public Document Get(DocumentsOperationContext context, Slice loweredKey)
         {
-			var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
@@ -440,7 +450,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+                table = new Table(TombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
             }
             catch (InvalidDataException)
             {
@@ -449,7 +459,7 @@ namespace Raven.Server.Documents
             }
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag))
             {
                 if (start > 0)
                 {
@@ -468,7 +478,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
+                table = new Table(DocsSchema, "@" + collection, context.Transaction.InnerTransaction);
             }
             catch (InvalidDataException)
             {
@@ -477,7 +487,7 @@ namespace Raven.Server.Documents
             }
 
             var result = table
-                        .SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
+                        .SeekBackwardFrom(DocsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
                         .FirstOrDefault();
 
             if (result == null)
@@ -493,7 +503,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+                table = new Table(TombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
             }
             catch (InvalidDataException)
             {
@@ -502,7 +512,7 @@ namespace Raven.Server.Documents
             }
 
             var result = table
-                .SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
+                .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
                 .FirstOrDefault();
 
             if (result == null)
@@ -518,7 +528,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+                table = new Table(TombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
             }
             catch (InvalidDataException)
             {
@@ -526,7 +536,7 @@ namespace Raven.Server.Documents
                 return 0;
             }
             return table
-                    .SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["DeletedEtags"], etag)
+                    .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes["DeletedEtags"], etag)
                     .Count();
         }
 
@@ -563,9 +573,9 @@ namespace Raven.Server.Documents
             out byte* key, out int keySize)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
-            if (byteCount > 255)
+            if (byteCount > 512)
                 throw new ArgumentException(
-                    $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
+                    $"Key cannot exceed 512 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
                     nameof(str));
 
             // Because we need to also store escape positions for the key when we store it
@@ -714,7 +724,7 @@ namespace Raven.Server.Documents
             string originalCollectionName;
             bool isSystemDocument;
             var collectionName = GetCollectionName(loweredKey, doc.Data, out originalCollectionName, out isSystemDocument);
-            var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, collectionName, context.Transaction.InnerTransaction);
 
             CreateTombstone(context, table, doc, originalCollectionName, changeVector);
 
@@ -789,8 +799,8 @@ namespace Raven.Server.Documents
 				};
 
                 var col = "#" + collectionName; // TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
-                _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
-                var table = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
+                TombstonesSchema.Create(context.Transaction.InnerTransaction, col);
+                var table = new Table(TombstonesSchema, col, context.Transaction.InnerTransaction);
 
                 table.Insert(tbv);
             }
@@ -964,8 +974,8 @@ namespace Raven.Server.Documents
             string originalCollectionName;
             bool isSystemDocument;
             var collectionName = GetCollectionName(key, document, out originalCollectionName, out isSystemDocument);
-            _docsSchema.Create(context.Transaction.InnerTransaction, collectionName);
-            var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+            DocsSchema.Create(context.Transaction.InnerTransaction, collectionName);
+            var table = new Table(DocsSchema, collectionName, context.Transaction.InnerTransaction);
 
             if (key[key.Length - 1] == '/')
             {
@@ -979,8 +989,8 @@ namespace Raven.Server.Documents
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             var col = "#" + originalCollectionName;// TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
-            _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
-            var tombstoneTable = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
+            TombstonesSchema.Create(context.Transaction.InnerTransaction, col);
+            var tombstoneTable = new Table(TombstonesSchema, col, context.Transaction.InnerTransaction);
             // delete a tombstone if it exists
             tombstoneTable.DeleteByKey(Slice.From(context.Allocator, lowerKey, lowerSize));
 
@@ -1230,7 +1240,7 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocuments(DocumentsOperationContext context)
         {
-            var fstIndex = _docsSchema.FixedSizeIndexes["AllDocsEtags"];
+            var fstIndex = DocsSchema.FixedSizeIndexes["AllDocsEtags"];
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.NameAsSlice, sizeof(long));
             return fst.NumberOfEntries;
         }
@@ -1269,7 +1279,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+                var collectionTable = new Table(DocsSchema, collectionName, context.Transaction.InnerTransaction);
 
                 return new CollectionStat
                 {
@@ -1292,7 +1302,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(_tombstonesSchema, "#" + collection, transaction);
+                table = new Table(TombstonesSchema, "#" + collection, transaction);
             }
             catch (InvalidDataException)
             {
@@ -1301,7 +1311,7 @@ namespace Raven.Server.Documents
             }
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleting tombstones earlier than {etag} in {collection}");
-            table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
+            table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
         }
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)

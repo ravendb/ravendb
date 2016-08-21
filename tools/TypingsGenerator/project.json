@@ -11,8 +11,7 @@
     },
     "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*",
-    "TypeScripter": "2.8.1"
-  },
+    "TypeScripter": "0.5.2"  },
 
   "frameworks": {
     "netcoreapp1.0": {

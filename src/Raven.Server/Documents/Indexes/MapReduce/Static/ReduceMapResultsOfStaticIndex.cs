@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 foreach (var property in _propertyAccessor.Properties)
                 {
-                    djv[property.Key] = property.Value(output);
+                    djv[property.Key] = property.Value.GetValue(output);
                 }
 
                 resultObjects.Add(indexContext.ReadObject(djv, "map/reduce"));

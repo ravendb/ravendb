@@ -28,8 +28,7 @@ namespace FastTests.Server.Json
                 ["Name"] = "John Doe"
             });
 
-            object read;
-            _sut.TryRead(doc, "Name", out read);
+            var read = _sut.Read(doc, "Name");
 
             Assert.Equal("John Doe", read.ToString());
         }
@@ -50,12 +49,11 @@ namespace FastTests.Server.Json
                 }
             });
 
-            object read;
-            _sut.TryRead(doc, "Address.City", out read);
+            var read = _sut.Read(doc, "Address.City");
 
             Assert.Equal("New York City", read.ToString());
 
-            _sut.TryRead(doc, "Address.Details.Floor", out read);
+            read = _sut.Read(doc, "Address.Details.Floor");
 
             Assert.Equal(2L, read);
         }
@@ -78,8 +76,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            object read;
-            _sut.TryRead(doc, "Friends,Name", out read);
+            var read = _sut.Read(doc, "Friends,Name");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -116,8 +113,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            object read;
-            _sut.TryRead(doc, "Friends,Name.First", out read);
+            var read = _sut.Read(doc, "Friends,Name.First");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -165,8 +161,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            object read;
-            _sut.TryRead(doc, "Items,,Bar.Foo", out read);
+            var read = _sut.Read(doc, "Items,,Bar.Foo");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -224,8 +219,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            object read;
-            _sut.TryRead(doc, "Items,Bar,Foo.Baz", out read);
+            var read = _sut.Read(doc, "Items,Bar,Foo.Baz");
 
             var enumerable = read as IEnumerable<object>;
 

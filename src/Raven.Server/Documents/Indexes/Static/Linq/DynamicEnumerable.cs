@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Linq;
 using Raven.Client.Linq;
 
 namespace Raven.Server.Documents.Indexes.Static.Linq
@@ -10,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
     {
         public static IEnumerable<dynamic> Union(object source, object other)
         {
-            return new DynamicList(((IEnumerable<object>)source).Union((IEnumerable<object>)other));
+            return new DynamicArray(((IEnumerable<object>)source).Union((IEnumerable<object>)other));
         }
 
         public static dynamic First<TSource>(IEnumerable<TSource> source)
@@ -173,12 +172,12 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static IEnumerable<dynamic> Concat(object source, object other)
         {
-            return new DynamicList(((IEnumerable<object>)source).Concat((IEnumerable<object>)other));
+            return new DynamicArray(((IEnumerable<object>)source).Concat((IEnumerable<object>)other));
         }
 
         public static IEnumerable<dynamic> Intersect(object source, object other)
         {
-            return new DynamicList(((IEnumerable<object>)source).Intersect((IEnumerable<object>)other));
+            return new DynamicArray(((IEnumerable<object>)source).Intersect((IEnumerable<object>)other));
         }
     }
 }

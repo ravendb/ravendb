@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -170,8 +171,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public bool MoveNext()
                 {
-                    Current.Data?.Dispose();
-
                     if (_enumerator.MoveNext() == false)
                         return false;
 
@@ -185,8 +184,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     foreach (var field in _fields)
                     {
-                        var value = accessor.Properties[field](document);
-                        mapResult[field] = value;
+                        var value = accessor.Properties[field].GetValue(document);
+                        mapResult[field] = TypeConverter.ConvertType(value, _parent._indexContext);
 
                         if (_groupByFields.Contains(field))
                         {
@@ -216,7 +215,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public void Dispose()
                 {
-                    Current.Data?.Dispose();
                 }
             }
         }

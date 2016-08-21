@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -86,7 +87,7 @@ namespace FastTests.Voron.Backups
                     tx.Commit();
                 }
 
-                new FullBackup().ToFile(envToSnapshot, Path.Combine(DataDir, "full.backup"));
+                new FullBackup().ToFile(Env, Path.Combine(DataDir, "full.backup"));
 
                 using (var tx = envToSnapshot.WriteTransaction())
                 {

@@ -649,11 +649,11 @@ namespace Voron.Impl.Journal
 
                 try
                 {
+                    var totalPages = 0L;
                     var sortedPages = pagesToWrite.OrderBy(x => x.Key)
                                                     .Select(x =>
                                                     {
                                                         var scratchNumber = x.Value.ScratchNumber;
-
                                                         PagerState pagerState;
                                                         if(scratchPagerStates.TryGetValue(scratchNumber, out pagerState) == false)
                                                         {
@@ -663,7 +663,9 @@ namespace Voron.Impl.Journal
                                                             scratchPagerStates.Add(scratchNumber, pagerState);
                                                         }
 
-                                                        return scratchBufferPool.ReadPage(transaction, scratchNumber, x.Value.ScratchPos, pagerState);
+                                                        var readPage = scratchBufferPool.ReadPage(transaction, scratchNumber, x.Value.ScratchPos, pagerState);
+                                                        totalPages += _waj._dataPager.GetNumberOfPages(readPage);
+                                                        return readPage;
                                                     })
                                                     .ToList();
 
@@ -675,9 +677,13 @@ namespace Voron.Impl.Journal
                     EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
                     long written = 0;
-                    foreach (var page in sortedPages)
+                    using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.Write,
+                            totalPages*_waj._dataPager.PageSize))
                     {
-                        written += _waj._dataPager.WritePage(page);
+                        foreach (var page in sortedPages)
+                        {
+                            written += _waj._dataPager.WritePage(page);
+                        }
                     }
 
                     _totalWrittenButUnsyncedBytes += written;
