@@ -159,7 +159,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 numericFields = null;
             }
 
-            result.MapFields = dynamicMapFields.OrderByDescending(x => x.Name.Length).ToArray();
+            result.MapFields = dynamicMapFields
+                .Where(x => x.Name != Constants.DocumentIdFieldName)
+                .OrderByDescending(x => x.Name.Length)
+                .ToArray();
 
             result.SortDescriptors = GetSortInfo(query.SortedFields, numericFields);
 

@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact(Skip = "TODO arek: how to handle queries with @in<__document_id>() only")]
+        [Fact]
         public async Task UsingInQuery()
         {
             var id1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
