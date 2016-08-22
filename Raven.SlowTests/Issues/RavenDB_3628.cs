@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3628.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,17 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Common;
-
 using Xunit;
 using Xunit.Extensions;
 
-namespace Raven.Tests.Issues
+namespace Raven.SlowTests.Issues
 {
     public class RavenDB_3628 : RavenTest
     {
@@ -108,7 +106,8 @@ namespace Raven.Tests.Issues
                     var stats = store.DatabaseCommands.GetStatistics();
                     var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
                     return indexStats.Priority == IndexingPriority.Disabled;
-                }, TimeSpan.FromSeconds(180));
+                    //Here i raise the time we wait for out of memory exception since it seems to take longer on the test machine 
+                }, TimeSpan.FromSeconds(10*60));
 
                 Assert.True(result);
 
