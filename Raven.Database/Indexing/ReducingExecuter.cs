@@ -93,7 +93,8 @@ namespace Raven.Database.Indexing
             }
             catch (Exception e)
             {
-                //if we got a OOME we need to decrease the batch size
+                operationCanceled = true;
+
                 if (HandleIfOutOfMemory(e, new OutOfMemoryDetails
                 {
                     Index = indexToWorkOn.Index,
@@ -101,24 +102,12 @@ namespace Raven.Database.Indexing
                     IsReducing = true
                 }))
                 {
-                    operationCanceled = true;
-                    return null;
-                }
-
-                Exception conflictException;
-                if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
-                {
-                    Log.Info($"Write conflict encountered for index '{indexToWorkOn.Index.PublicName}' during reduce." +
-                             $"Will retry. Details: {conflictException.Message}");
-                    operationCanceled = true;
+                    //if we got a OOME we need to decrease the batch size
                     return null;
                 }
 
                 if (IsOperationCanceledException(e))
-                {
-                    operationCanceled = true;
                     return null;
-                }
                     
                 context.AddError(indexToWorkOn.IndexId, indexToWorkOn.Index.PublicName, null, e);
             }

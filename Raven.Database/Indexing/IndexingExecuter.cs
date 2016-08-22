@@ -783,17 +783,20 @@ namespace Raven.Database.Indexing
             }
             catch (InvalidDataException e)
             {
+                wasOperationCanceled = true;
+
                 Log.ErrorException("Failed to index because of data corruption. ", e);
                 context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, e, $"Failed to index because of data corruption. Reason: {e.Message}");
             }
             catch (Exception e)
             {
+                wasOperationCanceled = true;
+
                 Exception conflictException;
                 if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
                 {
-                    Log.Info($"Write conflict encountered for index {batchForIndex.Index.PublicName}, " +
-                             $"probably when updating indexing stats. Will retry." +
-                             $"Details: {conflictException.Message}");
+                    Log.Info($"Write conflict encountered for index {batchForIndex.Index.PublicName}. " +
+                             $"Will retry on next indexing batch. Details: {conflictException.Message}");
                     return null;
                 }
 
@@ -803,14 +806,12 @@ namespace Raven.Database.Indexing
                     FailedItemsToProcessCount = batchForIndex.Batch.Ids.Count
                 }))
                 {
-                    wasOperationCanceled = true;
                     return null;
                 }
 
                 if (IsOperationCanceledException(e))
                 {
-                    wasOperationCanceled = true;
-                    throw;
+                    return null;
                 }
 
                 Log.WarnException($"Failed to index documents for index: {batchForIndex.Index.PublicName}", e);
