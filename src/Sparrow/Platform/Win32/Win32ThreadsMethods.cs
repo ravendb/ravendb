@@ -28,7 +28,7 @@ namespace Sparrow
     {
         Lowest = -2,
         BelowNormal = -1,
-        Normal = 0 ,
+        Normal = 0,
         AboveNormal = 1,
         Highest = 2
     }

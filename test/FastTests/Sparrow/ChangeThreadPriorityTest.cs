@@ -28,7 +28,6 @@ namespace FastTests.Sparrow
             thread.Start();
             thread.Join();
             Assert.True(threadPriority == ThreadPriority.Highest);
-
         }
     }
 }

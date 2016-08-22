@@ -18,10 +18,10 @@ namespace Sparrow
             if (Platform.RunningOnPosix)
             {
                 ulong threadId = PosixThreadsMethods.pthread_self();
-		        sched_param param = new sched_param
-		        {
-		            sched_priority = (int)priority
-		        };
+                sched_param param = new sched_param
+                {
+                    sched_priority = (int)priority
+                };
 
                 int policy = SCHED_OTHER;
                 if (priority != ThreadPriority.Normal)
@@ -48,7 +48,7 @@ namespace Sparrow
                     if (handle == IntPtr.Zero)
                         throw new Win32Exception("Failed to setup thread priority, couldn't open the current thread");
 
-                    var success = Win32ThreadsMethods.SetThreadPriority(handle, (int) priority);
+                    var success = Win32ThreadsMethods.SetThreadPriority(handle, (int)priority);
                     if (success == 0)
                     {
                         int lastWin32ErrorCode = Marshal.GetLastWin32Error();
@@ -137,9 +137,9 @@ namespace Sparrow
 
             ThreadPriority fixPriority = ThreadPriority.Normal;
 
-            if(priority >= 1 && priority <= 24)
+            if (priority >= 1 && priority <= 24)
                 fixPriority = ThreadPriority.Lowest;
-            else if(priority >=25 && priority <= 49)
+            else if (priority >= 25 && priority <= 49)
                 fixPriority = ThreadPriority.BelowNormal;
             else if (priority >= 50 && priority <= 74)
                 fixPriority = ThreadPriority.AboveNormal;
