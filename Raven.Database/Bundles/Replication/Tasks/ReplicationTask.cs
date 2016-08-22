@@ -52,6 +52,7 @@ namespace Raven.Bundles.Replication.Tasks
         public int NumberOfActiveReplicationDestinations { get; private set; }
         public const int SystemDocsLimitForRemoteEtagUpdate = 15;
         public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
+        public const int EtlFilteredDocumentsForRemoteEtagUpdate = 15;
 
         public readonly ConcurrentSet<Task> activeTasks = new ConcurrentSet<Task>();
 
@@ -802,7 +803,8 @@ namespace Raven.Bundles.Replication.Tasks
                             // we don't notify remote server about updates to system docs, see: RavenDB-715
                             if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0
                                 || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
-                                || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromOtherDestinations > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555, RavenDB-4750
+                                || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromOtherDestinations > DestinationDocsLimitForRemoteEtagUpdate // see RavenDB-1555, RavenDB-4750
+                                || documentsToReplicate.CountOfFilteredEtlDocuments > EtlFilteredDocumentsForRemoteEtagUpdate) 
                             {
                                 using (scope.StartRecording("Notify"))
                                 {
@@ -1216,6 +1218,7 @@ namespace Raven.Bundles.Replication.Tasks
             public RavenJArray Documents { get; set; }
             public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
             public int CountOfFilteredDocumentsWhichOriginFromOtherDestinations { get; set; }
+            public int CountOfFilteredEtlDocuments { get; set; }
             public List<JsonDocument> LoadedDocs { get; set; }
         }
 
@@ -1245,6 +1248,7 @@ namespace Raven.Bundles.Replication.Tasks
                     List<JsonDocument> fetchedDocs;
                     List<JsonDocument> docsToReplicate;
                     result.LastEtag = lastEtag;
+                    var isEtl = destination.IsETL;
 
                     while (true)
                     {
@@ -1266,10 +1270,18 @@ namespace Raven.Bundles.Replication.Tasks
                         docsToReplicate = handled.ToList();
 
                         docsSinceLastReplEtag += fetchedDocs.Count;
-                        result.CountOfFilteredDocumentsWhichAreSystemDocuments +=
-                            fetchedDocs.Count(doc => destination.IsSystemDocumentId(doc.Key));
-                        result.CountOfFilteredDocumentsWhichOriginFromOtherDestinations +=
-                            fetchedDocs.Count(doc => destination.OriginatedAtOtherDestinations(_transactionalStorageId, doc.Metadata) && !destination.IsSystemDocumentId(doc.Key));
+                        var filteredSystemDocuments = fetchedDocs.Count(doc => destination.IsSystemDocumentId(doc.Key));
+                        result.CountOfFilteredDocumentsWhichAreSystemDocuments += filteredSystemDocuments;
+                        var filteredOriginatedFromOtherDestinations = fetchedDocs
+                            .Count(doc => destination.OriginatedAtOtherDestinations(_transactionalStorageId, doc.Metadata) &&
+                                          !destination.IsSystemDocumentId(doc.Key));
+                        result.CountOfFilteredDocumentsWhichOriginFromOtherDestinations += filteredOriginatedFromOtherDestinations;
+
+                        if (isEtl)
+                        {
+                            var filteredDocuments = filteredSystemDocuments + filteredOriginatedFromOtherDestinations;
+                            result.CountOfFilteredEtlDocuments += fetchedDocs.Count - docsToReplicate.Count - filteredDocuments;
+                        }
 
                         if (fetchedDocs.Count > 0)
                         {
