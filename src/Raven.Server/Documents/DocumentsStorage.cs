@@ -678,6 +678,9 @@ namespace Raven.Server.Documents
 
         private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, TableValueReader tvr)
         {
+	        if (tvr == null) //precaution
+		        return null;
+
             var result = new DocumentTombstone
             {
                 StorageId = tvr.Id
