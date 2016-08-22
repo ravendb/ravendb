@@ -76,7 +76,7 @@ namespace Raven.Database.Plugins.Builtins
                 }
 
                 var message = $"A page file was found on HDD drive{(hddDrivesWithPageFile.Count > 1 ? "s" : string.Empty)}: " +
-                              $"{string.Join(", ", hddDrivesWithPageFile)} while there is {ssdDriveCount} " +
+                              $"{string.Join(", ", hddDrivesWithPageFile)} while there {(ssdDriveCount > 1 ? "are" : "is")} {ssdDriveCount} " +
                               $"SSD drive{(ssdDriveCount > 1 ? "s" : string.Empty)}. This can cause a slowdown, consider moving it to SSD";
 
                 log.Warn(message);
