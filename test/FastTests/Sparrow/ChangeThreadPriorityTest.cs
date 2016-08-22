@@ -1,6 +1,8 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Threading;
 using Sparrow;
+using Sparrow.Utils;
 using Xunit;
 
 namespace FastTests.Sparrow
@@ -10,24 +12,35 @@ namespace FastTests.Sparrow
         [Fact]
         public void StartChangeThreadPriority()
         {
+            Exception e = null;
             ThreadPriority threadPriority = ThreadPriority.Normal;
             Thread thread = new Thread(() =>
             {
                 try
                 {
-                    Assert.True(ThreadMethods.GetThreadPriority() == ThreadPriority.Normal);
-                    ThreadMethods.SetThreadPriority(ThreadPriority.Highest);
-                    threadPriority = ThreadMethods.GetThreadPriority();
-
+                    Assert.True(Threading.GetCurrentThreadPriority() == ThreadPriority.Normal);
+                    Threading.SetCurrentThreadPriority(ThreadPriority.Highest);
+                    lock (this)
+                    {
+                        threadPriority = Threading.GetCurrentThreadPriority();
+                    }
                 }
-                catch (Win32Exception ex)
+                catch (Exception ex)
                 {
-                    throw new Win32Exception(ex.Message, ex);
+                    lock (this)
+                    {
+                        e = ex;
+                    }
                 }
             });
             thread.Start();
             thread.Join();
-            Assert.True(threadPriority == ThreadPriority.Highest);
+            lock (this)
+            {
+                Assert.True(threadPriority == ThreadPriority.Highest);
+                if (e != null)
+                    Assert.False(true, e.ToString());
+            }
         }
     }
 }

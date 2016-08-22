@@ -6,6 +6,7 @@ using Raven.Abstractions.Util;
 using Raven.Server.Documents;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.ReplicationUtil
 {
@@ -36,8 +37,15 @@ namespace Raven.Server.ReplicationUtil
             if (_replicationThread != null)
                 return;
 
-            //haven't found better way to synchronize async method
-            _replicationThread = new Thread(() => AsyncHelpers.RunSync(ExecuteReplicationLoop))
+            _replicationThread = new Thread(() =>
+            {
+                // This has lower priority than request processing, so we let the OS
+                // schedule this appropriately
+                Threading.TryLowerCurrentThreadPriority();
+
+                //haven't found better way to synchronize async method
+                AsyncHelpers.RunSync(ExecuteReplicationLoop);
+            })
             {
                 Name = $"Replication thread, {ReplicationUniqueName}",
                 IsBackground = true
