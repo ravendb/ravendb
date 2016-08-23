@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;

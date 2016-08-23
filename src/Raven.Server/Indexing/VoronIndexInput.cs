@@ -5,14 +5,13 @@ using System.Threading;
 using Lucene.Net.Store;
 using Raven.Abstractions.Extensions;
 using Sparrow;
-
-using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing
 {
     public unsafe class VoronIndexInput : IndexInput
     {
+
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         private MmapStream _stream;
@@ -21,42 +20,34 @@ namespace Raven.Server.Indexing
         private readonly long _originalTransactionId;
         private readonly ThreadLocal<Transaction> _currentTransaction;
 
-        private readonly Slice _name;
+        private readonly string _name;
 
         private byte* _basePtr;
-
         private int _size;
 
         public VoronIndexInput(ThreadLocal<Transaction> transaction, string name)
         {
-            _name = Slice.From(transaction.Value.Allocator, name, ByteStringType.Immutable); 
+            _name = name;
             _originalTransactionId = transaction.Value.LowLevelTransaction.Id;
             _currentTransaction = transaction;
 
-            OpenInternal(this);
+            OpenInternal();
         }
 
-        private void OpenInternal(VoronIndexInput input)
+        private void OpenInternal()
         {
-            if (input._isOriginal || input._originalTransactionId != input._currentTransaction.Value.LowLevelTransaction.Id)
-            {
-                var filesTree = input._currentTransaction.Value.ReadTree("Files");
-                var readResult = filesTree.Read(input._name);
-                if (readResult == null)
-                    throw new FileNotFoundException("Could not find file", input._name.ToString());
+            var fileTree = _currentTransaction.Value.ReadTree(_name);
 
-                input._basePtr = readResult.Reader.Base;
-                input._size = readResult.Reader.Length;
-                input._stream = new MmapStream(readResult.Reader.Base, readResult.Reader.Length);
-                return;
-            }
+            if (fileTree == null)
+                throw new FileNotFoundException("Could not find index input", _name);
 
-            input._basePtr = _basePtr;
-            input._size = _size;
-            input._stream = new MmapStream(input._basePtr, input._size)
-            {
-                Position = _stream.Position
-            };
+            var readResult = fileTree.Read(VoronIndexOutput.DataKey);
+            if (readResult == null)
+                throw new InvalidDataException($"Could not find data of file {_name}");
+
+            _basePtr = readResult.Reader.Base;
+            _size = readResult.Reader.Length;
+            _stream = new MmapStream(readResult.Reader.Base, readResult.Reader.Length);
         }
 
         public override object Clone()
@@ -66,8 +57,16 @@ namespace Raven.Server.Indexing
             var clone = (VoronIndexInput)base.Clone();
             GC.SuppressFinalize(clone);
             clone._isOriginal = false;
-            
-            OpenInternal(clone);
+
+            if (clone._originalTransactionId != clone._currentTransaction.Value.LowLevelTransaction.Id)
+                clone.OpenInternal();
+            else
+            {
+                clone._stream = new MmapStream(clone._basePtr, clone._size)
+                {
+                    Position = _stream.Position
+                };
+            }
 
             return clone;
         }

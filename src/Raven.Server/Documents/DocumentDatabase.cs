@@ -1,22 +1,13 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
-using Raven.Client.Connection;
-using Raven.Client.Extensions;
-using Raven.Json.Linq;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
@@ -41,6 +32,9 @@ namespace Raven.Server.Documents
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
         public TransactionOperationsMerger TxMerger;
+
+        private long _usages;
+        private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
 
         public DocumentDatabase(string name, RavenConfiguration configuration, IoMetrics ioMetrics)
         {
@@ -110,6 +104,40 @@ namespace Raven.Server.Documents
             InitializeInternal();
         }
 
+        public DatabaseUsage DatabaseInUse()
+        {
+            return new DatabaseUsage(this);
+        }
+
+        public struct DatabaseUsage : IDisposable
+        {
+            private readonly DocumentDatabase _parent;
+
+            public DatabaseUsage(DocumentDatabase parent)
+            {
+                _parent = parent;
+                Interlocked.Increment(ref _parent._usages);
+                if (_parent._databaseShutdown.IsCancellationRequested)
+                {
+                    Dispose();
+                    ThrowOperationCancelled();
+                }
+            }
+
+            private void ThrowOperationCancelled()
+            {
+                throw new OperationCanceledException("The database " + _parent.Name + " is shutting down");
+            }
+
+
+            public void Dispose()
+            {
+                Interlocked.Decrement(ref _parent._usages);
+                if(_parent._databaseShutdown.IsCancellationRequested)
+                    _parent._waitForUsagesOnDisposal.Set();
+
+            }
+        }
 
         private void InitializeInternal()
         {
@@ -145,6 +173,14 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _databaseShutdown.Cancel();
+            // we'll wait for 1 minute to drain all the requests
+            // from the database
+            for (int i = 0; i < 60; i++)
+            {
+                if (Interlocked.Read(ref _usages) == 0)
+                    break;
+                _waitForUsagesOnDisposal.Wait(100);
+            }
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
 
             exceptionAggregator.Execute(() =>

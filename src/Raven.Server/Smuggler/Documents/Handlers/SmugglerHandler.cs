@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmugglerHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,7 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Smuggler
+namespace Raven.Server.Smuggler.Documents.Handlers
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
@@ -23,7 +23,7 @@ namespace Raven.Server.Smuggler
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var exporter = new DatabaseDataExporter(Database)
+                var exporter = new SmugglerExporter(Database)
                 {
                     DocumentsLimit = GetIntValueQueryString("documentsLimit", required: false),
                     RevisionDocumentsLimit = GetIntValueQueryString("RevisionDocumentsLimit", required: false),
@@ -50,7 +50,7 @@ namespace Raven.Server.Smuggler
             //TODO: detect gzip or not based on query string param
             using (var stream = new GZipStream(HttpContext.Request.Body, CompressionMode.Decompress))
             {
-                var importer = new DatabaseDataImporter(Database);
+                var importer = new SmugglerImporter(Database);
 
                 var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
                 DatabaseItemType databaseItemType;

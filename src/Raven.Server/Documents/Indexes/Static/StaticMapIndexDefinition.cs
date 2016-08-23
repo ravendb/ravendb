@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return result.ToArray();
         }
 
-        protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             var builder = IndexDefinition.ToJson();
             using (var json = context.ReadObject(builder, nameof(IndexDefinition), BlittableJsonDocumentBuilder.UsageMode.ToDisk))

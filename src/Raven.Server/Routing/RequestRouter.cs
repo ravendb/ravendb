@@ -73,7 +73,15 @@ namespace Raven.Server.Routing
                     return;
             }
 
-            await handler(reqCtx);
+            if (reqCtx.Database != null)
+            {
+                using (reqCtx.Database.DatabaseInUse())
+                    await handler(reqCtx);
+            }
+            else
+            {
+                await handler(reqCtx);
+            }
 
             Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
         }

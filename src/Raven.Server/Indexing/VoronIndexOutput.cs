@@ -9,13 +9,15 @@ namespace Raven.Server.Indexing
 {
     public class VoronIndexOutput : BufferedIndexOutput
     {
-        private readonly Slice _name;
+        public static readonly Slice DataKey = Slice.From(StorageEnvironment.LabelsContext, "_", ByteStringType.Immutable);
+
+        private readonly string _name;
         private readonly Transaction _tx;
         private readonly FileStream _file;
 
         public VoronIndexOutput(string tempPath, string name, Transaction tx)
         {
-            _name = Slice.From(tx.Allocator, name, ByteStringType.Immutable);
+            _name = name;
             _tx = tx;
             var fileTempPath = Path.Combine(tempPath, name + "_" + Guid.NewGuid());
             //TODO: Pass this flag
@@ -33,7 +35,7 @@ namespace Raven.Server.Indexing
         public override void Seek(long pos)
         {
             base.Seek(pos);
-            _file.Seek(pos, System.IO.SeekOrigin.Begin);
+            _file.Seek(pos, SeekOrigin.Begin);
         }
 
         public override long Length => _file.Length;
@@ -46,9 +48,9 @@ namespace Raven.Server.Indexing
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            var tree = _tx.CreateTree("Files");
+            var tree = _tx.CreateTree(_name);
             _file.Seek(0, SeekOrigin.Begin);
-            tree.Add(_name, _file);
+            tree.Add(DataKey, _file);
         }
     }
 }

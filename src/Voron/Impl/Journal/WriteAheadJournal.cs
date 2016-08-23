@@ -677,7 +677,7 @@ namespace Voron.Impl.Journal
                     EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
                     long written = 0;
-                    using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.Write,
+                    using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.WriteUsingMem,
                             totalPages*_waj._dataPager.PageSize))
                     {
                         foreach (var page in sortedPages)

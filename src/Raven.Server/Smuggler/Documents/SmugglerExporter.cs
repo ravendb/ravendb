@@ -5,11 +5,13 @@ using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 
-namespace Raven.Server.Smuggler
+namespace Raven.Server.Smuggler.Documents
 {
-    public class DatabaseDataExporter
+    public class SmugglerExporter
     {
         private readonly DocumentDatabase _database;
 
@@ -21,7 +23,7 @@ namespace Raven.Server.Smuggler
 
         public DatabaseItemType OperateOnTypes;
 
-        public DatabaseDataExporter(DocumentDatabase database)
+        public SmugglerExporter(DocumentDatabase database)
         {
             _database = database;
             OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
@@ -111,23 +113,17 @@ namespace Raven.Server.Smuggler
                 if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(("Indexes"));
+                    writer.WritePropertyName("Indexes");
                     writer.WriteStartArray();
+                    var isFirst = true;
                     foreach (var index in _database.IndexStore.GetIndexes())
                     {
-                        if (index.Type == IndexType.Map || index.Type == IndexType.MapReduce)
-                        {
-                            var indexDefinition = index.GetIndexDefinition();
-                            writer.WriteIndexDefinition(context, indexDefinition);
-                        }
-                        else if (index.Type == IndexType.Faulty)
-                        {
-                            // TODO: Should we export them?
-                        }
-                        else
-                        {
-                            // TODO: Export auto indexes.
-                        }
+                        if (isFirst == false)
+                            writer.WriteComma();
+
+                        isFirst = false;
+
+                        IndexProcessor.Export(writer, index, context);
                     }
                     writer.WriteEndArray();
                 }
@@ -137,9 +133,15 @@ namespace Raven.Server.Smuggler
                     writer.WriteComma();
                     writer.WritePropertyName(("Transformers"));
                     writer.WriteStartArray();
+                    var isFirst = true;
                     foreach (var transformer in _database.TransformerStore.GetTransformers())
                     {
-                        writer.WriteTransformerDefinition(context, transformer.Definition);
+                        if (isFirst == false)
+                            writer.WriteComma();
+
+                        isFirst = false;
+
+                        TransformerProcessor.Export(writer, transformer, context);
                     }
                     writer.WriteEndArray();
                 }

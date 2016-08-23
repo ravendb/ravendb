@@ -8,6 +8,9 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Smuggler;
+using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Json
@@ -41,6 +44,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, PeriodicExportStatus> PeriodicExportStatus = GenerateJsonDeserializationRoutine<PeriodicExportStatus>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
+        internal static readonly Func<BlittableJsonReaderObject, LegacyIndexDefinition> LegacyIndexDefinition = GenerateJsonDeserializationRoutine<LegacyIndexDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, TransformerDefinition> TransformerDefinition = GenerateJsonDeserializationRoutine<TransformerDefinition>();
     }

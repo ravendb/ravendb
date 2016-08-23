@@ -118,7 +118,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 var result = AggregateOn(_aggregationBatch, indexContext, token);
 
-                writer.DeleteReduceResult(reduceKeyHash, stats);
+                if (section.IsNew == false)
+                    writer.DeleteReduceResult(reduceKeyHash, stats);
 
                 foreach (var output in result.Outputs)
                 {
@@ -272,6 +273,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             if (parentPage == -1)
                             {
                                 writer.DeleteReduceResult(reduceKeyHash, stats);
+
                                 foreach (var output in result.Outputs)
                                 {
                                     writer.IndexDocument(reduceKeyHash, new Document

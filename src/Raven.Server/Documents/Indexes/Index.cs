@@ -39,6 +39,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -417,6 +418,10 @@ namespace Raven.Server.Documents.Indexes
 
         protected void ExecuteIndexing()
         {
+            // indexing threads should have lower priority than request processing threads
+            // so we let the OS know that it can schedule them appropriately.
+            Threading.TryLowerCurrentThreadPriority();
+
             using (CultureHelper.EnsureInvariantCulture())
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown, _cancellationTokenSource.Token))
             {
