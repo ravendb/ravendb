@@ -6,11 +6,40 @@ using Raven.Client.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using System.Linq;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexes;
 
 namespace FastTests.Smuggler
 {
     public class SmugglerApiTests : RavenTestBase
     {
+        private class Users_ByName : AbstractIndexCreationTask<User>
+        {
+            public Users_ByName()
+            {
+                Map = users => from u in users
+                               select new
+                               {
+                                   u.Name
+                               };
+
+                Stores.Add(x => x.Name, FieldStorage.Yes);
+            }
+        }
+
+        private class Users_Address : AbstractTransformerCreationTask<User>
+        {
+            public Users_Address()
+            {
+                TransformResults = results => from r in results
+                                              let address = LoadDocument<Address>(r.AddressId)
+                                              select new
+                                              {
+                                                  address.City
+                                              };
+            }
+        }
+
         [Fact]
         public async Task CanExportDirectlyToRemote()
         {
@@ -19,8 +48,8 @@ namespace FastTests.Smuggler
             {
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Name1", LastName = "LastName1"});
-                    await session.StoreAsync(new User {Name = "Name2", LastName = "LastName2"});
+                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" });
+                    await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2" });
                     await session.SaveChangesAsync();
                 }
 
@@ -40,10 +69,26 @@ namespace FastTests.Smuggler
                 using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
                 using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
+                    using (var session = store1.OpenSession())
+                    {
+                        // creating auto-indexes
+                        session.Query<User>()
+                            .Where(x => x.Age > 10)
+                            .ToList();
+
+                        session.Query<User>()
+                            .GroupBy(x => x.Name)
+                            .Select(x => new { Name = x.Key, Count = x.Count() })
+                            .ToList();
+                    }
+
+                    new Users_ByName().Execute(store1);
+                    new Users_Address().Execute(store1);
+
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Name = "Name1", LastName = "LastName1"});
-                        await session.StoreAsync(new User {Name = "Name2", LastName = "LastName2"});
+                        await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" });
+                        await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2" });
                         await session.SaveChangesAsync();
                     }
 
@@ -53,6 +98,8 @@ namespace FastTests.Smuggler
 
                     var stats = await store2.AsyncDatabaseCommands.GetStatisticsAsync();
                     Assert.Equal(3, stats.CountOfDocuments);
+                    Assert.Equal(3, stats.CountOfIndexes);
+                    Assert.Equal(1, stats.CountOfTransformers);
                 }
             }
             finally
@@ -73,9 +120,9 @@ namespace FastTests.Smuggler
                     {
                         await VersioningHelper.SetupVersioning(store1);
 
-                        await session.StoreAsync(new Person {Name = "Name1"});
-                        await session.StoreAsync(new Person {Name = "Name2"});
-                        await session.StoreAsync(new Company {Name = "Hibernaitng Rhinos "});
+                        await session.StoreAsync(new Person { Name = "Name1" });
+                        await session.StoreAsync(new Person { Name = "Name2" });
+                        await session.StoreAsync(new Company { Name = "Hibernaitng Rhinos " });
                         await session.SaveChangesAsync();
                     }
 
@@ -85,7 +132,7 @@ namespace FastTests.Smuggler
                         {
                             var company = await session.LoadAsync<Company>("companies/1");
                             var person = await session.LoadAsync<Person>("people/1");
-                            company.Name +=  " update " + i;
+                            company.Name += " update " + i;
                             person.Name += " update " + i;
                             await session.StoreAsync(company);
                             await session.StoreAsync(person);

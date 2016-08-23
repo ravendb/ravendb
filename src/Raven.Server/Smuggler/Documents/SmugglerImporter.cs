@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Smuggler;
@@ -9,24 +8,27 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Smuggler
+namespace Raven.Server.Smuggler.Documents
 {
-    public class DatabaseDataImporter
+    public class SmugglerImporter
     {
         private readonly DocumentDatabase _database;
 
         public DatabaseItemType OperateOnTypes;
 
-        public DatabaseDataImporter(DocumentDatabase database)
+        public SmugglerImporter(DocumentDatabase database)
         {
             _database = database;
-            _batchPutCommand = new MergedBatchPutCommand(_database);
+            _batchPutCommand = new MergedBatchPutCommand(_database, 0);
             OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
-                | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
+                             | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
+                             DatabaseItemType.Identities;
         }
 
         private MergedBatchPutCommand _batchPutCommand;
@@ -38,10 +40,11 @@ namespace Raven.Server.Smuggler
             var result = new ImportResult();
 
             var state = new JsonParserState();
-            
+
             using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
             {
-                string operateOnType = "__top_start_object";
+                var operateOnType = "__top_start_object";
+                var buildVersion = 0L;
                 var identities = new Dictionary<string, long>();
                 VersioningStorage versioningStorage = null;
 
@@ -66,14 +69,15 @@ namespace Raven.Server.Smuggler
                         case JsonParserToken.String:
                             unsafe
                             {
-                                operateOnType = new LazyStringValue(null, state.StringBuffer, state.StringSize, context).ToString();
+                                operateOnType =
+                                    new LazyStringValue(null, state.StringBuffer, state.StringSize, context).ToString();
                             }
                             break;
                         case JsonParserToken.Integer:
                             switch (operateOnType)
                             {
                                 case "BuildVersion":
-                                    _batchPutCommand.BuildVersion = state.Long;
+                                    buildVersion = state.Long;
                                     break;
                             }
                             break;
@@ -99,16 +103,17 @@ namespace Raven.Server.Smuggler
                             {
                                 result.DocumentsCount++;
                                 _batchPutCommand.Add(builder.CreateReader());
-                                await HandleBatchOfDocuments(context, parser);
+                                await HandleBatchOfDocuments(context, parser, buildVersion);
                             }
-                            else if (operateOnType == "RevisionDocuments" && OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
+                            else if (operateOnType == "RevisionDocuments" &&
+                                     OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
                             {
                                 if (versioningStorage == null)
                                     break;
 
                                 result.RevisionDocumentsCount++;
                                 _batchPutCommand.Add(builder.CreateReader());
-                                await HandleBatchOfDocuments(context, parser);
+                                await HandleBatchOfDocuments(context, parser, buildVersion);
                             }
                             else
                             {
@@ -120,34 +125,33 @@ namespace Raven.Server.Smuggler
                                             result.Warnings.Add("Attachments are not supported anymore. Use RavenFS isntead. Skipping.");
                                             break;
                                         case "Indexes":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
-                                            {
-                                                result.IndexesCount++;
+                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes) == false)
+                                                continue;
 
-                                                using (var reader = builder.CreateReader())
-                                                {
-                                                    /*   var index = new IndexDefinition();
-                                                       string name;
-                                                       if (reader.TryGet("Name", out name) == false)
-                                                       {
-                                                           result.Warnings.Add($"Cannot import the following index as it does not contain a name: '{reader}'. Skipping.");
-                                                       }
-                                                       index.Name = name;
-                                                       _database.IndexStore.CreateIndex(index);*/
-                                                }
+                                            result.IndexesCount++;
+                                            try
+                                            {
+                                                IndexProcessor.Import(builder, _database, buildVersion);
                                             }
+                                            catch (Exception e)
+                                            {
+                                                result.Warnings.Add($"Could not import index. Message: {e.Message}");
+                                            }
+
                                             break;
                                         case "Transformers":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Transformers))
-                                            {
-                                                result.TransformersCount++;
+                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Transformers) == false)
+                                                continue;
 
-                                                using (var reader = builder.CreateReader())
-                                                {
-                                                    /* var transformerDefinition = new TransformerDefinition();
-                                                     // TODO: Import
-                                                     _database.TransformerStore.CreateTransformer(transformerDefinition);*/
-                                                }
+                                            result.TransformersCount++;
+
+                                            try
+                                            {
+                                                TransformerProcessor.Import(builder, _database, buildVersion);
+                                            }
+                                            catch (Exception e)
+                                            {
+                                                result.Warnings.Add($"Could not import transformer. Message: {e.Message}");
                                             }
                                             break;
                                         case "Identities":
@@ -161,9 +165,7 @@ namespace Raven.Server.Smuggler
                                                     {
                                                         string identityKey, identityValueString;
                                                         long identityValue;
-                                                        if (reader.TryGet("Key", out identityKey) == false ||
-                                                            reader.TryGet("Value", out identityValueString) == false ||
-                                                            long.TryParse(identityValueString, out identityValue) == false)
+                                                        if (reader.TryGet("Key", out identityKey) == false || reader.TryGet("Value", out identityValueString) == false || long.TryParse(identityValueString, out identityValue) == false)
                                                         {
                                                             result.Warnings.Add($"Cannot import the following identity: '{reader}'. Skipping.");
                                                         }
@@ -180,7 +182,8 @@ namespace Raven.Server.Smuggler
                                             }
                                             break;
                                         default:
-                                            result.Warnings.Add($"The following type is not recognized: '{operateOnType}'. Skipping.");
+                                            result.Warnings.Add(
+                                                $"The following type is not recognized: '{operateOnType}'. Skipping.");
                                             break;
                                     }
                                 }
@@ -191,7 +194,7 @@ namespace Raven.Server.Smuggler
                             {
                                 case "Docs":
                                     await FinishBatchOfDocuments();
-                                    _batchPutCommand = new MergedBatchPutCommand(_database);
+                                    _batchPutCommand = new MergedBatchPutCommand(_database, buildVersion);
 
                                     // We are taking a reference here since the documents import can activate or disable the versioning.
                                     // We holad a local copy because the user can disable the bundle during the import process, exteranly.
@@ -243,7 +246,7 @@ namespace Raven.Server.Smuggler
             _batchPutCommand = null;
         }
 
-        private async Task HandleBatchOfDocuments(DocumentsOperationContext context, UnmanagedJsonParser parser)
+        private async Task HandleBatchOfDocuments(DocumentsOperationContext context, UnmanagedJsonParser parser, long buildVersion)
         {
             if (_batchPutCommand.Documents.Count >= 16)
             {
@@ -257,7 +260,7 @@ namespace Raven.Server.Smuggler
                 }
                 _prevCommandTask = _database.TxMerger.Enqueue(_batchPutCommand);
                 _prevCommand = _batchPutCommand;
-                _batchPutCommand = new MergedBatchPutCommand(_database);
+                _batchPutCommand = new MergedBatchPutCommand(_database, buildVersion);
             }
         }
 
@@ -270,18 +273,19 @@ namespace Raven.Server.Smuggler
 
         private class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
-            public long BuildVersion;
             public bool IsRevision;
 
             private readonly DocumentDatabase _database;
+            private readonly long _buildVersion;
 
             public readonly List<BlittableJsonReaderObject> Documents = new List<BlittableJsonReaderObject>();
             private readonly IDisposable _resetContext;
             private readonly DocumentsOperationContext _context;
 
-            public MergedBatchPutCommand(DocumentDatabase database)
+            public MergedBatchPutCommand(DocumentDatabase database, long buildVersion)
             {
                 _database = database;
+                _buildVersion = buildVersion;
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
@@ -302,11 +306,6 @@ namespace Raven.Server.Smuggler
                     mutatedMetadata.Remove(Constants.MetadataDocId);
                     mutatedMetadata.Remove(Constants.MetadataEtagId);
 
-                    if (key.StartsWith("formation"))
-                    {
-                        
-                    }
-
                     if (IsRevision)
                     {
                         long etag;
@@ -315,7 +314,7 @@ namespace Raven.Server.Smuggler
 
                         _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document);
                     }
-                    else if (BuildVersion < 4000 && key.Contains("/revisions/"))
+                    else if (_buildVersion < 4000 && key.Contains("/revisions/"))
                     {
                         long etag;
                         if (metadata.TryGet(Constants.MetadataEtagId, out etag) == false)

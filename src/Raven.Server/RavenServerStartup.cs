@@ -49,7 +49,10 @@ namespace Raven.Server
 
                     //TODO: Proper json output, not like this
                     var response = context.Response;
-                    response.StatusCode = 500;
+
+                    if (response.HasStarted == false)
+                        response.StatusCode = 500;
+
                     var sb = new StringBuilder();
                     sb.Append("{\r\n\t\"Url\":\"")
                         .Append(context.Request.Path).Append('?').Append(context.Request.QueryString)
@@ -67,7 +70,7 @@ namespace Raven.Server
                         errorString = e.ToString();
                     }
 
-                    sb.Append(errorString.Replace("\\","\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n"));
+                    sb.Append(errorString.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n"));
                     sb.Append("\"\r\n}");
 
                     await response.WriteAsync(sb.ToString());

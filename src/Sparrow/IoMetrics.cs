@@ -9,7 +9,8 @@ namespace Sparrow
     {
         public enum MeterType
         {
-            Write,
+            WriteUsingSyscall,
+            WriteUsingMem,
             Sync
         }
 
@@ -51,8 +52,11 @@ namespace Sparrow
             IoMeterBuffer buffer;
             switch (type)
             {
-                case MeterType.Write:
-                    buffer = fileIoMetrics.Write;
+                case MeterType.WriteUsingMem:
+                    buffer = fileIoMetrics.WriteUsingMem;
+                    break;
+                case MeterType.WriteUsingSyscall:
+                    buffer = fileIoMetrics.WriteUsingSyscall;
                     break;
                 case MeterType.Sync:
                     buffer = fileIoMetrics.Sync;
@@ -67,15 +71,16 @@ namespace Sparrow
         {
             public string FileName;
             public IoMeterBuffer Sync;
-            public IoMeterBuffer Write;
+            public IoMeterBuffer WriteUsingMem;
+            public IoMeterBuffer WriteUsingSyscall;
             public bool Closed;
 
             public FileIoMetrics(string filename, int metricsBufferSize, int summaryBufferSize)
             {
                 FileName = filename;
 
-                Write = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
-
+                WriteUsingMem = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+                WriteUsingSyscall = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 Sync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
             }
 
@@ -84,7 +89,8 @@ namespace Sparrow
             {
                 var list = new List<IoMeterBuffer.MeterItem>();
                 list.AddRange(Sync.GetCurrentItems());
-                list.AddRange(Write.GetCurrentItems());
+                list.AddRange(WriteUsingMem.GetCurrentItems());
+                list.AddRange(WriteUsingSyscall.GetCurrentItems());
 
                 list.Sort((x, y) => x.Start.CompareTo(y.Start));
 
@@ -95,7 +101,8 @@ namespace Sparrow
             {
                 var list = new List<IoMeterBuffer.SummerizedItem>();
                 list.AddRange(Sync.GetSummerizedItems());
-                list.AddRange(Write.GetSummerizedItems());
+                list.AddRange(WriteUsingSyscall.GetSummerizedItems());
+                list.AddRange(WriteUsingMem.GetSummerizedItems());
 
                 list.Sort((x, y) => x.TotalTimeStart.CompareTo(y.TotalTimeStart));
 

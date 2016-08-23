@@ -214,6 +214,16 @@ namespace Raven.Client.Connection
 
             var replicationInformationTaskCopy = refreshReplicationInformationTask;
             if (replicationInformationTaskCopy != null)
-                replicationInformationTaskCopy.Wait();
+            {
+                try
+                {
+                    replicationInformationTaskCopy.Wait();
+                }
+                catch (Exception e)
+                {
+                    if(Log.IsWarnEnabled)
+                        Log.WarnException("Failure in getting replication information during dispose", e);
+                }
+            }
     }
 }}

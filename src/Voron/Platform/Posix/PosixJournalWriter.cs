@@ -88,7 +88,7 @@ namespace Voron.Platform.Posix
 
             var nNumberOfBytesToWrite = (ulong)numberOfPages*(ulong)_options.PageSize;
             long result;
-            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.Write, (long)nNumberOfBytesToWrite))
+            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.WriteUsingSyscall, (long)nNumberOfBytesToWrite))
             {
                 result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite, position);
             }

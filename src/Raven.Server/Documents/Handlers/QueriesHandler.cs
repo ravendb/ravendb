@@ -54,22 +54,26 @@ namespace Raven.Server.Documents.Handlers
             var includes = GetStringValuesQueryString("include", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
-            var runner = new QueryRunner(Database, context);
 
-            var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
-
-            if (result.NotModified)
+            using (var runner = new QueryRunner(Database))
             {
-                HttpContext.Response.StatusCode = 304;
-                return;
+                var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
+
+                if (result.NotModified)
+                {
+                    HttpContext.Response.StatusCode = 304;
+                    return;
+                }
+
+                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteDocumentQueryResult(context, result, metadataOnly);
+                }
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteDocumentQueryResult(context, result, metadataOnly);
-            }
         }
 
         private void MoreLikeThis(DocumentsOperationContext context, string indexName, OperationCancelToken token)
@@ -77,44 +81,47 @@ namespace Raven.Server.Documents.Handlers
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var query = GetMoreLikeThisQuery(context);
-            var runner = new QueryRunner(Database, context);
-
-            var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
-
-            if (result.NotModified)
+            using (var runner = new QueryRunner(Database))
             {
-                HttpContext.Response.StatusCode = 304;
-                return;
-            }
+                var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+                if (result.NotModified)
+                {
+                    HttpContext.Response.StatusCode = 304;
+                    return;
+                }
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteQueryResult(context, result, metadataOnly: false);
+                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteQueryResult(context, result, metadataOnly: false);
+                }
             }
         }
 
         private void Explain(DocumentsOperationContext context, string indexName)
         {
             var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
-            var runner = new QueryRunner(Database, context);
-
-            var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
-
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var runner = new QueryRunner(Database))
             {
-                var isFirst = true;
-                writer.WriteStartArray();
-                foreach (var explanation in explanations)
-                {
-                    if (isFirst == false)
-                        writer.WriteComma();
 
-                    isFirst = false;
-                    writer.WriteExplanation(context, explanation);
+                var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var isFirst = true;
+                    writer.WriteStartArray();
+                    foreach (var explanation in explanations)
+                    {
+                        if (isFirst == false)
+                            writer.WriteComma();
+
+                        isFirst = false;
+                        writer.WriteExplanation(context, explanation);
+                    }
+                    writer.WriteEndArray();
                 }
-                writer.WriteEndArray();
             }
         }
 
@@ -155,15 +162,17 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var queryRunner = new QueryRunner(Database, context);
-                await operation(queryRunner, indexName, query, options, token).ConfigureAwait(false);
+                using (var queryRunner = new QueryRunner(Database))
+                {
+                    await operation(queryRunner, indexName, query, options, token).ConfigureAwait(false);
 
-                writer.WriteStartObject();
+                    writer.WriteStartObject();
 
-                writer.WritePropertyName("OperationId");
-                writer.WriteInteger(-1); // TODO [ppekrol]
+                    writer.WritePropertyName("OperationId");
+                    writer.WriteInteger(-1); // TODO [ppekrol]
 
-                writer.WriteEndObject();
+                    writer.WriteEndObject();
+                }
             }
         }
 

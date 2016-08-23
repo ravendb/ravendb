@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 return SyntaxFactory.ParseExpression($"(Func<dynamic, {alreadyCasted.Type}>)({lambda})");
             }
 
-            var cast = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(decimal){lambda.Body}");
+            var cast = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(decimal)({lambda.Body})");
 
             return SyntaxFactory.ParseExpression($"(Func<dynamic, decimal>)({lambda.WithBody(cast)})");
         }

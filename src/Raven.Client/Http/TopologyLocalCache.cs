@@ -69,6 +69,7 @@ namespace Raven.Client.Http
                 using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
+                    writer.WriteStartObject();
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.LeaderNode)));
                     WriteNode(writer, topology.LeaderNode, context);
 
@@ -85,6 +86,7 @@ namespace Raven.Client.Http
 
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.WriteBehavior)));
                     writer.WriteString(context.GetLazyString(topology.WriteBehavior.ToString()));
+                    writer.WriteEndObject();
                 }
             }
             catch (Exception e)

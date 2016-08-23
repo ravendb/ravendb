@@ -37,12 +37,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 readPtr += resultPtr->Size + SizeOfResultHeader;
             }
+
+            IsNew = false;
         }
 
         public NestedMapResultsSection()
         {
-            
+            IsNew = true;
         }
+
+        public bool IsNew { get; }
 
         public int Size => _dataSize + _mapResults.Count*SizeOfResultHeader;
 

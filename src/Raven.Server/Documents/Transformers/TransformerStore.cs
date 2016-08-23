@@ -169,6 +169,11 @@ namespace Raven.Server.Documents.Transformers
             return _transformers;
         }
 
+        public int GetTransformersCount()
+        {
+            return _transformers.Count;
+        }
+
         private void DeleteTransformerInternal(int id)
         {
             Transformer transformer;

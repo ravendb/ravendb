@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.Server.Smuggler
+namespace Raven.Server.Smuggler.Documents.Data
 {
     public class ImportResult
     {

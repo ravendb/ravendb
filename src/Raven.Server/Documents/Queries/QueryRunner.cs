@@ -13,21 +13,22 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class QueryRunner
+    public class QueryRunner : IDisposable
     {
         private readonly DocumentDatabase _database;
 
         private readonly DocumentsOperationContext _documentsContext;
+        private IDisposable _allocateOperationContext;
 
-        public QueryRunner(DocumentDatabase database, DocumentsOperationContext documentsContext)
+        public QueryRunner(DocumentDatabase database)
         {
             _database = database;
-            _documentsContext = documentsContext;
+            _allocateOperationContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext);
         }
 
         public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
@@ -191,6 +192,11 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("There is not index with name: " + indexName);
 
             return index;
+        }
+
+        public void Dispose()
+        {
+            _allocateOperationContext.Dispose();
         }
     }
 }

@@ -61,22 +61,23 @@ namespace Raven.Server.Indexing
             return readResult.Version;
         }
 
-        public override unsafe void TouchFile(string name)
+        public override void TouchFile(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
             var readResult = filesTree.Read(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            filesTree.DirectAdd(name, readResult.Reader.Length);
+            filesTree.Add(name, Stream.Null);
         }
 
         public override long FileLength(string name)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
-            var readResult = filesTree.Read(name);
-            if (readResult == null)
+            var fileTree = _currentTransaction.Value.ReadTree(name);
+            if (fileTree == null)
                 throw new FileNotFoundException("Could not find file", name);
+
+            var readResult = fileTree.Read(VoronIndexOutput.DataKey);
 
             //TODO: handle files larger than 2GB
             return readResult.Reader.Length;
@@ -90,6 +91,7 @@ namespace Raven.Server.Indexing
                 throw new FileNotFoundException("Could not find file", name);
 
             filesTree.Delete(name);
+            _currentTransaction.Value.DeleteTree(name);
         }
 
         public override IndexInput OpenInput(string name)
@@ -99,6 +101,9 @@ namespace Raven.Server.Indexing
 
         public override IndexOutput CreateOutput(string name)
         {
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            filesTree.Add(name, Stream.Null);
+
             return new VoronIndexOutput(_environment.Options.TempPath, name, _currentTransaction.Value);
         }
 

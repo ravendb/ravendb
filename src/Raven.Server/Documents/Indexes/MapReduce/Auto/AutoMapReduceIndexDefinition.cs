@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 
@@ -31,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase); ;
         }
 
-        protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
 
@@ -58,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return indexDefinition;
         }
 
-        protected void PersistGroupByFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected void PersistGroupByFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             writer.WritePropertyName((nameof(GroupByFields)));
             writer.WriteStartArray();
@@ -111,82 +110,87 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
                 {
-                    int lockModeAsInt;
-                    reader.TryGet(nameof(LockMode), out lockModeAsInt);
-
-                    BlittableJsonReaderArray jsonArray;
-                    reader.TryGet(nameof(Collections), out jsonArray);
-
-                    var collection = jsonArray.GetStringByIndex(0);
-
-                    reader.TryGet(nameof(MapFields), out jsonArray);
-
-                    var mapFields = new IndexField[jsonArray.Length];
-
-                    for (var i = 0; i < jsonArray.Length; i++)
-                    {
-                        var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
-
-                        string name;
-                        json.TryGet(nameof(IndexField.Name), out name);
-
-                        bool highlighted;
-                        json.TryGet(nameof(IndexField.Highlighted), out highlighted);
-
-                        int sortOptionAsInt;
-                        json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
-
-                        int mapReduceOperationAsInt;
-                        json.TryGet(nameof(IndexField.MapReduceOperation), out mapReduceOperationAsInt);
-
-                        var field = new IndexField
-                        {
-                            Name = name,
-                            Highlighted = highlighted,
-                            Storage = FieldStorage.Yes,
-                            SortOption = (SortOptions?)sortOptionAsInt,
-                            Indexing = FieldIndexing.Default,
-                            MapReduceOperation = (FieldMapReduceOperation)mapReduceOperationAsInt
-                        };
-
-                        mapFields[i] = field;
-                    }
-
-                    reader.TryGet(nameof(GroupByFields), out jsonArray);
-
-                    var groupByFields = new IndexField[jsonArray.Length];
-
-                    for (var i = 0; i < jsonArray.Length; i++)
-                    {
-                        var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
-
-                        string name;
-                        json.TryGet(nameof(IndexField.Name), out name);
-
-                        bool highlighted;
-                        json.TryGet(nameof(IndexField.Highlighted), out highlighted);
-
-                        int sortOptionAsInt;
-                        json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
-
-                        var field = new IndexField
-                        {
-                            Name = name,
-                            Highlighted = highlighted,
-                            Storage = FieldStorage.Yes,
-                            SortOption = (SortOptions?)sortOptionAsInt,
-                            Indexing = FieldIndexing.Default
-                        };
-
-                        groupByFields[i] = field;
-                    }
-
-                    return new AutoMapReduceIndexDefinition(new []{ collection }, mapFields,  groupByFields)
-                    {
-                        LockMode = (IndexLockMode)lockModeAsInt
-                    };
+                    return LoadFromJson(reader);
                 }
             }
+        }
+
+        public static AutoMapReduceIndexDefinition LoadFromJson(BlittableJsonReaderObject reader)
+        {
+            int lockModeAsInt;
+            reader.TryGet(nameof(LockMode), out lockModeAsInt);
+
+            BlittableJsonReaderArray jsonArray;
+            reader.TryGet(nameof(Collections), out jsonArray);
+
+            var collection = jsonArray.GetStringByIndex(0);
+
+            reader.TryGet(nameof(MapFields), out jsonArray);
+
+            var mapFields = new IndexField[jsonArray.Length];
+
+            for (var i = 0; i < jsonArray.Length; i++)
+            {
+                var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
+
+                string name;
+                json.TryGet(nameof(IndexField.Name), out name);
+
+                bool highlighted;
+                json.TryGet(nameof(IndexField.Highlighted), out highlighted);
+
+                int sortOptionAsInt;
+                json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
+
+                int mapReduceOperationAsInt;
+                json.TryGet(nameof(IndexField.MapReduceOperation), out mapReduceOperationAsInt);
+
+                var field = new IndexField
+                {
+                    Name = name,
+                    Highlighted = highlighted,
+                    Storage = FieldStorage.Yes,
+                    SortOption = (SortOptions?)sortOptionAsInt,
+                    Indexing = FieldIndexing.Default,
+                    MapReduceOperation = (FieldMapReduceOperation)mapReduceOperationAsInt
+                };
+
+                mapFields[i] = field;
+            }
+
+            reader.TryGet(nameof(GroupByFields), out jsonArray);
+
+            var groupByFields = new IndexField[jsonArray.Length];
+
+            for (var i = 0; i < jsonArray.Length; i++)
+            {
+                var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
+
+                string name;
+                json.TryGet(nameof(IndexField.Name), out name);
+
+                bool highlighted;
+                json.TryGet(nameof(IndexField.Highlighted), out highlighted);
+
+                int sortOptionAsInt;
+                json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
+
+                var field = new IndexField
+                {
+                    Name = name,
+                    Highlighted = highlighted,
+                    Storage = FieldStorage.Yes,
+                    SortOption = (SortOptions?)sortOptionAsInt,
+                    Indexing = FieldIndexing.Default
+                };
+
+                groupByFields[i] = field;
+            }
+
+            return new AutoMapReduceIndexDefinition(new[] { collection }, mapFields, groupByFields)
+            {
+                LockMode = (IndexLockMode)lockModeAsInt
+            };
         }
     }
 }
