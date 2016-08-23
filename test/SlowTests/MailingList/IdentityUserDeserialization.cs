@@ -3,24 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class IdentityUserDeserialization : RavenTest
+    public class IdentityUserDeserialization : RavenTestBase
     {
         [Fact]
-        public void Can_Deserialize_IdentityUser()
+        public async Task Can_Deserialize_IdentityUser()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer += serializer => serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
                 using (IDocumentSession session = store.OpenSession())
@@ -40,7 +40,7 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Query<IdentityUser>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
@@ -52,37 +52,37 @@ namespace Raven.Tests.MailingList
             }
         }
 
-         public class IdentityUserLogin : IdentityUserLogin<string> { }
-
-    /// <summary>
-    ///     Entity type for a user's login (i.e. facebook, google)
-    /// </summary>
-    /// <typeparam name="TKey"></typeparam>
-    public class IdentityUserLogin<TKey> where TKey : IEquatable<TKey>
-    {
-        /// <summary>
-        ///     The login provider for the login (i.e. facebook, google)
-        /// </summary>
-        public virtual string LoginProvider { get; set; }
+        private class IdentityUserLogin : IdentityUserLogin<string> { }
 
         /// <summary>
-        ///     Key representing the login for the provider
+        ///     Entity type for a user's login (i.e. facebook, google)
         /// </summary>
-        public virtual string ProviderKey { get; set; }
+        /// <typeparam name="TKey"></typeparam>
+        private class IdentityUserLogin<TKey> where TKey : IEquatable<TKey>
+        {
+            /// <summary>
+            ///     The login provider for the login (i.e. facebook, google)
+            /// </summary>
+            public virtual string LoginProvider { get; set; }
 
-        /// <summary>
-        ///     Display name for the login
-        /// </summary>
-        public virtual string ProviderDisplayName { get; set; }
+            /// <summary>
+            ///     Key representing the login for the provider
+            /// </summary>
+            public virtual string ProviderKey { get; set; }
 
-        /// <summary>
-        ///     User Id for the user who owns this login
-        /// </summary>
-        public virtual TKey UserId { get; set; }
-    }
+            /// <summary>
+            ///     Display name for the login
+            /// </summary>
+            public virtual string ProviderDisplayName { get; set; }
+
+            /// <summary>
+            ///     User Id for the user who owns this login
+            /// </summary>
+            public virtual TKey UserId { get; set; }
+        }
 
         // from : https://raw.githubusercontent.com/aspnet/Identity/dev/src/Microsoft.AspNet.Identity/IdentityUser.cs
-        public class IdentityUser : IdentityUser<string>
+        private class IdentityUser : IdentityUser<string>
         {
             public IdentityUser()
             {
@@ -95,7 +95,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class IdentityUser<TKey> where TKey : IEquatable<TKey>
+        private class IdentityUser<TKey> where TKey : IEquatable<TKey>
         {
             private ICollection<IdentityUserRole<TKey>> _roles;
             private ICollection<IdentityUserClaim<TKey>> _claims;
@@ -111,7 +111,7 @@ namespace Raven.Tests.MailingList
             public IdentityUser(string userName) : this()
             {
                 UserName = userName;
-                
+
             }
 
             public virtual TKey Id { get; set; }
@@ -193,13 +193,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class IdentityUserRole : IdentityUserRole<string> { }
+        private class IdentityUserRole : IdentityUserRole<string> { }
 
         /// <summary>
         ///     EntityType that represents a user belonging to a role
         /// </summary>
         /// <typeparam name="TKey"></typeparam>
-        public class IdentityUserRole<TKey> where TKey : IEquatable<TKey>
+        private class IdentityUserRole<TKey> where TKey : IEquatable<TKey>
         {
             /// <summary>
             ///     UserId for the user that is in the role
@@ -212,7 +212,7 @@ namespace Raven.Tests.MailingList
             public virtual TKey RoleId { get; set; }
         }
 
-        public class IdentityUserClaim : IdentityUserClaim<string> { }
+        private class IdentityUserClaim : IdentityUserClaim<string> { }
 
         /// <summary>
         ///     EntityType that represents one specific user claim

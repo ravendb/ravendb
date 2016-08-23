@@ -41,6 +41,7 @@ namespace Raven.Server.Documents.Queries
         {
             private static readonly char[] InSeparator = { ',' };
             private static readonly string InPrefix = $"@in<{Constants.DocumentIdFieldName}>:";
+            private static readonly string EqualPrefix = $"{Constants.DocumentIdFieldName}:";
 
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
@@ -78,6 +79,22 @@ namespace Raven.Server.Documents.Queries
                     return null;
 
                 var q = new StringSegment(query.Query.Replace(" ", string.Empty), 0);
+
+                if (q.Length <= EqualPrefix.Length)
+                    return null;
+
+                var documentId = q.SubSegment(0, EqualPrefix.Length);
+                if (documentId.Equals(EqualPrefix))
+                {
+                    var id = q.SubSegment(EqualPrefix.Length);
+                    var key = Slice.From(_context.Allocator, id);
+                    _context.Allocator.ToLowerCase(ref key.Content);
+
+                    return new List<Slice>
+                    {
+                        key
+                    };
+                }
 
                 if (q.Length <= InPrefix.Length)
                     return null;
