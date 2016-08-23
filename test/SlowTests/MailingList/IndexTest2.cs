@@ -1,20 +1,19 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class IndexTest2 : RavenTestBase
     {
-
-        public class SampleData
+        private class SampleData
         {
             public string Name { get; set; }
         }
 
-        public class SampleData_Index : AbstractIndexCreationTask<SampleData>
+        private class SampleData_Index : AbstractIndexCreationTask<SampleData>
         {
             public SampleData_Index()
             {
@@ -27,9 +26,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void CanIndexAndQuery()
+        public async Task CanIndexAndQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 

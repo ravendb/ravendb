@@ -1,24 +1,24 @@
-using Raven.Tests.Common;
-
-using Xunit;
-using Raven.Client.Linq;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class InIssues : RavenTest
+    public class InIssues : RavenTestBase
     {
-         public class Item
-         {
-             public string Key { get; set; }
-         }
+        private class Item
+        {
+            public string Key { get; set; }
+        }
 
         [Fact]
-        public void CanQueryProperly()
+        public async Task CanQueryProperly()
         {
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var keys = new[]
                     {
@@ -34,7 +34,7 @@ namespace Raven.Tests.MailingList
 
                     foreach (var key in keys)
                     {
-                        session.Store(new Item{Key = key});
+                        session.Store(new Item { Key = key });
                     }
                     session.SaveChanges();
                 }
@@ -50,14 +50,13 @@ namespace Raven.Tests.MailingList
                     };
 
                     var results = session.Query<Item>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Key.In(partialKeys))
                         .ToList();
                     foreach (var partialKey in partialKeys)
                     {
-                        Assert.True(results.Any(x=>x.Key == partialKey));
+                        Assert.True(results.Any(x => x.Key == partialKey));
                     }
-
                 }
             }
         }

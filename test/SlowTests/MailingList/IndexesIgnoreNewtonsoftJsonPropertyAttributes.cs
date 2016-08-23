@@ -1,9 +1,8 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests;
-using Raven.Tests.Common;
-
 using Xunit;
 
 namespace Raven.Imports.Newtonsoft.Json.Sample
@@ -15,7 +14,7 @@ namespace Raven.Imports.Newtonsoft.Json.Sample
     public sealed class JsonPropertyAttribute : Attribute
     {
         public string PropertyName { get; set; }
-    
+
         public JsonPropertyAttribute(string propertyName)
         {
             PropertyName = propertyName;
@@ -23,9 +22,9 @@ namespace Raven.Imports.Newtonsoft.Json.Sample
     }
 }
 
-namespace RavenTestConsole.RavenTests
+namespace SlowTests.MailingList
 {
-    public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenTest
+    public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenTestBase
     {
         private class StudentDto
         {
@@ -63,9 +62,9 @@ namespace RavenTestConsole.RavenTests
         /// they ignore the attribute on Email but obey the attribute on Postcode.
         /// </summary>
         [Fact]
-        public void WillIgnoreAttribute()
+        public async Task WillIgnoreAttribute()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new StudentDtos_ByEmailDomain().Execute(store);
@@ -75,12 +74,12 @@ namespace RavenTestConsole.RavenTests
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,
     Postcode = studentDto.ZipCode
-})", definition.Map);
+})", definition.Maps.First());
 
                 Assert.NotEqual(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.EmailAddress,
     Postcode = studentDto.ZipCode
-})", definition.Map);
+})", definition.Maps.First());
             }
         }
     }
