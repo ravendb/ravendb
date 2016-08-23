@@ -209,17 +209,23 @@ namespace FastTests.Server.Documents.Replication
 
 
 		[Fact]
-		public async Task Conflict_should_occur_after_changes_to_the_same_document_on_two_nodes_at_the_same_time_with_master_slave()
+		public async Task Conflict_same_time_with_master_slave()
 		{
 			var dbName1 = DbName + "-1";
 			var dbName2 = DbName + "-2";
-			using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
-			using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+			using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "foo1"))
+			using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "foo2"))
 			{
-				store1.DefaultDatabase = dbName1;
-				store2.DefaultDatabase = dbName2;
-				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
-				store2.DatabaseCommands.ForDatabase(dbName2).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
+				using (var s1 = store1.OpenSession())
+				{
+					s1.Store(new User(), "foo/bar");
+					s1.SaveChanges();
+				}
+				using (var s2 = store2.OpenSession())
+				{
+					s2.Store(new User(), "foo/bar");
+					s2.SaveChanges();
+				}
 
 				SetupReplication(store1, store2);
 
@@ -259,8 +265,7 @@ namespace FastTests.Server.Documents.Replication
 				SetupReplication(store1, store3);
 				SetupReplication(store2, store3);
 
-				var conflicts = await WaitUntilHasConflict( store3, "foo/bar",
-					count: 3);
+				var conflicts = await WaitUntilHasConflict(store3, "foo/bar",3);
 
 				Assert.Equal(3, conflicts["foo/bar"].Count);
 			}

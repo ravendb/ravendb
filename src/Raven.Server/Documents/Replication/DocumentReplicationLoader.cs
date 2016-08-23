@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     changeVector.Add(new DynamicJsonValue
                     {
-                        ["DbId"] = changeVectorEntry.DbId,
+                        ["DbId"] = changeVectorEntry.DbId.ToString(),
                         ["Etag"] = changeVectorEntry.Etag
                     });
                 }

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 using FastTests.Server.Documents.Replication;
-using SlowTests.Tests.Linq;
 
 namespace Tryouts
 {
@@ -11,12 +8,14 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-
-            using (var f = new FastTests.Server.Documents.Replication.ReplicationConflictsTests())
-            {
-                f.Conflict_should_work_on_master_slave_slave().Wait();
-            }
-
+	        for (int i = 0; i < 1000; i++)
+	        {
+				Console.WriteLine(i);
+		        using (var f = new ReplicationConflictsTests())
+		        {
+			        f.Conflict_should_work_on_master_slave_slave().Wait();
+		        }
+	        }
         }
     }
 }

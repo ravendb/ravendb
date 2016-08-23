@@ -175,7 +175,6 @@ namespace Raven.Server.Documents.Replication
 								_database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
 								break;
 		                    case ConflictStatus.ShouldResolveConflict:
-							
 								_context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
 								goto case ConflictStatus.Update;
 							case ConflictStatus.Conflict:
