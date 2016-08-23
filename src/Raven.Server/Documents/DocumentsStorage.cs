@@ -251,9 +251,9 @@ namespace Raven.Server.Documents
             foreach (var kvp in changeVector)
             {
                 var dbId = kvp.Key;
-                var etag = kvp.Value;
+                var etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
                 tree.Add(Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid)),
-                   Slice.External(context.Allocator, (byte*)&etag, sizeof(long)));
+                   Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long)));
             }
         }
 
@@ -873,7 +873,7 @@ namespace Raven.Server.Documents
 			int keySize;
 			GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-		    var items = new List<DocumentConflict>();			
+			var items = new List<DocumentConflict>();			
 			foreach (var result in conflictsTable.SeekForwardFrom(
 				_conflictsSchema.Indexes["KeyAndChangeVector"],
 				Slice.External(context.Allocator, lowerKey, lowerSize),true))
@@ -908,6 +908,8 @@ namespace Raven.Server.Documents
 		public void AddConflict(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc,
 		    ChangeVectorEntry[] incomingChangeVector)
 	    {
+			if(_logger.IsInfoEnabled)
+				_logger.Info($"Adding conflict to {key} (Incoming change vector {string.Join(",", incomingChangeVector.Select(x => $"{x.DbId}/{x.Etag}"))})");
 		    var conflictsTable = new Table(_conflictsSchema,"Conflicts", context.Transaction.InnerTransaction);
 
 		    byte* lowerKey;

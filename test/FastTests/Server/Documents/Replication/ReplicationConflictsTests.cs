@@ -12,7 +12,7 @@ using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
-using Voron.Tests;
+using Sparrow.Logging;
 using Xunit;
 
 namespace FastTests.Server.Documents.Replication
@@ -20,6 +20,11 @@ namespace FastTests.Server.Documents.Replication
     public class ReplicationConflictsTests : ReplicationTestsBase
     {
 		public readonly string DbName = "TestDB" + Guid.NewGuid();
+
+	    public ReplicationConflictsTests()
+	    {
+			DoNotReuseServer();
+		}
 
 		public class User
 		{
@@ -225,32 +230,55 @@ namespace FastTests.Server.Documents.Replication
 		
 
 		[Fact]
-		public async Task Conflict_should_occur_after_changes_to_the_same_document_on_two_nodes_at_the_same_time_with_master_master()
-		{
-			var dbName1 = DbName + "-1";
-			var dbName2 = DbName + "-2";
+		public async Task Conflict_should_work_on_master_slave_slave()
+		{			
+			var dbName1 = "FooBar-1";
+			var dbName2 = "FooBar-2";
+			var dbName3 = "FooBar-3";
+			LoggerSetup.Instance.EchoToConsole = true;
 			using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
 			using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+			using (var store3 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName3))
 			{
 				store1.DefaultDatabase = dbName1;
 				store2.DefaultDatabase = dbName2;
-				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
-				store2.DatabaseCommands.ForDatabase(dbName2).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
+				store3.DefaultDatabase = dbName3;
 
-				SetupReplication(dbName1, store2, store1);
-				SetupReplication(dbName2, store1, store2);
-				
-				var conflicts1 = await WaitUntilHasConflict(dbName1, store1, "foo/bar");
-				var conflicts2 = await WaitUntilHasConflict(dbName2, store2, "foo/bar");
+				using (var s1 = store1.OpenSession(dbName1))
+				{
+					s1.Store(new User(), "foo/bar");
+					s1.SaveChanges();
+				}
+				using (var s2 = store2.OpenSession(dbName2))
+				{
+					s2.Store(new User(), "foo/bar");
+					s2.SaveChanges();
+				}
+				using (var s3 = store3.OpenSession(dbName3))
+				{
+					s3.Store(new User(), "foo/bar");
+					s3.SaveChanges();
+				}
 
-				Assert.Equal(2, conflicts1["foo/bar"].Count);
-				Assert.Equal(2, conflicts2["foo/bar"].Count);
+				SetupReplication(dbName3, store1, store3);
+				SetupReplication(dbName3, store2, store3);
+
+				var conflicts = await WaitUntilHasConflict(dbName3, store3, "foo/bar",
+					c => c.ContainsKey("foo/bar") && c["foo/bar"].Count == 3);
+
+				Assert.Equal(3, conflicts["foo/bar"].Count);
 			}
 		}
 
 		private async Task<Dictionary<string, List<ChangeVectorEntry[]>>>
-			WaitUntilHasConflict(string dbName, DocumentStore store, string docId, int timeout = 10000)
+			WaitUntilHasConflict(string dbName, 
+				DocumentStore store, 
+				string docId, 
+				Func<Dictionary<string, List<ChangeVectorEntry[]>>,bool> conflictPredicate = null, 
+				int timeout = 10000)
 		{
+			if (Debugger.IsAttached)
+				timeout *= 100;
 			bool hasConflict;
 			Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
 			var sw = Stopwatch.StartNew();
@@ -260,7 +288,9 @@ namespace FastTests.Server.Documents.Replication
 				hasConflict = conflicts.Count > 0;
 				if (hasConflict == false && sw.ElapsedMilliseconds > timeout)
 					Assert.False(true, "Timed out while waiting for conflicts");
-			} while (hasConflict == false);
+
+			} while ((conflictPredicate == null && !hasConflict) || 
+					 (conflictPredicate != null && !conflictPredicate(conflicts)));
 			return conflicts;
 		}
 

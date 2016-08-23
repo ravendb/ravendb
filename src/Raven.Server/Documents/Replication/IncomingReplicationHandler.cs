@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
             {
                 _log.Info(
-                    $"Sending ok to {FromToString} with last etag {lastEtag} and change vector: {databaseChangeVector.Format()}");
+                    $"Sending ok => {FromToString} with last etag {lastEtag} and change vector: {databaseChangeVector.Format()}");
             }
             _context.Write(writer, new DynamicJsonValue
             {

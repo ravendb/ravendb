@@ -193,7 +193,13 @@ namespace Raven.Server.Documents
                 DocumentTombstoneCleaner = null;
             });
 
-            exceptionAggregator.Execute(() =>
+			exceptionAggregator.Execute(() =>
+			{
+				DocumentReplicationLoader?.Dispose();
+				DocumentReplicationLoader = null;
+			});
+
+			exceptionAggregator.Execute(() =>
             {
                 SqlReplicationLoader?.Dispose();
                 SqlReplicationLoader = null;
