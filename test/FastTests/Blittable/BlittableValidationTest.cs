@@ -553,6 +553,53 @@ namespace FastTests.Blittable
         }
 
         [Fact]
+        public void Valid_String()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
+                {
+                    var temp = new Str
+                    {
+                        str = "\nabcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz" +
+                              "abcdefghijklmnopqrstuvwxyz\n"
+                    };
+                    var obj = RavenJObject.FromObject(temp);
+                    var objString = obj.ToString(Formatting.None);
+                    var buffer = Encoding.UTF8.GetBytes(objString);
+                    parser.SetBuffer(buffer, buffer.Length);
+                    var writer = new BlittableJsonDocumentBuilder(ctx,
+                        BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings,
+                        "test", parser, state);
+                    writer.ReadObject();
+                    var x = writer.Read();
+                    writer.FinalizeDocument();
+                    var reader = writer.CreateReader();
+
+                    reader.BlittableValidation();
+                }
+            }
+        }
+
+        [Fact]
         public unsafe void Invalid_Props_Offset()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
