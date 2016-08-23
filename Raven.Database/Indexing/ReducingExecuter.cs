@@ -27,7 +27,8 @@ namespace Raven.Database.Indexing
             autoTuner = new ReduceBatchSizeAutoTuner(context);
         }
 
-        protected ReducingPerformanceStats[] HandleReduceForIndex(IndexToWorkOn indexToWorkOn, CancellationToken token)
+        protected ReducingPerformanceStats[] HandleReduceForIndex(
+            IndexToWorkOn indexToWorkOn, bool skipIncreasingBatchSize, CancellationToken token)
         {
             var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexToWorkOn.IndexId);
             if (viewGenerator == null)
@@ -70,7 +71,7 @@ namespace Raven.Database.Indexing
                     if (Log.IsDebugEnabled)
                         Log.Debug("SingleStep reduce for keys: {0}", string.Join(",", singleStepReduceKeys));
                     
-                    var singleStepStats = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete, token);
+                    var singleStepStats = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete, skipIncreasingBatchSize, token);
 
                     performanceStats.Add(singleStepStats);
                 }
@@ -80,7 +81,7 @@ namespace Raven.Database.Indexing
                     if (Log.IsDebugEnabled)
                         Log.Debug("MultiStep reduce for keys: {0}", string.Join(",", multiStepsReduceKeys));
 
-                    var multiStepStats = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete, token);
+                    var multiStepStats = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete, skipIncreasingBatchSize, token);
 
                     performanceStats.Add(multiStepStats);
                 }
@@ -93,8 +94,6 @@ namespace Raven.Database.Indexing
             }
             catch (Exception e)
             {
-                operationCanceled = true;
-
                 if (HandleIfOutOfMemory(e, new OutOfMemoryDetails
                 {
                     Index = indexToWorkOn.Index,
@@ -103,13 +102,21 @@ namespace Raven.Database.Indexing
                 }))
                 {
                     //if we got a OOME we need to decrease the batch size
+                    operationCanceled = true;
                     return null;
                 }
 
                 if (IsOperationCanceledException(e))
+                {
+                    operationCanceled = true;
                     return null;
-                    
-                context.AddError(indexToWorkOn.IndexId, indexToWorkOn.Index.PublicName, null, e);
+                }
+
+                var message = $"Failed to reduce index: {indexToWorkOn.Index.PublicName} (id: {indexToWorkOn.IndexId}) " +
+                              $"{singleStepReduceKeys.Count} single step keys and {multiStepsReduceKeys.Count} multi step keys. " +
+                              "Skipping this batch (it won't be reduced)";
+
+                indexToWorkOn.Index.AddIndexingError(e, message);
             }
             finally
             {
@@ -174,7 +181,8 @@ namespace Raven.Database.Indexing
             return false;
         }
 
-        private ReducingPerformanceStats MultiStepReduce(IndexToWorkOn index, List<string> keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete, CancellationToken token)
+        private ReducingPerformanceStats MultiStepReduce(IndexToWorkOn index, List<string> keysToReduce, 
+            AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete, bool skipIncreasingBatchSize, CancellationToken token)
         {
             var needToMoveToMultiStep = new HashSet<string>();
             var alreadyMultiStep = new HashSet<string>();
@@ -341,7 +349,7 @@ namespace Raven.Database.Indexing
                                 Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration, performance.ItemsCount, index.Index.PublicName, reduceTimeWatcher.Elapsed, level);
                             }
 
-                            autoTuner.AutoThrottleBatchSize(count, size, batchDuration);
+                            autoTuner.AutoThrottleBatchSize(count, size, batchDuration, skipIncreasingBatchSize);
                         });
                     }
                     finally
@@ -374,7 +382,7 @@ namespace Raven.Database.Indexing
         }
 
         private ReducingPerformanceStats SingleStepReduce(IndexToWorkOn index, List<string> keysToReduce, AbstractViewGenerator viewGenerator,
-                                                          ConcurrentSet<object> itemsToDelete, CancellationToken token)
+                                                          ConcurrentSet<object> itemsToDelete, bool skipIncreasingBatchSize, CancellationToken token)
         {
             var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
             var alreadySingleStepQueue = new ConcurrentQueue<HashSet<string>>();
@@ -572,7 +580,7 @@ namespace Raven.Database.Indexing
 
                     reductionPerformanceStats.Add(performance);
 
-                    autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
+                    autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed, skipIncreasingBatchSize);
                 }
 
                 // update new preformed single step
@@ -677,6 +685,8 @@ namespace Raven.Database.Indexing
                 if (context.Database.ReducingThreadPool == null)
                     throw new OperationCanceledException();
 
+                var oomeErrorsCount = indexesToWorkOn.Select(x => x.Index).Sum(x => x.OutOfMemoryErrorsCount);
+
                 context.Database.ReducingThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
                 {
                     if (currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index) == false)
@@ -688,7 +698,7 @@ namespace Raven.Database.Indexing
 
                     try
                     {
-                        var performanceStats = HandleReduceForIndex(indexToWorkOn, context.CancellationToken);
+                        var performanceStats = HandleReduceForIndex(indexToWorkOn, oomeErrorsCount > 0, context.CancellationToken);
                         if (performanceStats != null)
                             reducingBatchInfo.PerformanceStats.TryAdd(indexToWorkOn.Index.PublicName, performanceStats);
 
