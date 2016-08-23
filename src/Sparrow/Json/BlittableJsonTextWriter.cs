@@ -138,6 +138,12 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteString(LazyStringValue str)
         {
+            if (str == null)
+            {
+                WriteNull();
+                return;
+            }
+
             var strBuffer = str.Buffer;
             var size = str.Size;
 

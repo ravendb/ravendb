@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Replication;
 
@@ -9,14 +10,16 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            
+            Parallel.For(0, 25, async (i) =>
             {
                 Console.WriteLine(i);
-                using (var f = new SlowTests.Tests.Views.MapReduce())
+                using (var f = new SlowTests.Tests.Linq.WhereClause())
                 {
-                    f.DoesNotOverReduce().Wait();
+                    await f.CanUnderstandSimpleContainsInExpression2();
                 }
-            }
+                Console.WriteLine(-i);
+            });
 
         }
     }
