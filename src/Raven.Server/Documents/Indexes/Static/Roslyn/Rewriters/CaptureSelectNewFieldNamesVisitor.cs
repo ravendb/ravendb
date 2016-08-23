@@ -16,13 +16,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (Fields != null)
                 return node;
 
-            var anonymousObjectCreationExpressionSyntax = node.DescendantNodes(descendIntoChildren: syntaxNode => true)
+            var last = node.DescendantNodes(descendIntoChildren: syntaxNode => true)
                 .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
 
-            if (anonymousObjectCreationExpressionSyntax == null)
+            if (last == null)
                 return node;
 
-            Fields = RewritersHelper.ExtractFields(anonymousObjectCreationExpressionSyntax);
+            // check if maybe we are nested
+            var parent = last.Ancestors(ascendOutOfTrivia: true)
+                .FirstOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
+
+            Fields = RewritersHelper.ExtractFields(parent ?? last);
 
             return node;
         }
@@ -32,13 +36,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (Fields != null)
                 return node;
 
-            var anonymousObjectCreationExpressionSyntax = node.DescendantNodes(descendIntoChildren: syntaxNode => true)
+            var last = node.DescendantNodes(descendIntoChildren: syntaxNode => true)
                 .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
 
-            if (anonymousObjectCreationExpressionSyntax == null)
+            if (last == null)
                 return node;
 
-            Fields = RewritersHelper.ExtractFields(anonymousObjectCreationExpressionSyntax);
+            // check if maybe we are nested
+            var parent = last.Ancestors(ascendOutOfTrivia: true)
+                .FirstOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
+
+            Fields = RewritersHelper.ExtractFields(parent ?? last);
 
             return node;
         }
