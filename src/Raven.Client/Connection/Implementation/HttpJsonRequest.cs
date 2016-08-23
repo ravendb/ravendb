@@ -232,13 +232,14 @@ namespace Raven.Client.Connection.Implementation
                 {
                     var requestMessage = getRequestMessage();
                     CopyHeadersToHttpRequestMessage(requestMessage);
+                    var sp = Stopwatch.StartNew();
                     try
                     {
                         Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException e)
                     {
-                        throw new TimeoutException("Request for " + requestMessage.RequestUri + " timed out", e);
+                        throw new TimeoutException(string.Format("Request for {0} timed out after {1:#,#;;0} ms", requestMessage.RequestUri, sp.ElapsedMilliseconds), e);
                     }
                     SetResponseHeaders(Response);
                     AssertServerVersionSupported();

@@ -376,7 +376,7 @@ namespace Sparrow.Collections
         public ZFastTrieSortedSet(IEnumerable<KeyValuePair<TKey, TValue>> elements, Func<TKey, BitVector> binarize) : this ( binarize )
         {
             if (elements == null)
-                throw new NullReferenceException();
+                throw new ArgumentOutOfRangeException(nameof(elements));
 
             foreach ( var element in elements )
                 Add(element.Key, element.Value);
