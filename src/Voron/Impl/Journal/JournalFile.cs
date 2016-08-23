@@ -126,10 +126,11 @@ namespace Voron.Impl.Journal
         }
 
         /// <summary>
-        /// write transaction's raw page data into journal. returns write page position
+        /// write transaction's raw page data into journal. returns io rate Bytes/Ticks
         /// </summary>
-        public long Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
+        public int Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
+            var ioRate = 0; // will remain zero if written to lazy buffer
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var unused = new HashSet<PagePosition>();
             var pageWritePos = _writePage;
@@ -149,7 +150,15 @@ namespace Voron.Impl.Journal
 
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
+                var sp = Stopwatch.StartNew();
                 _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
+                sp.Stop();
+
+                int elapsed = (int)sp.ElapsedTicks;
+                if (elapsed == 0)
+                    elapsed = 1; // prevent dev by zero
+
+                ioRate = (pages.NumberOfPages*tx.Environment.Options.PageSize)/elapsed;
             }
             else
             {
@@ -162,7 +171,7 @@ namespace Voron.Impl.Journal
                 if (tx.IsLazyTransaction == false ||
                     lazyTransactionScratch.NumberOfPages > tx.Environment.ScratchBufferPool.GetAvailablePagesCount()/2)
                 {
-                    lazyTransactionScratch.WriteBufferToFile(this, tx);
+                    ioRate = lazyTransactionScratch.WriteBufferToFile(this, tx);
                 }
                 else 
                 {
@@ -170,7 +179,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            return pageWritePos;
+            return ioRate;
         }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
