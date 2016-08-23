@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
 
-        protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
         }
@@ -74,16 +74,21 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
                 {
-                    var lockMode = ReadLockMode(reader);
-                    var collections = ReadCollections(reader);
-                    var fields = ReadMapFields(reader);
-
-                    return new AutoMapIndexDefinition(collections[0], fields)
-                    {
-                        LockMode = lockMode
-                    };
+                    return LoadFromJson(reader);
                 }
             }
+        }
+
+        public static AutoMapIndexDefinition LoadFromJson(BlittableJsonReaderObject reader)
+        {
+            var lockMode = ReadLockMode(reader);
+            var collections = ReadCollections(reader);
+            var fields = ReadMapFields(reader);
+
+            return new AutoMapIndexDefinition(collections[0], fields)
+            {
+                LockMode = lockMode
+            };
         }
     }
 }

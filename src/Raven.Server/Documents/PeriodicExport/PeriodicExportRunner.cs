@@ -14,6 +14,7 @@ using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
+using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -232,7 +233,7 @@ namespace Raven.Server.Documents.PeriodicExport
                         if (Directory.Exists(exportDirectory) == false)
                             Directory.CreateDirectory(exportDirectory);
 
-                        var dataExporter = new DatabaseDataExporter(_database)
+                        var dataExporter = new SmugglerExporter(_database)
                         {
                             DocumentsLimit = _exportLimit,
                             RevisionDocumentsLimit = _exportLimit,

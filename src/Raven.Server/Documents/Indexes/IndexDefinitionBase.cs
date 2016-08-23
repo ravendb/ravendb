@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        public void Persist(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
 
@@ -97,9 +97,9 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteEndObject();
         }
 
-        protected abstract void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer);
+        protected abstract void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
 
-        protected void PersistMapFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             writer.WritePropertyName((nameof(MapFields)));
             writer.WriteStartArray();

@@ -113,6 +113,9 @@ namespace Raven.Client.Smuggler
                 uri = UrlHelper.BuildUrl(uri, query);
 
                 var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode == false)
+                    throw new InvalidOperationException("Import failed");
+
                 if (response.IsSuccessStatusCode)
                 {
                     var x = await response.Content.ReadAsStringAsync();

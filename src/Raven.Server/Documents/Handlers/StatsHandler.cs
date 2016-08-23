@@ -24,13 +24,14 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
+                var transformersCount = Database.TransformerStore.GetTransformersCount();
 
                 var stats = new DatabaseStatistics();
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
                 stats.ApproximateTaskCount = 0; // TODO [ppekrol]
                 stats.CountOfIndexes = indexes.Count;
-                stats.CountOfTransformers = 0; // TODO [ppekrol]
+                stats.CountOfTransformers = transformersCount;
                 stats.CurrentNumberOfItemsToIndexInSingleBatch = 1; // TODO [ppekrol]
                 stats.CurrentNumberOfItemsToReduceInSingleBatch = 1; // TODO [ppekrol]
                 stats.CurrentNumberOfParallelTasks = 1; // TODO [ppekrol]

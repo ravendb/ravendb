@@ -23,7 +23,7 @@ namespace Sparrow.Json
                 if (ctor != null)
                     instance = Expression.New(ctor);
                 else
-                    instance = Expression.New(typeof (T));
+                    instance = Expression.New(typeof(T));
                 var propInit = new List<MemberBinding>();
                 foreach (var fieldInfo in typeof(T).GetFields())
                 {
@@ -69,7 +69,7 @@ namespace Sparrow.Json
                 if (type == typeof(string) || type == typeof(double)) // we support direct conversion to these types
                     genericTypes = EmptyTypes;
                 else
-                    genericTypes = new[] {propertyType};
+                    genericTypes = new[] { propertyType };
 
                 var tryGet = Expression.Call(json, nameof(BlittableJsonReaderObject.TryGet), genericTypes, Expression.Constant(propertyName), value);
                 return Expression.Condition(tryGet, value, Expression.Default(propertyType));
@@ -86,6 +86,12 @@ namespace Sparrow.Json
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfString), BindingFlags.NonPublic | BindingFlags.Static);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                     }
+                    else if (valueType.GetTypeInfo().IsEnum)
+                    {
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnum), BindingFlags.NonPublic | BindingFlags.Static);
+                        methodToCall = methodToCall.MakeGenericMethod(valueType);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                    }
                     else
                     {
                         var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
@@ -94,17 +100,19 @@ namespace Sparrow.Json
                     }
                 }
 
+                if (propertyType == typeof(List<string>) || propertyType == typeof(HashSet<string>))
+                {
+                    var method = typeof(JsonDeserializationBase).GetMethod(nameof(ToCollectionOfString), BindingFlags.NonPublic | BindingFlags.Static);
+                    method = method.MakeGenericMethod(propertyType);
+                    return Expression.Call(method, json, Expression.Constant(propertyName));
+                }
+
                 if (genericTypeDefinition == typeof(List<>))
                 {
                     var valueType = propertyType.GenericTypeArguments[0];
                     var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
                     var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
                     return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
-                }
-
-                if (propertyType == typeof(HashSet<string>))
-                {
-                    return Expression.Call(typeof(JsonDeserializationBase).GetMethod(nameof(ToHashSetOfString), BindingFlags.NonPublic | BindingFlags.Static), json, Expression.Constant(propertyName));
                 }
             }
 
@@ -135,7 +143,7 @@ namespace Sparrow.Json
             object converter;
             if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
             {
-                DeserializedTypes[propertyType] = converter = typeof (JsonDeserializationBase)
+                DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase)
                     .GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static)
                     .MakeGenericMethod(propertyType)
                     .Invoke(null, null);
@@ -159,7 +167,7 @@ namespace Sparrow.Json
             var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
 
             BlittableJsonReaderObject obj;
-            if (json.TryGet(name, out obj) == false)
+            if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
             foreach (var propertyName in obj.GetPropertyNames())
@@ -168,6 +176,26 @@ namespace Sparrow.Json
                 if (obj.TryGetMember(propertyName, out val))
                 {
                     dic[propertyName] = converter((BlittableJsonReaderObject)val);
+                }
+            }
+            return dic;
+        }
+
+        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name) 
+        {
+            var dic = new Dictionary<string, TEnum>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                string val;
+                if (obj.TryGet(propertyName, out val))
+                {
+                    dic[propertyName] = (TEnum)Enum.Parse(typeof(TEnum), val, true);
                 }
             }
             return dic;
@@ -193,18 +221,19 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static HashSet<string> ToHashSetOfString(BlittableJsonReaderObject json, string name)
+        private static TCollection ToCollectionOfString<TCollection>(BlittableJsonReaderObject json, string name)
+            where TCollection : ICollection<string>, new()
         {
-            var hashSet = new HashSet<string>();
+            var collection = new TCollection();
 
             BlittableJsonReaderArray jsonArray;
             if (json.TryGet(name, out jsonArray) == false || jsonArray == null)
-                return hashSet;
+                return collection;
 
             foreach (var value in jsonArray)
-                hashSet.Add(value.ToString());
+                collection.Add(value.ToString());
 
-            return hashSet;
+            return collection;
         }
 
         private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()

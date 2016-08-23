@@ -542,7 +542,6 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(transformerDefinition.TransfomerId)));
             writer.WriteInteger(transformerDefinition.TransfomerId);
-            writer.WriteComma();
 
             writer.WriteEndObject();
         }
