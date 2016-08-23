@@ -132,6 +132,9 @@ namespace Sparrow.Json
 
         private unsafe LazyStringValue GetLazyString(string field, bool longLived)
         {
+            if (field == null)
+                return null;
+
             var state = new JsonParserState();
             state.FindEscapePositionsIn(field);
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
