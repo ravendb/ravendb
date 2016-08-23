@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Replication;
+using SlowTests.Tests.Linq;
 
 namespace Tryouts
 {
@@ -10,16 +11,36 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            
-            Parallel.For(0, 25, async (i) =>
+            Console.WriteLine("First run");
+            using (var f = new WhereClause())
             {
-                Console.WriteLine(i);
-                using (var f = new SlowTests.Tests.Linq.WhereClause())
+                f.CanUnderstandSimpleContainsInExpression2().Wait();
+            }
+            Console.WriteLine("starting");
+            var tasks = new Task[100];
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                var copy = i;
+                tasks[i] = Task.Run(async () =>
                 {
-                    await f.CanUnderstandSimpleContainsInExpression2();
-                }
-                Console.WriteLine(-i);
-            });
+
+                    Console.WriteLine(copy);
+                    try
+                    {
+                        using (var f = new WhereClause())
+                        {
+                            await f.CanUnderstandSimpleContainsInExpression2();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                    Console.WriteLine(-copy);
+                });
+            }
+
+            Task.WaitAll(tasks);
 
         }
     }

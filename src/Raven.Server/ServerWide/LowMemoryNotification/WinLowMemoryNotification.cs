@@ -57,50 +57,56 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                 throw new Win32Exception();
             }
 
-            new Thread(() =>
-            {
-                while (true)
-                {
-                    var waitForResult = WaitForMultipleObjects(4,
-                        new[] {lowMemoryNotificationHandle, appDomainUnloadEvent, lowMemorySimulationEvent, softMemoryReleaseEvent}, false,
-                        5*60*1000);
-
-                    switch (waitForResult)
-                    {
-                        case 0: // lowMemoryNotificationHandle
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Low memory detected, will try to reduce memory usage...");
-                            RunLowMemoryHandlers();
-                            break;
-                        case 1:
-                            // app domain unload
-                            return;
-                        case 2: // LowMemorySimulationEvent
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Low memory simulation, will try to reduce memory usage...");
-                            RunLowMemoryHandlers();
-                            break;
-                        case 3: // SoftMemoryReleaseEvent
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Releasing memory before Garbage Collection operation");
-                            RunLowMemoryHandlers();
-                            break;
-                        case WAIT_TIMEOUT:
-                            ClearInactiveHandlers();
-                            break;
-                        case WAIT_FAILED:
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
-                            break;
-                    }
-
-                    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event oto frequent when the low memory notification object is in the signaled state
-                }
-            })
+            new Thread(MonitorMemoryUsage)
             {
                 IsBackground = true,
                 Name = "Low memory notification thread"
-            }.Start();
+            }.Start(appDomainUnloadEvent);
+        }
+
+        private void MonitorMemoryUsage(object state)
+        {
+            IntPtr appDomainUnloadEvent = (IntPtr) state;
+            while (true)
+            {
+                var waitForResult = WaitForMultipleObjects(4,
+                    new[] {lowMemoryNotificationHandle, appDomainUnloadEvent, lowMemorySimulationEvent, softMemoryReleaseEvent},
+                    false,
+                    5*60*1000);
+
+                switch (waitForResult)
+                {
+                    case 0: // lowMemoryNotificationHandle
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Low memory detected, will try to reduce memory usage...");
+                        RunLowMemoryHandlers();
+                        break;
+                    case 1:
+                        // app domain unload
+                        return;
+                    case 2: // LowMemorySimulationEvent
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Low memory simulation, will try to reduce memory usage...");
+                        RunLowMemoryHandlers();
+                        break;
+                    case 3: // SoftMemoryReleaseEvent
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Releasing memory before Garbage Collection operation");
+                        RunLowMemoryHandlers();
+                        break;
+                    case WAIT_TIMEOUT:
+                        ClearInactiveHandlers();
+                        break;
+                    case WAIT_FAILED:
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(
+                                "Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+                        break;
+                }
+
+                Thread.Sleep(TimeSpan.FromSeconds(60));
+                    // prevent triggering the event oto frequent when the low memory notification object is in the signaled state
+            }
         }
 
         public override void SimulateLowMemoryNotification()

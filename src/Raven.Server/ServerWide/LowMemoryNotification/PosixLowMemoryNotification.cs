@@ -23,14 +23,14 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             _shutdownNotification = shutdownNotification;
             _configuration = configuration;
             _logger = LoggerSetup.Instance.GetLogger<PosixLowMemoryNotification>(configuration.DatabaseName);
-            new Thread(Poll)
+            new Thread(MonitorMemoryUsage)
             {
                 IsBackground = true,
                 Name = "Low memory notification thread"
             }.Start();
         }
 
-        private void Poll()
+        private void MonitorMemoryUsage()
         {
             int clearInactiveHandlersCounter = 0;
 
