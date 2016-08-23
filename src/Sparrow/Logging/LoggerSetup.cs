@@ -179,7 +179,10 @@ namespace Sparrow.Logging
             _hasEntries.Set();
         }
 
-        private void WriteEntryToWriter(StreamWriter writer, LogEntry entry)
+		public bool EchoToConsole = false;
+	    public Func<string, bool> EchoLoggerPredicate;
+
+		private void WriteEntryToWriter(StreamWriter writer, LogEntry entry)
         {
             if (_currentThreadId == null)
             {
@@ -212,7 +215,18 @@ namespace Sparrow.Logging
             }
             writer.WriteLine();
             writer.Flush();
-        }
+
+	        if (EchoToConsole)
+	        {
+		        if (EchoLoggerPredicate == null || 
+					EchoLoggerPredicate(entry.Logger))
+		        {
+			        Console.WriteLine($"[{entry.Source}/{entry.Logger}] => {entry.Message} ({entry.At})");
+			        if (entry.Exception != null)
+				        Console.WriteLine($"[{entry.Source}/{entry.Logger}] => {entry.Exception} ({entry.At})");
+		        }
+	        }
+		}
 
         public Logger GetLogger<T>(string source)
         {

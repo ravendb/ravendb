@@ -1,14 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.Json.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
     {
-        public static bool GreaterThen(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
+		//note - this is a helper to use in unit tests only
+	    public static ChangeVectorEntry FromJson(this RavenJToken self)
+	    {
+		    return new ChangeVectorEntry
+			{
+				DbId = Guid.Parse(self.Value<string>("DbId")),
+				Etag = long.Parse(self.Value<string>("Etag"))
+			};
+	    }
+
+	    public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
+	    {
+		    var results = new DynamicJsonArray();
+			foreach(var entry in self)
+				results.Add(new DynamicJsonValue
+				{
+					["DbId"] = entry.DbId.ToString(),
+					["Etag"] = entry.Etag
+				});
+		    return results;
+	    }
+
+
+		public static bool GreaterThen(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
         {
             for (int i = 0; i < self.Length; i++)
             {

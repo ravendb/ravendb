@@ -165,13 +165,28 @@ namespace Raven.Server.Documents.Replication
                     foreach (var doc in _replicatedDocs)
                     {
                         ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);
+						var json = new BlittableJsonReaderObject(
+							buffer + doc.Position + (doc.ChangeVectorCount * sizeof(ChangeVectorEntry))
+							, doc.DocumentSize, _context);
 
-                        var json = new BlittableJsonReaderObject(
-                            buffer + doc.Position + (doc.ChangeVectorCount*sizeof (ChangeVectorEntry))
-                            , doc.DocumentSize, _context);
-
-                        //TODO: conflict handling
-                        _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+						switch (GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector))
+	                    {
+		                    case ConflictStatus.Update:
+								_database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+								break;
+		                    case ConflictStatus.ShouldResolveConflict:
+							
+								_context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
+								goto case ConflictStatus.Update;
+							case ConflictStatus.Conflict:
+								_database.DocumentsStorage.AddConflict(_context,doc.Id, json, _tempReplicatedChangeVector);
+								break;
+							case ConflictStatus.AlreadyMerged:
+								//nothing to do
+								break;
+							default:
+			                    throw new ArgumentOutOfRangeException("Invalid ConflictStatus");
+	                    }
                     }
                     _database.DocumentsStorage.SetDatabaseChangeVector(_context,
                         maxReceivedChangeVectorByDatabase);
@@ -188,6 +203,8 @@ namespace Raven.Server.Documents.Replication
                         $"Replication connection {FromToString}: received and written {replicatedDocsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastEtag}.");
             }
         }
+
+	    
 
         private unsafe void ReadChangeVector(ReplicationDocumentsPositions doc, byte* buffer,
             Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
@@ -229,7 +246,7 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
             {
                 _log.Info(
-                    $"Sending ok to {FromToString} with last etag {lastEtag} and change vector: {databaseChangeVector.Format()}");
+                    $"Sending ok => {FromToString} with last etag {lastEtag} and change vector: {databaseChangeVector.Format()}");
             }
             _context.Write(writer, new DynamicJsonValue
             {
@@ -336,5 +353,84 @@ namespace Raven.Server.Documents.Replication
 
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
+
+		private ConflictStatus GetConflictStatus(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote)
+		{
+			//tombstones also can be a conflict entry
+			var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, key);
+			if (conflicts.Count > 0)
+			{
+				foreach (var existingConflict in conflicts)
+				{
+					if(GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+						return ConflictStatus.Conflict;
+				}
+
+				return ConflictStatus.ShouldResolveConflict;
+			}
+
+			var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, key);
+			ChangeVectorEntry[] local;
+
+			if (result.Item1 != null)
+				local = result.Item1.ChangeVector;
+			else if (result.Item2 != null)
+				local = result.Item2.ChangeVector;
+			else return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
+
+			return GetConflictStatus(remote, local);
+		}
+
+		public enum ConflictStatus
+		{
+			Update,
+			Conflict,
+			AlreadyMerged,
+			ShouldResolveConflict
+		}
+
+		public static ConflictStatus GetConflictStatus(ChangeVectorEntry[] remote, ChangeVectorEntry[] local)
+	    {
+			//any missing entries from a change vector are assumed to have zero value
+			var remoteHasLargerEntries = local.Length < remote.Length; 
+		    var localHasLargerEntries = remote.Length < local.Length;
+
+		    int remoteEntriesTakenIntoAccount = 0;
+		    for (int index = 0; index < local.Length; index++)
+		    {
+			    if (remote.Length < index && remote[index].DbId == local[index].DbId)
+			    {
+				    remoteHasLargerEntries |= remote[index].Etag > local[index].Etag;
+					localHasLargerEntries |= local[index].Etag > remote[index].Etag;
+					remoteEntriesTakenIntoAccount++;
+				}
+			    else
+			    {
+				    var updated = false;
+				    for (var remoteIndex = 0; remoteIndex < remote.Length; remoteIndex++)
+				    {
+					    if (remote[remoteIndex].DbId == local[index].DbId)
+					    {
+							remoteHasLargerEntries |= remote[remoteIndex].Etag > local[index].Etag;
+							localHasLargerEntries |= local[index].Etag > remote[remoteIndex].Etag;
+						    remoteEntriesTakenIntoAccount++;
+							updated = true;
+						}
+					}
+
+				    if (!updated)
+					    localHasLargerEntries = true;
+			    }
+		    }
+			remoteHasLargerEntries |= remoteEntriesTakenIntoAccount < remote.Length;
+
+			if (remoteHasLargerEntries && localHasLargerEntries)
+				return ConflictStatus.Conflict;
+
+		    if (!remoteHasLargerEntries && localHasLargerEntries)
+			    return ConflictStatus.AlreadyMerged;
+
+		    return ConflictStatus.Update;
+	    }
     }
 }

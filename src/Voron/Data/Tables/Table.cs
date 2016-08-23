@@ -146,15 +146,13 @@ namespace Voron.Data.Tables
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-            var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree.Read(key);
-            if (readResult == null)
-            {
-                id = -1;
-                return false;
-            }
+			id = -1;		
+			var pkTree = GetTree(_schema.Key);
+	        var readResult = pkTree?.Read(key);
+	        if (readResult == null)
+		        return false;
 
-            id = readResult.Reader.ReadLittleEndianInt64();
+	        id = readResult.Reader.ReadLittleEndianInt64();
             return true;
         }
 

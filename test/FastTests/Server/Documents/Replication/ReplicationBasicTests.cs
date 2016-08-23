@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Replication.Messages;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,9 +20,9 @@ namespace FastTests.Server.Documents.Replication
         {
             public string Name { get; set; }
             public int Age { get; set; }
-        }
+        }	   
 
-        [Fact]
+		[Fact]
         public async Task Master_master_replication_from_etag_zero_without_conflict_should_work()
         {
             var dbName1 = DbName + "-1";
