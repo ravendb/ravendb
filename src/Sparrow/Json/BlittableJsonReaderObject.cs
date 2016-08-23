@@ -620,13 +620,15 @@ namespace Sparrow.Json
             if (stringLength < 0)
                 throw new InvalidDataException("String not valid");
             var str = stringOffset + lenOffset;
+            var totalEscCharLen = 0;
             var escCount = ReadVariableSizeInt(stringOffset + lenOffset + stringLength, out escOffset);
             if (escCount != 0)
             {
                 var prevEscChar = 0;
                 for (var i = 0; i < escCount; i++)
                 {
-                    var escCharOffset = ReadNumber(_mem + str + stringLength + escOffset + i, 1);
+                    byte escCharOffsetLen;
+                    var escCharOffset = ReadVariableSizeInt(str + stringLength + escOffset + totalEscCharLen, out escCharOffsetLen);
                     escCharOffset += prevEscChar ;
                     var escChar = (char)ReadNumber(_mem + str + escCharOffset, 1);
                     switch (escChar)
@@ -643,10 +645,11 @@ namespace Sparrow.Json
                         default:
                             throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
                     }
+                    totalEscCharLen += escCharOffsetLen;
                     prevEscChar = escCharOffset + 1;
                 }
             }
-            return stringLength + escOffset + escCount + lenOffset;
+            return stringLength + escOffset + totalEscCharLen + lenOffset;
         }
 
         private BlittableJsonToken TokenValidation(byte tokenStart, out int propOffsetSize,
