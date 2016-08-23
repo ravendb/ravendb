@@ -33,7 +33,7 @@ namespace FastTests.Server.Documents.Replication
                 store1.DefaultDatabase = dbName1;
                 store2.DefaultDatabase = dbName2;
 
-                SetupReplication(dbName2, store1, store2);
+                SetupReplication(store1, store2);
                 SetupReplication(dbName1, store2, store1);
                 using (var session = store1.OpenSession())
                 {

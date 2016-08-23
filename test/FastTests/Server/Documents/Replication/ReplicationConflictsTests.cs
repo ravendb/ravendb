@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
@@ -220,9 +221,9 @@ namespace FastTests.Server.Documents.Replication
 				store1.DatabaseCommands.ForDatabase(dbName1).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
 				store2.DatabaseCommands.ForDatabase(dbName2).Put("foo/bar", null, new RavenJObject(), new RavenJObject());
 
-				SetupReplication(dbName2, store1, store2);
+				SetupReplication(store1, store2);
 
-				var conflicts = await WaitUntilHasConflict(dbName2, store2, "foo/bar");
+				var conflicts = await WaitUntilHasConflict(store2, "foo/bar");
 				Assert.Equal(2, conflicts["foo/bar"].Count);
 			}
 		}
@@ -235,69 +236,70 @@ namespace FastTests.Server.Documents.Replication
 			var dbName1 = "FooBar-1";
 			var dbName2 = "FooBar-2";
 			var dbName3 = "FooBar-3";
-			LoggerSetup.Instance.EchoToConsole = true;
-			using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
-			using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
-			using (var store3 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName3))
+			using (var store1 = await GetDocumentStore(dbSuffixIdentifier: dbName1))
+			using (var store2 = await GetDocumentStore(dbSuffixIdentifier: dbName2))
+			using (var store3 = await GetDocumentStore(dbSuffixIdentifier: dbName3))
 			{
-				store1.DefaultDatabase = dbName1;
-				store2.DefaultDatabase = dbName2;
-				store3.DefaultDatabase = dbName3;
-
-				using (var s1 = store1.OpenSession(dbName1))
+				using (var s1 = store1.OpenSession())
 				{
 					s1.Store(new User(), "foo/bar");
 					s1.SaveChanges();
 				}
-				using (var s2 = store2.OpenSession(dbName2))
+				using (var s2 = store2.OpenSession())
 				{
 					s2.Store(new User(), "foo/bar");
 					s2.SaveChanges();
 				}
-				using (var s3 = store3.OpenSession(dbName3))
+				using (var s3 = store3.OpenSession())
 				{
 					s3.Store(new User(), "foo/bar");
 					s3.SaveChanges();
 				}
 
-				SetupReplication(dbName3, store1, store3);
-				SetupReplication(dbName3, store2, store3);
+				SetupReplication(store1, store3);
+				SetupReplication(store2, store3);
 
-				var conflicts = await WaitUntilHasConflict(dbName3, store3, "foo/bar",
-					c => c.ContainsKey("foo/bar") && c["foo/bar"].Count == 3);
+				var conflicts = await WaitUntilHasConflict( store3, "foo/bar",
+					count: 3);
 
 				Assert.Equal(3, conflicts["foo/bar"].Count);
 			}
 		}
 
-		private async Task<Dictionary<string, List<ChangeVectorEntry[]>>>
-			WaitUntilHasConflict(string dbName, 
+		private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
 				DocumentStore store, 
 				string docId, 
-				Func<Dictionary<string, List<ChangeVectorEntry[]>>,bool> conflictPredicate = null, 
+                int count = 1,
 				int timeout = 10000)
 		{
 			if (Debugger.IsAttached)
 				timeout *= 100;
-			bool hasConflict;
 			Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
 			var sw = Stopwatch.StartNew();
 			do
 			{
-				conflicts = await GetConflicts(store, dbName, docId);
-				hasConflict = conflicts.Count > 0;
-				if (hasConflict == false && sw.ElapsedMilliseconds > timeout)
-					Assert.False(true, "Timed out while waiting for conflicts");
+				conflicts = await GetConflicts(store, docId);
+			   
+			    List<ChangeVectorEntry[]> list;
+			    if (conflicts.TryGetValue(docId, out list) == false)
+			        list = new List<ChangeVectorEntry[]>();
+			    if (list.Count >= count)
+			        break;
 
-			} while ((conflictPredicate == null && !hasConflict) || 
-					 (conflictPredicate != null && !conflictPredicate(conflicts)));
+                if (sw.ElapsedMilliseconds > timeout)
+                {
+                    Assert.False(true,
+                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
+                }
+
+            } while (true);
 			return conflicts;
 		}
 
-		private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store, string dbName,
+		private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store, 
 		    string docId)
 	    {
-			var url = $"{store.Url}/databases/{dbName}/replication/conflicts?docId={docId}";
+			var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
 			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
 			{

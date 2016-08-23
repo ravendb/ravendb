@@ -37,7 +37,11 @@ namespace FastTests.Server.Documents.Replication
             return default(T);
         }
 
-        protected static void SetupReplication(string targetDbName, DocumentStore fromStore, DocumentStore toStore)
+        protected static void SetupReplication(string todo, DocumentStore fromStore, DocumentStore toStore)
+        {
+            
+        }
+        protected static void SetupReplication(DocumentStore fromStore, DocumentStore toStore)
         {
             using (var session = fromStore.OpenSession())
             {
@@ -47,7 +51,7 @@ namespace FastTests.Server.Documents.Replication
                     {
                         new ReplicationDestination
                         {
-                            Database = targetDbName,
+                            Database = toStore.DefaultDatabase,
                             Url = toStore.Url
                         }
                     }
