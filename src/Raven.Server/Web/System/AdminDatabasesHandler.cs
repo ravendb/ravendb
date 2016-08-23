@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Abstractions.Data;
@@ -123,43 +124,8 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/databases/$", "DELETE", "/admin/databases/{databaseName:string}?hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task Delete()
-        {
-            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var isHardDelete = GetBoolValueQueryString("isHardDelete", required: false) ?? false;
-
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
-                if (configuration == null)
-                {
-                    HttpContext.Response.StatusCode = 404;
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["name"] = name,
-                        ["deleted"] = false,
-                        ["reason"] = "database not found",
-                    });
-                    return Task.CompletedTask;
-                }
-
-                DeleteDatabase(name, context, isHardDelete, configuration);
-                HttpContext.Response.StatusCode = 200;
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["name"] = name,
-                    ["deleted"] = true,
-                });
-            }
-
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task DeleteBatch()
+        public Task Delete()
         {
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
@@ -168,37 +134,48 @@ namespace Raven.Server.Web.System
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartArray();
-                var first = true;
+                var results = new List<DynamicJsonValue>();
                 foreach (var name in names)
                 {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
                     var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
                     if (configuration == null)
                     {
-                        context.Write(writer, new DynamicJsonValue
+                        results.Add(new DynamicJsonValue
                         {
                             ["name"] = name,
                             ["deleted"] = false,
                             ["reason"] = "database not found",
                         });
+
                         continue;
                     }
 
                     DeleteDatabase(name, context, isHardDelete, configuration);
-                    context.Write(writer, new DynamicJsonValue
+
+                    results.Add(new DynamicJsonValue
                     {
                         ["name"] = name,
                         ["deleted"] = true,
                     });
                 }
-                writer.WriteEndArray();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var result in results)
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        context.Write(writer, result);
+                    }
+                    writer.WriteEndArray();
+                }
             }
+
             return Task.CompletedTask;
         }
 

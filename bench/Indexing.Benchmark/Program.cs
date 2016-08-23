@@ -44,21 +44,10 @@ namespace Indexing.Benchmark
                 DefaultDatabase = DbName
             }.Initialize();
 
-            while (_store.DatabaseCommands.GlobalAdmin.GetDatabaseNames(100).Contains(DbName))
+            if (_store.DatabaseCommands.GlobalAdmin.GetDatabaseNames(100).Contains(DbName))
             {
-                try
-                {
-                    _store.DatabaseCommands.GlobalAdmin.DeleteDatabase(DbName, true);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Failed to delete database '{DbName}'. Exception: {e.Message}");
-
-                    var timeToWait = TimeSpan.FromSeconds(2);
-
-                    Console.WriteLine($"waiting {timeToWait} and trying again ... ");
-                    Thread.Sleep(timeToWait);
-                }
+                _store.DatabaseCommands.GetStatistics(); // give some time for database to load
+                _store.DatabaseCommands.GlobalAdmin.DeleteDatabase(DbName, true);
             }
 
             var doc = MultiDatabase.CreateDatabaseDocument(DbName);
@@ -120,7 +109,7 @@ namespace Indexing.Benchmark
             var numberOfAdditionalMapReduceIndexes = 5;
 
             Console.WriteLine($"Putting additional indexes: {numberOfAdditionaMapIndexes} map and {numberOfAdditionalMapReduceIndexes} map-reduce");
-            
+
             for (int i = 0; i < numberOfAdditionaMapIndexes / 2; i++)
             {
                 var employeesByNameAndAddress = new MapIndexesBench.Employees_ByNameAndAddress(i);
@@ -244,14 +233,14 @@ namespace Indexing.Benchmark
                     {
                         var employee = new Employee()
                         {
-                            FirstName = $"FirstName-{i%123}",
-                            LastName = $"LastName-{i%456}",
+                            FirstName = $"FirstName-{i % 123}",
+                            LastName = $"LastName-{i % 456}",
                             Address = new Address()
                             {
-                                Country = i%2 == 0 ? "PL" : "IL",
-                                City = $"City-{i%77}",
-                                Street = $"Street-{i%199}",
-                                ZipCode = i%999
+                                Country = i % 2 == 0 ? "PL" : "IL",
+                                City = $"City-{i % 77}",
+                                Street = $"Street-{i % 199}",
+                                ZipCode = i % 999
                             }
                         };
 
