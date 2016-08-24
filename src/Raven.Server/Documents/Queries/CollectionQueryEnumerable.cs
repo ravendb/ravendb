@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Voron;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -35,6 +39,10 @@ namespace Raven.Server.Documents.Queries
 
         private class Enumerator : IEnumerator<Document>
         {
+            private static readonly char[] InSeparator = { ',' };
+            private static readonly string InPrefix = $"@in<{Constants.DocumentIdFieldName}>:";
+            private static readonly string EqualPrefix = $"{Constants.DocumentIdFieldName}:";
+
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;
@@ -49,6 +57,7 @@ namespace Raven.Server.Documents.Queries
             private int _start;
             private IEnumerator<Document> _inner;
             private int _innerCount;
+            private readonly List<Slice> _ids;
 
             public Enumerator(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context)
             {
@@ -60,6 +69,68 @@ namespace Raven.Server.Documents.Queries
 
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
+
+                _ids = ExtractIdsFromQuery(query);
+            }
+
+            private List<Slice> ExtractIdsFromQuery(IndexQueryServerSide query)
+            {
+                if (string.IsNullOrWhiteSpace(query.Query))
+                    return null;
+
+                var q = new StringSegment(query.Query.Replace(" ", string.Empty), 0);
+
+                if (q.Length <= EqualPrefix.Length)
+                    return null;
+
+                var documentId = q.SubSegment(0, EqualPrefix.Length);
+                if (documentId.Equals(EqualPrefix))
+                {
+                    var id = q.SubSegment(EqualPrefix.Length);
+                    var key = Slice.From(_context.Allocator, id);
+                    _context.Allocator.ToLowerCase(ref key.Content);
+
+                    return new List<Slice>
+                    {
+                        key
+                    };
+                }
+
+                if (q.Length <= InPrefix.Length)
+                    return null;
+
+                var @in = q.SubSegment(0, InPrefix.Length);
+                if (@in.Equals(InPrefix) == false)
+                    return null;
+
+                var ids = q.SubSegment(InPrefix.Length + 1, q.Length - InPrefix.Length - 2);
+
+                var results = new Slice[0];
+                int indexOfComma;
+                do
+                {
+                    indexOfComma = ids.IndexOfAny(InSeparator, 0);
+
+                    StringSegment id;
+                    if (indexOfComma != -1)
+                    {
+                        id = ids.SubSegment(0, indexOfComma);
+                        ids = ids.SubSegment(indexOfComma + 1);
+                    }
+                    else
+                        id = ids;
+
+                    var key = Slice.From(_context.Allocator, id);
+                    _context.Allocator.ToLowerCase(ref key.Content);
+
+                    Array.Resize(ref results, results.Length + 1);
+                    results[results.Length - 1] = key;
+
+                } while (indexOfComma != -1);
+
+                return results
+                    .OrderBy(x => x, SliceComparer.Instance)
+                    .ToList();
             }
 
             public bool MoveNext()
@@ -71,7 +142,10 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (_inner == null)
                     {
-                        _inner = _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize).GetEnumerator();
+                        _inner = _ids != null && _ids.Count > 0
+                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize).GetEnumerator() 
+                            : _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize).GetEnumerator();
+
                         _innerCount = 0;
                     }
 

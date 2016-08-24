@@ -13,8 +13,7 @@ require([], function() {
     function run() {
         if (isPhantomJS) {
             mochaPhantomJS.run();
-        }
-        else {
+        } else {
             if (logEnabled) console.log('running tests');
             mocha.run();
         }

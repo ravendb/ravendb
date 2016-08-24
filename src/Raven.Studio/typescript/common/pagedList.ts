@@ -82,7 +82,7 @@ class pagedList {
                 .done((result: pagedResultSet<any>) => {
                     deferred.resolve(result.items[0]);
                 })
-                .fail(error => deferred.reject(error));
+                .fail((error: any) => deferred.reject(error));
         }
         return deferred;
     }

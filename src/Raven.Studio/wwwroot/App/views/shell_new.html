@@ -1,0 +1,149 @@
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">RavenDB</a>
+            <a class="menu-collapse-button icon-menu-collapse" title="collapse menu"></a>
+        </div>
+        <div id="navbar">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
+                <li><a href="#" class="icon-help"></a></li>
+                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
+            </ul>
+            <div class="inputs-container hidden-xs">
+                <div class="select-database-container">
+                    <div class="form-control btn-toggle select-database">
+                        <span class="icon-database"></span>db/IdentityTryOuts
+                    </div>
+                    <div class="box-container">
+                        <input type="search" class="database-filter" placeholder="filter" />
+                        <section>
+                            <ul class="database-list">
+                                <li><a href="#" class="database">brickpile</a></li>
+                                <li><a href="#" class="database">brics</a></li>
+                                <li><a href="#" class="database">fs</a></li>
+                                <li><a href="#" class="database">IdentityTests</a></li>
+                                <li><a href="#" class="database">IdentityTryOuts</a></li>
+                                <li><a href="#" class="filesystem">jspatchtest</a></li>
+                                <li><a href="#" class="database">logs</a></li>
+                                <li><a href="#" class="database">Media</a></li>
+                                <li><a href="#" class="database">Northwind</a></li>
+                                <li><a href="#" class="database">QuartzDemo</a></li>
+                                <li><a href="#" class="database">r1</a></li>
+                                <li><a href="#" class="database">rep1</a></li>
+                                <li><a href="#" class="filesystem">rep2</a></li>
+                                <li><a href="#" class="filesystem">sortings</a></li>
+                                <li><a href="#" class="database">T1</a></li>
+                                <li><a href="#" class="database">test</a></li>
+                                <li><a href="#" class="counter">test2</a></li>
+                                <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                            </ul>
+                        </section>
+                    </div>
+                </div>
+                <div class="search-container">
+                    <input type="search" class="form-control" placeholder="search" />
+                    <div class="autocomplete-list box-container">
+                        <section>
+                            <h4>Menu</h4>
+                            <ul>
+                                <li>Apples</li>
+                                <li>Bananas</li>
+                                <li>Oranges</li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h4>Documents</h4>
+                            <ul>
+                                <li>
+                                    Companies
+                                    <ul>
+                                        <li>Companies/1</li>
+                                        <li>Companies/2</li>
+                                        <li>Companies/3</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    Computers
+                                    <ul>
+                                        <li>computers/1</li>
+                                        <li>Companies/2</li>
+                                        <li>Companies/3</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h4>Indexes</h4>
+                            <ul>
+                                <li>Apples</li>
+                                <li>Bananas</li>
+                                <li>Oranges</li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h4>Transformers</h4>
+                            <ul>
+                                <li>Apples</li>
+                                <li>Bananas</li>
+                                <li>Oranges</li>
+                            </ul>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+
+<script type="text/html" id="leafMenuItem">
+    <li data-bind="with: item">
+        <a data-bind="visible: nav === true, attr: { href: path, title: title }">
+            <span data-bind="css: css"></span>
+            <span data-bind="text: title"></span>
+        </a>
+    </li>
+</script>
+
+<script type="text/html" id="intermediateMenuItem">
+    <li class="arrow-right">
+        <a data-bind="attr: { title: item.title }">
+            <span data-bind="css: item.css"></span>
+            <span data-bind="text: item.title"></span>
+        </a>
+        <div data-bind="css: 'level-' + level, attr: { 'data-level-name': item.title }" class="level" >
+            <h2 data-bind="text: item.title"></h2>
+            <a class="back" title="back">back</a>
+
+            <ul data-bind="foreach: item.children">
+                <!-- ko template: { name: type + 'MenuItem', data: { item: $data, level: $parent.level + 1 } } -->
+                <!-- /ko -->
+            </ul>
+        </div>
+
+</script>
+
+<script type="text/html" id="separatorMenuItem">
+    <!-- ko if: !!item.title -->
+    <h3 data-bind="text: item.title"></h3>
+    <!-- /ko -->
+    <!-- ko if: !item.title -->
+    <hr/>
+    <!-- /ko -->
+</script>
+
+<nav id="main-menu" class="main-menu">
+    <div class="level-0" data-level-name="Menu">
+        <ul data-bind="foreach: mainMenu.items">
+            <!-- ko template: { name: type + 'MenuItem', data: { item: $data, level: 1 } } -->
+            <!-- /ko -->
+        </ul>
+    </div>
+</nav>
+
+<div class="container-fluid content-container">
+    <div class="content-container-margin">
+        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
+    </div>
+</div>

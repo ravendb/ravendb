@@ -26,7 +26,6 @@
     "d3": "^3.5.15",
     "nvd3": "^1.8.2",
     "dagre-d3": "^0.4.17",
-    "ace": "^1.2.3",
     "jszip-utils": "^0.0.2",
     "jszip": "^2.5.0",
     "text": "requirejs-text#^2.0.14",
@@ -42,5 +41,8 @@
     "requirejs": "^2.1.22",
     "knockout": ">= 2.0",
     "lodash": "^4.11.1"
+  },
+  "devDependencies": {
+    "ace": "^1.2.5"
   }
 }

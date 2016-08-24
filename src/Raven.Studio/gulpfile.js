@@ -46,7 +46,7 @@ gulp.task('less:old', function () {
 });
 
 gulp.task('less', function() {
-    return gulp.src(PATHS.lessSource)
+    return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
         .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.less({
@@ -179,7 +179,7 @@ gulp.task('generate-test-list', function () {
 gulp.task('mochaTests', function () {
     var mocha = plugins.mochaPhantomjs({
         reporter: 'spec',
-        dump:'test.log'
+        dump: 'test.log'
     });
 
     return gulp.src(PATHS.test.html).pipe(mocha);

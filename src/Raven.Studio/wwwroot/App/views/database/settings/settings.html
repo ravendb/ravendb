@@ -1,4 +1,4 @@
-<ul class="breadcrumb">
+<ul class="breadcrumb old_layout">
     <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     <li>
         <h3>
@@ -18,29 +18,23 @@
     </li>
 </ul>
 
-<div class="settings-container row new_layout">
-  
-    <div class="col-md-10" data-bind="router: { cacheViews: false }">
-
-    </div>
-    <div class="col-md-2">
-        <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
-            <li data-bind="css: { active: (isActive() || $root.isEditingSqlReplication($root.router.navigationModel,route) === true) }, visible: $parent.routeIsVisible($data)">
-                <a data-bind="attr: { href: hash }, text: title"></a>
-            </li>
-        </ul>
-    </div>
-</div>
-
-<div class="settings-container row old_layout">
-    <div class="col-md-2">
-        <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
-            <li data-bind="css: { active: (isActive() || $root.isEditingSqlReplication($root.router.navigationModel,route) === true) }, visible: $parent.routeIsVisible($data)">
-                <a data-bind="attr: { href: hash }, text: title"></a>
-            </li>
-        </ul>
-    </div>
-    <div class="col-md-10" data-bind="router: { cacheViews: false }">
+<div data-bind="if: $root.layout.newLayoutMode()">
+    <div data-bind="router: { cacheViews: false }">
 
     </div>
 </div>
+<div data-bind="if: !$root.layout.newLayoutMode()">
+    <div class="settings-container row">
+        <div class="col-md-2">
+            <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
+                <li data-bind="css: { active: (isActive() || $root.isEditingSqlReplication($root.router.navigationModel,route) === true) }, visible: $parent.routeIsVisible($data)">
+                    <a data-bind="attr: { href: hash }, text: title"></a>
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-10" data-bind="router: { cacheViews: false }">
+
+        </div>
+    </div>
+</div>
+

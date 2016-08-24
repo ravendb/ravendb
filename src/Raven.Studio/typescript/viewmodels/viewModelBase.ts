@@ -16,26 +16,25 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
-import layoutSwitcher = require("viewmodels/layoutSwitcher");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
 
-    static layout = new layoutSwitcher();
-
-    public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-    public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-    public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
-    public activeTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
-    public lastActivatedResource = ko.observable<resource>()
+    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
+    activeTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
+    lastActivatedResource = ko.observable<resource>()
         .subscribeTo("ActivateDatabase", true)
         .subscribeTo("ActivateFilesystem", true)
         .subscribeTo("ActivateCounterStorage", true)
         .subscribeTo("ActivateTimeSeries", true);
 
-    public downloader = new downloader();
+    downloader = new downloader();
+
+    isBusy = ko.observable<boolean>(false);
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
@@ -54,7 +53,6 @@ class viewModelBase {
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
-        viewModelBase.layout.setMode(false);
     }
 
     /*
@@ -67,7 +65,6 @@ class viewModelBase {
     canActivate(args: any): any {
         var self = this;
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
-
         this.downloader.reset();
 
         var resource = appUrl.getResource();
@@ -315,7 +312,7 @@ class viewModelBase {
     }
 
     canContinueIfNotDirty(title: string, confirmationMessage: string) {
-        var deferred = $.Deferred();
+        var deferred = $.Deferred<void>();
 
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {

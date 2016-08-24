@@ -23,9 +23,9 @@ class status extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'databases/status', moduleId: 'viewmodels/database/status/statistics', title: 'Stats', nav: true, hash: appUrl.forCurrentDatabase().status },
                 { route: 'databases/status/indexing*details', moduleId: 'viewmodels/database/status/indexing/indexing', title: 'Indexing', nav: true, hash: appUrl.forCurrentDatabase().indexPerformance },
                 { route: 'databases/status/requests*details', moduleId: 'viewmodels/database/status/requests/requests', title: 'Request Tracking', nav: true, hash: appUrl.forCurrentDatabase().requestsCount },
+                { route: 'databases/status', moduleId: 'viewmodels/database/status/statistics', title: 'Stats', nav: true, hash: appUrl.forCurrentDatabase().status },
                 { route: 'databases/status/logs', moduleId: 'viewmodels/database/status/logs', title: 'Logs', nav: true, hash: appUrl.forCurrentDatabase().logs },
                 { route: 'databases/status/runningTasks', moduleId: 'viewmodels/database/status/runningTasks', title: 'Running Tasks', nav: true, hash: appUrl.forCurrentDatabase().runningTasks },
                 { route: 'databases/status/alerts', moduleId: 'viewmodels/database/status/alerts', title: 'Alerts', nav: true, hash: appUrl.forCurrentDatabase().alerts },

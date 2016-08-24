@@ -212,7 +212,7 @@ namespace Sparrow.Logging
             }
             writer.WriteLine();
             writer.Flush();
-        }
+		}
 
         public Logger GetLogger<T>(string source)
         {

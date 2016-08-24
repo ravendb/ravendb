@@ -6,11 +6,15 @@ import activator = require("durandal/activator");
 import extensions = require("src/Raven.Studio/typescript/common/extensions");
 import commandBaseMock = require("mocks/commandBaseMock");
 import system = require("durandal/system");
+import composition = require("durandal/composition");
+import binder = require("durandal/binder");
 import oauthContext = require("src/Raven.Studio/typescript/common/oauthContext");
 
 system.debug(true);
 
-class Utils {
+class Utils { 
+
+    static injector = new Squire();
 
     static initTest() {
         Utils.initInjector();
@@ -19,95 +23,98 @@ class Utils {
     static initInjector() {
         extensions.install();
 
-        beforeEach(function (cb) {
-            injector = new Squire();
-            injector.mock('commands/commandBase', commandBaseMock);
-            injector.store('common/oauthContext')
-                .require(["mocks", "common/oauthContext"], function (mocks: any, context: any) {
-
+        beforeEach((cb: Function) => {
+            
+            Utils.injector = new Squire();
+            Utils.injector.mock('knockout', ko);
+            Utils.injector.mock('commands/commandBase', commandBaseMock);
+            Utils.injector.store(['common/oauthContext', 'common/bindingHelpers/aceEditorBindingHandler'])
+                .require(["mocks", "common/oauthContext", "common/bindingHelpers/aceEditorBindingHandler"], (mocks: any, context: oauthContext, aceEditorBindingHandler: any) => {
                     var ctx: any = mocks.store["common/oauthContext"];
                     ctx.enterApiKeyTask = $.Deferred().resolve();
+
+                    aceEditorBindingHandler.useWebWorkers = false;
                     cb();
                 });
         });
 
-        afterEach(function () {
-            injector.remove();
+        afterEach(() => {
+            Utils.injector.remove();
         });
     }
 
-    static mockCommand<T>(commandName: string, resultValue: T) {
-        injector.mock(commandName, () => ({
-            execute: () => $.Deferred<T>().resolve(resultValue)
+    static requireViewmodel<T>(viewmodelName: string, cb: Function) {
+        Utils.injector.require(["viewmodels/" + viewmodelName], cb);
+    }
+
+    static mockCommand<T>(commandName: string, resultProvider:() => T) {
+        Utils.injector.mock(commandName, () => ({
+            execute: () => $.Deferred<T>().resolve(resultProvider())
         }));
     }
 
     static viewModelPrefix = "src/Raven.Studio/typescript/viewmodels/";
-    static viewTemplatePrefix = "text!src/Raven.Studio/wwwroot/App/views/";
+    static viewTemplatePrefix = "src/Raven.Studio/wwwroot/App/views/";
     static viewTemplateSuffix = ".html";
 
+    static cleanup(activatorInstance: DurandalActivator<any>, $test: JQuery) {
+        activatorInstance(null);
+        ko.cleanNode($test[0].children[0]);
+        $test.html("");
+    }
+
     static runViewmodelTest<T>(viewModelName: string, opts: {
-        initViewmodel?: (vm: T) => void,
-        afterAttach?: (vm: T) => void,
-        afterBinding?: (vm: T) => void
+        initViewmodel?: (vm: T) => void;
+        afterAttach?: (vm: T) => void;
+        afterComposition?: (vm: T) => void;
+        assertions?: (vm: T, $container: JQuery) => void;
     }): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            injector.
-                require([Utils.viewModelPrefix + viewModelName, Utils.viewTemplatePrefix + viewModelName + Utils.viewTemplateSuffix], (viewModel: new () => T, viewTemplate: string) => {
+            Utils.injector.
+                require([Utils.viewModelPrefix + viewModelName], (viewModel: new () => T) => {
                     try {
                         var vm = new viewModel();
 
                         var activatorInstance = activator.create();
+                        activatorInstance.activateItem(vm).then((result: boolean) => {
+                            if (!result) {
+                                reject('unable to activate item');
+                                return;
+                            }
+                            if (opts.initViewmodel) {
+                                opts.initViewmodel(vm);
+                            }
+                            var $test = jquery("#test");
 
-                        activatorInstance(vm);
-                        if (!activatorInstance()) {
-                            reject('Unable to activate: ' + viewModelName);
-                        }
+                            binder.throwOnErrors = true;
 
-                        if (opts.initViewmodel) {
-                            opts.initViewmodel(vm);
-                        }
+                            composition.compose($test[0], <any>{
+                                activate: false, // we use external activator 
+                                cacheViews: false,
+                                model: vm,
+                                view: Utils.viewTemplatePrefix + viewModelName + Utils.viewTemplateSuffix,
+                                attached: () => {
+                                    if (opts.afterAttach) {
+                                        opts.afterAttach(vm);
+                                    }
+                                },
+                                compositionComplete: () => {
+                                    if (opts.afterComposition) {
+                                        opts.afterComposition(vm);
+                                    }
+                                    setTimeout(() => {
+                                        if (opts.assertions) {
+                                            opts.assertions(vm, $test);
+                                        }
 
-                        if ((<any>vm).binding) {
-                            (<any>vm).binding();
-                        }
+                                        Utils.cleanup(activatorInstance, $test);
 
-                        var $container = jquery("<div></div>");
-                        var $test = jquery("#test");
-                        var testNode = $test[0];
-
-                        $container.html(viewTemplate);
-
-                        ko.applyBindings(vm, $container[0]);
-
-                        if (opts.afterBinding) {
-                            opts.afterBinding(vm);
-                        }
-
-                        if ((<any>vm).bindingComplete) {
-                            (<any>vm).bindingComplete();
-                        }
-
-                        $test.append($container);
-
-                        if ((<any>vm).attached) {
-                            (<any>vm).attached();
-                        }
-
-                        if ((<any>vm).compositionComplete) {
-                            (<any>vm).compositionComplete();
-                        }
-
-                        if (opts.afterAttach) {
-                            opts.afterAttach(vm);
-                        }
-
-                        activatorInstance(null);
-
-                        ko.cleanNode(testNode);
-                        $test.html('');
-
-                        resolve();
+                                        resolve();
+                                    });
+                                }
+                            }, null);
+                            
+                        });
                     } catch (e) {
                         reject(e);
                     }

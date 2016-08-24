@@ -101,7 +101,7 @@ namespace Raven.Server.Documents
             return GetCollectionName(document, out isSystemDocument);
         }
 
-        private static string GetCollectionName(BlittableJsonReaderObject document, out bool isSystemDocument)
+	    public static string GetCollectionName(BlittableJsonReaderObject document, out bool isSystemDocument)
         {
             isSystemDocument = false;
             string collectionName;

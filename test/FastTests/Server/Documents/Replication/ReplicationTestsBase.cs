@@ -25,7 +25,7 @@ namespace FastTests.Server.Documents.Replication
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds <= timeout)
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenSession(store.DefaultDatabase))
                 {
                     var doc = session.Load<T>(id);
                     if (doc != null)
@@ -36,8 +36,8 @@ namespace FastTests.Server.Documents.Replication
 
             return default(T);
         }
-
-        protected static void SetupReplication(string targetDbName, DocumentStore fromStore, DocumentStore toStore)
+        
+        protected static void SetupReplication(DocumentStore fromStore, DocumentStore toStore)
         {
             using (var session = fromStore.OpenSession())
             {
@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Replication
                     {
                         new ReplicationDestination
                         {
-                            Database = targetDbName,
+                            Database = toStore.DefaultDatabase,
                             Url = toStore.Url
                         }
                     }

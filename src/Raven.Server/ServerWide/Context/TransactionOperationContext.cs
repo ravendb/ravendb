@@ -70,6 +70,12 @@ namespace Raven.Server.ServerWide.Context
             return Transaction;
         }
 
+        public void CloseTransaction()
+        {
+            Transaction?.Dispose();
+            Transaction = null;
+        }
+
         public IntPtr PinObjectAndGetAddress(object obj)
         {
             var handle = GCHandle.Alloc(obj, GCHandleType.Pinned);
@@ -101,8 +107,7 @@ namespace Raven.Server.ServerWide.Context
         {
             base.Reset();
 
-            Transaction?.Dispose();            
-            Transaction = null;
+            CloseTransaction();
         }        
     }
 }

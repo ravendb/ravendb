@@ -2,9 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
@@ -89,7 +87,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     changeVector.Add(new DynamicJsonValue
                     {
-                        ["DbId"] = changeVectorEntry.DbId,
+                        ["DbId"] = changeVectorEntry.DbId.ToString(),
                         ["Etag"] = changeVectorEntry.Etag
                     });
                 }
@@ -152,7 +150,15 @@ namespace Raven.Server.Documents.Replication
                         minDiff = diff;
                 }
             }
-            _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
+
+	        try
+	        {
+				//at this stage we can be already disposed, so ...
+		        _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
+	        }
+	        catch (ObjectDisposedException)
+	        {
+	        }
         }
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
@@ -194,13 +200,19 @@ namespace Raven.Server.Documents.Replication
             if (replicationDocument?.Destinations == null) //precaution
                 return;
 
-            foreach (var destination in replicationDocument.Destinations)
+			if (_log.IsInfoEnabled)
+				_log.Info("Initializing outgoing replications..");
+			foreach (var destination in replicationDocument.Destinations)
             {
+				if(_log.IsInfoEnabled)
+					_log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
                 AddAndStartOutgoingReplication(destination);
             }
-        }
+			if (_log.IsInfoEnabled)
+				_log.Info("Finished initialization of outgoing replications..");
+		}
 
-        private void AddAndStartOutgoingReplication(ReplicationDestination destination)
+		private void AddAndStartOutgoingReplication(ReplicationDestination destination)
         {
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;

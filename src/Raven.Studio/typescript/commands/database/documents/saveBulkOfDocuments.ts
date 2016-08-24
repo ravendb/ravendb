@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveBulkOfDocuments extends commandBase {
 
-    constructor(private dataTypes:String, private bulkDocuments: Array<bulkDocumentDto>, private db: database) {
+    constructor(private dataTypes:string, private bulkDocuments: Array<bulkDocumentDto>, private db: database) {
         super();
     }
 
