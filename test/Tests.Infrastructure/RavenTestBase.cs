@@ -195,6 +195,10 @@ namespace FastTests
             await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
             store.AfterDispose += (sender, args) =>
             {
+                var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                if (databaseTask != null && databaseTask.IsCompleted == false)
+                    databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
+
                 store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: true);
                 CreatedStores.TryRemove(store);
             };
@@ -292,7 +296,7 @@ namespace FastTests
                     return;
                 }
 
-                 exceptionAggregator.ThrowIfNeeded();
+                exceptionAggregator.ThrowIfNeeded();
             }
         }
     }

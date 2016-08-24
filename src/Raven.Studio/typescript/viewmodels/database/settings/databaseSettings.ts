@@ -29,7 +29,6 @@ class databaseSettings extends viewModelBase {
 
     constructor() {
         super();
-        viewModelBase.layout.setMode(true);
         aceEditorBindingHandler.install();
 
         this.document.subscribe(doc => {

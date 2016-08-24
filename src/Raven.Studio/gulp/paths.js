@@ -21,10 +21,8 @@ var paths = {
     },
 
     lessSource: [
-        './wwwroot/Content/app.less',
-        './wwwroot/Content/bootstrap.less',
-        './wwwroot/Content/dynatree.custom.less',
-        './wwwroot/Content/awesome-bootstrap-checkbox.less'],
+        './wwwroot/Content/css/styles.less',
+        './wwwroot/Content/css/bootstrap/bootstrap.less'],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
 

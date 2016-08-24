@@ -17,7 +17,6 @@ class transformerShell extends viewModelBase {
             .map([
                 { route: 'databases/transformers', moduleId: 'viewmodels/database/transformers/transformers', title: 'Transformers', nav: true },
                 { route: 'databases/transformers/edit(/:transformerName)', moduleId: 'viewmodels/database/transformers/editTransformer', title: 'Edit Transformer', nav: true }
-                
             ])
             .buildNavigationModel();
 

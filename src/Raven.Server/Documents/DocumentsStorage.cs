@@ -283,7 +283,7 @@ namespace Raven.Server.Documents
 
             var prefixSlice = GetSliceFromKey(context, prefix);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith:true))
+            foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
             {
                 var document = TableValueToDocument(context, result);
                 string documentKey = document.Key;
@@ -350,7 +350,7 @@ namespace Raven.Server.Documents
             {
                 if (result.Id == etag)
                     continue;
-                
+
                 if (start > 0)
                 {
                     start--;
@@ -374,6 +374,30 @@ namespace Raven.Server.Documents
                     continue;
 
                 yield return TableValueToDocument(context, result);
+            }
+        }
+
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            foreach (var id in ids)
+            {
+                // id must be lowercased
+
+                var tvr = table.ReadByKey(id);
+                if (tvr == null)
+                    continue;
+
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToDocument(context, tvr);
             }
         }
 
@@ -562,7 +586,7 @@ namespace Raven.Server.Documents
             var buffer = context.GetNativeTempBuffer(
                 byteCount
                 + sizeof(char) * key.Length); // for the lower calls
-            
+
             fixed (char* pChars = key)
             {
                 var destChars = (char*)buffer;
@@ -1011,7 +1035,7 @@ namespace Raven.Server.Documents
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-            var oldValue = table.ReadByKey(Slice.External(context.Allocator, lowerKey, (ushort) lowerSize));
+            var oldValue = table.ReadByKey(Slice.External(context.Allocator, lowerKey, (ushort)lowerSize));
 
             if (changeVector == null)
             {
@@ -1044,7 +1068,7 @@ namespace Raven.Server.Documents
                 {
                     int size;
                     var pOldEtag = oldValue.Read(1, out size);
-                    var oldEtag = IPAddress.NetworkToHostOrder(*(long*) pOldEtag);
+                    var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
                     if (expectedEtag != null && oldEtag != expectedEtag)
                         throw new ConcurrencyException(
                             $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
@@ -1066,7 +1090,7 @@ namespace Raven.Server.Documents
                 _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, originalCollectionName, key,
                     newEtagBigEndian, document);
                 _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
-                    Slice.External(context.Allocator, lowerKey, (ushort) lowerSize), document);
+                    Slice.External(context.Allocator, lowerKey, (ushort)lowerSize), document);
             }
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -1369,7 +1393,7 @@ namespace Raven.Server.Documents
             var etagsTree = context.Transaction.InnerTransaction.CreateTree("LastReplicatedEtags");
             etagsTree.Add(
                 Slice.From(context.Allocator, dbId),
-                Slice.External(context.Allocator, (byte*) &etag, sizeof (long))
+                Slice.External(context.Allocator, (byte*)&etag, sizeof(long))
                 );
         }
 

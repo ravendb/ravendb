@@ -14,43 +14,10 @@
         <link rel="apple-touch-icon" href="Content/images/logo.png"/>
 
         <!-- build:css App/styles.css -->
-        
-            <meta name="currentLayout" content="old" /> <!-- temporary variable used for storing layout info-->
-
-            <!-- old scripts: we want to get rid of them : -->
-            <link rel="stylesheet" data-layout="old" href="Content/bootstrap.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css"/>
-            <link rel="stylesheet" data-layout="old" href="lib/bootstrap-select/dist/css/bootstrap-select.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/font-awesome/css/font-awesome.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/Durandal/css/durandal.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/nprogress/nprogress.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/jquery-ui/themes/base/all.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/jquery.dynatree/dist/skin/ui.dynatree.css" />
-            <link rel="stylesheet" data-layout="old" href="Content/dynatree.custom.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/nvd3/build/nv.d3.css" />
-            <link rel="stylesheet" data-layout="old" href="Content/app.css" />
-            <link rel="stylesheet" data-layout="old" href="Content/awesome-bootstrap-checkbox.css" />
-            <link rel="stylesheet" data-layout="old" href="lib/animate.css/animate.css"/>
-        
-            <!-- new scripts: -->
-            
-            <link rel="stylesheet" disabled="true" data-layout="new" href="Content_old/old_bootstrap.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/bootstrap-select/dist/css/bootstrap-select.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/font-awesome/css/font-awesome.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/Durandal/css/durandal.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/nprogress/nprogress.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/jquery-ui/themes/base/all.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/jquery.dynatree/dist/skin/ui.dynatree.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="Content/dynatree.custom.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/nvd3/build/nv.d3.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="Content_old/old_app.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="Content/awesome-bootstrap-checkbox.css" />
-            <link rel="stylesheet" disabled="true" data-layout="new" href="lib/animate.css/animate.css" />
-        
-
+            <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
+            <link rel="stylesheet" href="Content/css/bootstrap/bootstrap.css" />
+            <link rel="stylesheet" href="Content/css/styles.css" />
+            <link rel="stylesheet" href="lib/font-awesome/css/font-awesome.css" />
         <!-- /build -->
 
         <script type="text/javascript">
@@ -66,7 +33,7 @@
     <div id="applicationHost">
         <div class="splash">
             <div class="message">
-                <img alt="RavenDB" src="Content/images/logo.png" />
+                <img alt="RavenDB" src="Content_old/images/logo.png" />
             </div>
         </div>
     </div>
@@ -86,11 +53,6 @@
         <script type="text/javascript" src="lib/bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
         <script type="text/javascript" src="lib/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
         <script type="text/javascript" src="lib/bootstrap-select/dist/js/bootstrap-select.js"></script>
-        <script type="text/javascript" src="lib/jquery-ui/ui/core.js"></script>
-        <script type="text/javascript" src="lib/jquery-ui/ui/widget.js"></script>
-        <script type="text/javascript" src="lib/jquery-ui/ui/widgets/mouse.js"></script>
-        <script type="text/javascript" src="lib/jquery-ui/ui/widgets/resizable.js"></script>
-        <script type="text/javascript" src="lib/jquery.dynatree/dist/jquery.dynatree.js"></script>
         <script type="text/javascript" src="lib/jwerty/jwerty.js"></script>
         <script type="text/javascript" src="lib/jquery-fullscreen/jquery.fullscreen.js"></script>
         <script type="text/javascript" src="lib/spin.js/spin.js"></script>
@@ -106,5 +68,9 @@
     <!-- build:js App/main.js -->
         <script type="text/javascript" src="lib/requirejs/require.js"></script>
     <!-- /build -->
+        
+    <script type="text/javascript" src="Content/ace/ace.js"></script>
+    <script type="text/javascript" src="Content/ace/ext-language_tools.js"></script>
+    <script type="text/javascript" src="Content/ace/worker-json.js"></script>
 </body>
 </html>
