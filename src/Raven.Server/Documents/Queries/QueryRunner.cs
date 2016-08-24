@@ -13,22 +13,21 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
+
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class QueryRunner : IDisposable
+    public class QueryRunner
     {
         private readonly DocumentDatabase _database;
 
         private readonly DocumentsOperationContext _documentsContext;
-        private IDisposable _allocateOperationContext;
 
-        public QueryRunner(DocumentDatabase database)
+        public QueryRunner(DocumentDatabase database, DocumentsOperationContext documentsContext)
         {
             _database = database;
-            _allocateOperationContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext);
+            _documentsContext = documentsContext;
         }
 
         public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
@@ -119,7 +118,7 @@ namespace Raven.Server.Documents.Queries
             RavenTransaction tx = null;
             var operations = 0;
             var results = await index.Query(query, context, token).ConfigureAwait(false);
-            context.Reset();
+            context.CloseTransaction();
 
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
@@ -192,11 +191,6 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("There is not index with name: " + indexName);
 
             return index;
-        }
-
-        public void Dispose()
-        {
-            _allocateOperationContext.Dispose();
         }
     }
 }

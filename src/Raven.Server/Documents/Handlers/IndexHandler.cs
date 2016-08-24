@@ -474,39 +474,36 @@ namespace Raven.Server.Documents.Handlers
             {
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-                using (var runner = new QueryRunner(Database))
+                var runner = new QueryRunner(Database, context);
+
+                var result = runner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
+
+                if (result.NotModified)
                 {
-
-                    var result = runner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag,
-                        GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
-
-                    if (result.NotModified)
-                    {
-                        HttpContext.Response.StatusCode = (int) HttpStatusCode.NotModified;
-                        return Task.CompletedTask;
-                    }
-
-                    HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartArray();
-                        var isFirst = true;
-                        foreach (var term in result.Terms)
-                        {
-                            if (isFirst == false)
-                                writer.WriteComma();
-
-                            isFirst = false;
-
-                            writer.WriteString((term));
-                        }
-
-                        writer.WriteEndArray();
-                    }
-
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
+
+                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartArray();
+                    var isFirst = true;
+                    foreach (var term in result.Terms)
+                    {
+                        if (isFirst == false)
+                            writer.WriteComma();
+
+                        isFirst = false;
+
+                        writer.WriteString((term));
+                    }
+
+                    writer.WriteEndArray();
+                }
+
+                return Task.CompletedTask;
             }
         }
 
