@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Data;
 using Xunit;
@@ -8,9 +7,9 @@ namespace SlowTests.MailingList
     public class WildCardQuery : RavenTestBase
     {
          [Fact]
-         public async Task CanQuery()
+         public void CanQuery()
          {
-             using(var store = await GetDocumentStore())
+             using(var store = GetDocumentStore())
              {
                  store.DatabaseCommands.Query("dynamic/foo", new IndexQuery
                  {

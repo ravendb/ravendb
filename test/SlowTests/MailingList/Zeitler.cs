@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Util.Encryptors;
 using Xunit;
@@ -20,10 +19,10 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task AddTest()
+        public void AddTest()
         {
             // want a green test? comment this	
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
                 

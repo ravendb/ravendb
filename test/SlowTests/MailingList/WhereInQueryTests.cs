@@ -14,7 +14,7 @@ namespace SlowTests.MailingList
 
         public WhereInQueryTests()
         {
-            documentStore = GetDocumentStore().Result;
+            documentStore = GetDocumentStore();
 
             using (IDocumentSession session = documentStore.OpenSession())
             {

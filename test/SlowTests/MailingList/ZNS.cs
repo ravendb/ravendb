@@ -54,9 +54,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Can_SortAndPageMultipleDates()
+        public void Can_SortAndPageMultipleDates()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 //Create an index
                 store.Initialize();

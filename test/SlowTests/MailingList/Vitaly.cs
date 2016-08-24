@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Indexes;
 using Xunit;
@@ -49,7 +48,7 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Test()
+        public void Test()
         {
             var activityShot1 = new ActivityShot
             {
@@ -63,7 +62,7 @@ namespace SlowTests.MailingList
                 Thumbnail = new byte[] {2}
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new DailyActivityIndex().Execute(store);
 

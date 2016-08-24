@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 
@@ -16,9 +15,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Main()
+        public void Main()
         {
-            using (var Store = await GetDocumentStore())
+            using (var Store = GetDocumentStore())
             {
 
                 using (var session = Store.OpenSession())

@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
 
         public WhereStringEqualsInCollection()
         {
-            store = GetDocumentStore().Result;
+            store = GetDocumentStore();
             using (var session = store.OpenSession())
             {
                 session.Store(new MyEntity { StringData = "Entity with collection", StringCollection = new List<string> { "CollectionItem1", "CollectionItem2" } });

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -14,9 +13,9 @@ namespace SlowTests.MailingList
     public class WhereInTests : RavenTestBase
     {
         [Fact]
-        public async Task WhereIn_using_index_notAnalyzed()
+        public void WhereIn_using_index_notAnalyzed()
         {
-            using (IDocumentStore documentStore = await GetDocumentStore())
+            using (IDocumentStore documentStore = GetDocumentStore())
             {
                 new PersonsNotAnalyzed().Execute(documentStore);
 
@@ -45,9 +44,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task WhereIn_using_index_analyzed()
+        public void WhereIn_using_index_analyzed()
         {
-            using (IDocumentStore documentStore = await GetDocumentStore())
+            using (IDocumentStore documentStore = GetDocumentStore())
             {
                 new PersonsAnalyzed().Execute(documentStore);
 
@@ -68,9 +67,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task WhereIn_not_using_index()
+        public void WhereIn_not_using_index()
         {
-            using (IDocumentStore documentStore = await GetDocumentStore())
+            using (IDocumentStore documentStore = GetDocumentStore())
             {
 
                 string[] names = { "Person One", "PersonTwo" };
@@ -90,9 +89,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Where_In_using_query_index_notAnalyzed()
+        public void Where_In_using_query_index_notAnalyzed()
         {
-            using (IDocumentStore documentStore = await GetDocumentStore())
+            using (IDocumentStore documentStore = GetDocumentStore())
             {
                 new PersonsNotAnalyzed().Execute(documentStore);
 
@@ -113,9 +112,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Where_In_using_query_index_analyzed()
+        public void Where_In_using_query_index_analyzed()
         {
-            using (IDocumentStore documentStore = await GetDocumentStore())
+            using (IDocumentStore documentStore = GetDocumentStore())
             {
                 new PersonsAnalyzed().Execute(documentStore);
 
@@ -136,9 +135,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Where_In_using_query()
+        public void Where_In_using_query()
         {
-            using (IDocumentStore documentStore = await GetDocumentStore())
+            using (IDocumentStore documentStore = GetDocumentStore())
             {
                 string[] names = { "Person One", "PersonTwo" };
 

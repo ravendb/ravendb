@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
@@ -13,9 +12,9 @@ namespace SlowTests.MailingList
     public class Willem : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task ThisIsMyTest()
+        public void ThisIsMyTest()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Sales_ByDateProduct().Execute(store);
                 using (var session = store.OpenSession())

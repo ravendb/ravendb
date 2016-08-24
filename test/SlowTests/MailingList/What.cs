@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 
@@ -14,9 +13,9 @@ namespace SlowTests.MailingList
     public class What : RavenTestBase
     {
         [Fact]
-        public async Task Y_U_No_Work()
+        public void Y_U_No_Work()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var raven = store.OpenSession())
                 {

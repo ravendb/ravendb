@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Linq;
@@ -60,9 +59,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task ShouldBeAbleToQueryUsingNull()
+        public void ShouldBeAbleToQueryUsingNull()
         {
-            using(var store = await GetDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 new DataResult_ByAddress().Execute(store);
                 using(var session = store.OpenSession())

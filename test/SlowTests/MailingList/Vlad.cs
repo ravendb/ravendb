@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -19,14 +18,14 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task TestLazyQuery()
+        public void TestLazyQuery()
         {
             var doc = new SampleDoc
             {
                 Number = DateTime.Now.Ticks,
                 Name = "Test1"
             };
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -60,9 +59,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task TestReplication()
+        public void TestReplication()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -100,9 +99,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task WillOnlyGetPost2Once()
+        public void WillOnlyGetPost2Once()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Post_ByTag().Execute(store);
                 using (IDocumentSession session = store.OpenSession())

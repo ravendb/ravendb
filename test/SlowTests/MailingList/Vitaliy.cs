@@ -3,17 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client.Embedded;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Vitaliy : RavenTest
+    public class Vitaliy : RavenTestBase
     {
             public class Cgc
         {
@@ -76,10 +75,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void Run()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
 
                 using (var documentSession = documentStore.OpenSession())

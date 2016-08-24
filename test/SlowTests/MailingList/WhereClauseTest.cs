@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Xunit;
@@ -15,9 +14,9 @@ namespace SlowTests.MailingList
     public class WhereClauseTest : RavenTestBase
     {
         [Fact]
-        public async Task ATest()
+        public void ATest()
         {
-            using (var ds = await GetDocumentStore())
+            using (var ds = GetDocumentStore())
             {
                 using (IDocumentSession session = ds.OpenSession())
                 {

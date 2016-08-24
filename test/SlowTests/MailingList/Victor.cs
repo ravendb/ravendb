@@ -1,12 +1,11 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Victor : RavenTest
+    public class Victor : RavenTestBase
     {
         public class Item
         {
@@ -39,10 +38,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void CanSortDynamically()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new WithDynamicIndex().Execute(store);
                 using (var s = store.OpenSession())
