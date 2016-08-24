@@ -44,7 +44,8 @@ namespace FastTests.Server.Documents.Expiration
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
-                    session.Advanced.GetMetadataFor(company)[Constants.Expiration.RavenExpirationDate] = new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite));
+                    var metadata = await session.Advanced.GetMetadataForAsync(company);
+                    metadata[Constants.Expiration.RavenExpirationDate] = new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite));
                     await session.SaveChangesAsync();
                 }
 
@@ -52,7 +53,7 @@ namespace FastTests.Server.Documents.Expiration
                 {
                     var company2 = await session.LoadAsync<Company>(company.Id);
                     Assert.NotNull(company2);
-                    var metadata = session.Advanced.GetMetadataFor(company2);
+                    var metadata = await session.Advanced.GetMetadataForAsync(company2);
                     var expirationDate = metadata["Raven-Expiration-Date"];
                     Assert.NotNull(expirationDate);
                     var dateTime = expirationDate.Value<DateTime>();
