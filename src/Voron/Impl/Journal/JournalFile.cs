@@ -154,11 +154,12 @@ namespace Voron.Impl.Journal
                 _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
                 sp.Stop();
 
-                int elapsed = (int)sp.ElapsedTicks;
+                var elapsed = sp.ElapsedTicks;
                 if (elapsed == 0)
                     elapsed = 1; // prevent dev by zero
 
-                ioRate = (pages.NumberOfPages*tx.Environment.Options.PageSize)/elapsed;
+                ioRate = (int)((pages.NumberOfPages * tx.Environment.Options.PageSize) / elapsed);
+                Console.WriteLine($"-> {pages.NumberOfPages * tx.Environment.Options.PageSize:#,#} in {elapsed:#,#}");
             }
             else
             {

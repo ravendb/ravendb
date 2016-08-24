@@ -54,16 +54,15 @@ namespace Voron.Impl.Journal
             if (_firstPositionInJournalFile != null)
             {
                 var sp = Stopwatch.StartNew();
-                journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),
-    _lastUsedPage);
+                journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),_lastUsedPage);
 
                 sp.Stop();
 
-                int elapsed = (int)sp.ElapsedTicks;
+                var elapsed = sp.ElapsedTicks;
                 if (elapsed == 0)
                     elapsed = 1; // prevent dev by zero
 
-                ioRate = (_lastUsedPage * tx.Environment.Options.PageSize) / elapsed;
+                ioRate = (int)((_lastUsedPage * tx.Environment.Options.PageSize) / elapsed);
             }
 
             if (tx != null)
