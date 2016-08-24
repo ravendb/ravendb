@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
@@ -1204,6 +1205,15 @@ more responsive application.
         public virtual void Dispose()
         {
             _releaseOperationContext.Dispose();
+        }
+
+        ~InMemoryDocumentSessionOperations()
+        {
+            Dispose();
+
+#if DEBUG
+            Debug.WriteLine("Disposing a session for finalizer! It should be disposed by calling session.Dispose()!");
+#endif
         }
 
         /// <summary>
