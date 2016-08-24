@@ -2,21 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class Willem : RavenTestBase
     {
-        [Fact]
-        public void ThisIsMyTest()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task ThisIsMyTest()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new Sales_ByDateProduct().Execute(store);
                 using (var session = store.OpenSession())

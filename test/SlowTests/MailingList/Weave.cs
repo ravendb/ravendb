@@ -1,12 +1,11 @@
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Weave : RavenTest
+    public class Weave : RavenTestBase
     {
         public class CalcSystem
         {
@@ -17,9 +16,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void Main()
+        public async Task Main()
         {
-            using (var Store = NewDocumentStore())
+            using (var Store = await GetDocumentStore())
             {
 
                 using (var session = Store.OpenSession())

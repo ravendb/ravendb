@@ -1,16 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Linq;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class WallaceTurner : RavenTest
+    public class WallaceTurner : RavenTestBase
     {
         public class DataResult
         {
@@ -61,9 +60,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void ShouldBeAbleToQueryUsingNull()
+        public async Task ShouldBeAbleToQueryUsingNull()
         {
-            using(var store = NewDocumentStore())
+            using(var store = await GetDocumentStore())
             {
                 new DataResult_ByAddress().Execute(store);
                 using(var session = store.OpenSession())

@@ -1,19 +1,14 @@
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Abstractions.Util.Encryptors;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    using Raven.Abstractions.Util.Encryptors;
-
-    public class Zeitler : RavenTest
+    public class Zeitler : RavenTestBase
     {
         public class PersistentCacheKey
         {
@@ -23,20 +18,15 @@ namespace Raven.Tests.MailingList
             public string ETag { get; set; }
             public DateTimeOffset LastModified { get; set; }
         }
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
-        {
-            configuration.Modify(x => x.Core.RunInMemory, false);
-        }
+
         [Fact]
-        public void AddTest()
+        public async Task AddTest()
         {
             // want a green test? comment this	
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = await GetDocumentStore())
             {
                 documentStore.Initialize();
-                new RavenDocumentsByEntityName().Execute(documentStore);
-
-
+                
                 // want a green test? uncomment this	
                 //var documentStore = new DocumentStore() {
                 //	Url = "http://localhost:8082/databases/entitytagstore"

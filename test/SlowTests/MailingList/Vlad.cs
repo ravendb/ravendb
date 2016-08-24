@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Vlad : RavenTest
+    public class Vlad : RavenTestBase
     {
         public class SampleDoc
         {
@@ -21,14 +19,14 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void TestLazyQuery()
+        public async Task TestLazyQuery()
         {
             var doc = new SampleDoc
             {
                 Number = DateTime.Now.Ticks,
                 Name = "Test1"
             };
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -62,14 +60,11 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void TestReplication()
+        public async Task TestReplication()
         {
-            string dbName = "MyNewDatabase";
-
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(dbName);
-                using (var session = store.OpenSession(dbName))
+                using (var session = store.OpenSession())
                 {
                     session.Store(new SampleDoc { Number = 1, Name = "Test 1" }, "SampleDocs/1");
                     session.Store(new SampleDoc { Number = 2, Name = "Test 2" }, "SampleDocs/2");
@@ -80,16 +75,16 @@ namespace Raven.Tests.MailingList
                     var selectWarmup = session.Query<SampleDoc>().Select(x => new { x.Name, x.Number }).ToList();
                 }
 
-                using (var session = store.OpenSession(dbName))
+                using (var session = store.OpenSession())
                 {
                     var doc = session.Load<SampleDoc>("SampleDocs/2");
                     session.Delete(doc);
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, dbName);
+                WaitForIndexing(store);
 
-                using (var session = store.OpenSession(dbName))
+                using (var session = store.OpenSession())
                 {
                     var selectGood = session.Query<SampleDoc>().ToList();
                     Assert.Equal(2, selectGood.Count);
@@ -105,9 +100,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void WillOnlyGetPost2Once()
+        public async Task WillOnlyGetPost2Once()
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new Post_ByTag().Execute(store);
                 using (IDocumentSession session = store.OpenSession())

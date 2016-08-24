@@ -1,22 +1,22 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Database.Indexing;
-using Raven.Tests.Common;
-
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class WhereInTests : RavenTest
+    public class WhereInTests : RavenTestBase
     {
         [Fact]
-        public void WhereIn_using_index_notAnalyzed()
+        public async Task WhereIn_using_index_notAnalyzed()
         {
-            using (IDocumentStore documentStore = NewDocumentStore())
+            using (IDocumentStore documentStore = await GetDocumentStore())
             {
                 new PersonsNotAnalyzed().Execute(documentStore);
 
@@ -45,9 +45,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void WhereIn_using_index_analyzed()
+        public async Task WhereIn_using_index_analyzed()
         {
-            using (IDocumentStore documentStore = NewDocumentStore())
+            using (IDocumentStore documentStore = await GetDocumentStore())
             {
                 new PersonsAnalyzed().Execute(documentStore);
 
@@ -68,9 +68,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void WhereIn_not_using_index()
+        public async Task WhereIn_not_using_index()
         {
-            using (IDocumentStore documentStore = NewDocumentStore())
+            using (IDocumentStore documentStore = await GetDocumentStore())
             {
 
                 string[] names = { "Person One", "PersonTwo" };
@@ -90,9 +90,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void Where_In_using_query_index_notAnalyzed()
+        public async Task Where_In_using_query_index_notAnalyzed()
         {
-            using (IDocumentStore documentStore = NewDocumentStore())
+            using (IDocumentStore documentStore = await GetDocumentStore())
             {
                 new PersonsNotAnalyzed().Execute(documentStore);
 
@@ -113,9 +113,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void Where_In_using_query_index_analyzed()
+        public async Task Where_In_using_query_index_analyzed()
         {
-            using (IDocumentStore documentStore = NewDocumentStore())
+            using (IDocumentStore documentStore = await GetDocumentStore())
             {
                 new PersonsAnalyzed().Execute(documentStore);
 
@@ -136,9 +136,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void Where_In_using_query()
+        public async Task Where_In_using_query()
         {
-            using (IDocumentStore documentStore = NewDocumentStore())
+            using (IDocumentStore documentStore = await GetDocumentStore())
             {
                 string[] names = { "Person One", "PersonTwo" };
 

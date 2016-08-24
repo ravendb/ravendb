@@ -3,20 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Client.Embedded;
-using Raven.Tests.Common;
 
-using Xunit;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class What : RavenTest
+    public class What : RavenTestBase
     {
         [Fact]
-        public void Y_U_No_Work()
+        public async Task Y_U_No_Work()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var raven = store.OpenSession())
                 {

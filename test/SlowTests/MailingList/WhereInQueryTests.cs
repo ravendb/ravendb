@@ -1,21 +1,20 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class WhereInQueryTests : RavenTest
+    public class WhereInQueryTests : RavenTestBase
     {
-        private readonly EmbeddableDocumentStore documentStore;
+        private readonly DocumentStore documentStore;
 
         public WhereInQueryTests()
         {
-            documentStore = NewDocumentStore();
+            documentStore = GetDocumentStore().Result;
 
             using (IDocumentSession session = documentStore.OpenSession())
             {

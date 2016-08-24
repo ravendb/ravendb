@@ -3,20 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client;
-using Raven.Tests.Common;
 
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class WhereClauseTest : RavenTest
+    public class WhereClauseTest : RavenTestBase
     {
         [Fact]
-        public void ATest()
+        public async Task ATest()
         {
-            using (var ds = NewDocumentStore())
+            using (var ds = await GetDocumentStore())
             {
                 using (IDocumentSession session = ds.OpenSession())
                 {

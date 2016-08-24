@@ -3,26 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using Raven.Client.Document;
-using Raven.Tests.Common;
-
-using Xunit;
-using Raven.Client.Linq;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Wallace : RavenTest
+    public class Wallace : RavenTestBase
     {
         [Fact]
-        public void CanGetProperErrorFromComputedOrderBy()
+        public async Task CanGetProperErrorFromComputedOrderBy()
         {
-            using(GetNewServer())
-            using(var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using(var store = await GetDocumentStore())
             {
                 using(var session = store.OpenSession())
                 {

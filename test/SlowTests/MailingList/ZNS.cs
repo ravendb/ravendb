@@ -3,20 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ZNS : RavenTest
+    public class ZNS : RavenTestBase
     {
         public class TestItem
         {
@@ -49,24 +49,27 @@ namespace Raven.Tests.MailingList
 
             public override string ToString()
             {
-                return Date.ToShortDateString();
+                return Date.ToString("d");
             } 
         }
 
         [Fact]
-        public void Can_SortAndPageMultipleDates()
+        public async Task Can_SortAndPageMultipleDates()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 //Create an index
                 store.Initialize();
-                store.DatabaseCommands.PutIndex("TestItemsIndex", new Raven.Abstractions.Indexing.IndexDefinition
+                store.DatabaseCommands.PutIndex("TestItemsIndex", new IndexDefinition
                 {
                     Name = "TestItemsIndex",
-                    Map = @"from item in docs.TestItems
+                    Maps = { @"from item in docs.TestItems
                         from d in item.Dates.Select((Func<dynamic,dynamic>)(x => x.Date)).Distinct()
-                        select new {Id = item.Id, Name = item.Name, EventDate = d};",
-                        Stores = {{"EventDate", FieldStorage.Yes}}
+                        select new {Id = item.Id, Name = item.Name, EventDate = d}" },
+                    Fields =
+                    {
+                        { "EventDate", new IndexFieldOptions { Storage = FieldStorage.Yes }}
+                    }
                 }, true);
 
                 //Insert some events at random dates

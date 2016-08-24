@@ -1,20 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Embedded;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Document;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class WhereStringEqualsInCollection : RavenTest
+    public class WhereStringEqualsInCollection : RavenTestBase
     {
-        private readonly EmbeddableDocumentStore store;
+        private readonly DocumentStore store;
 
         public WhereStringEqualsInCollection()
         {
-            store = NewDocumentStore();
+            store = GetDocumentStore().Result;
             using (var session = store.OpenSession())
             {
                 session.Store(new MyEntity { StringData = "Entity with collection", StringCollection = new List<string> { "CollectionItem1", "CollectionItem2" } });
@@ -42,7 +41,7 @@ namespace Raven.Tests.MailingList
             {
                 var count = session.Query<MyEntity>()
                                    .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-                                   .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.InvariantCultureIgnoreCase)));
+                                   .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.OrdinalIgnoreCase)));
 
                 Assert.Equal(1, count);
             }
@@ -58,6 +57,12 @@ namespace Raven.Tests.MailingList
                                                                   .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.Ordinal))));
 
             }
+        }
+
+        public override void Dispose()
+        {
+            store.Dispose();
+            base.Dispose();
         }
 
         public class MyEntity
