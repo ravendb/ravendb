@@ -153,7 +153,7 @@ namespace SlowTests.SlowTests.Bugs
                                 session.SaveChanges();
                             }
                         }
-                    }, TaskCreationOptions.LongRunning);
+                    });
                     tasks.Add(thread);
                 }
 
