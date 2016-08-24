@@ -56,7 +56,9 @@ namespace Raven.Client.Http
                     Database = databaseName,
                     ApiKey = apiKey,
                 },
-                Etag = int.MinValue
+                ReadBehavior = ReadBehavior.LeaderOnly,
+                WriteBehavior = WriteBehavior.LeaderOnly,
+                Etag = int.MinValue,
             };
 
             var handler = new HttpClientHandler();
@@ -89,7 +91,7 @@ namespace Raven.Client.Http
                     _firstTimeTryLoadFromTopologyCache = false;
 
                     var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                    if (cachedTopology != null)
+                    if (cachedTopology != null && cachedTopology.Etag > 0)
                     {
                         _topology = cachedTopology;
                         // we have cached topology, but we need to verify it is up to date, we'll check in 
