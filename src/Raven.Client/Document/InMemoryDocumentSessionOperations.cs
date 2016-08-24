@@ -1199,17 +1199,24 @@ more responsive application.
             metadata[Constants.Versioning.RavenEnableVersioning] = true;
         }
 
+        private void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+                GC.SuppressFinalize(this);
+            _releaseOperationContext.Dispose();
+        }
+
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public virtual void Dispose()
         {
-            _releaseOperationContext.Dispose();
+            Dispose(true);
         }
 
         ~InMemoryDocumentSessionOperations()
         {
-            Dispose();
+            Dispose(false);
 
 #if DEBUG
             Debug.WriteLine("Disposing a session for finalizer! It should be disposed by calling session.Dispose()!");
