@@ -80,12 +80,22 @@ namespace Raven.Client.Document.SessionOperations
             var entity = _session.ConvertToEntity(typeof(T), id, document);
             try
             {
-                _session.EntitiesById.Add(id, entity);
+                _session.IdByEntities.Add(entity, id);
             }
             catch (Exception)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Tried to add an exisitg entity");
+            }
+
+            try
+            {
+                _session.EntitiesById.Add(id, entity);
+            }
+            catch (Exception)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Tried to add an exisitg id");
             }
             return (T) entity;
         }
