@@ -17,11 +17,11 @@ namespace SlowTests.MailingList
     public class Brett : RavenTestBase
     {
         [Fact]
-        public async Task TestMultiMap()
+        public void TestMultiMap()
         {
             Guid accountId = Guid.NewGuid();
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
                 //Load Test Data

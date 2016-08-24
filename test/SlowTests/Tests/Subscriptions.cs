@@ -13,7 +13,7 @@ namespace SlowTests.Tests
         [Fact]
         public async Task BasicSusbscriptionTest()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 await CreateDocuments(store, 1);
 

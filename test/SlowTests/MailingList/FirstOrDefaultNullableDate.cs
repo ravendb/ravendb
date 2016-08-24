@@ -39,9 +39,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task ShouldWork()
+        public void ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Index().Execute(store);
             }

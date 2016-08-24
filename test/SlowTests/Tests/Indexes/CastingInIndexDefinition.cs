@@ -9,9 +9,9 @@ namespace SlowTests.Tests.Indexes
     public class CastingInIndexDefinition : RavenTestBase
     {
         [Fact(Skip = "Could not compile reduce: TODO arek")]
-        public async Task CanCastValuesToString()
+        public void CanCastValuesToString()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new Employees_CurrentCount());
 

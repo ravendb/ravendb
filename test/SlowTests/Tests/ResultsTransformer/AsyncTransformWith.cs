@@ -17,9 +17,9 @@ namespace SlowTests.Tests.ResultsTransformer
     public class AsyncTransformWith : RavenTestBase
     {
         [Fact] // Passes on build 2550
-        public async Task CanRunTransformerOnSession()
+        public void CanRunTransformerOnSession()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new MyTransformer());
 
@@ -50,7 +50,7 @@ namespace SlowTests.Tests.ResultsTransformer
         [Fact] // Fails on build 2550        
         public async Task CanRunTransformerOnAsyncSession()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new MyTransformer());
 

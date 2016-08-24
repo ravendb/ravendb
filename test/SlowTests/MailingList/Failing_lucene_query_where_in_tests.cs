@@ -76,12 +76,12 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Failing_query_using_embedded_store_but_works_against_real_database()
+        public void Failing_query_using_embedded_store_but_works_against_real_database()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Contract_ToContractListViewModel().Execute(store);
 
@@ -112,12 +112,12 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Failing_lucene_query_where_in()
+        public void Failing_lucene_query_where_in()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Contract_ToContractListViewModel().Execute(store);
 
@@ -152,12 +152,12 @@ namespace SlowTests.MailingList
 
 
         [Fact]
-        public async Task Failing_query_using_embedded_store1()
+        public void Failing_query_using_embedded_store1()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Contract_ToContractListViewModel().Execute(store);
 
@@ -184,12 +184,12 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Failing_query_using_embedded_store2()
+        public void Failing_query_using_embedded_store2()
         {
             // Arrange
             var contract = GetContract();
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Contract_ToContractListViewModel().Execute(store);
 

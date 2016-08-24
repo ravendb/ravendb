@@ -28,7 +28,7 @@ namespace SlowTests.Core.Commands
     public class Documents : RavenTestBase
     {
         [Fact]
-        public async Task CanCancelPutDocument()
+        public void CanCancelPutDocument()
         {
             var random = new Random();
             var largeArray = new byte[1024 * 1024 * 2];
@@ -38,7 +38,7 @@ namespace SlowTests.Core.Commands
             var largeDocument = new { Data = largeArray };
 
             var cts = new CancellationTokenSource();
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var ravenJObject = RavenJObject.FromObject(largeDocument);
                 cts.Cancel();
@@ -50,7 +50,7 @@ namespace SlowTests.Core.Commands
         [Fact]
         public async Task CanPutGetUpdateAndDeleteDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var putResult = await store.AsyncDatabaseCommands.PutAsync(
                     "companies/1",
@@ -96,7 +96,7 @@ namespace SlowTests.Core.Commands
         [Fact]
         public async Task CanDeleteAndUpdateDocumentByIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("MyIndex", new IndexDefinition
                 {
@@ -126,7 +126,7 @@ namespace SlowTests.Core.Commands
         [Fact(Skip = "Missing feature: /docs/startsWith")]
         public async Task CanGetDocumentsWhoseIdStartsWithAPrefix()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -141,9 +141,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: /docs/stream")]
-        public async Task CanStreamDocs()
+        public void CanStreamDocs()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

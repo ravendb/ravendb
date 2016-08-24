@@ -30,7 +30,7 @@ namespace SlowTests.Server.Documents.SqlReplication
         [NonLinuxFact]
         public async Task ReplicateMultipleBatches()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 

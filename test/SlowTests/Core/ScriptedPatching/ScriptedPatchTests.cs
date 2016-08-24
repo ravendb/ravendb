@@ -30,9 +30,9 @@ namespace SlowTests.Core.ScriptedPatching
         }
 
         [Fact]
-        public async Task Max_script_steps_can_be_increased_from_inside_script()
+        public void Max_script_steps_can_be_increased_from_inside_script()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document =>
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document =>
             {
                 document.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "5000";
                 document.Settings[RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";
@@ -72,9 +72,9 @@ namespace SlowTests.Core.ScriptedPatching
         }
 
         [Fact]
-        public async Task Load_document_should_increase_max_steps_in_algorithm()
+        public void Load_document_should_increase_max_steps_in_algorithm()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document =>
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document =>
             {
                 document.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "5000";
                 document.Settings[RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";

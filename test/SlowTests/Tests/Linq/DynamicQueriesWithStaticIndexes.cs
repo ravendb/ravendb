@@ -12,10 +12,10 @@ namespace SlowTests.Tests.Linq
     public class DynamicQueriesWithStaticIndexes : RavenTestBase
     {
         [Fact]
-        public async Task DynamicQueryWillInterpretFieldNamesProperly()
+        public void DynamicQueryWillInterpretFieldNamesProperly()
         {
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
                 using (var session = store.OpenSession())

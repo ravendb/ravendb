@@ -24,9 +24,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task DistinctByValue()
+        public void DistinctByValue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

@@ -17,9 +17,9 @@ namespace SlowTests.Tests.Linq
     public class OfTypeSupport2 : RavenTestBase
     {
         [Fact]
-        public async Task ShouldCorrectlyMatchTheTypeName()
+        public void ShouldCorrectlyMatchTheTypeName()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

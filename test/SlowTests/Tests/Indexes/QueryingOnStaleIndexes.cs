@@ -29,9 +29,9 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact]
-        public async Task WillGetStaleResultWhenThereArePendingTasks()
+        public void WillGetStaleResultWhenThereArePendingTasks()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Users_ByName();
                 index.Execute(store);

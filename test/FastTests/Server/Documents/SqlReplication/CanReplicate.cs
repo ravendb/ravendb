@@ -161,7 +161,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
         [NonLinuxFact]
         public async Task SimpleTransformation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -209,7 +209,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
         [NonLinuxFact]
         public async Task NullPropagation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -262,7 +262,7 @@ replicateToOrders(orderData);");
         [NonLinuxFact]
         public async Task NullPropagation_WithExplicitNull()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -317,7 +317,7 @@ replicateToOrders(orderData);");
         [NonLinuxFact]
         public async Task RavenDB_3341()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -377,7 +377,7 @@ replicateToOrders(orderData);");
         [NonLinuxFact]
         public async Task CanUpdateToBeNoItemsInChildTable()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -425,7 +425,7 @@ replicateToOrders(orderData);");
         [NonLinuxFact]
         public async Task CanDelete()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -468,7 +468,7 @@ replicateToOrders(orderData);");
         [NonLinuxFact]
         public async Task RavenDB_3172()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -525,7 +525,7 @@ replicateToOrders(orderData);");
         {
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
 
@@ -559,9 +559,9 @@ var nameArr = this.StepName.split('.');");
 
         /*
                 [Fact]
-                public async Task RavenDB_3106()
+                public void RavenDB_3106()
                 {
-                    using (var store = await GetDocumentStore())
+                    using (var store = GetDocumentStore())
                     {
                         CreateRdbmsSchema(store);
 

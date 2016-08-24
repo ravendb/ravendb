@@ -49,9 +49,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryUsingEnum()
+        public void CanQueryUsingEnum()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.SaveEnumsAsIntegers = true;
 

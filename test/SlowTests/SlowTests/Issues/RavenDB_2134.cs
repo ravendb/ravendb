@@ -19,7 +19,7 @@ namespace SlowTests.SlowTests.Issues
         [Fact]
         public async Task ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 RavenQueryStatistics stats;
                 using (var session = store.OpenSession())

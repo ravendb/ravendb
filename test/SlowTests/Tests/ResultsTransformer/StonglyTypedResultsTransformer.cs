@@ -83,45 +83,45 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerOnLoadWithRemoteDatabase()
+        public void CanUseResultsTransformerOnLoadWithRemoteDatabase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 PerformLoadingTest(store);
             }
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerOnLoadWithLocalDatabase()
+        public void CanUseResultsTransformerOnLoadWithLocalDatabase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 PerformLoadingTest(store);
             }
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabase()
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 PerformLoadingTestArray(store);
             }
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabase()
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 PerformLoadingTestArray(store);
             }
         }
 
         [Fact]
-        public async Task CannotUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabaseWithSingleExpectation()
+        public void CannotUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabaseWithSingleExpectation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Assert.Throws<InvalidOperationException>(() =>
                 {
@@ -131,9 +131,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabaseWithSingleExpectation()
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabaseWithSingleExpectation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Assert.Throws<InvalidOperationException>(() =>
                 {
@@ -144,18 +144,18 @@ namespace SlowTests.Tests.ResultsTransformer
 
 
         [Fact]
-        public async Task CanUseResultsTransformerOnDynamicQueryWithRemoteDatabase()
+        public void CanUseResultsTransformerOnDynamicQueryWithRemoteDatabase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 PerformBasicTestWithDynamicQuery(store);
             }
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerOnDynamicQueryWithInMemoryDatabase()
+        public void CanUseResultsTransformerOnDynamicQueryWithInMemoryDatabase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 PerformBasicTestWithDynamicQuery(store);
             }

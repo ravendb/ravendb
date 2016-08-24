@@ -15,9 +15,9 @@ namespace SlowTests.MailingList
         [InlineData("pte")]
         [InlineData("ltd")]
         [InlineData("*inga*")]
-        public async Task CanSearchWithPrefixWildcard(string query)
+        public void CanSearchWithPrefixWildcard(string query)
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleDataIndex().Execute(store);
 

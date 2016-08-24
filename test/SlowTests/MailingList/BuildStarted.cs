@@ -16,9 +16,9 @@ namespace SlowTests.MailingList
         //database. It returns null which that variable is assigned a new value
         //storing that new value, however, fails.
         [Fact]
-        public async Task DocumentStoreFailsWhenGrabbingNonExistingItemAndStoringNewOne()
+        public void DocumentStoreFailsWhenGrabbingNonExistingItemAndStoringNewOne()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
@@ -45,9 +45,9 @@ namespace SlowTests.MailingList
         //non existing item. Sets the variable to a new value and stores it.
         //works like expected
         [Fact]
-        public async Task DocumentStoreWorksWhenAddingItemAndThenGrabbingNonExistingItemAndStoringNewOne()
+        public void DocumentStoreWorksWhenAddingItemAndThenGrabbingNonExistingItemAndStoringNewOne()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
@@ -73,9 +73,9 @@ namespace SlowTests.MailingList
         //performs a lookup on a non existing item. Sets the variable to a new 
         //value and stores it, however, fails.
         [Fact]
-        public async Task DocumentStoreWorksWhenAddingItemThenDeletingItAndThenGrabbingNonExistingItemAndStoringNewOne()
+        public void DocumentStoreWorksWhenAddingItemThenDeletingItAndThenGrabbingNonExistingItemAndStoringNewOne()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())

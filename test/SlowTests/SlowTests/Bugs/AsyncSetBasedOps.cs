@@ -27,7 +27,7 @@ namespace SlowTests.SlowTests.Bugs
         [Fact]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
             {
                 string lastUserId = null;
 

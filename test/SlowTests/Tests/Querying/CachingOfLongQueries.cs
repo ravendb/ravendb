@@ -16,9 +16,9 @@ namespace SlowTests.Tests.Querying
     public class CachingOfLongQueries : RavenTestBase
     {
         [Fact]
-        public async Task ShouldWork()
+        public void ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var val = new string('a', 2048);
                 using (var session = store.OpenSession())

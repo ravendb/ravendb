@@ -12,7 +12,7 @@ namespace FastTests.Client
         [Fact]
         public async Task include_with_prefix()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var order = RavenJObject.FromObject(new Order()
                 {
@@ -22,7 +22,7 @@ namespace FastTests.Client
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(order, "orders/1");
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -41,7 +41,7 @@ namespace FastTests.Client
         [Fact]
         public async Task include_with_suffix()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var order = RavenJObject.FromObject(new Order()
                 {
@@ -51,7 +51,7 @@ namespace FastTests.Client
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(order, "orders/1");
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

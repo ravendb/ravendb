@@ -18,9 +18,9 @@ namespace SlowTests.MailingList
     public class IdentityUserDeserialization : RavenTestBase
     {
         [Fact]
-        public async Task Can_Deserialize_IdentityUser()
+        public void Can_Deserialize_IdentityUser()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer += serializer => serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
                 using (IDocumentSession session = store.OpenSession())

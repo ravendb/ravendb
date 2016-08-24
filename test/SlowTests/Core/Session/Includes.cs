@@ -18,9 +18,9 @@ namespace SlowTests.Core.Session
     public class Includes : RavenTestBase
     {
         [Fact]
-        public async Task BasicInclude()
+        public void BasicInclude()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

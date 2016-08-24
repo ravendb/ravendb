@@ -56,9 +56,9 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact]
-        public async Task CanBoostFullDocument()
+        public void CanBoostFullDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UsersAndAccounts().Execute(store);
 
@@ -92,9 +92,9 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact]
-        public async Task CanGetBoostedValues()
+        public void CanGetBoostedValues()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UsersByName().Execute(store);
 

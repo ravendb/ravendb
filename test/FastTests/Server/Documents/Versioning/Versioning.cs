@@ -19,7 +19,7 @@ namespace FastTests.Server.Documents.Versioning
         public async Task CanGetAllRevisionsFor()
         {
             var company = new Company {Name = "Company Name"};
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
@@ -46,7 +46,7 @@ namespace FastTests.Server.Documents.Versioning
         [Fact]
         public async Task GetRevisionsOfNotExistKey()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
@@ -60,7 +60,7 @@ namespace FastTests.Server.Documents.Versioning
         [Fact]
         public async Task GetRevisionsOfNotExistKey_WithVersioningDisabled()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -75,7 +75,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             var user = new User { Name = "User Name" };
             var comment = new Comment { Name = "foo" };
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
@@ -98,7 +98,7 @@ namespace FastTests.Server.Documents.Versioning
         public async Task WillCreateRevisionIfExplicitlyRequested()
         {
             var product = new Product {Description = "A fine document db", Quantity = 5};
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
@@ -132,7 +132,7 @@ namespace FastTests.Server.Documents.Versioning
         public async Task WillDeleteOldRevisions()
         {
             var company = new Company {Name = "Company #1"};
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
@@ -159,7 +159,7 @@ namespace FastTests.Server.Documents.Versioning
         [Fact]
         public async Task WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
 

@@ -32,9 +32,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task ShouldBeAbleToGetNonStaleResults()
+        public void ShouldBeAbleToGetNonStaleResults()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

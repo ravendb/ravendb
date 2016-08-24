@@ -11,9 +11,9 @@ namespace SlowTests.MailingList
     public class Daniel : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task Run()
+        public void Run()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Matches_PlayerStats().Execute(store);
                 using (var session = store.OpenSession())

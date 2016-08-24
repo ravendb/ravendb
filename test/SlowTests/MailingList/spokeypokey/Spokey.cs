@@ -20,12 +20,12 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
         [Fact]
-        public async Task Can_query_empty_list()
+        public void Can_query_empty_list()
         {
             var user1 = new Employee() { FirstName = "Joe", ZipCodes2 = new List<string>() };
             var length = user1.ZipCodes2.Count;
             Assert.Equal(0, length);
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -48,12 +48,12 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
         [Fact]
-        public async Task Can_query_empty_array()
+        public void Can_query_empty_array()
         {
             var user1 = new Employee() { FirstName = "Joe", ZipCodes = new string[] { } };
             var length = user1.ZipCodes.Length;
             Assert.Equal(0, length);
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -136,7 +136,7 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
         [Fact]
-        public async Task Can_project_InternalId_from_transformResults2()
+        public void Can_project_InternalId_from_transformResults2()
         {
             var taxonomyCode1 = new TaxonomyCode
             {
@@ -156,7 +156,7 @@ namespace SlowTests.MailingList.spokeypokey
                 }
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
 

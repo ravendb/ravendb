@@ -12,9 +12,9 @@ namespace SlowTests.SlowTests.Indexes
     public class MapReduceIndexOnLargeDataSet : RavenTestBase
     {
         [Fact]
-        public async Task WillNotProduceAnyErrors()
+        public void WillNotProduceAnyErrors()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {

@@ -39,9 +39,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanCreateIndex()
+        public void CanCreateIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new Index_ByDescriptionAndTitle().Execute(store);
@@ -55,9 +55,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanCreateIndex2()
+        public void CanCreateIndex2()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new Index_ByDescriptionAndTitle2().Execute(store);

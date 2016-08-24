@@ -34,9 +34,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task ShouldThrow()
+        public void ShouldThrow()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var e = Assert.Throws<ErrorResponseException>(() => new InvalidMultiMapIndex().Execute(store));
                 Assert.Contains("Map and Reduce functions of a index must return identical types.", e.Message);

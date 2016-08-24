@@ -15,9 +15,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact]
-        public async Task Simple()
+        public void Simple()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
@@ -50,9 +50,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact]
-        public async Task WhenReferencedItemChanges()
+        public void WhenReferencedItemChanges()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
@@ -93,9 +93,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact]
-        public async Task WhenReferencedItemChangesInBatch()
+        public void WhenReferencedItemChangesInBatch()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
@@ -137,9 +137,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task WhenReferencedItemDeleted()
+        public void WhenReferencedItemDeleted()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
@@ -180,9 +180,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact]
-        public async Task NightOfTheLivingDead()
+        public void NightOfTheLivingDead()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
@@ -231,9 +231,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact]
-        public async Task SelfReferencing()
+        public void SelfReferencing()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
@@ -273,9 +273,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact]
-        public async Task Loops()
+        public void Loops()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {

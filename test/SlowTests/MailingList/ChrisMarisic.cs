@@ -44,10 +44,10 @@ namespace SlowTests.MailingList
         };
 
         [Fact]
-        public async Task Physical_store_test()
+        public void Physical_store_test()
         {
             List<Car> cars;
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
 

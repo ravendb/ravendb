@@ -13,9 +13,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryWithNot()
+        public void CanQueryWithNot()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -31,9 +31,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryWithOr()
+        public void CanQueryWithOr()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -51,9 +51,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryWithAnd()
+        public void CanQueryWithAnd()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

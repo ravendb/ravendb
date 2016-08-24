@@ -41,7 +41,7 @@ select new
         [Fact]
         public async Task CrossReferencing()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndex(store);
 
@@ -72,7 +72,7 @@ select new
         [Fact]
         public async Task UpdatingDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndex(store);
 
@@ -116,7 +116,7 @@ select new
         [Fact]
         public async Task UpdatingReferenceToAnotherDoc()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndex(store);
 
@@ -164,7 +164,7 @@ select new
         [Fact]
         public async Task UpdatingReferenceToMissing()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndex(store);
 
@@ -191,7 +191,7 @@ select new
         [Fact]
         public async Task UpdatingReferenceToNull()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndex(store);
 
@@ -217,7 +217,7 @@ select new
         [Fact]
         public async Task AddingReferenceToSamedoc()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndex(store);
 
@@ -243,7 +243,7 @@ select new
         [Fact]
         public async Task DeletingRootDoc()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndex(store);
 

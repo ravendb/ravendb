@@ -26,9 +26,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task FailTest()
+        public void FailTest()
         {
-            using (var docStore = await GetDocumentStore())
+            using (var docStore = GetDocumentStore())
             {
                 //Create Data
                 CreateAnyOperatorBug(docStore);
@@ -54,9 +54,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task PassTest()
+        public void PassTest()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 //Create Data
                 CreateAnyOperatorBug(store);

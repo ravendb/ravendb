@@ -53,7 +53,7 @@ select new {
         }
 
         [Fact]
-        public async Task CanGetReducedValues()
+        public void CanGetReducedValues()
         {
             var values = new[]
             {
@@ -70,7 +70,7 @@ select new {
                 "{blog_id: 5, comments: [{}]}",
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -86,9 +86,9 @@ select new {
 
         //issue --> indice name : scheduled_reductions_by_view -->multi-tree key commentscountperblog
         [Fact]
-        public async Task DoesNotOverReduce()
+        public void DoesNotOverReduce()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "512"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "512"))
             {
                 Fill(store);
 
@@ -129,7 +129,7 @@ select new {
         }
 
         [Fact]
-        public async Task CanUpdateReduceValue()
+        public void CanUpdateReduceValue()
         {
             var values = new[]
             {
@@ -146,7 +146,7 @@ select new {
                 "{blog_id: 5, comments: [{}]}",
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -169,7 +169,7 @@ select new {
 
 
         [Fact]
-        public async Task CanDelete()
+        public void CanDelete()
         {
             var values = new[]
             {
@@ -186,7 +186,7 @@ select new {
                 "{blog_id: 5, comments: [{}]}",
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -206,7 +206,7 @@ select new {
         }
 
         [Fact]
-        public async Task CanUpdateReduceValue_WhenChangingReduceKey()
+        public void CanUpdateReduceValue_WhenChangingReduceKey()
         {
             var values = new[]
             {
@@ -223,7 +223,7 @@ select new {
                 "{blog_id: 5, comments: [{}]}",
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 

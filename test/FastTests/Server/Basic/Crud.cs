@@ -12,7 +12,7 @@ namespace Raven.Tests.Core
         [Fact]
         public async Task CanSaveAndLoad()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -38,7 +38,7 @@ namespace Raven.Tests.Core
         [Fact]
         public async Task CanOverwriteDocumentWithSmallerValue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("users/1", null, RavenJObject.FromObject(new User {Name = "Fitzchak", LastName = "Very big value here, so can reproduce the issue"}),
                     RavenJObject.FromObject(new

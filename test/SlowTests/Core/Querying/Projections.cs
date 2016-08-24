@@ -18,9 +18,9 @@ namespace SlowTests.Core.Querying
     public class Projections : RavenTestBase
     {
         [Fact]
-        public async Task BasicProjections()
+        public void BasicProjections()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

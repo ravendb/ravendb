@@ -11,9 +11,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
     public class GroupByMultipleFields : RavenTestBase
     {
         [Fact]
-        public async Task Group_by_multiple_fields()
+        public void Group_by_multiple_fields()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -252,9 +252,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Fact]
-        public async Task Select_does_not_allow_to_specify_composite_group_by_directly()
+        public void Select_does_not_allow_to_specify_composite_group_by_directly()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

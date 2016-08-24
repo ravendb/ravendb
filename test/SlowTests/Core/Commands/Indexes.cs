@@ -29,7 +29,7 @@ namespace SlowTests.Core.Commands
         [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const string usersByname = "users/byName";
 
@@ -60,9 +60,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public async Task CanGetTermsForIndex()
+        public void CanGetTermsForIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -95,9 +95,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public async Task CanGetTermsForIndex_WithPaging()
+        public void CanGetTermsForIndex_WithPaging()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -130,9 +130,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: query for index entries only")]
-        public async Task CanQueryForMetadataAndIndexEntriesOnly()
+        public void CanQueryForMetadataAndIndexEntriesOnly()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -179,7 +179,7 @@ namespace SlowTests.Core.Commands
         {
             var index1 = new Users_ByName();
             var index2 = new Posts_ByTitleAndContent();
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 index1.Execute(store);
                 index2.Execute(store);
@@ -195,7 +195,7 @@ namespace SlowTests.Core.Commands
         public async Task CanResetIndex()
         {
             var index = new Users_ByName();
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 index.Execute(store);
                 using (var session = store.OpenSession())

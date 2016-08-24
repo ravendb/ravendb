@@ -82,9 +82,9 @@ namespace SlowTests.MailingList.spokeypokey
 
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task Can_reference_child_documents_in_index()
+        public void Can_reference_child_documents_in_index()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProviderAndTaxonomyCodeIndex1().Execute(store);
 

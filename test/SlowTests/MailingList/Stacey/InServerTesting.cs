@@ -46,9 +46,9 @@ namespace SlowTests.MailingList.Stacey
         }
 
         [Fact]
-        public async Task ngram_search_not_empty()
+        public void ngram_search_not_empty()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ImageByName().Execute(store);
 

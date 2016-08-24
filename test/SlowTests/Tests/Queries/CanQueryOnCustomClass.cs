@@ -19,9 +19,9 @@ namespace SlowTests.Tests.Queries
     public class CanQueryOnCustomClass : RavenTestBase
     {
         [Fact]
-        public async Task UsingConverter()
+        public void UsingConverter()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer += x => x.Converters = new JsonConverterCollection(x.Converters) { new MoneyConverter() };
 

@@ -76,9 +76,9 @@ namespace SlowTests.MailingList
 
 
         [Fact]
-        public async Task IndexShouldAllowToQueryOnBooleanSubcollectionProperty()
+        public void IndexShouldAllowToQueryOnBooleanSubcollectionProperty()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -96,9 +96,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task IndexShouldAllowToQueryOnIntegerSubcollectionProperty()
+        public void IndexShouldAllowToQueryOnIntegerSubcollectionProperty()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 

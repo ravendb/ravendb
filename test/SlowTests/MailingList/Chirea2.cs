@@ -17,9 +17,9 @@ namespace SlowTests.MailingList
     public class Chirea2 : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task MulitplyDecimal()
+        public void MulitplyDecimal()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Orders_Search();
 
