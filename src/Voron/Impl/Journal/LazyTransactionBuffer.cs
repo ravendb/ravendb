@@ -48,21 +48,11 @@ namespace Voron.Impl.Journal
             _readTransaction = tx.Environment.NewLowLevelTransaction(TransactionFlags.Read);
         }
 
-        public int WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)
+        public void WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)
         {
-            int ioRate = 0;
             if (_firstPositionInJournalFile != null)
             {
-                var sp = Stopwatch.StartNew();
                 journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),_lastUsedPage);
-
-                sp.Stop();
-
-                var elapsed = sp.ElapsedTicks;
-                if (elapsed == 0)
-                    elapsed = 1; // prevent dev by zero
-
-                ioRate = (int)((_lastUsedPage * tx.Environment.Options.PageSize) / elapsed);
             }
 
             if (tx != null)
@@ -73,8 +63,6 @@ namespace Voron.Impl.Journal
             _lastUsedPage = 0;
             _readTransaction = null;
             NumberOfPages = 0;
-
-            return ioRate;
         }
 
         public void Dispose()

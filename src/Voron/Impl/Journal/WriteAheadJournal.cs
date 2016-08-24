@@ -46,11 +46,6 @@ namespace Voron.Impl.Journal
         private LazyTransactionBuffer _lazyTransactionBuffer;
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
-        private bool _isSlowIO;
-        private int _lastWriteBytePerTicks;
-
-
-
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
@@ -902,8 +897,6 @@ namespace Voron.Impl.Journal
 
         public void WriteToJournal(LowLevelTransaction tx, int pageCount)
         {
-            var ioRate = 0;
-
             var pages = CompressPages(tx, pageCount, _compressionPager);
 
             if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
@@ -917,16 +910,13 @@ namespace Voron.Impl.Journal
                 CurrentFile = NextFile(pages.NumberOfPages);
             }
 
-            ioRate = CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
+            CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
 
             if (CurrentFile.AvailablePages == 0)
             {
                 _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                 CurrentFile = null;
             }
-
-            if (ioRate != 0)
-                _lastWriteBytePerTicks = ioRate;
         }
 
         private CompressedPagesResult CompressPages(LowLevelTransaction tx, int numberOfPages, AbstractPager compressionPager)
@@ -953,8 +943,8 @@ namespace Voron.Impl.Journal
             byte* tempBuffer = null;
             byte* write;
 
-            // compress pages unless they are smaller then 64K and IO rate is faster then compression rate
-            bool compressPages = sizeInBytes + pageSize > 64 * 1024 || _isSlowIO;  // +pageSize to count TransactionHeader
+            // compress pages unless they are smaller then 64K
+            bool compressPages = sizeInBytes + pageSize > 64 * 1024;  // +pageSize to count TransactionHeader
 
             if (compressPages)
             {
@@ -981,19 +971,7 @@ namespace Voron.Impl.Journal
             int len;
             if (compressPages)
             {
-                var sp = Stopwatch.StartNew();
                 len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBufferSize);
-                var elapsedTicks = sp.ElapsedTicks;
-                if (_lastWriteBytePerTicks != 0 && elapsedTicks != 0)
-                {
-                    var isSlowIo = _lastWriteBytePerTicks < (sizeInBytes - len) / elapsedTicks;
-                    if (isSlowIo != _isSlowIO)
-                    {
-                        //TODO: Log this
-                        Console.WriteLine($"{_lastWriteBytePerTicks} < ({(sizeInBytes - len) / elapsedTicks})({sizeInBytes - len} / {elapsedTicks})");
-                    }
-                    _isSlowIO = isSlowIo;
-                }
             }
             else
             {

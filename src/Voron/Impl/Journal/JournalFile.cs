@@ -126,11 +126,10 @@ namespace Voron.Impl.Journal
         }
 
         /// <summary>
-        /// write transaction's raw page data into journal. returns io rate Bytes/Ticks
+        /// write transaction's raw page data into journal
         /// </summary>
-        public int Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
+        public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
-            var ioRate = 0; // will remain zero if written to lazy buffer
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var unused = new HashSet<PagePosition>();
             var pageWritePos = _writePage;
@@ -150,16 +149,7 @@ namespace Voron.Impl.Journal
 
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
-                var sp = Stopwatch.StartNew();
                 _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
-                sp.Stop();
-
-                var elapsed = sp.ElapsedTicks;
-                if (elapsed == 0)
-                    elapsed = 1; // prevent dev by zero
-
-                ioRate = (int)((pages.NumberOfPages * tx.Environment.Options.PageSize) / elapsed);
-                Console.WriteLine($"-> {pages.NumberOfPages * tx.Environment.Options.PageSize:#,#} in {elapsed:#,#}");
             }
             else
             {
@@ -172,15 +162,13 @@ namespace Voron.Impl.Journal
                 if (tx.IsLazyTransaction == false ||
                     lazyTransactionScratch.NumberOfPages > tx.Environment.ScratchBufferPool.GetAvailablePagesCount()/2)
                 {
-                    ioRate = lazyTransactionScratch.WriteBufferToFile(this, tx);
+                    lazyTransactionScratch.WriteBufferToFile(this, tx);
                 }
                 else 
                 {
                     lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
                 }
             }
-
-            return ioRate;
         }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
