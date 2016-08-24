@@ -13,7 +13,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
-using System.Configuration;
 
 namespace Raven.Client.FileSystem
 {
