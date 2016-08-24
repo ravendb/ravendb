@@ -400,7 +400,7 @@ namespace Raven.Tests.Issues
                 {
                     var index = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
                     return index != null;
-                }, 5000);
+                }, 15000);
 
                 var oldIndex = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
                 Assert.True(oldIndex.Equals(testIndex.CreateIndexDefinition(), false));
