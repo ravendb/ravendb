@@ -20,13 +20,6 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationConflictsTests : ReplicationTestsBase
     {
-		public readonly string DbName = "TestDB" + Guid.NewGuid();
-
-	    public ReplicationConflictsTests()
-	    {
-			DoNotReuseServer();
-		}
-
 		public class User
 		{
 			public string Name { get; set; }
@@ -211,8 +204,6 @@ namespace FastTests.Server.Documents.Replication
 		[Fact]
 		public async Task Conflict_same_time_with_master_slave()
 		{
-			var dbName1 = DbName + "-1";
-			var dbName2 = DbName + "-2";
 			using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "foo1"))
 			using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "foo2"))
 			{
