@@ -40,7 +40,8 @@ namespace Raven.Client.Document.SessionOperations
             if (id == null)
                 throw new ArgumentNullException(nameof(id), "The document id cannot be null");
 
-            _ids = new[] {id};
+            if (_ids == null)
+                _ids = new[] {id};
             if (_session.IsLoadedOrDeleted(id))
                 return;
 
