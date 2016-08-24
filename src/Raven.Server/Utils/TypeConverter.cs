@@ -72,6 +72,10 @@ namespace Raven.Server.Utils
             if (charEnumerable != null)
                 return new string(charEnumerable.ToArray());
 
+            var bytes = value as byte[];
+            if (bytes != null)
+                return System.Convert.ToBase64String(bytes);
+
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);
 

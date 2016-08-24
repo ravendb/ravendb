@@ -95,6 +95,11 @@ namespace Sparrow.Json
             }
         }
 
+        public static implicit operator byte[](LazyStringValue self)
+        {
+            return Convert.FromBase64String(self);
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null))

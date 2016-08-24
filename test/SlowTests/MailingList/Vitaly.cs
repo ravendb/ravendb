@@ -1,14 +1,13 @@
 using System;
 using System.Linq;
-using Raven.Client.Embedded;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Vitaly : RavenTest
+    public class Vitaly : RavenTestBase
     {
         public class ActivityShot
         {
@@ -50,7 +49,7 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void Test()
+        public async Task Test()
         {
             var activityShot1 = new ActivityShot
             {
@@ -64,7 +63,7 @@ namespace Raven.Tests.MailingList
                 Thumbnail = new byte[] {2}
             };
 
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new DailyActivityIndex().Execute(store);
 
