@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
@@ -77,8 +78,9 @@ namespace Raven.Client.Document
             FindClrType = (id, doc, metadata) => metadata.Value<string>(Constants.Headers.RavenClrType);
             FindClrTypeNew = (id, doc) =>
             {
+                BlittableJsonReaderObject metadata;
                 string clrType;
-                if (doc.TryGet(Constants.Headers.RavenClrType, out clrType))
+                if (doc.TryGet(Constants.Metadata, out metadata) && metadata.TryGet(Constants.Headers.RavenClrType, out clrType))
                 {
                     return clrType;
                 }
@@ -814,7 +816,17 @@ namespace Raven.Client.Document
 
         public object JsonDeserialize(Type type, BlittableJsonReaderObject document)
         {
-            throw new NotImplementedException();
+            var jsonSerializer = CreateSerializer();
+            /*TODO: Use a 4KB memory stream which we be allocated once per session */
+            using (var ms = new MemoryStream())
+            {
+                document.WriteJsonTo(ms);
+                ms.Position = 0;
+                using (var reader = new StreamReader(ms))
+                {
+                    return jsonSerializer.Deserialize(reader, type);
+                }
+            }
         }
     }
 
