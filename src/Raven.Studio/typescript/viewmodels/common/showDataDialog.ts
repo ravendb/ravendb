@@ -7,14 +7,12 @@ class showDataDialog extends dialogViewModelBase {
         super(elementToFocusOnDismissal);
     }
     
-    canActivate(args: any): any {
-         return true;
-    }
-
     attached() {
         super.attached();
         this.registerResizing("documentsResize");
         this.selectText();
+
+        //TODO: create createKeyboardShortcut in dialog view model base and use it
         jwerty.key("CTRL+C, enter", e => {
             e.preventDefault();
             this.close();
@@ -35,7 +33,7 @@ class showDataDialog extends dialogViewModelBase {
         $("#inputData").select();
     }
 
-    close() {
+    close() { //TODO: move to base class?
         dialog.close(this);
     }
 }

@@ -38,16 +38,14 @@ class document implements documentBase {
     }
 
     toDto(includeMeta: boolean = false): documentDto {
-        var dto: any = { '@metadata': <any> undefined };
+        var dto: any = { };
         var properties = this.getDocumentPropertyNames();
         for (var i = 0; i < properties.length; i++) {
             var property = properties[i];
             dto[property] = (<any>this)[property];
         }
 
-        if (includeMeta && this.__metadata) {
-            dto["@metadata"] = this.__metadata.toDto();
-        }
+        dto["@metadata"] = includeMeta && this.__metadata ? this.__metadata.toDto() : undefined;
 
         return dto;
     }
@@ -73,7 +71,7 @@ class document implements documentBase {
         return bulkDoc;
     }
 
-    public static empty(): document {
+    static empty(): document {
         var emptyDto = {
             '@metadata': {}
         };
@@ -81,12 +79,11 @@ class document implements documentBase {
         return new document(<any>emptyDto);
     }
 
-    public static getEntityNameFromId(id: string): string {
+    static getEntityNameFromId(id: string): string {
         if (!id) {
             return null;
         }
 
-        // TODO: is there a better/more reliable way to do this?
         var slashIndex = id.lastIndexOf("/");
         if (slashIndex >= 1) {
             return id.substring(0, 1).toUpperCase() + id.substring(1, slashIndex);

@@ -3,8 +3,8 @@ import database = require("models/resources/database");
 
 class verifyDocumentsIDsCommand extends commandBase {
 
-    public static IDsLocalStorage: string[] = [];
-    public static InvalidIDsLocal:string[]=[];
+    static IDsLocalStorage: Array<string> = [];
+    static InvalidIDsLocal: Array<string> = [];
 
     constructor(private docIDs: string[], private db: database, private queryLocalStorage:boolean, private storeResultsInLocalStorage:boolean) {
         super();
@@ -18,21 +18,21 @@ class verifyDocumentsIDsCommand extends commandBase {
         }
     }
 
-    execute(): any {
+    execute(): JQueryPromise<Array<string>> {
         
-        var verifyResult = $.Deferred();       
+        var verifyResult = $.Deferred<Array<string>>();       
         var verifiedIDs: string[] = [];
 
         // if required to check with locally stored document ids first, remove known non existing documet ids first and confirm verified ids later
-        if (this.queryLocalStorage === true) {
+        if (this.queryLocalStorage) {
 
-            if (!!verifyDocumentsIDsCommand.InvalidIDsLocal && verifyDocumentsIDsCommand.InvalidIDsLocal.length > 0) {
+            if (verifyDocumentsIDsCommand.InvalidIDsLocal.length > 0) {
                 this.docIDs.removeAll(verifyDocumentsIDsCommand.InvalidIDsLocal);
             }
 
-            if (!!verifyDocumentsIDsCommand.IDsLocalStorage && verifyDocumentsIDsCommand.IDsLocalStorage.length > 0) {
+            if (verifyDocumentsIDsCommand.IDsLocalStorage.length > 0) {
                 this.docIDs.forEach(curId => {
-                    if (!!verifyDocumentsIDsCommand.IDsLocalStorage.first(x => x === curId)) {
+                    if (verifyDocumentsIDsCommand.IDsLocalStorage.first(x => x === curId)) {
                         verifiedIDs.push(curId);
                     } 
                 });
@@ -43,17 +43,17 @@ class verifyDocumentsIDsCommand extends commandBase {
 
         if (this.docIDs.length > 0) {
             var postResult = this.post("/docs?metadata-only=true", JSON.stringify(this.docIDs), this.db);
-            postResult.fail(xhr => verifyResult.fail(xhr));
+            postResult.fail((xhr: JQueryXHR) => verifyResult.reject(xhr));
             postResult.done((queryResult: queryResultDto) => {
-                if (!!queryResult && !!queryResult.Results) {
+                if (queryResult && queryResult.Results) {
                     queryResult.Results.forEach(curVerifiedID => {
                         verifiedIDs.push(curVerifiedID['@metadata']['@id']);                        
-                        if (this.queryLocalStorage === true) {
+                        if (this.queryLocalStorage) {
                             verifyDocumentsIDsCommand.IDsLocalStorage.push(curVerifiedID);
                         }
                     });
 
-                    if (this.queryLocalStorage === true) {
+                    if (this.queryLocalStorage) {
                         this.docIDs.removeAll(queryResult.Results.map(curResult => curResult['@metadata']['@id']));
                         verifyDocumentsIDsCommand.InvalidIDsLocal.pushAll(this.docIDs);
                     }
@@ -62,13 +62,10 @@ class verifyDocumentsIDsCommand extends commandBase {
             });
             return verifyResult;
         } else {
-            return verifiedIDs;
+            verifyResult.resolve(verifiedIDs);
+            return verifyResult;
         }
-
-        
     }
-
-   
 }
 
 export = verifyDocumentsIDsCommand;

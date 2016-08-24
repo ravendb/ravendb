@@ -5,6 +5,9 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 import viewLocator = require("durandal/viewLocator");
 
+import menu = require("common/shell/menu");
+import resourceSwitcher = require("common/shell/resourceSwitcher");
+import searchBox = require("common/shell/searchBox");
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
@@ -103,7 +106,7 @@ class shell extends viewModelBase {
 
     canShowFileSystemSettings = ko.computed(() => {
         if (!this.canShowFileSystemNavbar()) return false;
-        var fs = <fileSystem> this.lastActivatedResource();
+        var fs = <fileSystem>this.lastActivatedResource();
         return fs.activeBundles.contains("Versioning");
     });
 
@@ -148,7 +151,7 @@ class shell extends viewModelBase {
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-   
+
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
@@ -161,6 +164,14 @@ class shell extends viewModelBase {
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
+
+    mainMenu = new menu({
+        canExposeConfigOverTheWire: shell.canExposeConfigOverTheWire,
+        isGlobalAdmin: shell.isGlobalAdmin,
+        activeDatabase: this.activeDatabase
+    });
+    searchBox = new searchBox();
+    resourceSwitcher = new resourceSwitcher();
 
     //TODO: delete me!
     static has40Features = ko.computed(() => shell.serverMainVersion() >= 4);
@@ -181,8 +192,8 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => {
-           /* TODO  this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-            this.notifications = this.createNotifications();*/
+            /* TODO  this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+             this.notifications = this.createNotifications();*/
         });
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -231,45 +242,8 @@ class shell extends viewModelBase {
         oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
         NProgress.set(.7);
-        router.map([
-            { route: "admin/settings*details", title: "Admin Settings", moduleId: "viewmodels/manage/adminSettings", nav: true, hash: this.appUrls.adminSettings },
-            { route: ["", "resources"], title: "Resources", moduleId: "viewmodels/resources/resources", nav: true, hash: this.appUrls.resourcesManagement },
-            { route: "databases/documents", title: "Documents", moduleId: "viewmodels/database/documents/documents", nav: true, hash: this.appUrls.documents },
-            { route: "databases/conflicts", title: "Conflicts", moduleId: "viewmodels/database/conflicts/conflicts", nav: true, hash: this.appUrls.conflicts },
-            { route: "databases/patch(/:recentPatchHash)", title: "Patch", moduleId: "viewmodels/database/patch/patch", nav: true, hash: this.appUrls.patch },
-            { route: "databases/upgrade", title: "Upgrade in progress", moduleId: "viewmodels/common/upgrade", nav: false, hash: this.appUrls.upgrade },
-            { route: "databases/indexes*details", title: "Indexes", moduleId: "viewmodels/database/indexes/indexesShell", nav: true, hash: this.appUrls.indexes },
-            { route: "databases/transformers*details", title: "Transformers", moduleId: "viewmodels/database/transformers/transformersShell", nav: false, hash: this.appUrls.transformers },
-            { route: "databases/query*details", title: "Query", moduleId: "viewmodels/database/query/queryShell", nav: true, hash: this.appUrls.query(null) },
-            { route: "databases/tasks*details", title: "Tasks", moduleId: "viewmodels/database/tasks/tasks", nav: true, hash: this.appUrls.tasks, },
-            { route: "databases/settings*details", title: "Settings", moduleId: "viewmodels/database/settings/settings", nav: true, hash: this.appUrls.settings },
-            { route: "databases/status*details", title: "Status", moduleId: "viewmodels/database/status/status", nav: true, hash: this.appUrls.status },
-            { route: "databases/edit", title: "Edit Document", moduleId: "viewmodels/database/documents/editDocument", nav: false },
-            { route: "filesystems/files", title: "Files", moduleId: "viewmodels/filesystem/files/filesystemFiles", nav: true, hash: this.appUrls.filesystemFiles },
-            { route: "filesystems/search", title: "Search", moduleId: "viewmodels/filesystem/search/search", nav: true, hash: this.appUrls.filesystemSearch },
-            { route: "filesystems/synchronization*details", title: "Synchronization", moduleId: "viewmodels/filesystem/synchronization/synchronization", nav: true, hash: this.appUrls.filesystemSynchronization },
-            { route: "filesystems/status*details", title: "Status", moduleId: "viewmodels/filesystem/status/status", nav: true, hash: this.appUrls.filesystemStatus },
-            { route: "filesystems/tasks*details", title: "Tasks", moduleId: "viewmodels/filesystem/tasks/tasks", nav: true, hash: this.appUrls.filesystemTasks },
-            { route: "filesystems/settings*details", title: "Settings", moduleId: "viewmodels/filesystem/settings/settings", nav: true, hash: this.appUrls.filesystemSettings },
-            { route: "filesystems/configuration", title: "Configuration", moduleId: "viewmodels/filesystem/configurations/configuration", nav: true, hash: this.appUrls.filesystemConfiguration },
-            { route: "filesystems/edit", title: "Edit File", moduleId: "viewmodels/filesystem/files/filesystemEditFile", nav: false },
-            { route: "counterstorages/counters", title: "Counters", moduleId: "viewmodels/counter/counters", nav: true, hash: this.appUrls.counterStorageCounters },
-            { route: "counterstorages/replication", title: "Replication", moduleId: "viewmodels/counter/counterStorageReplication", nav: true, hash: this.appUrls.counterStorageReplication },
-            { route: "counterstorages/tasks*details", title: "Stats", moduleId: "viewmodels/counter/tasks/tasks", nav: true, hash: this.appUrls.counterStorageStats },
-            { route: "counterstorages/stats", title: "Stats", moduleId: "viewmodels/counter/counterStorageStats", nav: true, hash: this.appUrls.counterStorageStats },
-            { route: "counterstorages/configuration", title: "Configuration", moduleId: "viewmodels/counter/counterStorageConfiguration", nav: true, hash: this.appUrls.counterStorageConfiguration },
-            { route: "counterstorages/edit", title: "Edit Counter", moduleId: "viewmodels/counter/editCounter", nav: false },
-            { route: "timeseries/types", title: "Types", moduleId: "viewmodels/timeSeries/timeSeriesTypes", nav: true, hash: this.appUrls.timeSeriesType },
-            { route: "timeseries/points", title: "Points", moduleId: "viewmodels/timeSeries/timeSeriesPoints", nav: true, hash: this.appUrls.timeSeriesPoints },
-            { route: "timeseries/stats", title: "Stats", moduleId: "viewmodels/timeSeries/timeSeriesStats", nav: true, hash: this.appUrls.timeSeriesStats },
-            { route: "timeseries/configuration*details", title: "Configuration", moduleId: "viewmodels/timeSeries/configuration/configuration", nav: true, hash: this.appUrls.timeSeriesConfiguration }
-        ]).buildNavigationModel();
 
-        // Show progress whenever we navigate.
-        router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
-
-        appUrl.mapUnknownRoutes(router);
+        this.setupRouting();
 
         var self = this;
 
@@ -317,6 +291,18 @@ class shell extends viewModelBase {
 
         $(window).resize(() => self.lastActivatedResource.valueHasMutated());
         //TODO: return shell.fetchLicenseStatus();
+
+    }
+
+    private setupRouting() {
+
+        let routes = this.getRoutesForNewLayout();
+        routes.pushAll(routes);
+        router.map(routes).buildNavigationModel();
+        router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+        router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
+
+        appUrl.mapUnknownRoutes(router);
     }
 
     private isActiveResourceDisabled(rs: resource): boolean {
@@ -367,6 +353,18 @@ class shell extends viewModelBase {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
         };
+
+    }
+
+    private initializeShellComponents() {
+        this.mainMenu.initialize();
+        this.resourceSwitcher.initialize();
+        this.searchBox.initialize();
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+        this.initializeShellComponents();
     }
 
     private preLoadRecentErrorsView() {
@@ -397,6 +395,150 @@ class shell extends viewModelBase {
             }
         });
     }*/
+
+    private getRoutesForNewLayout() {
+        let routes = [
+            {
+                route: "databases/upgrade",
+                title: "Upgrade in progress",
+                moduleId: "viewmodels/common/upgrade",
+                nav: false,
+                dynamicHash: this.appUrls.upgrade
+            },
+            {
+                route: "databases/edit",
+                title: "Edit Document",
+                moduleId: "viewmodels/database/documents/editDocument",
+                nav: false
+            },
+            {
+                route: "filesystems/files",
+                title: "Files",
+                moduleId: "viewmodels/filesystem/files/filesystemFiles",
+                nav: true,
+                dynamicHash: this.appUrls.filesystemFiles
+            },
+            {
+                route: "filesystems/search",
+                title: "Search",
+                moduleId: "viewmodels/filesystem/search/search",
+                nav: true,
+                dynamicHash: this.appUrls.filesystemSearch
+            },
+            {
+                route: "filesystems/synchronization*details",
+                title: "Synchronization",
+                moduleId: "viewmodels/filesystem/synchronization/synchronization",
+                nav: true,
+                dynamicHash: this.appUrls.filesystemSynchronization
+            },
+            {
+                route: "filesystems/status*details",
+                title: "Status",
+                moduleId: "viewmodels/filesystem/status/status",
+                nav: true,
+                dynamicHash: this.appUrls.filesystemStatus
+            },
+            {
+                route: "filesystems/tasks*details",
+                title: "Tasks",
+                moduleId: "viewmodels/filesystem/tasks/tasks",
+                nav: true,
+                dynamicHash: this.appUrls.filesystemTasks
+            },
+            {
+                route: "filesystems/settings*details",
+                title: "Settings",
+                moduleId: "viewmodels/filesystem/settings/settings",
+                nav: true,
+                dynamicHash: this.appUrls.filesystemSettings
+            },
+            {
+                route: "filesystems/configuration",
+                title: "Configuration",
+                moduleId: "viewmodels/filesystem/configurations/configuration",
+                nav: true,
+                dynamicHash: this.appUrls.filesystemConfiguration
+            },
+            {
+                route: "filesystems/edit",
+                title: "Edit File",
+                moduleId: "viewmodels/filesystem/files/filesystemEditFile",
+                nav: false
+            },
+            {
+                route: "counterstorages/counters",
+                title: "Counters",
+                moduleId: "viewmodels/counter/counters",
+                nav: true,
+                dynamicHash: this.appUrls.counterStorageCounters
+            },
+            {
+                route: "counterstorages/replication",
+                title: "Replication",
+                moduleId: "viewmodels/counter/counterStorageReplication",
+                nav: true,
+                dynamicHash: this.appUrls.counterStorageReplication
+            },
+            {
+                route: "counterstorages/tasks*details",
+                title: "Stats",
+                moduleId: "viewmodels/counter/tasks/tasks",
+                nav: true,
+                dynamicHash: this.appUrls.counterStorageStats
+            },
+            {
+                route: "counterstorages/stats",
+                title: "Stats",
+                moduleId: "viewmodels/counter/counterStorageStats",
+                nav: true,
+                dynamicHash: this.appUrls.counterStorageStats
+            },
+            {
+                route: "counterstorages/configuration",
+                title: "Configuration",
+                moduleId: "viewmodels/counter/counterStorageConfiguration",
+                nav: true,
+                dynamicHash: this.appUrls.counterStorageConfiguration
+            },
+            {
+                route: "counterstorages/edit",
+                title: "Edit Counter",
+                moduleId: "viewmodels/counter/editCounter",
+                nav: false
+            },
+            {
+                route: "timeseries/types",
+                title: "Types",
+                moduleId: "viewmodels/timeSeries/timeSeriesTypes",
+                nav: true,
+                dynamicHash: this.appUrls.timeSeriesType
+            },
+            {
+                route: "timeseries/points",
+                title: "Points",
+                moduleId: "viewmodels/timeSeries/timeSeriesPoints",
+                nav: true,
+                dynamicHash: this.appUrls.timeSeriesPoints
+            },
+            {
+                route: "timeseries/stats",
+                title: "Stats",
+                moduleId: "viewmodels/timeSeries/timeSeriesStats",
+                nav: true,
+                dynamicHash: this.appUrls.timeSeriesStats
+            },
+            {
+                route: "timeseries/configuration*details",
+                title: "Configuration",
+                moduleId: "viewmodels/timeSeries/configuration/configuration",
+                nav: true,
+                dynamicHash: this.appUrls.timeSeriesConfiguration
+            }
+        ] as Array<DurandalRouteConfiguration>;
+
+        return routes.concat(this.mainMenu.routerConfiguration());
+    }
 
     private fecthStudioConfigForDatabase(db: database) {
         var hotSpareTask = new getHotSpareInformation().execute();
@@ -571,8 +713,8 @@ class shell extends viewModelBase {
     }
 
     private renewOAuthToken() {
-       /* TODO: oauthContext.authHeader(null);
-        new getDatabaseStatsCommand(null).execute();*/
+        /* TODO: oauthContext.authHeader(null);
+         new getDatabaseStatsCommand(null).execute();*/
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -639,7 +781,7 @@ class shell extends viewModelBase {
                 var connectedResource = this.currentConnectedResource;
                 var resourceObservableArray: any = shell.databases;
                 var activeResourceObservable: any = this.activeDatabase;
-                var isNotDatabase = !(connectedResource instanceof database); 
+                var isNotDatabase = !(connectedResource instanceof database);
                 if (isNotDatabase && connectedResource instanceof fileSystem) {
                     resourceObservableArray = shell.fileSystems;
                     activeResourceObservable = this.activeFilesystem;
@@ -906,7 +1048,7 @@ class shell extends viewModelBase {
     }
 
     private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
-        var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare": "Hot Spare", "#FF8585");
+        var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare" : "Hot Spare", "#FF8585");
         license.hotSpare(hotSpare);
         shell.selectedEnvironmentColorStatic(color);
         shell.originalEnvironmentColor(color);
