@@ -8,14 +8,14 @@ namespace SlowTests.MailingList
 {
     public class Vitaly : RavenTestBase
     {
-        public class ActivityShot
+        private class ActivityShot
         {
             public byte[] Thumbnail { get; set; }
 
             public DateTimeOffset Edited { get; set; }
         }
 
-        public class DailyActivity
+        private class DailyActivity
         {
             public DateTime Date { get; set; }
 
@@ -23,7 +23,7 @@ namespace SlowTests.MailingList
         }
 
 
-        public class DailyActivityIndex : AbstractIndexCreationTask<ActivityShot, DailyActivity>
+        private class DailyActivityIndex : AbstractIndexCreationTask<ActivityShot, DailyActivity>
         {
             public DailyActivityIndex()
             {
@@ -53,13 +53,13 @@ namespace SlowTests.MailingList
             var activityShot1 = new ActivityShot
             {
                 Edited = new DateTime(2011, 1, 1),
-                Thumbnail = new byte[] {1}
+                Thumbnail = new byte[] { 1 }
             };
 
             var activityShot2 = new ActivityShot
             {
                 Edited = new DateTime(2011, 10, 10),
-                Thumbnail = new byte[] {2}
+                Thumbnail = new byte[] { 2 }
             };
 
             using (var store = GetDocumentStore())

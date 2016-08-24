@@ -65,7 +65,7 @@ namespace SlowTests.MailingList
             base.Dispose();
         }
 
-        public class MyEntity
+        private class MyEntity
         {
             public MyEntity()
             {

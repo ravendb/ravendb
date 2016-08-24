@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
                 using (IDocumentSession qSession = ds.OpenSession())
                 {
                     var entities = qSession.Query<TestEntity>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.IntType > 0)
                         .ToList();
 
@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class TestEntity
+        private class TestEntity
         {
             public TestEntity(int intValue)
             {

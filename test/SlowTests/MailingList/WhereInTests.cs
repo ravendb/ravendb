@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
         {
             var perFieldAnalyzerComparer = new RavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();
             Assert.Equal(perFieldAnalyzerComparer.GetHashCode("Name"), perFieldAnalyzerComparer.GetHashCode("@in<Name>"));
-            Assert.True(perFieldAnalyzerComparer.Equals("Name","@in<Name>"));
+            Assert.True(perFieldAnalyzerComparer.Equals("Name", "@in<Name>"));
         }
 
         [Fact]
@@ -167,32 +167,32 @@ namespace SlowTests.MailingList
             }
             WaitForIndexing(documentStore);
         }
-    }
 
-    public class Person
-    {
-        public string Name { get; set; }
-    }
-
-    public class PersonsNotAnalyzed : AbstractIndexCreationTask<Person>
-    {
-        public PersonsNotAnalyzed()
+        private class Person
         {
-            Map = organizations => from o in organizations
-                                   select new { o.Name };
-
-            Indexes.Add(x => x.Name, FieldIndexing.NotAnalyzed);
+            public string Name { get; set; }
         }
-    }
 
-    public class PersonsAnalyzed : AbstractIndexCreationTask<Person>
-    {
-        public PersonsAnalyzed()
+        private class PersonsNotAnalyzed : AbstractIndexCreationTask<Person>
         {
-            Map = organizations => from o in organizations
-                                   select new { o.Name };
+            public PersonsNotAnalyzed()
+            {
+                Map = organizations => from o in organizations
+                                       select new { o.Name };
 
-            Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.NotAnalyzed);
+            }
+        }
+
+        private class PersonsAnalyzed : AbstractIndexCreationTask<Person>
+        {
+            public PersonsAnalyzed()
+            {
+                Map = organizations => from o in organizations
+                                       select new { o.Name };
+
+                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+            }
         }
     }
 }

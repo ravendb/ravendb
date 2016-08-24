@@ -19,7 +19,7 @@ namespace SlowTests.MailingList
             {
                 using (var raven = store.OpenSession())
                 {
-                    raven.Store(new User {Name = new PersonName("Slappy", "McFuzznutz"),});
+                    raven.Store(new User { Name = new PersonName("Slappy", "McFuzznutz"), });
                     raven.SaveChanges();
                 }
 
@@ -73,20 +73,20 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class UserSearchModel
+        private class UserSearchModel
         {
             public string UserId { get; set; }
             public string FirstName { get; set; }
             public string LastName { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public PersonName Name { get; set; }
         }
 
-        public class PersonName
+        private class PersonName
         {
             public PersonName(string first, string last)
             {

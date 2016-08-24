@@ -10,7 +10,7 @@ namespace SlowTests.MailingList
 {
     public class WallaceTurner : RavenTestBase
     {
-        public class DataResult
+        private class DataResult
         {
             public DataResult()
             {
@@ -42,17 +42,17 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class DataResult_ByAddress : AbstractIndexCreationTask<DataResult>
+        private class DataResult_ByAddress : AbstractIndexCreationTask<DataResult>
         {
             public DataResult_ByAddress()
             {
                 Map = docs => from doc in docs
                               select new
                               {
-                                LastModified = doc.LastModified, 
-                                Address = doc.Address, 
-                                Suburb = doc.Suburb, 
-                                State = doc.State
+                                  LastModified = doc.LastModified,
+                                  Address = doc.Address,
+                                  Suburb = doc.Suburb,
+                                  State = doc.State
                               };
                 Index(x => x.Address, FieldIndexing.Analyzed);
             }
@@ -61,10 +61,10 @@ namespace SlowTests.MailingList
         [Fact]
         public void ShouldBeAbleToQueryUsingNull()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new DataResult_ByAddress().Execute(store);
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new DataResult
                     {

@@ -1,20 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class JoelAsync : RavenTest
+    public class JoelAsync : RavenTestBase
     {
-        public class Dummy
+        private class Dummy
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -23,11 +15,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void AsyncQuery()
         {
-            using (var server = GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {

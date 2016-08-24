@@ -9,7 +9,7 @@ namespace SlowTests.MailingList
 {
     public class Zeitler : RavenTestBase
     {
-        public class PersistentCacheKey
+        private class PersistentCacheKey
         {
             public string Id { get; set; }
             public byte[] Hash { get; set; }
@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
             using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
-                
+
                 // want a green test? uncomment this	
                 //var documentStore = new DocumentStore() {
                 //	Url = "http://localhost:8082/databases/entitytagstore"

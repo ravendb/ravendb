@@ -11,7 +11,7 @@ namespace SlowTests.MailingList
 {
     public class Vlad : RavenTestBase
     {
-        public class SampleDoc
+        private class SampleDoc
         {
             public long Number;
             public string Name;
@@ -167,7 +167,7 @@ namespace SlowTests.MailingList
 
         #region Nested type: Post
 
-        public class Post_ByTag : AbstractIndexCreationTask<Post>
+        private class Post_ByTag : AbstractIndexCreationTask<Post>
         {
             public Post_ByTag()
             {
@@ -183,7 +183,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class Post
+        private class Post
         {
             public string Title { get; set; }
             public string[] Tags { get; set; }

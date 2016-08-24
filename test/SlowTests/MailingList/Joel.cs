@@ -3,16 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Lucene.Net.Search;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Joel : RavenTest
+    public class Joel : RavenTestBase
     {
         private class Item
         {
@@ -33,7 +33,7 @@ namespace Raven.Tests.MailingList
                       from item in items
                       select new Result
                       {
-                          Query = new object[] {item.Age, item.Name}
+                          Query = new object[] { item.Age, item.Name }
                       };
             }
         }
@@ -41,17 +41,17 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanCreateIndexWithExplicitType()
         {
-            using (var s = NewDocumentStore())
+            using (var s = GetDocumentStore())
             {
                 s.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new Index().Execute(s);
-                var indexDefinition = s.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
+                var indexDefinition = s.DatabaseCommands.GetIndex("Index");
                 Assert.Equal(@"docs.Items.Select(item => new {
     Query = new object[] {
         ((object) item.Age),
         item.Name
     }
-})", indexDefinition.Map);
+})", indexDefinition.Maps.First());
             }
         }
     }

@@ -6,7 +6,7 @@ namespace SlowTests.MailingList
 {
     public class Weave : RavenTestBase
     {
-        public class CalcSystem
+        private class CalcSystem
         {
             public int ClientID { get; set; }
             public int SystemID { get; set; }
@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
                 using (var session = Store.OpenSession())
                 {
                     var allSystems = session.Query<CalcSystem>()
-                        .Customize(x=>x.WaitForNonStaleResultsAsOfNow())
+                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
                         .Where(c => c.Server != "");
                     var distinctSystems = allSystems.Select(m => m.Server).Distinct();
                     Assert.Equal(distinctSystems.ToList().Count, 2);

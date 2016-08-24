@@ -1,25 +1,25 @@
-using System.Linq;
-using Raven.Client;
+using System.Reflection;
+using FastTests;
 using Raven.Client.Document;
-using Raven.Tests.Common;
-
 using Xunit;
+using Raven.Client.Linq;
+using System.Linq;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class JohanNilsson : RavenTest
+    public class JohanNilsson : RavenTestBase
     {
-        internal interface IEntity
+        private interface IEntity
         {
             string Id2 { get; set; }
         }
 
-        internal interface IDomainObject : IEntity
+        private interface IDomainObject : IEntity
         {
             string ImportantProperty { get; }
         }
 
-        class DomainObject : IDomainObject
+        private class DomainObject : IDomainObject
         {
             public string Id2 { get; set; }
             public string ImportantProperty { get; set; }
@@ -29,17 +29,17 @@ namespace Raven.Tests.MailingList
         public void WithCustomizedTagNameAndIdentityProperty()
         {
             var id = string.Empty;
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.AllowQueriesOnId = true;
                 var defaultFindIdentityProperty = store.Conventions.FindIdentityProperty;
                 store.Conventions.FindIdentityProperty = property =>
-                    typeof(IEntity).IsAssignableFrom(property.DeclaringType)
+                    typeof(IEntity).GetTypeInfo().IsAssignableFrom(property.DeclaringType)
                       ? property.Name == "Id2"
                       : defaultFindIdentityProperty(property);
 
                 store.Conventions.FindTypeTagName = type =>
-                                                    typeof (IDomainObject).IsAssignableFrom(type)
+                                                    typeof(IDomainObject).IsAssignableFrom(type)
                                                         ? "domainobjects"
                                                         : DocumentConvention.DefaultTypeTagName(type);
 
@@ -55,8 +55,6 @@ namespace Raven.Tests.MailingList
                 var matchingDomainObjects = store.OpenSession().Query<IDomainObject>().Where(_ => _.Id2 == id).ToList();
                 Assert.Equal(matchingDomainObjects.Count, 1);
             }
-
-
         }
     }
 }

@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
 {
     public class ZNS2 : RavenTestBase
     {
-        public class TestItem
+        private class TestItem
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class EventDate
+        private class EventDate
         {
             public DateTime Date { get; set; }
             public string Time { get; set; }

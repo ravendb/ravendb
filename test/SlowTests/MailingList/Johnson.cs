@@ -1,28 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Johnson : RavenTest
+    public class Johnson : RavenTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public List<Bar> Bars { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public DateTime Date { get; set; }
             public decimal Amount { get; set; }
         }
 
-        public class FoosTotalByBarDate : AbstractIndexCreationTask<Foo, FoosTotalByBarDate.ReduceResult>
+        private class FoosTotalByBarDate : AbstractIndexCreationTask<Foo, FoosTotalByBarDate.ReduceResult>
         {
             public FoosTotalByBarDate()
             {
@@ -54,7 +53,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanGroupOnDate()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new FoosTotalByBarDate().Execute(documentStore);
 
@@ -90,11 +89,11 @@ namespace Raven.Tests.MailingList
                 {
                     var reduceResults = session.Query<FoosTotalByBarDate.ReduceResult, FoosTotalByBarDate>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .OrderBy(x=>x.Date)
+                        .OrderBy(x => x.Date)
                         .ToList();
 
                     Assert.Equal(3, reduceResults.Count);
-                    Assert.Equal(new DateTime(2011, 1, 1),reduceResults[0].Date);
+                    Assert.Equal(new DateTime(2011, 1, 1), reduceResults[0].Date);
                     Assert.Equal(200, reduceResults[0].Total);
                     Assert.Equal(new DateTime(2011, 1, 2), reduceResults[1].Date);
                     Assert.Equal(400, reduceResults[1].Total);

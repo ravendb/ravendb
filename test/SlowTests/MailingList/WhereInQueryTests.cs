@@ -19,23 +19,23 @@ namespace SlowTests.MailingList
             using (IDocumentSession session = documentStore.OpenSession())
             {
                 session.Store(new TestDocument
-                              {
-                                  Id = "Doc1",
-                                  FirstName = "FirstName1",
-                                  LastName = "LastName1"
-                              });
+                {
+                    Id = "Doc1",
+                    FirstName = "FirstName1",
+                    LastName = "LastName1"
+                });
                 session.Store(new TestDocument
-                              {
-                                  Id = "Doc2",
-                                  FirstName = "FirstName2",
-                                  LastName = "LastName2"
-                              });
+                {
+                    Id = "Doc2",
+                    FirstName = "FirstName2",
+                    LastName = "LastName2"
+                });
                 session.Store(new TestDocument
-                              {
-                                  Id = "Doc3",
-                                  FirstName = "FirstName3",
-                                  LastName = "LastName3"
-                              });
+                {
+                    Id = "Doc3",
+                    FirstName = "FirstName3",
+                    LastName = "LastName3"
+                });
                 session.SaveChanges();
             }
 
@@ -84,7 +84,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class TestDocument
+        private class TestDocument
         {
             public string FirstName { get; set; }
 
@@ -93,16 +93,16 @@ namespace SlowTests.MailingList
             public string LastName { get; set; }
         }
 
-        public class TestIndex : AbstractIndexCreationTask<TestDocument>
+        private class TestIndex : AbstractIndexCreationTask<TestDocument>
         {
             public TestIndex()
             {
                 Map = docs => from doc in docs
                               select new
-                                     {
-                                         doc.FirstName,
-                                         doc.LastName
-                                     };
+                              {
+                                  doc.FirstName,
+                                  doc.LastName
+                              };
             }
         }
     }

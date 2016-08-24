@@ -7,13 +7,13 @@ namespace SlowTests.MailingList
 {
     public class Victor : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public string Id { get; set; }
             public Attribute[] Attributes { get; set; }
         }
 
-        public class Attribute
+        private class Attribute
         {
             public Attribute(string name, decimal value)
             {
@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
             public decimal Value { get; set; }
         }
 
-        public class WithDynamicIndex : AbstractIndexCreationTask<Item>
+        private class WithDynamicIndex : AbstractIndexCreationTask<Item>
         {
             public WithDynamicIndex()
             {

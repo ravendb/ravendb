@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
 {
     public class ZNS : RavenTestBase
     {
-        public class TestItem
+        private class TestItem
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class EventDate
+        private class EventDate
         {
             public DateTime Date { get; set; }
             public string Time { get; set; }
@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
             public override string ToString()
             {
                 return Date.ToString("d");
-            } 
+            }
         }
 
         [Fact]
@@ -80,9 +80,9 @@ namespace SlowTests.MailingList
                         var dates = new List<DateTime>();
                         for (var j = 0; j < 5; j++)
                         {
-                            var r = new System.Random(i*j);
+                            var r = new System.Random(i * j);
                             ;
-                            dates.Add(new DateTime(2012, r.Next(1,12), r.Next(1,31)));
+                            dates.Add(new DateTime(2012, r.Next(1, 12), r.Next(1, 31)));
                         }
 
                         session.Store(new TestItem()
@@ -137,7 +137,7 @@ namespace SlowTests.MailingList
 
                 Assert.Equal(result.Count, pagedResult.Count);
                 //Assert "all" results are equal to paged results
-                Assert.Equal(result.Select(x=>x.Id).ToArray(), pagedResult.Select(x=>x.Id).ToArray());
+                Assert.Equal(result.Select(x => x.Id).ToArray(), pagedResult.Select(x => x.Id).ToArray());
             }
         }
     }
