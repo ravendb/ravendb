@@ -605,7 +605,8 @@ namespace Raven.Bundles.Replication.Tasks
                                 }
                             }
 
-                            if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty &&
+                            if (destination.IsETL == false &&
+                                destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty &&
                                 destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.Empty)
                             {
                                 IndexReplication.Execute();

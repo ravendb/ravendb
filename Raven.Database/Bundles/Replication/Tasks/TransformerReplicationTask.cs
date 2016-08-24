@@ -15,26 +15,23 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Impl;
-using Raven.Database;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Replication.Tasks
+namespace Raven.Database.Bundles.Replication.Tasks
 {
     public class TransformerReplicationTask : ReplicationTaskBase
     {
         private readonly static ILog Log = LogManager.GetCurrentClassLogger();
-        
-        private readonly ReplicationTask replication;
+
         private readonly TimeSpan replicationFrequency;
         private Timer timer;
         private readonly object replicationLock = new object();
 
         public TransformerReplicationTask(DocumentDatabase database, HttpRavenRequestFactory httpRavenRequestFactory, ReplicationTask replication)
-            : base(database, httpRavenRequestFactory)
+            : base(database, httpRavenRequestFactory, replication)
         {
-            this.replication = replication;
-
             replicationFrequency = TimeSpan.FromSeconds(database.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
             TimeToWaitBeforeSendingDeletesOfTransformersToSiblings = TimeSpan.FromMinutes(1);
         }
@@ -43,9 +40,9 @@ namespace Raven.Bundles.Replication.Tasks
 
         public void Start()
         {
-            database.Notifications.OnTransformerChange += OnTransformerChange;
+            Database.Notifications.OnTransformerChange += OnTransformerChange;
 
-            timer = database.TimerManager.NewTimer(x => Execute(), TimeSpan.Zero, replicationFrequency);
+            timer = Database.TimerManager.NewTimer(x => Execute(), TimeSpan.Zero, replicationFrequency);
         }
 
         private void OnTransformerChange(DocumentDatabase documentDatabase, TransformerChangeNotification eventArgs)
@@ -54,24 +51,30 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 case TransformerChangeTypes.TransformerAdded:
                     //if created transformer with the same name as deleted one, we should prevent its deletion replication
-                    database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationTransformerTombstones, eventArgs.Name));
+                    Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationTransformerTombstones, eventArgs.Name));
                     break;
                 case TransformerChangeTypes.TransformerRemoved:
+                    //If we don't have any destination to replicate to (we are probably slave node)
+                    //we shouldn't keep a tombstone since we are not going to remove it anytime
+                    //and keeping it prevents us from getting that transformer created again.
+                    if (GetReplicationDestinations().Count == 0)
+                        return;
+
                     var metadata = new RavenJObject
                     {
                         {Constants.RavenTransformerDeleteMarker, true},
-                        {Constants.RavenReplicationSource, database.TransactionalStorage.Id.ToString()},
-                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(database)}
+                        {Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
+                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)}
                     };
 
-                    database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationTransformerTombstones, eventArgs.Name, metadata, UuidType.Transformers));
+                    Database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationTransformerTombstones, eventArgs.Name, metadata, UuidType.Transformers));
                     break;
             }
         }
 
         public bool Execute(Func<ReplicationDestination, bool> shouldSkipDestinationPredicate = null)
         {
-            if (database.Disposed)
+            if (Database.Disposed)
                 return false;
 
             if (Monitor.TryEnter(replicationLock) == false)
@@ -82,7 +85,7 @@ namespace Raven.Bundles.Replication.Tasks
                 using (CultureHelper.EnsureInvariantCulture())
                 {
                     shouldSkipDestinationPredicate = shouldSkipDestinationPredicate ?? (x => x.SkipIndexReplication == false);
-                    var replicationDestinations = replication.GetReplicationDestinations(x => shouldSkipDestinationPredicate(x));
+                    var replicationDestinations = GetReplicationDestinations(x => shouldSkipDestinationPredicate(x));
 
                     foreach (var destination in replicationDestinations)
                     {
@@ -99,18 +102,18 @@ namespace Raven.Bundles.Replication.Tasks
 
                             ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
 
-                            if (database.Transformers.Definitions.Length > 0)
+                            if (Database.Transformers.Definitions.Length > 0)
                             {
-                                foreach (var definition in database.Transformers.Definitions)
+                                foreach (var definition in Database.Transformers.Definitions)
                                     ReplicateSingleTransformer(destination, definition);
                             }
 
-                            database.TransactionalStorage.Batch(actions =>
+                            Database.TransactionalStorage.Batch(actions =>
                             {
                                 foreach (var transformerTombstone in replicatedTransformerTombstones)
                                 {
-                                    var transfomerExists = database.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
-                                    if (transformerTombstone.Value != replicationDestinations.Length &&
+                                    var transfomerExists = Database.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
+                                    if (transformerTombstone.Value != replicationDestinations.Count &&
                                         transfomerExists == false)
                                         continue;
 
@@ -141,12 +144,12 @@ namespace Raven.Bundles.Replication.Tasks
 
         public void Execute(string transformerName)
         {
-            var definition = database.IndexDefinitionStorage.GetTransformerDefinition(transformerName);
+            var definition = Database.IndexDefinitionStorage.GetTransformerDefinition(transformerName);
 
             if (definition == null)
                 return;
 
-            foreach (var destination in replication.GetReplicationDestinations(x => x.SkipIndexReplication == false))
+            foreach (var destination in GetReplicationDestinations(x => x.SkipIndexReplication == false))
             {
                 ReplicateSingleTransformer(destination, definition);
             }
@@ -160,13 +163,13 @@ namespace Raven.Bundles.Replication.Tasks
                 clonedTransformer.TransfomerId = 0;
 
                 var url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInformation();
-                var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethod.Put, destination.ConnectionStringOptions, replication.GetRequestBuffering(destination));
+                var replicationRequest = HttpRavenRequestFactory.Create(url, HttpMethod.Put, destination.ConnectionStringOptions, Replication.GetRequestBuffering(destination));
                 replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
                 replicationRequest.ExecuteRequest();
             }
             catch (Exception e)
             {
-                replication.HandleRequestBufferingErrors(e, destination);
+                Replication.HandleRequestBufferingErrors(e, destination);
 
                 Log.WarnException("Could not replicate transformer " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
             }
@@ -182,7 +185,7 @@ namespace Raven.Bundles.Replication.Tasks
                 try
                 {
                     int value;
-                    if (database.Transformers.GetTransformerDefinition(tombstone.Key) != null) //if in the meantime the transformer was recreated under the same name
+                    if (Database.Transformers.GetTransformerDefinition(tombstone.Key) != null) //if in the meantime the transformer was recreated under the same name
                     {
                         replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
                         replicatedTransformerTombstones[tombstone.Key] = value + 1;
@@ -190,8 +193,8 @@ namespace Raven.Bundles.Replication.Tasks
                     }
 
                     var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInformation());
-                    var replicationRequest = httpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions, replication.GetRequestBuffering(destination));
-                    replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
+                    var replicationRequest = HttpRavenRequestFactory.Create(url, HttpMethods.Delete, destination.ConnectionStringOptions, Replication.GetRequestBuffering(destination));
+                    replicationRequest.Write(RavenJObject.FromObject(EmptyRequestBody));
                     replicationRequest.ExecuteRequest();
                     Log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
                     replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
@@ -199,7 +202,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
                 catch (Exception e)
                 {
-                    replication.HandleRequestBufferingErrors(e, destination);
+                    Replication.HandleRequestBufferingErrors(e, destination);
 
                     Log.ErrorException(string.Format("Failed to replicate transformer deletion (transformer name = {0})", tombstone.Key), e);
                 }
