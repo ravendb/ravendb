@@ -12,7 +12,6 @@ namespace Raven.Client.Document.SessionOperations
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<NewLoadOperation>("Raven.Client");
-        private BlittableJsonReaderObject[] _result;
 
         private string[] _ids;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
@@ -103,11 +102,9 @@ namespace Raven.Client.Document.SessionOperations
 
         public void SetResult(GetDocumentResult result)
         {
-            _result = result.Results;
-
             if (result.Includes != null && result.Includes.Any())
             {
-                foreach (var document in result.Includes)
+                foreach (BlittableJsonReaderObject document in result.Includes)
                 {
                     if (document == null)
                     {
@@ -127,7 +124,7 @@ namespace Raven.Client.Document.SessionOperations
 
             for (var i = 0; i < result.Results.Length; i++)
             {
-                var document = result.Results[i];
+                var document = (BlittableJsonReaderObject)result.Results[i];
                 if (document == null)
                 {
                     _session.RegisterMissing(_idsToCheckOnServer[i]);
