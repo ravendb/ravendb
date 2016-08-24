@@ -109,7 +109,11 @@ namespace Raven.Server
                     .UseKestrel(options => { })
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
-                    .ConfigureServices(services => services.AddSingleton(Router))
+                    .ConfigureServices(services =>
+                    {
+                        services.AddSingleton(Router);
+                        services.AddSingleton(this);
+                    })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
                 if (_logger.IsInfoEnabled)
@@ -278,7 +282,7 @@ namespace Raven.Server
                                 BulkInsertConnection.Run(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-								SubscriptionConnection.SendSubscriptionDocuments(tcp);
+                                SubscriptionConnection.SendSubscriptionDocuments(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
                                 var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;

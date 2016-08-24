@@ -1,18 +1,17 @@
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Jorre : RavenTest
+    public class Jorre : RavenTestBase
     {
         [Fact]
         public void CanQueryOnNegativeDecimal()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Query<Boat>()
                         .Where(x => x.Weight == -1)
@@ -21,7 +20,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Boat
+        private class Boat
         {
             public decimal Weight { get; set; }
         }

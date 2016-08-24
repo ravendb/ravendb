@@ -3,27 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Jonas : RavenTest
+    public class Jonas : RavenTestBase
     {
         [Fact]
         public void CanCreateIndexWithGenerics()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new PlayerScore_Distribution().Execute(store);
             }
         }
 
-        public class PlayerScore_Distribution : AbstractIndexCreationTask<Round, PlayerScore_Distribution.ScoreDistribution>
+        private class PlayerScore_Distribution : AbstractIndexCreationTask<Round, PlayerScore_Distribution.ScoreDistribution>
         {
             public class ScoreDistribution
             {
@@ -66,7 +66,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Round
+        private class Round
         {
             public PlayerRound[] PlayerRounds { get; set; }
             public object CourseId { get; set; }

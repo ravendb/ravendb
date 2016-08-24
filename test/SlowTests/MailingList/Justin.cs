@@ -1,33 +1,30 @@
 using System;
-using Raven.Abstractions.Exceptions;
-using Raven.Client;
-using Raven.Client.Linq;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Justin : RavenTest
+    public class Justin : RavenTestBase
     {
         [Fact]
         public void ActualTest()
         {
             // Arrange.
-            using (var documentStore = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
-                new Users_NameAndPassportSearching().Execute(documentStore);
+                new Users_NameAndPassportSearching().Execute(store);
 
                 var users = CreateFakeUsers();
                 var usersCount = users.Count();
-                using (var documentSession = documentStore.OpenSession())
+                using (var documentSession = store.OpenSession())
                 {
                     foreach (var user in users)
                     {
@@ -46,10 +43,9 @@ namespace Raven.Tests.MailingList
                 // Act.
 
                 // Lets check if there are any errors.
-                var errors = documentStore.DatabaseCommands.GetStatistics().Errors;
-                Assert.Empty(errors);
+                TestHelper.AssertNoIndexErrors(store);
 
-                using (var documentSession = documentStore.OpenSession())
+                using (var documentSession = store.OpenSession())
                 {
                     var allData = documentSession
                         .Query<User>()
@@ -79,8 +75,7 @@ namespace Raven.Tests.MailingList
         public void ActualTest_IgnoreErrors()
         {
             // Arrange.
-            using (var server = GetNewServer())
-            using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
+            using (var documentStore = GetDocumentStore())
             {
                 Console.WriteLine("Document Store initialized - running in memory.");
 
@@ -101,16 +96,7 @@ namespace Raven.Tests.MailingList
                 // Act.
 
                 // Lets check if there are any errors.
-                var errors = documentStore.DatabaseCommands.GetStatistics().Errors;
-                if (errors != null && errors.Length > 0)
-                {
-                    foreach (var error in errors)
-                    {
-                        Console.WriteLine("Index: {0}; Error: {1}", error.Index, error.Error);
-                    }
-
-                    return;
-                }
+                TestHelper.AssertNoIndexErrors(documentStore);
                 Console.WriteLine("No Document Store errors.");
 
                 using (var documentSession = documentStore.OpenSession())
@@ -175,14 +161,14 @@ namespace Raven.Tests.MailingList
                        };
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public int Age { get; set; }
             public string PassportNumber { get; set; }
         }
 
-        internal class Users_NameAndPassportSearching_WithError : AbstractIndexCreationTask<User, Users_NameAndPassportSearching.ReduceResult>
+        private class Users_NameAndPassportSearching_WithError : AbstractIndexCreationTask<User, Users_NameAndPassportSearching.ReduceResult>
         {
             public Users_NameAndPassportSearching_WithError()
             {
@@ -206,7 +192,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        internal class Users_NameAndPassportSearching : AbstractIndexCreationTask<User, Users_NameAndPassportSearching.ReduceResult>
+        private class Users_NameAndPassportSearching : AbstractIndexCreationTask<User, Users_NameAndPassportSearching.ReduceResult>
         {
             public Users_NameAndPassportSearching()
             {
