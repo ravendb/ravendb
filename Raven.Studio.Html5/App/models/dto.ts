@@ -1180,6 +1180,7 @@ interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
     RejectClientsEnabled: boolean;
     ClusterWide: boolean;
+    Stats: reducedDatabaseStatisticsDto;
 }
 
 interface tenantDto {
@@ -1191,6 +1192,7 @@ interface tenantDto {
 }
 
 interface fileSystemDto extends tenantDto {
+    Stats: filesystemStatisticsDto;
 }
 
 interface counterStorageDto extends tenantDto {

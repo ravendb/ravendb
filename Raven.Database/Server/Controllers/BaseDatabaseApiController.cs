@@ -11,12 +11,9 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Common;
-using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -443,27 +440,27 @@ namespace Raven.Database.Server.Controllers
             long documentsCount = 0;
             Resource.TransactionalStorage.Batch(
                 accessor =>
-            {                
+                {
                     lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
                     documentsCount = accessor.Documents.GetDocumentsCount();
                 });
 
             lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
             return lastDocEtag;
-            }
+        }
 
         protected class TenantData
-            {
+        {
             public bool IsLoaded { get; set; }
             public string Name { get; set; }
             public bool Disabled { get; set; }
             public string[] Bundles { get; set; }
             public bool IsAdminCurrentTenant { get; set; }
-            }
+        }
 
         protected HttpResponseMessage Resources<T>(string prefix, Func<RavenJArray, List<T>> getResourcesData, bool getAdditionalData = false)
             where T : TenantData
-            {
+        {
             if (EnsureSystemDatabase() == false)
                 return
                     GetMessageWithString(
@@ -488,7 +485,7 @@ namespace Raven.Database.Server.Controllers
             List<string> approvedResources = null;
             if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
             {
-                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+                var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
                 HttpResponseMessage authMsg;
                 if (authorizer.TryAuthorize(this, out authMsg) == false)
@@ -499,39 +496,39 @@ namespace Raven.Database.Server.Controllers
                     return authMsg;
 
                 if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
-                        {
+                {
                     approvedResources = authorizer.GetApprovedResources(user, this, resourcesNames);
-                            }
+                }
 
                 resourcesData.ForEach(x =>
-                    {
+                {
                     var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
                     if (principalWithDatabaseAccess != null)
-                {
+                    {
                         var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
                         x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Resource);
-                }
-            else
-            {
+                    }
+                    else
+                    {
                         x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
-            }
+                    }
                 });
-        }
+            }
 
             var lastDocEtag = GetLastDocEtag();
             if (MatchEtag(lastDocEtag))
                 return GetEmptyMessage(HttpStatusCode.NotModified);
 
             if (approvedResources != null)
-        {
+            {
                 resourcesData = resourcesData.Where(data => approvedResources.Contains(data.Name)).ToList();
                 resourcesNames = resourcesNames.Where(name => approvedResources.Contains(name)).ToArray();
-        }
+            }
 
             var responseMessage = getAdditionalData ? GetMessageWithObject(resourcesData) : GetMessageWithObject(resourcesNames);
             WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
             return responseMessage.WithNoCache();
-            }
+        }
 
         protected RavenJArray GetResourcesDocuments(string resourcePrefix)
         {

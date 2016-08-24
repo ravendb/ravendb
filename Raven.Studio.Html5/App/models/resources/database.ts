@@ -13,7 +13,9 @@ class database extends resource {
     static type = "database";
     iconName: KnockoutComputed<string>;
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, isLoaded = false, clusterWide = false) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false,
+        bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false,
+        isLoaded = false, clusterWide = false, stats: reducedDatabaseStatisticsDto = null) {
         super(name, TenantType.Database, isAdminCurrentTenant);
         this.fullTypeName = "Database";
         this.disabled(isDisabled);
@@ -22,6 +24,10 @@ class database extends resource {
         this.rejectClientsMode(isRejectClientsMode);
         this.isLoaded(isLoaded);
         this.clusterWide(clusterWide);
+        if (!!stats) {
+            this.saveStatistics(stats);
+        }
+
         this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-fw fa-database" : "fa fa-fw fa-cubes");
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
         this.isLicensed = ko.pureComputed(() => {
