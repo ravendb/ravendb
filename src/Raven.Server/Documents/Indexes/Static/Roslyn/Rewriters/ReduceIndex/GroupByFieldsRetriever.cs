@@ -68,6 +68,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
                 var singleGroupByField = groupByLambda.Body as MemberAccessExpressionSyntax;
                 var multipleGroupByFields = groupByLambda.Body as AnonymousObjectCreationExpressionSyntax;
+                var literalGroupByField = groupByLambda.Body as LiteralExpressionSyntax;
 
                 if (singleGroupByField != null)
                 {
@@ -76,6 +77,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 else if (multipleGroupByFields != null)
                 {
                     GroupByFields = RewritersHelper.ExtractFields(multipleGroupByFields).ToArray();
+                }
+                else if (literalGroupByField != null)
+                {
+                    GroupByFields = new string[0];
                 }
                 else
                 {

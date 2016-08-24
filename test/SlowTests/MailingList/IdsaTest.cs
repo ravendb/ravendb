@@ -7,23 +7,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class IdsaTest : RavenTest
+    public class IdsaTest : RavenTestBase
     {
         [Fact]
-        public void CanGetEmptyCollection()
+        public async Task CanGetEmptyCollection()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new CasinosSuspensionsIndex().Execute(store);
 
@@ -55,7 +54,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class CasinosSuspensionsIndex : AbstractIndexCreationTask<Casino, CasinosSuspensionsIndex.IndexResult>
+        private class CasinosSuspensionsIndex : AbstractIndexCreationTask<Casino, CasinosSuspensionsIndex.IndexResult>
         {
             public class IndexResult
             {
@@ -70,16 +69,16 @@ namespace Raven.Tests.MailingList
             public CasinosSuspensionsIndex()
             {
                 Map = casinos => from casino in casinos
-                    from suspension in casino.Suspensions
-                    select new
-                    {
-                        CityId = casino.CityId,
-                        CasinoId = casino.Id,
-                        CasinoAddress = casino.Address,
-                        Id = suspension.Id,
-                        DateTime = suspension.DateTime,
-                        Exemptions = (object[]) suspension.Exemptions ?? new object[0]
-                    };
+                                 from suspension in casino.Suspensions
+                                 select new
+                                 {
+                                     CityId = casino.CityId,
+                                     CasinoId = casino.Id,
+                                     CasinoAddress = casino.Address,
+                                     Id = suspension.Id,
+                                     DateTime = suspension.DateTime,
+                                     Exemptions = (object[])suspension.Exemptions ?? new object[0]
+                                 };
 
                 Store(x => x.CityId, FieldStorage.Yes);
                 Store(x => x.CasinoId, FieldStorage.Yes);
@@ -90,7 +89,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Casino
+        private class Casino
         {
             public string Id { get; set; }
             public DateTime AdditionDate { get; set; }
@@ -119,13 +118,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public enum CasinoStatus
+        private enum CasinoStatus
         {
             Opened = 1,
             Closed = 2
         }
 
-        public class Suspension
+        private class Suspension
         {
             public string Id { get; set; }
             public DateTime DateTime { get; set; }
@@ -138,7 +137,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Exemption
+        private class Exemption
         {
             public ExemptionItemType ItemType { get; set; }
             public long Quantity { get; set; }
@@ -150,7 +149,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public enum ExemptionItemType
+        private enum ExemptionItemType
         {
             Unknown = 1,
             Pc = 2,
@@ -159,7 +158,7 @@ namespace Raven.Tests.MailingList
             Terminal = 5
         }
 
-        public class Comment
+        private class Comment
         {
             public string Id { get; set; }
             public DateTime DateTime { get; set; }

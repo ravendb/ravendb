@@ -1,15 +1,16 @@
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class IndexMetadata : RavenTest
+    public class IndexMetadata : RavenTestBase
     {
-        public class Users_DeleteStatus : AbstractMultiMapIndexCreationTask
+        private class Users_DeleteStatus : AbstractMultiMapIndexCreationTask
         {
             public Users_DeleteStatus()
             {
@@ -24,15 +25,15 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WillGenerateProperIndex()
         {
-            var usersDeleteStatus = new Users_DeleteStatus {Conventions = new DocumentConvention()};
+            var usersDeleteStatus = new Users_DeleteStatus { Conventions = new DocumentConvention() };
             var indexDefinition = usersDeleteStatus.CreateIndexDefinition();
-            Assert.Contains("Deleted = user[\"@metadata\"][\"Deleted\"]", indexDefinition.Map);
+            Assert.Contains("Deleted = user[\"@metadata\"][\"Deleted\"]", indexDefinition.Maps.First());
         }
 
         [Fact]
-        public void CanCreateIndex()
+        public async Task CanCreateIndex()
         {
-            using(var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new Users_DeleteStatus().Execute(store);
             }

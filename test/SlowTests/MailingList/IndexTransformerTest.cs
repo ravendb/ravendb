@@ -3,20 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class IndexTransformerTest : RavenTestBase
     {
         [Fact]
-        public void CanIndexAndQuery()
+        public async Task CanIndexAndQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new SimpleTransformer().Execute(store);
                 new SimpleIndex().Execute(store);
@@ -39,14 +41,12 @@ namespace Raven.Tests.MailingList
             }
         }
 
-
-
-        public class TestEntity
+        private class TestEntity
         {
             public string Name { get; set; }
         }
 
-        public class SimpleIndex : AbstractIndexCreationTask<TestEntity>
+        private class SimpleIndex : AbstractIndexCreationTask<TestEntity>
         {
             public SimpleIndex()
             {
@@ -62,12 +62,12 @@ namespace Raven.Tests.MailingList
 
         }
 
-        public class Mapping
+        private class Mapping
         {
             public bool Test { get; set; }
         }
 
-        public class SimpleTransformer
+        private class SimpleTransformer
             : AbstractTransformerCreationTask<Mapping>
         {
             public SimpleTransformer()

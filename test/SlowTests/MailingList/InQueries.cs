@@ -1,23 +1,22 @@
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class InQueries : RavenTest
+    public class InQueries : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Country { get; set; }
-        }	
-
+        }
 
         [Fact]
-        public void WhenQueryContainsQuestionMark()
+        public async Task WhenQueryContainsQuestionMark()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -37,9 +36,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void WhenQueryContainsOneElement()
+        public async Task WhenQueryContainsOneElement()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -60,9 +59,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void WhenElementcontainsCommas()
+        public async Task WhenElementcontainsCommas()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -83,9 +82,9 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void WhenElementcontainsCommasInMiddleOfList()
+        public async Task WhenElementcontainsCommasInMiddleOfList()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -98,7 +97,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var collection = session.Query<User>().Where(x => x.Country.In(new[]{"Korea","Asia,Japan","China"})).ToList();
+                    var collection = session.Query<User>().Where(x => x.Country.In(new[] { "Korea", "Asia,Japan", "China" })).ToList();
 
                     Assert.NotEmpty(collection);
                 }

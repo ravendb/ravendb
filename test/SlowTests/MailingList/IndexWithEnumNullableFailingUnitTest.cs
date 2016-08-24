@@ -1,17 +1,14 @@
 using System.Linq;
-
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-
     public class IndexWithEnumNullableFailingUnitTest : RavenTestBase
     {
-        public class CultureDataIndex : AbstractIndexCreationTask<CultureData>
+        private class CultureDataIndex : AbstractIndexCreationTask<CultureData>
         {
             public CultureDataIndex()
             {
@@ -23,7 +20,7 @@ namespace Raven.Tests.MailingList
                 }));
             }
         }
-        public enum LanguageCultureName
+        private enum LanguageCultureName
         {
             [System.ComponentModel.Description("Afrikaans - South Africa")]
             AfrikaansSouthAfrica,
@@ -434,7 +431,7 @@ namespace Raven.Tests.MailingList
             VietnameseVietnam,
         }
 
-        public class CultureData
+        private class CultureData
         {
             public CultureData()
             {
@@ -455,13 +452,12 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void SortByNotWorkingTest()
+        public async Task SortByNotWorkingTest()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new CultureDataIndex().Execute(store);
             }
         }
-
     }
 }

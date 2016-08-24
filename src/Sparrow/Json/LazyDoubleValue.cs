@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json
 {
-    public class LazyDoubleValue
+    public class LazyDoubleValue : IComparable
     {
         public readonly LazyStringValue Inner;
         private double? _val;
@@ -70,6 +71,29 @@ namespace Sparrow.Json
         public override int GetHashCode()
         {
             return _val?.GetHashCode() ?? _decimalVal?.GetHashCode() ?? Inner.GetHashCode();
+        }
+
+        public int CompareTo(object that)
+        {
+            if (that is double)
+                return Compare(this, (double)that);
+
+            if (that is LazyDoubleValue)
+                return Compare(this, (LazyDoubleValue)that);
+
+            throw new NotSupportedException($"Could not compare with '{that}' of type '{that.GetType()}'.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int Compare(double @this, double that)
+        {
+            if (@this > that)
+                return 1;
+
+            if (@this < that)
+                return -1;
+
+            return 0;
         }
     }
 }

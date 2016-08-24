@@ -3,26 +3,29 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class IndexCompilation : RavenTest
+    public class IndexCompilation : RavenTestBase
     {
-        [Fact]
-        public void CanCompileIndex()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public async Task CanCompileIndex()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 new AccommodationFlightGeoNodePriceCalendarIndex().Execute(store);
             }
         }
-        public class AccommodationFlightGeoNodePriceCalendarIndex : AbstractIndexCreationTask<AccommodationFlightPriceCalendarGeoNode>
+
+        private class AccommodationFlightGeoNodePriceCalendarIndex : AbstractIndexCreationTask<AccommodationFlightPriceCalendarGeoNode>
         {
 
             public AccommodationFlightGeoNodePriceCalendarIndex()
@@ -50,22 +53,20 @@ namespace Raven.Tests.MailingList
 
         }
 
-
-
-        public class AccommodationFlightPriceCalendarAccommodationPrice
+        private class AccommodationFlightPriceCalendarAccommodationPrice
         {
             public DateTime? AccommodationArrivalDate { get; private set; }
             public decimal? AccommodationPriceFrom { get; private set; }
         }
 
-        public class AccommodationFlightPriceCalendarFlightPrice
+        private class AccommodationFlightPriceCalendarFlightPrice
         {
             public int? OutboundDepartureLocationId { get; private set; }
             public decimal? FlightPriceFrom { get; private set; }
             public DateTime PriceExpiresAt { get; private set; }
         }
 
-        public class AccommodationFlightPriceCalendarGeoNode
+        private class AccommodationFlightPriceCalendarGeoNode
         {
             public string Id { get; private set; }
             public int GeoNodeId { get; private set; }
@@ -75,21 +76,21 @@ namespace Raven.Tests.MailingList
             public string PersonConfiguration { get; private set; }
         }
 
-        public class PeriodDefinition
+        private class PeriodDefinition
         {
             public int StartDaysMask { get; private set; }
             public int StayLength { get; private set; }
             public string Description { get; set; }
         }
 
-        public class PricedDated
+        private class PricedDated
         {
             public DateTime Date { get; private set; }
             public AccommodationFlightPriceCalendarAccommodationPrice Accommodation { get; set; }
             public HashSet<AccommodationFlightPriceCalendarFlightPrice> Flights { get; set; }
         }
 
-        public class PricedPeriodDefinition
+        private class PricedPeriodDefinition
         {
             public PeriodDefinition Period { get; private set; }
             public List<PricedDated> Dates { get; private set; }
