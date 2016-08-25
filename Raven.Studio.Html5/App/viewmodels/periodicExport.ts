@@ -6,6 +6,10 @@ import document = require("models/document");
 import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
+import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
+import getPeriodicExportSettingsForNonAdmin = require("commands/getPeriodicExportSettingsForNonAdmin");
+
+type canEditSettingsDetails = { canEdit: boolean, canViaOverride: boolean };
 
 class periodicExport extends viewModelBase {
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
@@ -13,6 +17,7 @@ class periodicExport extends viewModelBase {
     backupStatusDirtyFlag = new ko.DirtyFlag([]);
     backupConfigDirtyFlag = new ko.DirtyFlag([]);
     isForbidden = ko.observable<boolean>(false);
+    useAlternativeEditMethod = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -45,15 +50,24 @@ class periodicExport extends viewModelBase {
         this.backupSetup(new periodicExportSetup);
         var deferred = $.Deferred();
 
-        var db = this.activeDatabase();
-        this.isForbidden(!db.isAdminCurrentTenant());
-        if (db.isAdminCurrentTenant()) {
-            $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
-        } else {
-            deferred.resolve({ can: true });
-        }
+        this.canEditSettings()
+            .done((editSettings: canEditSettingsDetails) => {
+                this.isForbidden(!editSettings.canEdit);
+
+                this.useAlternativeEditMethod(editSettings.canViaOverride);
+
+                if (editSettings.canEdit) {
+                    var db = this.activeDatabase();
+
+                    $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db, editSettings.canViaOverride))
+                        .done(() => {
+                            deferred.resolve({ can: true });
+                        })
+                        .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+                } else {
+                    deferred.resolve({ can: true });
+                }
+            });
 
         return deferred;
     }
@@ -77,6 +91,29 @@ class periodicExport extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
     }
 
+    private canEditSettings(): JQueryPromise<canEditSettingsDetails> {
+        var db = this.activeDatabase();
+        if (db.isAdminCurrentTenant()) {
+            return $.Deferred<canEditSettingsDetails>().resolve({ canEdit: true, canViaOverride: false });
+        } else {
+            // non-admin user - give him another chance by checking configuration option
+            var configTask = $.Deferred<canEditSettingsDetails>();
+
+            new getStatusDebugConfigCommand(db).execute()
+                .done(config => {
+                    if (config && config.Studio && config.Studio.AllowNonAdminUsersToSetupPeriodicExport) {
+                        configTask.resolve({ canEdit: true, canViaOverride: true });
+                    } else {
+                        configTask.resolve({ canEdit: false, canViaOverride: false });
+                    }
+                })
+                .fail(() => configTask.reject());
+
+            return configTask;
+        }
+    }
+
+
     fetchPeriodicExportSetup(db): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getPeriodicExportSetupCommand(db)
@@ -86,13 +123,26 @@ class periodicExport extends viewModelBase {
         return deferred;
     }
 
-    fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        new getDatabaseSettingsCommand(db)
-            .execute()
-            .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); })
-            .always(() => deferred.resolve());
-        return deferred;
+    fetchPeriodicExportAccountsSettings(db: database, useAlternativeFetchMethod: boolean): JQueryPromise<any> {
+        if (useAlternativeFetchMethod) {
+            return new getPeriodicExportSettingsForNonAdmin(db)
+                .execute()
+                .done((settings: { [key: string] : string} ) => {
+                    this.backupSetup().awsAccessKey(settings["Raven/AWSAccessKey"]);
+                    this.backupSetup().awsSecretKey(settings["Raven/AWSSecretKey"]);
+                    this.backupSetup().azureStorageAccount(settings["Raven/AzureStorageAccount"]);
+                    this.backupSetup().azureStorageKey(settings["Raven/AzureStorageKey"]);
+                    
+                    this.backupSetup().checkDecryptionFailure();
+                });
+        } else {
+            var deferred = $.Deferred();
+            new getDatabaseSettingsCommand(db)
+                .execute()
+                .done((document: document) => { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); })
+                .always(() => deferred.resolve());
+            return deferred;
+        }
     }
 
     activatePeriodicExport() {
@@ -103,10 +153,12 @@ class periodicExport extends viewModelBase {
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-            var saveTask = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
+            var saveTask = new savePeriodicExportSetupCommand(this.backupSetup(), db, this.useAlternativeEditMethod()).execute();
             saveTask.done((resultArray) => {
-                var newEtag = resultArray[0].ETag;
-                this.backupSetup().setEtag(newEtag);
+                if (!this.useAlternativeEditMethod()) {
+                    var newEtag = resultArray[0].ETag;
+                    this.backupSetup().setEtag(newEtag);
+                }
                 this.backupSetup().resetDecryptionFailures();
                 this.backupStatusDirtyFlag().reset(); //Resync Changes
                 this.backupConfigDirtyFlag().reset(); //Resync Changes

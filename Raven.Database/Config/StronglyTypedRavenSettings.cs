@@ -34,6 +34,8 @@ namespace Raven.Database.Config
 
         public WebSocketsConfiguration WebSockets { get; set; }
 
+        public StudioConfiguration Studio { get; private set; }
+
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
             Replication = new ReplicationConfiguration();
@@ -44,6 +46,7 @@ namespace Raven.Database.Config
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
+            Studio = new StudioConfiguration();
 
             this.settings = settings;
         }
@@ -276,6 +279,8 @@ namespace Raven.Database.Config
             Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
             Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
             Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
+
+            Studio.AllowNonAdminUsersToSetupPeriodicExport = new BooleanSetting(settings[Constants.AllowNonAdminUsersToSetupPeriodicExport], false);
 
             Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
             Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
@@ -564,6 +569,11 @@ namespace Raven.Database.Config
             public StringSetting DefaultStorageTypeName { get; set; }
 
             public BooleanSetting PreventSchemaUpdate { get; set; }
+        }
+
+        public class StudioConfiguration
+        {
+            public BooleanSetting AllowNonAdminUsersToSetupPeriodicExport { get; set; }
         }
 
         public class EncryptionConfiguration

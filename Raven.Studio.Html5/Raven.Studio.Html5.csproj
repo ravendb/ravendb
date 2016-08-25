@@ -84,6 +84,7 @@
     <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getPeriodicExportSettingsForNonAdmin.ts" />
     <TypeScriptCompile Include="App\commands\validateExportDatabaseOptionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationStatsCommand.ts" />

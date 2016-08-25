@@ -71,6 +71,9 @@ namespace Raven.Abstractions.Data
         public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
         public const string RavenServerBuild = "Raven-Server-Build";
 
+        // Studio
+        public const string AllowNonAdminUsersToSetupPeriodicExport = "Raven/AllowNonAdminUsersToSetupPeriodicExport";
+
         // Indexing
         public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
         public const int DefaultPrefetchingDurationLimit = 5000;

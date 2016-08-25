@@ -53,6 +53,8 @@ namespace Raven.Database.Config
 
         public WebSocketsConfiguration WebSockets { get; set; }
 
+        public StudioConfiguration Studio { get; private set; }
+
         public InMemoryRavenConfiguration()
         {
             Replication = new ReplicationConfiguration();
@@ -62,6 +64,7 @@ namespace Raven.Database.Config
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
+            Studio = new StudioConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -102,6 +105,7 @@ namespace Raven.Database.Config
 
             WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
             FileSystem.InitializeFrom(this);
+            Studio.InitializeFrom(this);
 
             MaxPrecomputedBatchSizeForNewIndex = ravenSettings.MaxPrecomputedBatchSizeForNewIndex.Value;
 
@@ -327,6 +331,8 @@ namespace Raven.Database.Config
 
             if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
                 FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+
+            Studio.AllowNonAdminUsersToSetupPeriodicExport = ravenSettings.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value;
 
             Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
@@ -1563,6 +1569,16 @@ namespace Raven.Database.Config
         public class WebSocketsConfiguration
         {
             public int InitialBufferPoolSize { get; set; }
+        }
+
+        public class StudioConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                AllowNonAdminUsersToSetupPeriodicExport = configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport;
+            }
+
+            public bool AllowNonAdminUsersToSetupPeriodicExport { get; set; }
         }
 
         public void UpdateDataDirForLegacySystemDb()
