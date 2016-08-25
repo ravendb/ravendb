@@ -49,17 +49,37 @@
                             <ul class="dropdown-menu" role="menu">
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, '')">Let client decide</a></li>
                                 <li class="divider"></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')">Allow reads from secondaries when request time SLA threshold is reached</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a></li>
+                                <li data-bind="visible: !$root.isInCluster()">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a>
+                                </li>
+                                <li data-bind="visible: !$root.isInCluster()">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')">Allow reads from secondaries when request time SLA threshold is reached</a>
+                                </li>
+                                <li data-bind="visible: !$root.isInCluster()">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a>
+                                </li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'FailImmediately')">Fail immediately</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached,ReadFromAllServers')">Read from all servers but switch when request time SLA threshold is reached</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeader')">Read from leader write to leader</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeaderWithFailovers')">Read from leader write to leader with failovers</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeader')">Read from all write to leader</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeaderWithFailovers')">Read from all write to leader with failovers</a></li>
+                                <li data-bind="visible: !$root.isInCluster()">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a>
+                                </li>
+                                <li data-bind="visible: !$root.isInCluster()">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached,ReadFromAllServers')">Read from all servers but switch when request time SLA threshold is reached</a>
+                                </li>
+                                <li data-bind="visible: !$root.isInCluster()">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a>
+                                </li>
+                                <li data-bind="visible: $root.isInCluster">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeader'), visible: $root.isInCluster">Read from leader write to leader</a>
+                                </li>
+                                <li data-bind="visible: $root.isInCluster">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromLeaderWriteToLeaderWithFailovers'), visible: $root.isInCluster">Read from leader write to leader with failovers</a>
+                                </li>
+                                <li data-bind="visible: $root.isInCluster">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeader'), visible: $root.isInCluster">Read from all write to leader</a>
+                                </li>
+                                <li data-bind="visible: $root.isInCluster">
+                                    <a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllWriteToLeaderWithFailovers'), visible: $root.isInCluster">Read from all write to leader with failovers</a>
+                                </li>
                             </ul>
                         </div>
                     </div>

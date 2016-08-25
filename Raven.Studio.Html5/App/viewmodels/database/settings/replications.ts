@@ -19,6 +19,7 @@ import enableReplicationCommand = require("commands/database/replication/enableR
 import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
+import shell = require("viewmodels/shell");
 
 class replications extends viewModelBase {
 
@@ -43,6 +44,7 @@ class replications extends viewModelBase {
     skipIndexReplicationForAll = ko.observable<boolean>();
 
     showRequestTimeoutRow: KnockoutComputed<boolean>;
+    isInCluster = shell.clusterMode;
 
     private skipIndexReplicationForAllSubscription: KnockoutSubscription;
 
@@ -51,7 +53,7 @@ class replications extends viewModelBase {
             this.skipIndexReplicationForAllSubscription.dispose();
 
         var newStatus = this.getIndexReplicationStatusForAllDestinations();
-        this.skipIndexReplicationForAll(newStatus === 'all');
+        this.skipIndexReplicationForAll(newStatus === "all");
 
         this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
     }
