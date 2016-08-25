@@ -880,29 +880,6 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, int start, int count)
-        {
-            writer.WriteStartArray();
-
-            var first = true;
-            foreach (var document in documents.Skip(start).Take(count))
-            {
-                if (document == null)
-                    continue;
-
-                using (document.Data)
-                {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    writer.WriteDocument(context, document, metadataOnly);
-                }
-            }
-
-            writer.WriteEndArray();
-        }
-
         public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
         {
             document.EnsureMetadata();
