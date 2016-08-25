@@ -208,7 +208,7 @@ namespace FastTests.Client.Subscriptions
 
                         Assert.False(completed == taskStarted);
 
-                        Assert.True(await ackSentAmre.WaitAsync(50000));
+                        Assert.True(await ackSentAmre.WaitAsync(TimeSpan.FromSeconds(50)));
 
                         acceptedSubscription.Dispose();
 
@@ -270,7 +270,7 @@ namespace FastTests.Client.Subscriptions
                         Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000), "no doc");
                     }
 
-                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(5000), "no ack");
+                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(5)), "no ack");
 
                     Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 
