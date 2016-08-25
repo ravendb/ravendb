@@ -51,12 +51,12 @@ namespace Sparrow
             SetInAsyncManner(_tcs);
         }
 
-        public void Reset()
+        public void Reset(bool force = false)
         {
             while (true)
             {
                 var tcs = _tcs;
-                if (!tcs.Task.IsCompleted ||
+                if ((tcs.Task.IsCompleted == false && force == false) ||
 #pragma warning disable 420
                     Interlocked.CompareExchange(ref _tcs, new TaskCompletionSource<bool>(), tcs) == tcs)
 #pragma warning restore 420
@@ -70,8 +70,7 @@ namespace Sparrow
 
             var previousTcs = _tcs;
 
-            Reset();
-
+            Reset(force: true);
             SetInAsyncManner(previousTcs);
         }
 
