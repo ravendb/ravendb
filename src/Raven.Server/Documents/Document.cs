@@ -11,6 +11,8 @@ namespace Raven.Server.Documents
 {
     public class Document
     {
+        public static readonly Document ExplicitNull = new Document();
+
         public const string NoCollectionSpecified = "Raven/Empty";
         public const string SystemDocumentsCollection = "Raven/SystemDocs";
 
@@ -101,7 +103,7 @@ namespace Raven.Server.Documents
             return GetCollectionName(document, out isSystemDocument);
         }
 
-	    public static string GetCollectionName(BlittableJsonReaderObject document, out bool isSystemDocument)
+        public static string GetCollectionName(BlittableJsonReaderObject document, out bool isSystemDocument)
         {
             isSystemDocument = false;
             string collectionName;

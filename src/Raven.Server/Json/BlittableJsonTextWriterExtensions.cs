@@ -861,12 +861,18 @@ namespace Raven.Server.Json
                 if (document == null)
                     continue;
 
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                if (document == Document.ExplicitNull)
+                {
+                    writer.WriteNull();
+                    continue;
+                }
+
                 using (document.Data)
                 {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
                     writer.WriteDocument(context, document, metadataOnly);
                 }
             }

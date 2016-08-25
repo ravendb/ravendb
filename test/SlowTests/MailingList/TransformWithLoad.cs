@@ -1,16 +1,12 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class TransformWithLoad : RavenTestBase
     {
@@ -18,7 +14,7 @@ namespace Raven.Tests.MailingList
 
         public TransformWithLoad()
         {
-            store = NewDocumentStore();
+            store = GetDocumentStore();
             new ContactTransformer().Execute(store);
             new Contact_ByName().Execute(store);
 
@@ -157,7 +153,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Contact
+        private class Contact
         {
             public Contact()
             {
@@ -169,7 +165,7 @@ namespace Raven.Tests.MailingList
             public List<string> DetailIds { get; set; }
         }
 
-        public class ContactDto
+        private class ContactDto
         {
             public string ContactId { get; set; }
             public string ContactName { get; set; }
@@ -177,7 +173,7 @@ namespace Raven.Tests.MailingList
             public string MetaVal { get; set; }
         }
 
-        public class ContactTransformer : AbstractTransformerCreationTask<Contact>
+        private class ContactTransformer : AbstractTransformerCreationTask<Contact>
         {
             public ContactTransformer()
             {
@@ -192,7 +188,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Contact_ByName : AbstractIndexCreationTask<Contact>
+        private class Contact_ByName : AbstractIndexCreationTask<Contact>
         {
             public Contact_ByName()
             {
@@ -202,7 +198,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Detail
+        private class Detail
         {
             public string Id { get; set; }
             public string Name { get; set; }

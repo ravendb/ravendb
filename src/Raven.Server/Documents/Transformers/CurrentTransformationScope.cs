@@ -71,6 +71,8 @@ namespace Raven.Server.Documents.Transformers
             if (document == null)
                 return DynamicNullObject.Null;
 
+            document.EnsureMetadata();
+
             // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
             return new DynamicBlittableJson(document);
         }
