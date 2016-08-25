@@ -56,7 +56,7 @@ namespace FastTests.Voron.Journal
             }
 
             Assert.Null(Env.Journal.CurrentFile);
-            Assert.Equal(1, Env.Journal.Files.Count);
+            Assert.Equal(5, Env.Journal.Files.Count);
         }
     }
 }

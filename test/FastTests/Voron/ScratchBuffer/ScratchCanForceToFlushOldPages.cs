@@ -72,7 +72,7 @@ namespace FastTests.Voron.ScratchBuffer
 
                     var allocated2 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
 
-                    Assert.True(allocated2 < allocated1);
+                    Assert.Equal(allocated2 , allocated1);
 
                     var read = txr2.CreateTree("foo").Read("bars/1");
 

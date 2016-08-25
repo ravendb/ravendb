@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Journal
@@ -51,8 +52,7 @@ namespace Voron.Impl.Journal
         {
             if (_firstPositionInJournalFile != null)
             {
-                journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),
-                    _lastUsedPage);
+                journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),_lastUsedPage);
             }
 
             if (tx != null)

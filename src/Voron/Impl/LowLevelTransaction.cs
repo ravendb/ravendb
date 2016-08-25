@@ -57,7 +57,17 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
 
         public TransactionFlags Flags { get; }
-        public bool IsLazyTransaction { get; set; }
+
+        public bool IsLazyTransaction
+        {
+            get { return _isLazyTransaction; }
+            set
+            {
+                _isLazyTransaction = value;
+                if (_isLazyTransaction)
+                    _env.Journal.HasLazyTransactions = true;
+            }
+        }
 
 
         internal bool CreatedByJournalApplicator;
@@ -614,6 +624,7 @@ namespace Voron.Impl
         }
 
         private PagerState _lastState;
+        private bool _isLazyTransaction;
 
         internal void EnsurePagerStateReference(PagerState state)
         {

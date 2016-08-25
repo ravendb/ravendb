@@ -126,9 +126,9 @@ namespace Voron.Impl.Journal
         }
 
         /// <summary>
-        /// write transaction's raw page data into journal. returns write page position
+        /// write transaction's raw page data into journal
         /// </summary>
-        public long Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
+        public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var unused = new HashSet<PagePosition>();
@@ -169,8 +169,6 @@ namespace Voron.Impl.Journal
                     lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
                 }
             }
-
-            return pageWritePos;
         }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
