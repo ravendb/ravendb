@@ -1,18 +1,14 @@
 using System;
-using Raven.Client;
-using Raven.Client.Linq;
 using System.Linq;
-using Raven.Client.Document;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class LastModifiedMetadataTest : RavenTest
+    public class LastModifiedMetadataTest : RavenTestBase
     {
-
         private class AmazingIndex2 : AbstractIndexCreationTask<User>
         {
             public AmazingIndex2()
@@ -37,11 +33,11 @@ namespace Raven.Tests.MailingList
             public AmazingTransformer2()
             {
                 TransformResults = results => from doc in results
-                                                          select new
-                                                          {
-                                                              InternalId = MetadataFor(doc)["@id"],
-                                                              LastModified = MetadataFor(doc)["Last-Modified"],
-                                                          };
+                                              select new
+                                              {
+                                                  InternalId = MetadataFor(doc)["@id"],
+                                                  LastModified = MetadataFor(doc)["Last-Modified"],
+                                              };
             }
         }
 
@@ -51,31 +47,24 @@ namespace Raven.Tests.MailingList
             public string Name { get; set; }
         }
 
-
         [Fact]
         public void Can_index_and_query_metadata2()
         {
-            using(GetNewServer())
-            using(var DocStore = new DocumentStore
+            using (var store = GetDocumentStore())
             {
-                Conventions =
-                    {
-                        FindIdentityProperty = info => info.Name == "InternalId"
-                    },
-                Url = "http://localhost:8079"
-            }.Initialize())
-            {
+                store.Conventions.FindIdentityProperty = info => info.Name == "InternalId";
+
                 var user1 = new User { Name = "Joe Schmoe" };
                 var user2 = new User { Name = "Jack Spratt" };
-                new AmazingIndex2().Execute(DocStore);
-                new AmazingTransformer2().Execute(DocStore);
-                using (var session = DocStore.OpenSession())
+                new AmazingIndex2().Execute(store);
+                new AmazingTransformer2().Execute(store);
+                using (var session = store.OpenSession())
                 {
                     session.Store(user1);
                     session.Store(user2);
                     session.SaveChanges();
                 }
-                using (var session = DocStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var user3 = session.Load<User>(user1.InternalId);
                     Assert.NotNull(user3);
@@ -84,7 +73,7 @@ namespace Raven.Tests.MailingList
 
                     var modifiedDocuments = (from u in session.Query<User, AmazingIndex2>()
                                                 .TransformWith<AmazingTransformer2, AmazingTransformer2.ModifiedDocuments>()
-                                                 .Customize(x=>x.WaitForNonStaleResults())
+                                                 .Customize(x => x.WaitForNonStaleResults())
                                              orderby u.InternalId
                                              select u).ToList();
 
@@ -95,6 +84,6 @@ namespace Raven.Tests.MailingList
 
                 }
             }
-        } 
+        }
     }
 }

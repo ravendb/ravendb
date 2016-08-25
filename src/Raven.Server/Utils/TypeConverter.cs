@@ -191,7 +191,16 @@ namespace Raven.Server.Utils
 
             if (targetType == typeof(DateTime))
             {
-                var s = value as string ?? value as LazyStringValue;
+                if (value is DateTimeOffset)
+                    return (T)(object)((DateTimeOffset)value).DateTime;
+
+                var s = value as string;
+                if (s == null)
+                {
+                    var lzv = value as LazyStringValue;
+                    if (lzv != null)
+                        s = lzv;
+                }
 
                 if (s != null)
                 {

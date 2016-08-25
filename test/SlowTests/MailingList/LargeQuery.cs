@@ -1,22 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class LargeQuery : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void CanExecuteLargeQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -40,13 +38,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
         }
 
 
-        public class OrderIndex : AbstractMultiMapIndexCreationTask<OrderIndex.IndexResult>
+        private class OrderIndex : AbstractMultiMapIndexCreationTask<OrderIndex.IndexResult>
         {
             public class IndexResult
             {
@@ -58,18 +56,18 @@ namespace Raven.Tests.MailingList
             {
                 AddMap<Order>(orders => from o in orders
 
-                                           select new
-                                           {
-                                               Id = o.Id,
-                                           });
+                                        select new
+                                        {
+                                            Id = o.Id,
+                                        });
 
                 Reduce = results => from result in results
                                     group result by new { result.Id }
                                         into gr
-                                        select new OrderIndex.IndexResult
-                                        {
-                                            Id = gr.Select(x => x.Id).FirstOrDefault(x => x != null),
-                                        };
+                                    select new OrderIndex.IndexResult
+                                    {
+                                        Id = gr.Select(x => x.Id).FirstOrDefault(x => x != null),
+                                    };
 
                 StoreAllFields(FieldStorage.Yes);
             }

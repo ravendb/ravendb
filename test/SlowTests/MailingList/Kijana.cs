@@ -3,23 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Kijana : RavenTest
+    public class Kijana : RavenTestBase
     {
-        public class Scratch
+        private class Scratch
         {
             public string Id { get; set; }
             public long Value { get; set; }
         }
 
-        class ScratchIndex : AbstractIndexCreationTask<Scratch>
+        private class ScratchIndex : AbstractIndexCreationTask<Scratch>
         {
             public ScratchIndex()
             {
@@ -30,14 +31,14 @@ namespace Raven.Tests.MailingList
                         doc.Value
                     };
 
-                Sort(x => x.Value, SortOptions.Long);
+                Sort(x => x.Value, SortOptions.NumericDefault);
             }
         }
 
         [Fact]
         public void CanSetSortValue()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ScratchIndex().Execute(store);
             }

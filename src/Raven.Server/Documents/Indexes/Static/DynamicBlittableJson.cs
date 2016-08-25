@@ -65,6 +65,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var getResult = BlittableJson.TryGetMember(name, out result);
 
+            if (getResult == false && (name == Constants.MetadataDocId || name == Constants.MetadataEtagId))
+            {
+                result = BlittableJson.Modifications[name];
+                getResult = result != null;
+            }
+
             if (result == null && name == "HasValue")
             {
                 result = getResult;
