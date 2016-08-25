@@ -3,16 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Client;
-using Raven.Tests.Common;
 
+using FastTests;
 using Xunit;
-using Raven.Client.Linq;
+using Raven.Client;
 using System.Linq;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Vicente : RavenTest
+    public class Vicente : RavenTestBase
     {
         public const string query =
             @"CTOTurning a dream into a web :)
@@ -33,7 +32,7 @@ https://www.talentous.comSenior consultantWorking as software architect and seni
         [Fact]
         public void CanQuery()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 using(var session = store.OpenSession())
                 {

@@ -1,20 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Troy2 : RavenTest
+    public class Troy2 : RavenTestBase
     {
         [Fact]
         public void UsingDefaultFieldWithSelectFieldsFails()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TesterSearch().Execute(store);
                 using (var session = store.OpenSession())
@@ -76,7 +75,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class TesterSearch : AbstractIndexCreationTask<Tester, TesterSearch.SearchResult>
+        private class TesterSearch : AbstractIndexCreationTask<Tester, TesterSearch.SearchResult>
         {
 
             public override string IndexName
@@ -122,12 +121,12 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class PasswordOnly
+        private class PasswordOnly
         {
             public string Password { get; set; }
         }
 
-        public class Tester
+        private class Tester
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
