@@ -31,15 +31,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 .Where(x => x.Key != Constants.AllFields)
                 .Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
 
-            if (definition.Fields.Count < outputFields.Length)
+            foreach (var outputField in outputFields)
             {
-                foreach (var outputField in outputFields)
-                {
-                    if (definition.Fields.ContainsKey(outputField))
-                        continue;
+                if (definition.Fields.ContainsKey(outputField))
+                    continue;
 
-                    result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields));
-                }
+                result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields));
             }
 
             return result.ToArray();

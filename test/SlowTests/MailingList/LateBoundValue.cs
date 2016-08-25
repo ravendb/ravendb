@@ -1,21 +1,19 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class LateBoundValue : RavenTestBase
     {
-        public class SampleData : AggregateBaseEx<string>
+        private class SampleData : AggregateBaseEx<string>
         {
-
         }
 
-        public class SampleData_Index : AbstractMultiMapIndexCreationTask<SampleData>
+        private class SampleData_Index : AbstractMultiMapIndexCreationTask<SampleData>
         {
             public SampleData_Index()
             {
@@ -28,11 +26,12 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public abstract class AggregateBaseEx<TType> : AggregateBase
+        private abstract class AggregateBaseEx<TType> : AggregateBase
         {
             public TType AnotherProp { get; set; }
         }
-        public abstract class AggregateBase
+
+        private abstract class AggregateBase
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -41,7 +40,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanIndexAndQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 
@@ -55,6 +54,9 @@ namespace Raven.Tests.MailingList
 
                     session.SaveChanges();
                 }
+
+                WaitForIndexing(store);
+                TestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -70,15 +72,16 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanLoadDoc()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string id;
                 using (var session = store.OpenSession())
                 {
                     var sampleData = new SampleData
-                        {
-                            Name = "RavenDB", AnotherProp = "AnotherProp"
-                        };
+                    {
+                        Name = "RavenDB",
+                        AnotherProp = "AnotherProp"
+                    };
                     session.Store(sampleData);
                     id = sampleData.Id;
                     session.SaveChanges();
@@ -87,12 +90,10 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = session.Load<SampleData>(id);
-                    
+
                     Assert.Equal(result.Name, "RavenDB");
                 }
             }
         }
     }
-
- 
 }
