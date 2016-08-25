@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Runtime.Caching;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
 
@@ -77,6 +78,14 @@ namespace Raven.Database.Config
             MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
                 Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)));
+
+            int workerThreads;
+            int completionThreads;
+            ThreadPool.GetMinThreads(out workerThreads, out completionThreads);
+            MinThreadPoolWorkerThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolWorkerThreads"], workerThreads, 2);
+            MinThreadPoolCompletionThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolCompletionThreads"], completionThreads, 2);
 
             MaxPageSize =
                 new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -293,6 +302,10 @@ namespace Raven.Database.Config
 
             CacheDocumentsInMemory = new BooleanSetting(settings["Raven/CacheDocumentsInMemory"], true);
         }
+
+        public IntegerSettingWithMin MinThreadPoolWorkerThreads { get; set; }
+
+        public IntegerSettingWithMin MinThreadPoolCompletionThreads { get; set; }
 
         private string GetDefaultWebDir()
         {

@@ -273,12 +273,18 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
 
             configurationComparer.Assert(expected => expected.CacheDocumentsInMemory.Value, actual => actual.CacheDocumentsInMemory);
+            configurationComparer.Assert(expected => expected.MinThreadPoolWorkerThreads.Value, actual => actual.MinThreadPoolWorkerThreads);
+            configurationComparer.Assert(expected => expected.MinThreadPoolCompletionThreads.Value, actual => actual.MinThreadPoolCompletionThreads);
+
 
             configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
             configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
             configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
             configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
             configurationComparer.Ignore(x => x.TransactionMode);
+
+            
+            
 
             Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
             Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);

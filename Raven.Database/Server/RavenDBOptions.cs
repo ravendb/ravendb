@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-
+using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -35,6 +35,7 @@ namespace Raven.Database.Server
             {
                 HttpEndpointRegistration.RegisterHttpEndpointTarget();
                 HttpEndpointRegistration.RegisterAdminLogsTarget();
+                ThreadPool.SetMinThreads(configuration.MinThreadPoolWorkerThreads, configuration.MinThreadPoolCompletionThreads);
                 if (db == null)
                 {
                     configuration.UpdateDataDirForLegacySystemDb();
