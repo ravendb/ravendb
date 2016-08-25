@@ -3,32 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class TransformResultsWithProjection : RavenTestBase
     {
-        [Fact]
-        public void CanGetProjectedResultsWhenUsingTransformWithConsoleDb()
-        {
-            using (var store = NewRemoteDocumentStore())
-                Test(store);
-        }
-
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void CanGetProjectedResultsWhenUsingTransformWithInMemory()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
                 Test(store);
         }
 
@@ -82,13 +74,11 @@ namespace Raven.Tests.MailingList
                     .TransformWith<NearbyServiceCallTransformer, NearbyServiceCallItemViewModel>()
                     .ToList();
 
-                WaitForUserToContinueTheTest();
-
                 Assert.Equal(2, results.Count());
             }
         }
 
-        public class BaseInvoice
+        private class BaseInvoice
         {
             public BaseInvoice()
             {
@@ -102,7 +92,7 @@ namespace Raven.Tests.MailingList
             public List<ServiceCall> Calls { get; set; }
         }
 
-        public class Lead
+        private class Lead
         {
             public string Id { get; set; }
             public double Lat { get; set; }
@@ -140,13 +130,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class ServiceCall
+        private class ServiceCall
         {
             public int Id { get; set; }
             public DateTime AppointmentDate { get; set; }
         }
 
-        public class ServiceCalls_Index : AbstractIndexCreationTask<BaseInvoice, ServiceCalls_Index.Result>
+        private class ServiceCalls_Index : AbstractIndexCreationTask<BaseInvoice, ServiceCalls_Index.Result>
         {
             public ServiceCalls_Index()
             {

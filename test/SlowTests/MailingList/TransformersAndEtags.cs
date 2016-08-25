@@ -3,28 +3,28 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class TransformersAndEtags : RavenTest
+    public class TransformersAndEtags : RavenTestBase
     {
-        public class Company
+        private class Company
         {
             public string Name { get; set; }
             public string Parent { get; set; }
         }
 
-        public class Item
+        private class Item
         {
             public string[] Names { get; set; }
         }
 
-        public class AllNames : AbstractTransformerCreationTask<Company>
+        private class AllNames : AbstractTransformerCreationTask<Company>
         {
             public AllNames()
             {
@@ -40,10 +40,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void CanGetUpdatesForChangedRelation()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new AllNames().Execute(store);
 

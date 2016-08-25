@@ -3,36 +3,33 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Document;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class TransformWithConversionListener : RavenTest
+    public class TransformWithConversionListener : RavenTestBase
     {
-         public class Item
+         private class Item
          {
              public string Id { get; set; }
 
              public string Name { get; set; }
          }
 
-        public class TransformedItem
+        private class TransformedItem
         {
             public bool Transformed { get; set; }
             public string Name { get; set; }
             public bool Converted { get; set; }
         }
 
-        public class EtagTransformer : AbstractTransformerCreationTask<Item>
+        private class EtagTransformer : AbstractTransformerCreationTask<Item>
         {
             public EtagTransformer()
             {
@@ -46,7 +43,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class DocumentConversionListener  : IDocumentConversionListener
+        private class DocumentConversionListener  : IDocumentConversionListener
         {
             
             public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
@@ -71,7 +68,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void SyncApi()
         {
-            using (var store = (DocumentStore)NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new EtagTransformer().Execute(store);
 
@@ -96,7 +93,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void AsyncApi()
         {
-            using (var store = (DocumentStore)NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new EtagTransformer().ExecuteAsync(store.AsyncDatabaseCommands, store.Conventions).Wait();
 

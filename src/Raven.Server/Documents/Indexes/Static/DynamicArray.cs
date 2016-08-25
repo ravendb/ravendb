@@ -131,6 +131,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return Enumerable.Sum(this, selector);
         }
 
+        public IEnumerable<object> Take(int count)
+        {
+            return Enumerable.Take(this, count);
+        }
+
         public dynamic DefaultIfEmpty(object defaultValue = null)
         {
             return Enumerable.DefaultIfEmpty(this, defaultValue ?? DynamicNullObject.Null);
