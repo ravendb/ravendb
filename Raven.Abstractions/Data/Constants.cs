@@ -222,6 +222,9 @@ namespace Raven.Abstractions.Data
         public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
         public const string ReplicationPropagationDelayInSeconds = "Raven/Replication/ReplicationPropagationDelayInSeconds";
 
+        // Studio
+        public const string AllowNonAdminUsersToSetupPeriodicExport = "Raven/AllowNonAdminUsersToSetupPeriodicExport";
+
         [Obsolete("Use RavenFS instead.")]
         public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 

@@ -8,8 +8,11 @@ import appUrl = require("common/appUrl");
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
 import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
 import deleteLocalPeriodicExportSetupCommand = require("commands/database/globalConfig/deleteLocalPeriodicExportSetupCommand");
+import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
+
+type canEditSettingsDetails = { canEdit: boolean, canViaOverride: boolean };
 
 class periodicExport extends viewModelBase {
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
@@ -20,6 +23,7 @@ class periodicExport extends viewModelBase {
     usingGlobal = ko.observable<boolean>(false);
     hasGlobalValues = ko.observable<boolean>(false);
     isForbidden = ko.observable<boolean>(false);
+    useAlternativeEditMethod = ko.observable<boolean>(false);
     
     showOnDiskExportRow: KnockoutComputed<boolean>;
 
@@ -61,20 +65,49 @@ class periodicExport extends viewModelBase {
 
         var deferred = $.Deferred();
 
-        var db = this.activeDatabase();
-        this.isForbidden(!db.isAdminCurrentTenant());
-        if (db.isAdminCurrentTenant()) {
-            $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
-                .done(() => {
-                    this.updateExportDisabledFlag();
+        this.canEditSettings()
+            .done((editSettings: canEditSettingsDetails) => {
+                this.isForbidden(!editSettings.canEdit);
+
+                this.useAlternativeEditMethod(editSettings.canViaOverride);
+
+                if (editSettings.canEdit) {
+                    var db = this.activeDatabase();
+
+                    $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db, editSettings.canViaOverride))
+                        .done(() => {
+                            this.updateExportDisabledFlag();
+                            deferred.resolve({ can: true });
+                        })
+                        .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+                } else {
                     deferred.resolve({ can: true });
-                })
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
-        } else {
-            deferred.resolve({ can: true });
-        }
+                }
+            });
 
         return deferred;
+    }
+
+    private canEditSettings(): JQueryPromise<canEditSettingsDetails> {
+        var db = this.activeDatabase();
+        if (db.isAdminCurrentTenant()) {
+            return $.Deferred<canEditSettingsDetails>().resolve({ canEdit: true, canViaOverride: false });
+        } else {
+            // non-admin user - give him another chance by checking configuration option
+            var configTask = $.Deferred<canEditSettingsDetails>();
+
+            new getStatusDebugConfigCommand(db).execute()
+                .done(config => {
+                    if (config && config.Studio && config.Studio.AllowNonAdminUsersToSetupPeriodicExport) {
+                        configTask.resolve({ canEdit: true, canViaOverride: true });
+                    } else {
+                        configTask.resolve({ canEdit: false, canViaOverride: false });
+                    }
+                })
+                .fail(() => configTask.reject());
+
+            return configTask;
+        }
     }
 
     activate(args) {
@@ -109,34 +142,44 @@ class periodicExport extends viewModelBase {
         return deferred;
     }
 
-    fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
-        var task = $.Deferred();
-        var dbSettingsTask = new getDatabaseSettingsCommand(db)
-            .execute()
-            .done((document: document) => { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); });
-
-        dbSettingsTask.then(() => {
-            new getConfigurationSettingsCommand(db,
-                ["Raven/AWSAccessKey", "Raven/AWSSecretKey", "Raven/AzureStorageAccount", "Raven/AzureStorageKey"])
+    fetchPeriodicExportAccountsSettings(db: database, useAlternativeFetchMethod: boolean): JQueryPromise<any> {
+        if (useAlternativeFetchMethod) {
+            return this.getConfigurationSettings(db);
+        } else {
+            var task = $.Deferred();
+            var dbSettingsTask = new getDatabaseSettingsCommand(db)
                 .execute()
-                .done((result: configurationSettings) => {
-                    var awsAccess = result.results["Raven/AWSAccessKey"];
-                    var awsSecret = result.results["Raven/AWSSecretKey"];
-                    var azureAccess = result.results["Raven/AzureStorageAccount"];
-                    var azureSecret = result.results["Raven/AzureStorageKey"];
-                    this.globalBackupSetup().awsAccessKey(awsAccess.globalValue());
-                    this.globalBackupSetup().awsSecretKey(awsSecret.globalValue());
-                    this.globalBackupSetup().azureStorageAccount(azureAccess.globalValue());
-                    this.globalBackupSetup().azureStorageKey(azureSecret.globalValue());
-                    this.backupSetup().awsAccessKey(awsAccess.effectiveValue());
-                    this.backupSetup().awsSecretKey(awsSecret.effectiveValue());
-                    this.backupSetup().azureStorageAccount(azureAccess.effectiveValue());
-                    this.backupSetup().azureStorageKey(azureSecret.effectiveValue());
-                    task.resolve();
+                .done((document: document) => { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); });
+
+            dbSettingsTask.then(() => {
+                this.getConfigurationSettings(db)
+                    .done(() => task.resolve());
             });
-        });
-        return task;
+
+            return task;
+        }
     }
+
+    private getConfigurationSettings(db: database): JQueryPromise<configurationSettings> {
+        return new getConfigurationSettingsCommand(db,
+            ["Raven/AWSAccessKey", "Raven/AWSSecretKey", "Raven/AzureStorageAccount", "Raven/AzureStorageKey"])
+            .execute()
+            .done((result: configurationSettings) => {
+                var awsAccess = result.results["Raven/AWSAccessKey"];
+                var awsSecret = result.results["Raven/AWSSecretKey"];
+                var azureAccess = result.results["Raven/AzureStorageAccount"];
+                var azureSecret = result.results["Raven/AzureStorageKey"];
+                this.globalBackupSetup().awsAccessKey(awsAccess.globalValue());
+                this.globalBackupSetup().awsSecretKey(awsSecret.globalValue());
+                this.globalBackupSetup().azureStorageAccount(azureAccess.globalValue());
+                this.globalBackupSetup().azureStorageKey(azureSecret.globalValue());
+                this.backupSetup().awsAccessKey(awsAccess.effectiveValue());
+                this.backupSetup().awsSecretKey(awsSecret.effectiveValue());
+                this.backupSetup().azureStorageAccount(azureAccess.effectiveValue());
+                this.backupSetup().azureStorageKey(azureSecret.effectiveValue());
+            });
+    }
+
 
     saveChanges() {
         eventsCollector.default.reportEvent("periodic-export", "save");
@@ -147,11 +190,14 @@ class periodicExport extends viewModelBase {
                 task = new deleteLocalPeriodicExportSetupCommand(this.backupSetup(), db)
                     .execute();
             } else {
-                task = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
+                task = new savePeriodicExportSetupCommand(this.backupSetup(), db, false, this.useAlternativeEditMethod()).execute();
             }
             task.done((resultArray) => {
-                var newEtag = resultArray[0].ETag;
-                this.backupSetup().setEtag(newEtag);
+                if (!this.useAlternativeEditMethod()) {
+                    var newEtag = resultArray[0].ETag;
+                    this.backupSetup().setEtag(newEtag);
+                }
+                
                 this.backupSetup().resetDecryptionFailures();
                 this.dirtyFlag().reset(); // Resync changes
                 this.updateExportDisabledFlag();

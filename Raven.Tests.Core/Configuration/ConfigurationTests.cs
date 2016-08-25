@@ -295,6 +295,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.IndexStoragePath);
             configurationComparer.Assert(expected => expected.DefaultStorageTypeName.Value, actual => actual.DefaultStorageTypeName);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CompiledIndexCacheDirectory.Value.ToFullPath(null)), actual => actual.CompiledIndexCacheDirectory);
+            configurationComparer.Assert(expected => expected.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value, actual => actual.Studio.AllowNonAdminUsersToSetupPeriodicExport);
             configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
             configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
             configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);

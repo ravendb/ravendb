@@ -62,6 +62,8 @@ namespace Raven.Database.Config
 
         public WebSocketsConfiguration WebSockets { get; private set; }
 
+        public StudioConfiguration Studio { get; private set; }
+
         public InMemoryRavenConfiguration()
         {
             Replication = new ReplicationConfiguration();
@@ -75,6 +77,7 @@ namespace Raven.Database.Config
             WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
             Monitoring = new MonitoringConfiguration();
+            Studio = new StudioConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -122,6 +125,7 @@ namespace Raven.Database.Config
             FileSystem.InitializeFrom(this);
             Counter.InitializeFrom(this);
             TimeSeries.InitializeFrom(this);
+            Studio.InitializeFrom(this);
 
             MaxPrecomputedBatchSizeForNewIndex = ravenSettings.MaxPrecomputedBatchSizeForNewIndex.Value;
 
@@ -344,6 +348,8 @@ namespace Raven.Database.Config
             FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
             if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
                 FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+
+            Studio.AllowNonAdminUsersToSetupPeriodicExport = ravenSettings.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value;
 
             Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
             Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
@@ -1625,6 +1631,16 @@ namespace Raven.Database.Config
 
                 return EsentTypeName; // We choose esent by default
             }
+        }
+
+        public class StudioConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                AllowNonAdminUsersToSetupPeriodicExport = configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport;
+            }
+
+            public bool AllowNonAdminUsersToSetupPeriodicExport { get; set; }
         }
 
         public class CounterConfiguration
