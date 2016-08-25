@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Runtime.Caching;
+using System.Threading;
 using Rachis;
 using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
@@ -90,6 +91,14 @@ namespace Raven.Database.Config
             MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
                 Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)));
+
+            int workerThreads;
+            int completionThreads;
+            ThreadPool.GetMinThreads(out workerThreads, out completionThreads);
+            MinThreadPoolWorkerThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolWorkerThreads"], workerThreads, 2);
+            MinThreadPoolCompletionThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolCompletionThreads"], completionThreads, 2);
 
             LowMemoryLimitForLinuxDetectionInMB =
                 new IntegerSetting(settings[Constants.LowMemoryLimitForLinuxDetectionInMB],
@@ -376,6 +385,10 @@ namespace Raven.Database.Config
         public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }
 
         public IntegerSetting MemoryLimitForProcessing { get; private set; }
+
+        public IntegerSettingWithMin MinThreadPoolWorkerThreads { get; private set; }
+
+        public IntegerSettingWithMin MinThreadPoolCompletionThreads { get; private set; }
 
         public IntegerSetting LowMemoryLimitForLinuxDetectionInMB { get; private set; }
         public IntegerSetting MaxConcurrentServerRequests { get; private set; }

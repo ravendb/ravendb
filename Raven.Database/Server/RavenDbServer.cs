@@ -41,6 +41,7 @@ namespace Raven.Server
         public RavenDbServer(InMemoryRavenConfiguration configuration)
         {
             this.configuration = configuration;
+            
             documentStore = new DocumentStore
             {
                 Conventions =

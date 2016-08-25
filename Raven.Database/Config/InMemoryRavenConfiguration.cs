@@ -153,6 +153,9 @@ namespace Raven.Database.Config
             PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
             // Core settings
+
+            MinThreadPoolCompletionThreads = ravenSettings.MinThreadPoolCompletionThreads.Value;
+            MinThreadPoolWorkerThreads = ravenSettings.MinThreadPoolWorkerThreads.Value;
             MaxPageSize = ravenSettings.MaxPageSize.Value;
 
             MemoryCacheLimitMegabytes = ravenSettings.MemoryCacheLimitMegabytes.Value;
@@ -636,6 +639,21 @@ namespace Raven.Database.Config
         /// Checking the index may take some time on large databases
         /// </summary>
         public bool ResetIndexOnUncleanShutdown { get; set; }
+
+        /// <summary>
+        /// Minimum threads for .net thread pool worker threads
+        /// Default: system default
+        /// Min: 2
+        /// </summary>
+        public int MinThreadPoolWorkerThreads { get; set; }
+
+        /// <summary>
+        /// Minimum threads for .net thread pool async io completion threads
+        /// Default: system default
+        /// Min: 2
+        /// </summary>
+        public int MinThreadPoolCompletionThreads { get; set; }
+
 
         /// <summary>
         /// The maximum allowed page size for queries. 
