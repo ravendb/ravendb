@@ -178,8 +178,8 @@ namespace Sparrow.Json
         private BlittableJsonDocumentBuilder.PropertyTag GetPropertyTag(int index, long metadataSize)
         {
             var propPos = _metadataPtr + index * metadataSize;
-            var propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
             var propertyOffset = ReadNumber(propPos, _currentOffsetSize);
+            var propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
             var type = *(propPos + _currentOffsetSize + _currentPropertyIdSize);
             return new BlittableJsonDocumentBuilder.PropertyTag
             {
