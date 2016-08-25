@@ -134,8 +134,9 @@ namespace Raven.Database.Server
             _maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
 		    _maxSecondsForTaskToWaitForDatabaseToLoad = configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
+            ThreadPool.SetMinThreads(configuration.MinThreadPoolWorkerThreads, configuration.MinThreadPoolCompletionThreads);
 
-			if (configuration.RunInMemory == false)
+            if (configuration.RunInMemory == false)
 			{
 				if (configuration.CreatePluginsDirectoryIfNotExisting)
 				{
@@ -1171,38 +1172,61 @@ namespace Raven.Database.Server
 			var config = CreateTenantConfiguration(tenantId);
 			if (config == null)
 				return false;
+            
+            if (resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout) == false)
+            {
+                var msg = string.Format(
+                                "The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
+                                tenantId,
+                                resourceCreationSemaphore.CurrentCount,
+                                concurrentDatabaseLoadTimeout);
+                logger.Warn(msg);
+                database= null;
+                return false;
+            }
 
-			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
-			{
-				var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-				var documentDatabase = new DocumentDatabase(config, transportState);
-				try
-				{
-					AssertLicenseParameters(config);
-					documentDatabase.SpinBackgroundWorkers();
-					InitializeRequestResponders(documentDatabase);
+		    var newTaskCreated = false;
 
-					// if we have a very long init process, make sure that we reset the last idle time for this db.
-					documentDatabase.WorkContext.UpdateFoundWork();
-				}
-				catch (Exception)
-				{
-					documentDatabase.Dispose();
-					throw;
-				}
-				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-				return documentDatabase;
-			}).ContinueWith(task =>
-			{
-				if (task.Status == TaskStatus.Faulted) // this observes the task exception
-				{
-					logger.WarnException("Failed to create database " + tenantId, task.Exception);
-				}
-				return task;
-			}).Unwrap());
+            database = ResourcesStoresCache.GetOrAdd(tenantId, __ =>
+            {
+                newTaskCreated = true;
+                return Task.Factory.StartNew(() =>
+                {
 
-			return true;
+                    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                    var documentDatabase = new DocumentDatabase(config, transportState);
+                    try
+                    {
+                        AssertLicenseParameters(config);
+                        documentDatabase.SpinBackgroundWorkers();
+                        InitializeRequestResponders(documentDatabase);
+
+                        // if we have a very long init process, make sure that we reset the last idle time for this db.
+                        documentDatabase.WorkContext.UpdateFoundWork();
+                    }
+                    catch (Exception)
+                    {
+                        documentDatabase.Dispose();
+                        throw;
+                    }
+                    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+                    return documentDatabase;
+                }).ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        logger.WarnException("Failed to create database " + tenantId, task.Exception);
+                    }
+                    resourceCreationSemaphore.Release();
+                    return task;
+                }).Unwrap();
+            });
+
+
+            if (newTaskCreated == false)
+                resourceCreationSemaphore.Release();
+            return true;
 		}
 
 		private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
@@ -1437,32 +1461,12 @@ namespace Raven.Database.Server
 		{
 			if (string.Equals("System", name, StringComparison.OrdinalIgnoreCase))
 				return new CompletedTask<DocumentDatabase>(SystemDatabase);
-
-			var hasAcquired = false;
-			try
-			{
-				hasAcquired = resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout);
-				if (!hasAcquired)
-				{
-					var msg = string.Format(
-									"The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
-									name,
-									resourceCreationSemaphore.CurrentCount,
-									concurrentDatabaseLoadTimeout);
-					logger.Warn(msg);
-					return null;
-				}
-
-				Task<DocumentDatabase> db;
-				if (TryGetOrCreateResourceStore(name, out db))
-					return db;
-				return null;
-			}
-			finally
-			{
-				if(hasAcquired)
-					resourceCreationSemaphore.Release();
-			}
+            
+			Task<DocumentDatabase> db;
+			if (TryGetOrCreateResourceStore(name, out db))
+				return db;
+			return null;
+			
 		}
 
 		public void Protect(DatabaseDocument databaseDocument)

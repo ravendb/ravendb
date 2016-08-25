@@ -7,6 +7,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Runtime.Caching;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
 
@@ -33,10 +34,21 @@ namespace Raven.Database.Config
 
 			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-                Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75))); 
+                Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
 
-		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
+
+            int workerThreads;
+            int completionThreads;
+            ThreadPool.GetMinThreads(out workerThreads, out completionThreads);
+            MinThreadPoolWorkerThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolWorkerThreads"], workerThreads, 2);
+            MinThreadPoolCompletionThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolCompletionThreads"], completionThreads, 2);
+
+
+            EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
 		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
+
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =
@@ -173,7 +185,9 @@ namespace Raven.Database.Config
 			UseNullDocumentCacher = new BooleanSetting(settings["Raven/UseNullDocumentCacher"],false);
         }
 
-		private string GetDefaultWebDir()
+	    
+
+	    private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
 		}
@@ -207,7 +221,11 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MemoryLimitForIndexing { get; private set; }
 
-		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
+        public IntegerSettingWithMin MinThreadPoolCompletionThreads { get; private set; }
+
+        public IntegerSettingWithMin MinThreadPoolWorkerThreads { get; private set; }
+
+        public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 

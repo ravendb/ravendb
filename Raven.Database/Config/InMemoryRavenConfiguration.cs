@@ -89,8 +89,11 @@ namespace Raven.Database.Config
 			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 
 			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
-			// Core settings
-			MaxPageSize = ravenSettings.MaxPageSize.Value;
+            // Core settings
+
+            MinThreadPoolCompletionThreads = ravenSettings.MinThreadPoolCompletionThreads.Value;
+            MinThreadPoolWorkerThreads = ravenSettings.MinThreadPoolWorkerThreads.Value;
+            MaxPageSize = ravenSettings.MaxPageSize.Value;
 
 			MemoryCacheLimitMegabytes = ravenSettings.MemoryCacheLimitMegabytes.Value;
 
@@ -247,7 +250,11 @@ namespace Raven.Database.Config
             PostInit();
 		}
 
-		public TimeSpan ConcurrentDatabaseLoadTimeout { get; private set; }
+	    public int MinThreadPoolWorkerThreads { get; set; }
+
+	    public int MinThreadPoolCompletionThreads { get; set; }
+
+	    public TimeSpan ConcurrentDatabaseLoadTimeout { get; private set; }
 
 		public int MaxConcurrentDatabaseLoads { get; private set; }
 
