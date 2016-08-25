@@ -136,6 +136,8 @@ namespace Sparrow.Json
 
         public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
         {
+            if (pos < 0)
+                throw new ArgumentOutOfRangeException(nameof(pos), "Position cannot be negative, but was " + pos);
             // Read out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             // we assume that the value shouldn't be zero very often
