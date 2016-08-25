@@ -3,23 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Troy : RavenTest
+    public class Troy : RavenTestBase
     {
+        private DocumentStore _store;
+
         [Fact]
         public void QueryProductWithPhraseOrOtherTermsByDepartmentAndSwitchTermOrder()
         {
@@ -158,7 +158,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Product
+        private class Product
         {
             public Guid Id { get; set; }
             public string Name { get; set; }
@@ -169,25 +169,24 @@ namespace Raven.Tests.MailingList
             public DateTimeOffset Created { get; set; }
         }
 
-        private static EmbeddableDocumentStore CreateStore()
+        protected override void ModifyStore(DocumentStore store)
         {
-            var store = new EmbeddableDocumentStore
+            store.Conventions = new DocumentConvention
             {
-                RunInMemory = true,
-                Conventions = new DocumentConvention
-                {
-                    TransformTypeTagNameToDocumentKeyPrefix = tag => tag,
-                    FindTypeTagName = type => type.Name
-                }
+                TransformTypeTagNameToDocumentKeyPrefix = tag => tag,
+                FindTypeTagName = type => type.Name
             };
-            store.Initialize();
-
-            // Create the Index
-            new Product_Search().Execute(store);
-
-            return store;
         }
 
+        private DocumentStore CreateStore()
+        {
+            _store = GetDocumentStore();
+            // Create the Index
+            new Product_Search().Execute(_store);
+
+            return _store;
+        }
+        
         private static List<Product> CreateProducts()
         {
             var products = new List<Product>

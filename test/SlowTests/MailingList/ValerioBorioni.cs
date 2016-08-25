@@ -3,27 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Raven.Client.Document;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ValerioBorioni : RavenTest
+    public class ValerioBorioni : RavenTestBase
     {
         [Fact]
         public void RavenJValue_recognize_NAN_Float_isEqual_to_NAN_String()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.Configuration.Core.RunInMemory = true;
-                store.Initialize();
-
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new MyEntity());

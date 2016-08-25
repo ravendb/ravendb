@@ -3,44 +3,44 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Globalization;
 using System.Linq;
-using System.Threading;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Kushnir : RavenTest
+    public class Kushnir : RavenTestBase
     {
-        private static string alphabet = "abcdefghijklmnopqrstuvwxyz";
-        
+        private const string Alphabet = "abcdefghijklmnopqrstuvwxyz";
+
         [Fact]
         public void SortOnMetadata()
         {
-            using (var docStore = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                docStore.RegisterListener(new CreateDateMetadataConversion());
-                new Foos_ByNameDateCreated().Execute(docStore);
+                store.RegisterListener(new CreateDateMetadataConversion());
+                new Foos_ByNameDateCreated().Execute(store);
 
 
-                for (int i = 0; i < alphabet.Length; i++)
+                for (int i = 0; i < Alphabet.Length; i++)
                 {
-                    using (var session = docStore.OpenSession())
+                    using (var session = store.OpenSession())
                     {
-                        session.Store(new Foo { Name = alphabet[i].ToString(CultureInfo.InvariantCulture), Id = "Foos/" });
+                        session.Store(new Foo { Name = Alphabet[i].ToString() });
                         session.SaveChanges();
                     }
                 }
 
-                WaitForIndexing(docStore);
+                WaitForIndexing(store);
+                TestHelper.AssertNoIndexErrors(store);
 
-                using (var session = docStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var ascending = session.Query<Foo, Foos_ByNameDateCreated>()
                            .Where(a => a.Name.StartsWith(string.Empty))
@@ -52,15 +52,15 @@ namespace Raven.Tests.MailingList
                            .ToList();
 
 
-                    Assert.Equal(alphabet, ascending.Select(a => a.Name).Aggregate((a, b) => a + b));
-                    Assert.Equal(new string(alphabet.Reverse().ToArray()), @descending.Select(a => a.Name).Aggregate((a, b) => a + b));
+                    Assert.Equal(Alphabet, ascending.Select(a => a.Name).Aggregate((a, b) => a + b));
+                    Assert.Equal(new string(Alphabet.Reverse().ToArray()), @descending.Select(a => a.Name).Aggregate((a, b) => a + b));
                 }
             }
         }
 
-        public interface ITimeStamped { DateTime DateCreated { get; set; } }
+        private interface ITimeStamped { DateTime DateCreated { get; set; } }
 
-        public class Foo : ITimeStamped
+        private class Foo : ITimeStamped
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -68,13 +68,13 @@ namespace Raven.Tests.MailingList
             public DateTime DateCreated { get; set; }
         }
 
-        public class CreateDateMetadataConversion : IDocumentConversionListener
+        private class CreateDateMetadataConversion : IDocumentConversionListener
         {
-            private int count;
+            private int _count;
 
             public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
             {
-                
+
             }
 
             public void AfterConversionToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
@@ -84,7 +84,7 @@ namespace Raven.Tests.MailingList
                     document.Remove("DateCreated");
                     if (metadata["DateCreated"] == null)
                     {
-                        metadata["DateCreated"] = DateTime.Today.AddDays(count++).ToString("o");
+                        metadata["DateCreated"] = DateTime.Today.AddDays(_count++).ToString("o");
                     }
                 }
             }
@@ -105,7 +105,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Foos_ByNameDateCreated : AbstractIndexCreationTask<Foo>
+        private class Foos_ByNameDateCreated : AbstractIndexCreationTask<Foo>
         {
             public Foos_ByNameDateCreated()
             {

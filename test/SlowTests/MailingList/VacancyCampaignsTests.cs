@@ -3,22 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
-using Xunit;
 using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class VacancyCampaignsTests : RavenTest
+    public class VacancyCampaignsTests : RavenTestBase
     {
-        private EmbeddableDocumentStore Store;
+        private DocumentStore Store;
 
         public class Vacancy
         {
@@ -91,7 +91,7 @@ namespace Raven.Tests.MailingList
 
         public VacancyCampaignsTests()
         {
-            Store = NewDocumentStore();
+            Store = GetDocumentStore();
             new VacancyCampaignsIndex().Execute(Store);
             new VacancyCampaignsTransformer().Execute(Store);
 
@@ -116,7 +116,7 @@ namespace Raven.Tests.MailingList
             base.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void Can_query_active_campaigns()
         {
             using (var session = Store.OpenSession())

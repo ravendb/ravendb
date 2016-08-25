@@ -1,23 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class TroyMapReduce : RavenTest
+    public class TroyMapReduce : RavenTestBase
     {
         private Guid _appKey;
         private Guid _privateKey;
 
 
         [Fact]
-        public void UsingEmbedded()
+        public void ShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.TransformTypeTagNameToDocumentKeyPrefix = tag => tag;
                 store.Conventions.FindTypeTagName = type => type.Name;
@@ -42,36 +41,6 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-
-        [Fact]
-        public void UsingRemote()
-        {
-            using (var store = NewRemoteDocumentStore())
-            {
-                store.Conventions.TransformTypeTagNameToDocumentKeyPrefix = tag => tag;
-                store.Conventions.FindTypeTagName = type => type.Name;
-
-                new LogEntryCountByDate().Execute(store);
-                using (var session = store.OpenSession())
-                {
-                    SetKeys();
-                    var application = PopulateApplication();
-                    var entries = PopulateLogEntries();
-
-                    session.Store(application);
-                    entries.ForEach(session.Store);
-                    session.SaveChanges();
-
-                    var query = session.Query<LogEntryCountByDate.SearchResult>("LogEntry/CountByDate")
-                        //.Where( x => x.EntryDate == DateTime.Today )
-                      .Customize(x => x.WaitForNonStaleResultsAsOfNow());
-
-                    Assert.Equal(4, query.Count());
-                    Assert.Equal(1, query.First().EntryCount);
-                }
-            }
-        }
-
         private void SetKeys()
         {
             _appKey = Guid.Parse("7378e8ae-ddcd-460d-95f7-e89775bb0540");
@@ -141,7 +110,7 @@ namespace Raven.Tests.MailingList
             };
         }
 
-        public class Application
+        private class Application
         {
             public string Id { get; set; }
             public DateTimeOffset Created { get; set; }
@@ -151,7 +120,7 @@ namespace Raven.Tests.MailingList
             public string TimeZone { get; set; }
         }
 
-        public class LogEntry
+        private class LogEntry
         {
             public string Id { get; set; }
             public DateTime Created { get; set; }
@@ -165,14 +134,14 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class LogEntryDictionaryItem
+        private class LogEntryDictionaryItem
         {
             public string Key { get; set; }
             public object Value { get; set; }
         }
 
 
-        public class LogEntryCountByDate : AbstractIndexCreationTask<LogEntry, LogEntryCountByDate.SearchResult>
+        private class LogEntryCountByDate : AbstractIndexCreationTask<LogEntry, LogEntryCountByDate.SearchResult>
         {
 
             public override string IndexName

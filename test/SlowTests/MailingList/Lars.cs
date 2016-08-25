@@ -3,23 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Lars : RavenTest
+    public class Lars : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public string Name { get; set; }
             public int Age { get; set; }
         }
 
-        public class Index : AbstractIndexCreationTask<Item, Index.Result>
+        private class Index : AbstractIndexCreationTask<Item, Index.Result>
         {
             public class Result
             {
@@ -40,17 +40,17 @@ namespace Raven.Tests.MailingList
                          group r by 1
                          into g
                          let items = g.ToArray()
-                         select new {Age = items.Sum(x => x.Age)};
+                         select new { Age = items.Sum(x => x.Age) };
             }
         }
 
         [Fact]
         public void EnumerableMethodsShouldBeExternalStaticCalls()
         {
-            using (var s = NewDocumentStore())
+            using (var s = GetDocumentStore())
             {
                 new Index().Execute(s);
-                var indexDefinition = s.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
+                var indexDefinition = s.DatabaseCommands.GetIndex("Index");
                 Assert.Contains("Enumerable.ToArray(g)", indexDefinition.Reduce);
                 Assert.Contains("Enumerable.Sum", indexDefinition.Reduce);
             }

@@ -1,14 +1,14 @@
-using Raven.Tests.Common;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Kwoodard : RavenTest
+    public class Kwoodard : RavenTestBase
     {
         [Fact]
         public void CanSetUseOptimisticConcurrencyGlobally()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.DefaultUseOptimisticConcurrency = true;
 

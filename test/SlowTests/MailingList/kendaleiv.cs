@@ -3,40 +3,39 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class kendaleiv : RavenTest
+    public class kendaleiv : RavenTestBase
     {
-        public class Company
+        private class Company
         {
             public string Id { get; set; }
             public string CompanySalesId { get; set; }
             public IEnumerable<Contact> Contacts { get; set; }
         }
 
-        public class Contact
+        private class Contact
         {
             public string FirstName { get; set; }
             public string LastName { get; set; }
         }
 
-        public class CompanySales
+        private class CompanySales
         {
             public string Id { get; set; }
             public decimal SalesTotal { get; set; }
         }
 
-        public class CompanyContactIndex : AbstractIndexCreationTask<Company, CompanyContactIndex.IndexResult>
+        private class CompanyContactIndex : AbstractIndexCreationTask<Company, CompanyContactIndex.IndexResult>
         {
             public CompanyContactIndex()
             {
@@ -66,19 +65,19 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class CompanyContactTransformer : AbstractTransformerCreationTask<CompanyContactIndex.IndexResult>
+        private class CompanyContactTransformer : AbstractTransformerCreationTask<CompanyContactIndex.IndexResult>
         {
             public CompanyContactTransformer()
             {
                 TransformResults = results => from result in results
-                                                          let companySales = LoadDocument<CompanySales>(result.CompanySalesId)
-                                                          select new
-                                                          {
-                                                              result.CompanyId,
-                                                              result.FirstName,
-                                                              result.LastName,
-                                                              companySales.SalesTotal,
-                                                          };
+                                              let companySales = LoadDocument<CompanySales>(result.CompanySalesId)
+                                              select new
+                                              {
+                                                  result.CompanyId,
+                                                  result.FirstName,
+                                                  result.LastName,
+                                                  companySales.SalesTotal,
+                                              };
             }
 
             public class IndexResult
@@ -96,7 +95,7 @@ namespace Raven.Tests.MailingList
         {
             const int NUMBER_OF_COMPANIES = 100;
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new CompanyContactIndex().Execute(store);
                 new CompanyContactTransformer().Execute(store);
