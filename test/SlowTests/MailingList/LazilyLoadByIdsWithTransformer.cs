@@ -1,33 +1,31 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class LazilyLoadByIdsWithTransformer : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void WithTransformer()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new ItemsTransformer());
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Item{Position = 1});
-                    session.Store(new Item{Position = 2});
+                    session.Store(new Item { Position = 1 });
+                    session.Store(new Item { Position = 2 });
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var items = session.Load<ItemsTransformer, Item>(new [] {"items/1", "items/2" });
-                    Assert.Equal(1*3, items[0].Position);
-                    Assert.Equal(2*3, items[1].Position);
+                    var items = session.Load<ItemsTransformer, Item>(new[] { "items/1", "items/2" });
+                    Assert.Equal(1 * 3, items[0].Position);
+                    Assert.Equal(2 * 3, items[1].Position);
                 }
 
                 using (var session = store.OpenSession())
@@ -39,10 +37,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void WithTransformer2()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new ItemsTransformer());
 
@@ -78,7 +76,7 @@ namespace Raven.Tests.MailingList
         {
             public ItemsTransformer()
             {
-                TransformResults = docs => docs.Select(doc => new {Position = doc.Position*3});
+                TransformResults = docs => docs.Select(doc => new { Position = doc.Position * 3 });
             }
         }
     }
