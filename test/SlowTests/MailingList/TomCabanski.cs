@@ -1,26 +1,22 @@
+using FastTests;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Document;
-using Raven.Tests.Common;
-
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class TomCabanski : RavenTest
+    public class TomCabanski : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void CanEscapeGetFacets()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = "from doc in docs select new { doc.Age, doc.IsActive, doc.BookVendor }"
+                    Maps = { "from doc in docs.Users select new { doc.Age, doc.IsActive, doc.BookVendor }" }
                 });
 
                 using (var s = store.OpenSession())

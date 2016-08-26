@@ -1,15 +1,13 @@
 using System;
-
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class TimeZoneQueries : RavenTest
+    public class TimeZoneQueries : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public DateTimeOffset At { get; set; }
         }
@@ -17,7 +15,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryAtSpecificTimeZone()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 var notTheCurrentTimeZone = GetDifferentTimeZoneThanCurrentTimeZone();
                 using (var session = store.OpenSession())
@@ -46,7 +44,7 @@ namespace Raven.Tests.MailingList
 
         private static TimeSpan GetDifferentTimeZoneThanCurrentTimeZone()
         {
-            var differentTimeZoneThanCurrentTimeZone = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now);
+            var differentTimeZoneThanCurrentTimeZone = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now);
             if(differentTimeZoneThanCurrentTimeZone.Hours == 3)
                 return TimeSpan.FromHours(1);
             return TimeSpan.FromHours(3);

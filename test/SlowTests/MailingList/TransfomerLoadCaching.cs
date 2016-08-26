@@ -1,26 +1,25 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class TransformerLoadCaching : RavenTest
+    public class TransformerLoadCaching : RavenTestBase
     {
-        public class Contact
+        private class Contact
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class ContactDto
+        private class ContactDto
         {
             public string ContactId { get; set; }
             public string ContactName { get; set; }
         }
 
-        public class ContactTransformer : AbstractTransformerCreationTask<Contact>
+        private class ContactTransformer : AbstractTransformerCreationTask<Contact>
         {
             public ContactTransformer()
             {
@@ -36,7 +35,7 @@ namespace Raven.Tests.MailingList
          [Fact]
          public void ShouldNotCacheStaleData()
          {
-             using (var store = NewRemoteDocumentStore())
+             using (var store = GetDocumentStore())
              {
                  new ContactTransformer().Execute(store);
 

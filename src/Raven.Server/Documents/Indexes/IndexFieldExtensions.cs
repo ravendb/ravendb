@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public static Field.Index GetLuceneValue(this FieldIndexing value, string analyzer, Field.Index? @default)
+        public static Field.Index GetLuceneValue(this FieldIndexing value, string analyzer, Field.Index @default)
         {
             switch (value)
             {
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes
                 case FieldIndexing.NotAnalyzed:
                     return Field.Index.NOT_ANALYZED_NO_NORMS;
                 case FieldIndexing.Default:
-                    return @default ?? Field.Index.ANALYZED_NO_NORMS;
+                    return @default;
                 default:
                     throw new ArgumentOutOfRangeException();
             }

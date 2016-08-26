@@ -3,24 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Lucene.Net.Analysis;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Tobias : RavenTest
+    public class Tobias : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Collation and https://github.com/dotnet/roslyn/issues/12045")]
         public void CanWork()
         {
-            using(var Store = NewDocumentStore())
+            using(var Store = GetDocumentStore())
             {
 
                 new Data_Search().Execute(Store);
@@ -81,7 +80,7 @@ namespace Raven.Tests.MailingList
             };
 
 
-        public class Data_Search : AbstractMultiMapIndexCreationTask<Data_Search.ReduceResult>
+        private class Data_Search : AbstractMultiMapIndexCreationTask<Data_Search.ReduceResult>
         {
             public enum DataType { Unknown, Type1, Type2 };
 
@@ -168,7 +167,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Data_SearchTransformer : AbstractTransformerCreationTask<Data_Search.ReduceResult>
+        private class Data_SearchTransformer : AbstractTransformerCreationTask<Data_Search.ReduceResult>
         {
             public Data_SearchTransformer()
             {

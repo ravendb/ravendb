@@ -163,8 +163,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.DateTimeOffset)
             {
                 var dateTimeOffset = (DateTimeOffset)value;
+
                 string dateAsString;
-                if (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS)
+                if (field.Indexing != FieldIndexing.Default && (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS))
                     dateAsString = dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
                 else
                     dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);

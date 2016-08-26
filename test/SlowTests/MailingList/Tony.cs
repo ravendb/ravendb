@@ -3,22 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Tony : RavenTest
+    public class Tony : RavenTestBase
     {
         [Fact]
         public void TestSortBys()
         {
             var values = new int[] { 3, 20, 100 };
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -45,9 +44,8 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-
-
-        public class TestBlog
+        
+        private class TestBlog
         {
             public int Id { get; set; }
             public string Title { get; set; }
@@ -55,7 +53,7 @@ namespace Raven.Tests.MailingList
             public IList<TestPost> Posts { get; set; }
         }
 
-        public class TestPost
+        private class TestPost
         {
             public string Subject { get; set; }
             public string Content { get; set; }
