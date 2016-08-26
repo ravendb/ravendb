@@ -496,7 +496,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = $"User-{i}",
                             ["Location"] = locations[i % locations.Length],
                             ["Age"] = 20 + i,
-                            [Constants.Metadata] = new DynamicJsonValue
+                            [Constants.Metadata.Key] = new DynamicJsonValue
                             {
                                 [Constants.Headers.RavenEntityName] = "Users"
                             }
@@ -557,7 +557,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = "modified",
                             ["Location"] = "Poland",
                             ["Age"] = 30,
-                            [Constants.Metadata] = new DynamicJsonValue
+                            [Constants.Metadata.Key] = new DynamicJsonValue
                             {
                                 [Constants.Headers.RavenEntityName] = "Users"
                             }
@@ -632,7 +632,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = "James",
                             ["Location"] = "Israel",
                             ["Age"] = 20,
-                            [Constants.Metadata] = new DynamicJsonValue
+                            [Constants.Metadata.Key] = new DynamicJsonValue
                             {
                                 [Constants.Headers.RavenEntityName] = "Users"
                             }
@@ -753,7 +753,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                                     ["Quantity"] = 2
                                 }
                             },
-                            [Constants.Metadata] = new DynamicJsonValue
+                            [Constants.Metadata.Key] = new DynamicJsonValue
                             {
                                 [Constants.Headers.RavenEntityName] = "Orders"
                             }

@@ -587,7 +587,7 @@ namespace Raven.Client.FileSystem
             var val = (start ?? end);
             fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName, Value = val });
 
-            if (fieldName == Constants.DocumentIdFieldName)
+            if (fieldName == Constants.Indexing.Fields.DocumentIdFieldName)
                 return fieldName;
            
             if (UsesRangeType(val) && fieldName.EndsWith("_Range"))

@@ -1,20 +1,18 @@
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class LoadAllStartingWith : RavenTestBase
     {
-
-        public class Abc
+        private class Abc
         {
             public string Id { get; set; }
         }
 
-        public class Xyz
+        private class Xyz
         {
             public string Id { get; set; }
         }
@@ -22,17 +20,16 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void LoadAllStartingWithShouldNotLoadDeletedDocs()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var doc1 = new Abc()
+                var doc1 = new Abc
                 {
                     Id = "abc/1",
                 };
-                var doc2 = new Xyz()
+                var doc2 = new Xyz
                 {
                     Id = "xyz/1"
                 };
-
 
                 using (var session = store.OpenSession())
                 {

@@ -157,7 +157,7 @@ namespace SlowTests.Core.Commands
 
                 var metadataOnly = store.DatabaseCommands.Query("test", new IndexQuery(), metadataOnly: true).Results;
 
-                Assert.True(metadataOnly.TrueForAll(x => x.Keys.Count == 1 && x.Keys.First() == Constants.Metadata));
+                Assert.True(metadataOnly.TrueForAll(x => x.Keys.Count == 1 && x.Keys.First() == Constants.Metadata.Key));
 
                 var entriesOnly = store.DatabaseCommands.Query("test", new IndexQuery()
                 {
@@ -169,7 +169,7 @@ namespace SlowTests.Core.Commands
                     Assert.Equal(2, entriesOnly[i].Keys.Count);
 
                     Assert.Equal("user" + i, entriesOnly[i].Value<string>("Name"));
-                    Assert.Equal("users/" + (i + 1), entriesOnly[i].Value<string>(Constants.DocumentIdFieldName));
+                    Assert.Equal("users/" + (i + 1), entriesOnly[i].Value<string>(Constants.Indexing.Fields.DocumentIdFieldName));
                 }
             }
         }

@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Patch
             var obj = new DynamicJsonValue();
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.ReduceKeyFieldName || property.Key == Constants.DocumentIdFieldName)
+                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
                 var value = property.Value.Value;
@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Patch
             totalStatements += (MaxSteps/2 + (document.Data.Size*AdditionalStepsPerSize));
             engine.Options.MaxStatements(totalStatements);
 
-            // TODO: Make sure to add Constants.DocumentIdFieldName to document.Data
+            // TODO: Make sure to add Constants.Indexing.Fields.DocumentIdFieldName to document.Data
             return ToJsObject(engine, document.Data);
         }
 

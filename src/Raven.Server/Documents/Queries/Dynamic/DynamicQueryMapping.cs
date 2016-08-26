@@ -118,12 +118,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         var field = sortedField.Field;
 
-                        if (field.StartsWith(Constants.RandomFieldName) ||
-                            field.StartsWith(Constants.CustomSortFieldName) ||
-                            field.StartsWith(Constants.Headers.TemporaryScoreValue))
+                        if (field.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
+                            field.StartsWith(Constants.Indexing.Fields.CustomSortFieldName) ||
+                            field.StartsWith(Constants.Indexing.Fields.IndexFieldScoreName))
                             continue;
 
-                        if (field.StartsWith(Constants.AlphaNumericFieldName))
+                        if (field.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
                         {
                             field = SortFieldHelper.CustomField(field).Name;
                         }
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             result.MapFields = dynamicMapFields
-                .Where(x => x.Name != Constants.DocumentIdFieldName)
+                .Where(x => x.Name != Constants.Indexing.Fields.DocumentIdFieldName)
                 .OrderByDescending(x => x.Name.Length)
                 .ToArray();
 

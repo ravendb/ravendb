@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private bool TryGetByName(string name, out object result)
         {
-            if (name == Constants.DocumentIdFieldName || name == "Id")
+            if (name == Constants.Indexing.Fields.DocumentIdFieldName || name == "Id")
             {
                 if (_key == null)
                 {
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var getResult = BlittableJson.TryGetMember(name, out result);
 
-            if (getResult == false && (name == Constants.MetadataDocId || name == Constants.MetadataEtagId))
+            if (getResult == false && (name == Constants.Metadata.Id || name == Constants.Metadata.Etag))
             {
                 result = BlittableJson.Modifications[name];
                 getResult = result != null;

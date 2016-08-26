@@ -46,7 +46,7 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public SpatialUnits? RadiusUnitOverride { get; set; }
 
-        private string spatialFieldName = Constants.DefaultSpatialFieldName;
+        private string spatialFieldName = Constants.Indexing.Fields.DefaultSpatialFieldName;
         public string SpatialFieldName
         {
             get { return spatialFieldName; }

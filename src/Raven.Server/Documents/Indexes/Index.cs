@@ -915,17 +915,17 @@ namespace Raven.Server.Documents.Indexes
                     //if (f == Constants.TemporaryScoreValue)
                     //    continue;
 
-                    if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
+                    if (f.StartsWith(Constants.Indexing.Fields.RandomFieldName) || f.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    if (f.StartsWith(Constants.AlphaNumericFieldName))
+                    if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
                     {
                         f = SortFieldHelper.CustomField(f).Name;
                         if (string.IsNullOrEmpty(f))
                             throw new ArgumentException("Alpha numeric sorting requires a field name");
                     }
 
-                    if (IndexPersistence.ContainsField(f) == false && f.StartsWith(Constants.DistanceFieldName) == false && IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+                    if (IndexPersistence.ContainsField(f) == false && f.StartsWith(Constants.Indexing.Fields.DistanceFieldName) == false && IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
                         throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
                 }
             }

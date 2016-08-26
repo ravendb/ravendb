@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public bool ContainsField(string field)
         {
-            if (field == Constants.DocumentIdFieldName)
+            if (field == Constants.Indexing.Fields.DocumentIdFieldName)
                 return _index.Type.IsMap();
 
             if (field.EndsWith("_Range"))

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -883,7 +884,19 @@ namespace Raven.Server.Json
             if (metadataOnly)
                 document.RemoveAllPropertiesExceptMetadata();
 
-            context.Write(writer, document.Data);
+            try
+            {
+                context.Write(writer, document.Data);
+            }
+            catch (Exception e)
+            {
+                if (e is AggregateException)
+                {
+                    
+                }
+
+                throw;
+            }
         }
     }
 }

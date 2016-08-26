@@ -357,7 +357,7 @@ namespace Raven.Client.Linq
         /// <returns></returns>
         public virtual object GetValue(string name)
         {
-            if (name == Constants.DocumentIdFieldName)
+            if (name == Constants.Indexing.Fields.DocumentIdFieldName)
             {
                 return GetRootParentOrSelf().GetDocumentId();
             }
@@ -400,7 +400,7 @@ namespace Raven.Client.Linq
                 var id = metadata.Value<string>("@id");
                 return string.IsNullOrEmpty(id) ? (object)DynamicNullObject.Null : id;
             }
-            return inner.Value<string>(Constants.DocumentIdFieldName) ?? (object)DynamicNullObject.Null;
+            return inner.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName) ?? (object)DynamicNullObject.Null;
         }
 
 

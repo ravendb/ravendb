@@ -410,8 +410,8 @@ namespace SlowTests.Core.Indexing
                             .First();
 
                     Assert.NotNull(post.RawDocument);
-                    var metadata = (RavenJObject)post.RawDocument[Constants.Metadata];
-                    Assert.Equal("posts/1", metadata.Value<string>(Constants.MetadataDocId));
+                    var metadata = (RavenJObject)post.RawDocument[Constants.Metadata.Key];
+                    Assert.Equal("posts/1", metadata.Value<string>(Constants.Metadata.Id));
                 }
             }
         }

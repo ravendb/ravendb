@@ -1,26 +1,22 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Embedded;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class LowerCaseIdIndexTest : RavenTestBase
     {
-        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-        {
-        }
-
         [Fact]
         public void CanIndexAndQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
+                store.Conventions.FindIdentityProperty = q => q.Name == "id";
+
                 var index = new UserToResource_Index();
-                index.Execute(store.DatabaseCommands,store.Conventions);
+                index.Execute(store.DatabaseCommands, store.Conventions);
 
                 using (var session = store.OpenSession())
                 {
@@ -71,7 +67,7 @@ namespace Raven.Tests.MailingList
                         },
                         Users = new List<DenormalizedReference>()
                         {
-                            new DenormalizedReference(){ id="u1", Name="Tester" }                            
+                            new DenormalizedReference(){ id="u1", Name="Tester" }
                         }
                     });
 
@@ -91,38 +87,31 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var firstTest = session.Advanced.LuceneQuery<UserToResource_Index.ResourceToUserIndexData, UserToResource_Index>()
+                    var firstTest = session.Advanced.DocumentQuery<UserToResource_Index.ResourceToUserIndexData, UserToResource_Index>()
                             .WaitForNonStaleResults()
                             .WhereEquals("Name", "Tester")
-                            .FirstOrDefault();  
-                 
+                            .FirstOrDefault();
+
                     Assert.NotNull(firstTest);
                     Assert.NotNull(firstTest.UserId);
 
-                    var secondTest = session.Advanced.LuceneQuery<UserToResource_Index.ResourceToUserIndexData, UserToResource_Index>()
+                    var secondTest = session.Advanced.DocumentQuery<UserToResource_Index.ResourceToUserIndexData, UserToResource_Index>()
                              .WhereEquals("UserId", firstTest.UserId)
                              .FirstOrDefault();
 
-                    Assert.NotNull(secondTest);                    
+                    Assert.NotNull(secondTest);
                 }
             }
-        }        
-
-        protected override void ModifyStore(EmbeddableDocumentStore documentStore)
-        {
-            documentStore.Conventions.FindIdentityProperty = q => q.Name == "id";
         }
 
-
-
-        public class Resource
+        private class Resource
         {
             public string id { get; set; }
             public string Name { get; set; }
             public List<DenormalizedReference> ResourceGroups { get; set; }
         }
 
-        public class ResourceGroup
+        private class ResourceGroup
         {
             public string id { get; set; }
             public string Name { get; set; }
@@ -130,7 +119,7 @@ namespace Raven.Tests.MailingList
             public List<DenormalizedReference> ResourceUserGroups { get; set; }
         }
 
-        public class ResourceUserGroup
+        private class ResourceUserGroup
         {
             public string id { get; set; }
             public string Name { get; set; }
@@ -138,20 +127,20 @@ namespace Raven.Tests.MailingList
             public List<DenormalizedReference> Users { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string id { get; set; } //Id is ok
             public string Name { get; set; }
             public List<DenormalizedReference> ResourceUserGroups { get; set; }
         }
 
-        public class DenormalizedReference
+        private class DenormalizedReference
         {
             public string id { get; set; }
             public string Name { get; set; }
         }
 
-        public class UserToResource_Index : AbstractIndexCreationTask<User, UserToResource_Index.ResourceToUserIndexData>
+        private class UserToResource_Index : AbstractIndexCreationTask<User, UserToResource_Index.ResourceToUserIndexData>
         {
             public class ResourceToUserIndexData
             {
@@ -196,5 +185,5 @@ namespace Raven.Tests.MailingList
             }
         }
 
-    }    
+    }
 }

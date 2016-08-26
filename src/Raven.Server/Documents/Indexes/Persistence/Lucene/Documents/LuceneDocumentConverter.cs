@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     public class LuceneDocumentConverter : LuceneDocumentConverterBase
     {
         private readonly BlittableJsonTraverser _blittableTraverser;
-        private readonly Field _reduceValueField = new Field(Constants.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
+        private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
         private byte[] _reduceValueBuffer;
 

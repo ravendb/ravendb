@@ -7,7 +7,6 @@ using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -28,44 +27,44 @@ namespace Raven.Server.Documents.Queries.Results
             _fieldsToFetch = fieldsToFetch;
         }
 
-        public Document Get(Lucene.Net.Documents.Document input)
+        public Document Get(Lucene.Net.Documents.Document input, float score)
         {
             string id;
             if (TryGetKey(input, out id) == false)
-                throw new InvalidOperationException($"Could not extract '{Constants.DocumentIdFieldName}' from index.");
+                throw new InvalidOperationException($"Could not extract '{Constants.Indexing.Fields.DocumentIdFieldName}' from index.");
 
             if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)
-                return GetProjection(input, id);
+                return GetProjection(input, score, id);
 
-            return DirectGet(id);
+            return DirectGet(id, score);
         }
 
         public bool TryGetKey(Lucene.Net.Documents.Document input, out string key)
         {
-            key = input.Get(Constants.DocumentIdFieldName);
+            key = input.Get(Constants.Indexing.Fields.DocumentIdFieldName);
             return key != null;
         }
 
-        private Document DirectGet(string id)
+        private Document DirectGet(string id, float score)
         {
             var doc = _documentsStorage.Get(_context, id);
             if (doc == null)
                 return null;
 
-            doc.EnsureMetadata();
+            doc.EnsureMetadata(score);
             return doc;
         }
 
-        private Document GetProjection(Lucene.Net.Documents.Document input, string id)
+        private Document GetProjection(Lucene.Net.Documents.Document input, float score, string id)
         {
             Document doc = null;
             if (_fieldsToFetch.AnyExtractableFromIndex == false)
             {
-                doc = DirectGet(id);
+                doc = DirectGet(id, score);
                 if (doc == null)
                     return null;
 
-                return GetProjectionFromDocument(doc, _fieldsToFetch, _context);
+                return GetProjectionFromDocument(doc, score, _fieldsToFetch, _context);
             }
 
             var documentLoaded = false;
@@ -73,13 +72,13 @@ namespace Raven.Server.Documents.Queries.Results
             var result = new DynamicJsonValue();
 
             if (_fieldsToFetch.IsDistinct == false)
-                result[Constants.DocumentIdFieldName] = id;
+                result[Constants.Indexing.Fields.DocumentIdFieldName] = id;
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields;
             if (_fieldsToFetch.ExtractAllFromIndexAndDocument)
             {
                 fields = input.GetFields()
-                    .Where(x => x.Name != Constants.DocumentIdFieldName)
+                    .Where(x => x.Name != Constants.Indexing.Fields.DocumentIdFieldName)
                     .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
 
                 doc = _documentsStorage.Get(_context, id);
@@ -126,23 +125,23 @@ namespace Raven.Server.Documents.Queries.Results
                 };
             }
 
-            return ReturnProjection(result, doc, _context);
+            return ReturnProjection(result, doc, score, _context);
         }
 
-        public static Document GetProjectionFromDocument(Document doc, FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        public static Document GetProjectionFromDocument(Document doc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context)
         {
             var result = new DynamicJsonValue();
 
             if (fieldsToFetch.IsDistinct == false)
-                result[Constants.DocumentIdFieldName] = doc.Key;
+                result[Constants.Indexing.Fields.DocumentIdFieldName] = doc.Key;
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
                 ExtractValueFromDocument(fieldToFetch, doc, result);
 
-            return ReturnProjection(result, doc, context);
+            return ReturnProjection(result, doc, score, context);
         }
 
-        private static Document ReturnProjection(DynamicJsonValue result, Document doc, JsonOperationContext context)
+        private static Document ReturnProjection(DynamicJsonValue result, Document doc, float score, JsonOperationContext context)
         {
             var newData = context.ReadObject(result, doc.Key);
 
@@ -157,7 +156,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             doc.Data = newData;
-            doc.EnsureMetadata();
+            doc.EnsureMetadata(score);
 
             return doc;
         }

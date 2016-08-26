@@ -25,10 +25,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
         {
             IndexFieldOptions allFields;
-            definition.Fields.TryGetValue(Constants.AllFields, out allFields);
+            definition.Fields.TryGetValue(Constants.Indexing.Fields.AllFields, out allFields);
 
             var result = definition.Fields
-                .Where(x => x.Key != Constants.AllFields)
+                .Where(x => x.Key != Constants.Indexing.Fields.AllFields)
                 .Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
 
             foreach (var outputField in outputFields)

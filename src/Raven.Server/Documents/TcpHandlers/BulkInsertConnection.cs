@@ -249,12 +249,12 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             string docKey;
                             BlittableJsonReaderObject metadata;
-                            if (reader.TryGet(Constants.Metadata, out metadata) == false)
+                            if (reader.TryGet(Constants.Metadata.Key, out metadata) == false)
                             {
                                 const string message = "'@metadata' is missing in received document for bulk insert";
                                 throw new InvalidDataException(message);
                             }
-                            if (metadata.TryGet(Constants.MetadataDocId, out docKey) == false)
+                            if (metadata.TryGet(Constants.Metadata.Id, out docKey) == false)
                             {
                                 const string message = "'@id' is missing in received document for bulk insert";
                                 throw new InvalidDataException(message);
