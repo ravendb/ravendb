@@ -1,20 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class TransformerDictionaryOrderTests : RavenTestBase
     {
         [Fact]
         public void CanOrderADictionary()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new FooTransformer().Execute(store);
 
@@ -30,7 +28,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public Dictionary<string, DateTimeOffset> Dates { get; set; }
@@ -41,7 +39,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class FooTransformer : AbstractTransformerCreationTask<Foo>
+        private class FooTransformer : AbstractTransformerCreationTask<Foo>
         {
             public class Result
             {

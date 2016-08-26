@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Server.Utils;
@@ -123,15 +124,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerable<object> Select(Func<object, object> func)
         {
-            var list = new List<object>();
-            foreach (var property in BlittableJson.GetPropertyNames())
-            {
-                var value = this[property];
-                var result = func(new KeyValuePair<string, object>(property, value));
-                list.Add(TypeConverter.DynamicConvert(result));
-            }
+            return new DynamicArray(Enumerable.Select(this, func));
+        }
 
-            return new DynamicArray(list);
+        public IEnumerable<object> OrderBy(Func<object, object> func)
+        {
+            return new DynamicArray(Enumerable.OrderBy(this, func));
         }
 
         public override string ToString()
