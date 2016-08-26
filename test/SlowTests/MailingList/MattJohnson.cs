@@ -1,14 +1,12 @@
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class MattJohnson : RavenTest
+    public class MattJohnson : RavenTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public decimal Decimal { get; set; }
@@ -19,7 +17,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void ShouldSortProperly()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

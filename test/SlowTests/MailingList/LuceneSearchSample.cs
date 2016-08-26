@@ -1,17 +1,16 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    internal class LuceneSearchSample : RavenTestBase
+    public class LuceneSearchSample : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void LuceneSearchTest()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleSearchIndex().Execute(store);
 
@@ -57,26 +56,26 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SampleModel
+        private class SampleModel
         {
             public string Id { get; set; }
             public string IrrelevantData { get; set; }
             public int? NullableInt { get; set; }
         }
 
-        public class SampleModel2
+        private class SampleModel2
         {
             public string Id { get; set; }
             public string IrrelevantData { get; set; }
         }
 
-        public class SampleIndexView
+        private class SampleIndexView
         {
             public string Id { get; set; }
             public int? NullableInt { get; set; }
         }
 
-        public class SampleSearchIndex : AbstractMultiMapIndexCreationTask<SampleIndexView>
+        private class SampleSearchIndex : AbstractMultiMapIndexCreationTask<SampleIndexView>
         {
             public SampleSearchIndex()
             {
@@ -96,7 +95,7 @@ namespace Raven.Tests.MailingList
                                                     });
 
                 Reduce = results => from result in results
-                                    group result by new {result.Id}
+                                    group result by new { result.Id }
                                     into gr
                                     select new
                                     {

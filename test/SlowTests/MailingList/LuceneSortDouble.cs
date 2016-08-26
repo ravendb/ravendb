@@ -1,27 +1,24 @@
 using System.Linq;
-using Raven.Abstractions.Indexing;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class RavenTestSample : RavenTestBase
     {
-        public class ClassWithDouble
+        private class ClassWithDouble
         {
             public string Id { get; set; }
             public double Rating { get; set; }
 
             public override string ToString()
             {
-                return this.Rating.ToString();
+                return Rating.ToString();
             }
         }
 
-        public class ClassWithDouble_Index : AbstractIndexCreationTask<ClassWithDouble>
+        private class ClassWithDouble_Index : AbstractIndexCreationTask<ClassWithDouble>
         {
             public ClassWithDouble_Index()
             {
@@ -36,7 +33,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void NormalQuery_SortingByDoubleShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ClassWithDouble_Index().Execute(store);
 
@@ -89,7 +86,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void LuceneQuery_SortingByDoubleDescShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ClassWithDouble_Index().Execute(store);
 
@@ -142,7 +139,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void LuceneQuery_SortingByDoubleShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ClassWithDouble_Index().Execute(store);
 

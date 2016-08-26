@@ -1,25 +1,25 @@
-using Raven.Client;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Raven.Client;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class MissingIncludes : RavenTest
+    public class MissingIncludes : RavenTestBase
     {
-        public class Item
+        private class Item
         {
+#pragma warning disable 414
             public string Parent;
+#pragma warning restore 414
         }
 
         [Fact]
         public void WontGenerateRequestOnMissing_Load()
         {
-            using(var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Item
                     {
@@ -40,7 +40,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WontGenerateRequestOnMissing_Query()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    session.Query<Item>().Include(x => x.Parent).Customize(x=>x.WaitForNonStaleResults()).ToList();
+                    session.Query<Item>().Include(x => x.Parent).Customize(x => x.WaitForNonStaleResults()).ToList();
                     Assert.Null(session.Load<Item>(2));
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }

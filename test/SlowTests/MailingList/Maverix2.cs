@@ -3,31 +3,32 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
+using Raven.Server.Config;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Maverix2 : RavenTest
+    public class Maverix2 : RavenTestBase
     {
-        private readonly string path;
+        private readonly string _path;
 
         public Maverix2()
         {
-            path = NewDataPath("Maverix");
+            _path = NewDataPath();
         }
 
-        public EmbeddableDocumentStore Store()
+        public IDocumentStore Store()
         {
-            var store = new EmbeddableDocumentStore { DataDirectory = path };
+            var store = GetDocumentStore(path: _path);
+
             store.RegisterListener(new NonStaleQueryListener());
             store.Initialize();
 
@@ -83,74 +84,74 @@ namespace Raven.Tests.MailingList
 
         }
 
-        public class NonStaleQueryListener : IDocumentQueryListener
+        private class NonStaleQueryListener : IDocumentQueryListener
         {
             public void BeforeQueryExecuted(IDocumentQueryCustomization customization)
             {
                 customization.WaitForNonStaleResults();
             }
         }
-    }
 
-    [Serializable]
-    public class TemplateTest
-    {
-        public int Id { get; set; }
-        public int masterId { get; set; }
-        public string category { get; set; }
-        public string name { get; set; }
-        public string subject { get; set; }
-        public string description { get; set; }
-        public string text { get; set; }
-        public string html { get; set; }
 
-        public string thumbUrl { get; set; }
-        public string previewUrl { get; set; }
-
-        public string[] images { get; set; }
-        public long size { get; set; }
-
-        public int state { get; set; }
-        public DateTime added { get; set; }
-        public DateTime modified { get; set; }
-
-        public int type { get; set; }
-        public bool isAutomated { get; set; }
-        public long stamp { get; set; }
-    }
-
-    public class TemplateTests_Search : AbstractIndexCreationTask<TemplateTest, TemplateTests_Search.ReduceResult>
-    {
-        public class ReduceResult
+        private class TemplateTest
         {
-            public string name { get; set; }
+            public int Id { get; set; }
+            public int masterId { get; set; }
             public string category { get; set; }
-            public string type { get; set; }
-            public string[] targetIds { get; set; }
-            public string state { get; set; }
+            public string name { get; set; }
+            public string subject { get; set; }
+            public string description { get; set; }
+            public string text { get; set; }
+            public string html { get; set; }
+
+            public string thumbUrl { get; set; }
+            public string previewUrl { get; set; }
+
+            public string[] images { get; set; }
+            public long size { get; set; }
+
+            public int state { get; set; }
             public DateTime added { get; set; }
-            public string Query { get; set; }
+            public DateTime modified { get; set; }
+
+            public int type { get; set; }
+            public bool isAutomated { get; set; }
+            public long stamp { get; set; }
         }
 
-        public TemplateTests_Search()
+        private class TemplateTests_Search : AbstractIndexCreationTask<TemplateTest, TemplateTests_Search.ReduceResult>
         {
-            Map = templates => from template in templates
-                                select new
-                                {
-                                name = template.name,
-                                category = template.category,
-                                type = template.type,
-                                state = template.state,
-                                added = template.added,
-                                Query = new object[]
-                                {
+            public class ReduceResult
+            {
+                public string name { get; set; }
+                public string category { get; set; }
+                public string type { get; set; }
+                public string[] targetIds { get; set; }
+                public string state { get; set; }
+                public DateTime added { get; set; }
+                public string Query { get; set; }
+            }
+
+            public TemplateTests_Search()
+            {
+                Map = templates => from template in templates
+                                   select new
+                                   {
+                                       name = template.name,
+                                       category = template.category,
+                                       type = template.type,
+                                       state = template.state,
+                                       added = template.added,
+                                       Query = new object[]
+                                   {
                                     template.name,
                                     template.category,
                                     template.subject,
                                     template.description
-                                }
-                                };
-            Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+                                   }
+                                   };
+                Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+            }
         }
     }
 }

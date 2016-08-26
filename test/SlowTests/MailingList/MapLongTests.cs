@@ -1,20 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
-
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class MapLongTests : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void CanMapADictionaryLong()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new FooIndex().Execute(store);
 
@@ -49,7 +46,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public string Something { get; set; }
@@ -57,12 +54,12 @@ namespace Raven.Tests.MailingList
             public long Long { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public string Whatever { get; set; }
         }
 
-        public class FooIndex : AbstractIndexCreationTask<Foo, FooIndex.Result>
+        private class FooIndex : AbstractIndexCreationTask<Foo, FooIndex.Result>
         {
             public class Result
             {

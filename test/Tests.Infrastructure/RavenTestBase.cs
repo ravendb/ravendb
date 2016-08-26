@@ -160,7 +160,7 @@ namespace FastTests
 
         private static int _counter;
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null,
+        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null, string path = null,
            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
@@ -168,11 +168,21 @@ namespace FastTests
             if (dbSuffixIdentifier != null)
                 name = $"{name}_{dbSuffixIdentifier}";
 
-            var path = NewDataPath(name);
+            var hardDelete = true;
+            var runInMemory = true;
+
+            if (path == null)
+                path = NewDataPath(name);
+            else
+            {
+                hardDelete = false;
+                runInMemory = false;
+            }
 
             var doc = MultiDatabase.CreateDatabaseDocument(name);
-            doc.Settings["Raven/DataDir"] = path;
-            doc.Settings["Raven/ThrowIfAnyIndexOrTransformerCouldNotBeOpened"] = "true";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
+            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
             modifyDatabaseDocument?.Invoke(doc);
 
             TransactionOperationContext context;
@@ -199,7 +209,7 @@ namespace FastTests
                 if (databaseTask != null && databaseTask.IsCompleted == false)
                     databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: true);
+                store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
                 CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);

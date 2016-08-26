@@ -1,26 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
+using Raven.Server.Config;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class MultiMapIndexWithDynamicFieldsTests : RavenTest
+    public class MultiMapIndexWithDynamicFieldsTests : RavenTestBase
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
-        {
-            configuration.Modify(x => x.Indexing.MaxSimpleIndexOutputsPerDocument, 100);
-        }
-
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void CanSortDynamically()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
             {
                 new DynamicMultiMapDataSetIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -61,7 +54,7 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-        public class Song
+        private class Song
         {
             public string Id { get; set; }
 
@@ -74,19 +67,19 @@ namespace Raven.Tests.MailingList
             public Attribute[] Attributes { get; set; }
         }
 
-        public class DataSet
+        private class DataSet
         {
             public string Id { get; set; }
             public List<Item> Items { get; set; }
         }
 
-        public class Item
+        private class Item
         {
             public Attribute[] Attributes { get; set; }
             public string SongId { get; set; }
         }
 
-        public class Attribute
+        private class Attribute
         {
             protected Attribute() { }
             public Attribute(string name, object value)
@@ -98,7 +91,7 @@ namespace Raven.Tests.MailingList
             public object Value { get; set; }
         }
 
-        public class DataView
+        private class DataView
         {
             public string SongId { get; set; }
 
@@ -111,7 +104,7 @@ namespace Raven.Tests.MailingList
             public Attribute[] Attributes { get; set; }
         }
 
-        public class DynamicMultiMapDataSetIndex : AbstractMultiMapIndexCreationTask<DynamicMultiMapDataSetIndex.Result>
+        private class DynamicMultiMapDataSetIndex : AbstractMultiMapIndexCreationTask<DynamicMultiMapDataSetIndex.Result>
         {
             public class Result
             {

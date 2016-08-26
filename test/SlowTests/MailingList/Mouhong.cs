@@ -1,19 +1,18 @@
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Mouhong : RavenTest
+    public class Mouhong : RavenTestBase
     {
         [Fact]
         public void CanSortDescending()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TestItemIndex().Execute(store);
 
@@ -91,27 +90,27 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class TestItem
+        private class TestItem
         {
             public string Id { get; set; }
             public double Weight { get; set; }
             public string Letter { get; set; }
         }
 
-        public class TestItemIndex : AbstractIndexCreationTask<TestItem>
+        private class TestItemIndex : AbstractIndexCreationTask<TestItem>
         {
             public TestItemIndex()
             {
                 Map = items => from i in items
-                    select new
-                    {
-                        i.Id,
-                        i.Weight,
-                        i.Letter
-                    };
+                               select new
+                               {
+                                   i.Id,
+                                   i.Weight,
+                                   i.Letter
+                               };
 
-//                Index(x => x.Weight, Raven.Abstractions.Indexing.FieldIndexing.NotAnalyzed);
-                Sort(x => x.Weight, Raven.Abstractions.Indexing.SortOptions.Double);
+                //Index(x => x.Weight, Raven.Abstractions.Indexing.FieldIndexing.NotAnalyzed);
+                Sort(x => x.Weight, Raven.Abstractions.Indexing.SortOptions.NumericDouble);
             }
         }
     }
