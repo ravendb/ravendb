@@ -286,6 +286,7 @@ namespace FastTests
             SystemTime.UtcDateTime = null;
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
+
             foreach (var store in CreatedStores)
                 exceptionAggregator.Execute(store.Dispose);
             CreatedStores.Clear();
@@ -301,13 +302,10 @@ namespace FastTests
                         RemoveUsedPort(NonReusedServerPort);
                         RemoveUsedPort(NonReusedTcpServerPort);
                     });
-
-                    exceptionAggregator.ThrowIfNeeded();
-                    return;
                 }
-
-                exceptionAggregator.ThrowIfNeeded();
             }
+
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }
