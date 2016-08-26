@@ -106,8 +106,6 @@ namespace Raven.Server
             }
             BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
-            BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
-
             owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
             options = owinHttpServer.Options;
             
