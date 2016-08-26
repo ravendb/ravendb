@@ -1,24 +1,22 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class linmouhong3 : RavenTest
+    public class linmouhong3 : RavenTestBase
     {
-        public class ShortUrlMap
+        private class ShortUrlMap
         {
             public string LongUrl { get; set; }
 
             public string ShortUrl { get; set; }
         }
 
-        public class ShortUrlMapIndex : AbstractIndexCreationTask<ShortUrlMap>
+        private class ShortUrlMapIndex : AbstractIndexCreationTask<ShortUrlMap>
         {
             public ShortUrlMapIndex()
             {
@@ -34,11 +32,11 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void InQueriesWork()
         {
-            using (var Database = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                new ShortUrlMapIndex().Execute(Database);
+                new ShortUrlMapIndex().Execute(store);
 
-                using (var session = Database.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new ShortUrlMap
                     {
@@ -54,7 +52,7 @@ namespace Raven.Tests.MailingList
                 }
 
 
-                using (var session = Database.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var longUrls = new List<string>
                     {

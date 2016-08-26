@@ -3,22 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.ComponentModel.Composition.Hosting;
-using System.Linq;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System;
+using System.Linq;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class LazyTests : RavenTest
+    public class LazyTests : RavenTestBase
     {
-        public class Simple
+        private class Simple
         {
             public Simple()
             {
@@ -30,19 +27,19 @@ namespace Raven.Tests.MailingList
             public int stamp { get; set; }
         }
 
-        public class Reduced
+        private class Reduced
         {
             public string key { get; set; }
             public int stamp { get; set; }
         }
 
 
-        public class Simple_Index : AbstractIndexCreationTask<Simple>
+        private class Simple_Index : AbstractIndexCreationTask<Simple>
         {
             public Simple_Index()
             {
                 Map = entities => from entity in entities
-                                  select new {entity.key, entity.stamp};
+                                  select new { entity.key, entity.stamp };
             }
         }
 
@@ -70,7 +67,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Passing_not_embedded_with_empty_convention()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Populate(store);
 
@@ -91,7 +88,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Passing_embedded_disabled_profiling_false()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.DisableProfiling = false;
 
@@ -114,7 +111,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Passing_not_embedded_with_disabled_profiling_true()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.DisableProfiling = true;
                 Populate(store);
@@ -136,7 +133,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Passing_when_not_using_lazy()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.DisableProfiling = false;
                 Populate(store);
@@ -158,7 +155,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Failing_when_not_embedded_with_disabled_profiling_false()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.DisableProfiling = false;
                 Populate(store);

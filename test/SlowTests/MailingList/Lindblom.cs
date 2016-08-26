@@ -3,15 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Lindblom : RavenTest
+    public class Lindblom : RavenTestBase
     {
         [Fact]
         public void Test()
@@ -20,7 +20,7 @@ namespace Raven.Tests.MailingList
             IPageModel data;
 
             // Act
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new AllPages().Execute(store);
                 using (var session = store.OpenSession())
@@ -45,7 +45,7 @@ namespace Raven.Tests.MailingList
             Assert.NotNull(data);
         }
 
-        public class DocumentReference<T> where T : IPageModel
+        private class DocumentReference<T> where T : IPageModel
         {
             /// <summary>
             /// Get/Sets the Id of the DocumentReference
@@ -81,19 +81,19 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public interface IPageModel
+        private interface IPageModel
         {
             string Id { get; set; }
             DocumentReference<IPageModel> Parent { get; set; }
         }
 
-        public class PageModel : IPageModel
+        private class PageModel : IPageModel
         {
             public string Id { get; set; }
             public DocumentReference<IPageModel> Parent { get; set; }
         }
 
-        public class AllPages : AbstractMultiMapIndexCreationTask<IPageModel>
+        private class AllPages : AbstractMultiMapIndexCreationTask<IPageModel>
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="AllPages"/> class.

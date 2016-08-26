@@ -3,23 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class LazyWithIncludes : RavenTest
+    public class LazyWithIncludes : RavenTestBase
     {
         [Fact]
         public void CanGetLazyWithIncludes()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -51,6 +50,22 @@ namespace Raven.Tests.MailingList
                     Assert.NotNull(session.Load<User>(enumerable.First().LastName));
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
+            }
+        }
+
+        private class User
+        {
+            public string Id { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+        }
+
+        private class UserByFirstName : AbstractIndexCreationTask<User>
+        {
+            public UserByFirstName()
+            {
+                Map = users => from user in users
+                               select new { user.FirstName };
             }
         }
     }

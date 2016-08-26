@@ -1,19 +1,18 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
+using FastTests;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class LinqInExtensionTests : RavenTest
+    public class LinqInExtensionTests : RavenTestBase
     {
         [Fact]
         public void InListOver256Chars()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -42,7 +41,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void InListOver256Chars2()
         {
-            using (var store = NewRemoteDocumentStore(fiddler: true))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -70,7 +69,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class TestDoc
+        private class TestDoc
         {
             public string Id { get; set; }
             public string Name { get; set; }

@@ -1,22 +1,19 @@
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class CanSearchLazily : RavenTest
+    public class CanSearchLazily : RavenTestBase
     {
         [Fact]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -54,7 +51,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_Embedded()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -92,8 +89,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -127,8 +123,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -141,9 +136,9 @@ namespace Raven.Tests.MailingList
                 }
                 using (var session = store.OpenSession())
                 {
-                        session.Query<User, UserByFirstName>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .Take(15).ToList();
+                    session.Query<User, UserByFirstName>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Take(15).ToList();
 
                     RavenQueryStatistics stats;
 
@@ -164,8 +159,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex_NonLazy()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 new UserByFirstName().Execute(store);
                 using (var session = store.OpenSession())
@@ -196,21 +190,21 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-    }
 
-    public class User
-    {
-        public string Id { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-    }
-
-    public class UserByFirstName : AbstractIndexCreationTask<User>
-    {
-        public UserByFirstName()
+        private class User
         {
-            Map = users => from user in users
-                           select new { user.FirstName };
+            public string Id { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+        }
+
+        private class UserByFirstName : AbstractIndexCreationTask<User>
+        {
+            public UserByFirstName()
+            {
+                Map = users => from user in users
+                               select new { user.FirstName };
+            }
         }
     }
 }

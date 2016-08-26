@@ -1,13 +1,11 @@
-using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class linmouhong2 : RavenTest
+    public class linmouhong2 : RavenTestBase
     {
         public class Product
         {
@@ -45,11 +43,11 @@ namespace Raven.Tests.MailingList
                 Index(x => x.Name, Raven.Abstractions.Indexing.FieldIndexing.Analyzed);
             }
         }
-     
+
         [Fact]
         public void CanQuerySuccessfully()
         {
-            using(var database = NewDocumentStore())
+            using (var database = GetDocumentStore())
             {
                 new ProductIndex().Execute(database);
                 using (var session = database.OpenSession())

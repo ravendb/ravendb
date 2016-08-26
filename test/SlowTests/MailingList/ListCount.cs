@@ -1,16 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ListCount : RavenTest
+    public class ListCount : RavenTestBase
     {
-        public class Location
+        private class Location
         {
             public Guid Id { get; set; }
 
@@ -22,9 +20,9 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanGetCount()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Location
                     {

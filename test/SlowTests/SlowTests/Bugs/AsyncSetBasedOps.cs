@@ -17,11 +17,13 @@ namespace SlowTests.SlowTests.Bugs
 {
     public class AsyncSetBasedOps : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string FirstName;
+#pragma warning disable 414,649
             public string LastName;
             public string FullName;
+#pragma warning restore 414,649
         }
 
         [Fact]

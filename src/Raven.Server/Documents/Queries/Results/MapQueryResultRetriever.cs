@@ -5,6 +5,7 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -114,7 +115,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     continue;
 
-                TryExtractValueFromDocument(fieldToFetch, doc, result);
+                ExtractValueFromDocument(fieldToFetch, doc, result);
             }
 
             if (doc == null)
@@ -136,7 +137,7 @@ namespace Raven.Server.Documents.Queries.Results
                 result[Constants.DocumentIdFieldName] = doc.Key;
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
-                TryExtractValueFromDocument(fieldToFetch, doc, result);
+                ExtractValueFromDocument(fieldToFetch, doc, result);
 
             return ReturnProjection(result, doc, context);
         }
@@ -232,15 +233,9 @@ namespace Raven.Server.Documents.Queries.Results
             return _context.ReadForMemory(ms, field.Name);
         }
 
-        private static bool TryExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
+        private static void ExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
-            object value;
-            StringSegment leftPath;
-            if (BlittableJsonTraverser.Default.TryRead(document.Data, fieldToFetch.Name, out value, out leftPath) == false)
-                return false;
-
-            toFill[fieldToFetch.Name.Value] = value;
-            return true;
+            toFill[fieldToFetch.Name.Value] = BlittableJsonTraverserHelper.Read(BlittableJsonTraverser.Default, document, fieldToFetch.Name);
         }
     }
 }
