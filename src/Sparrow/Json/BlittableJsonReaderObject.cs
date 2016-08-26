@@ -424,6 +424,9 @@ namespace Sparrow.Json
 
         public int GetPropertyIndex(StringSegment name)
         {
+            if (_propCount == 0)
+                return -1;
+
             if (_cachedProperties != null)
             {
                 var propName = _context.GetLazyStringForFieldWithCaching(name.Value);
