@@ -8,41 +8,55 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTraverserHelper
     {
-        public static object Read(BlittableJsonTraverser blittableJsonTraverser, Document document, StringSegment path)
+        public static bool TryRead(BlittableJsonTraverser blittableJsonTraverser, Document document, StringSegment path, out object value)
         {
             StringSegment leftPath;
-            object value;
             if (blittableJsonTraverser.TryRead(document.Data, path, out value, out leftPath) == false)
             {
                 value = TypeConverter.ConvertForIndexing(value);
 
                 if (value == null)
-                    return null;
+                    return false;
 
                 if (leftPath == "Length")
                 {
                     var lazyStringValue = value as LazyStringValue;
                     if (lazyStringValue != null)
-                        return lazyStringValue.Size;
+                    {
+                        value = lazyStringValue.Size;
+                        return true;
+                    }
+
 
                     var lazyCompressedStringValue = value as LazyCompressedStringValue;
                     if (lazyCompressedStringValue != null)
-                        return lazyCompressedStringValue.UncompressedSize;
+                    {
+                        value = lazyCompressedStringValue.UncompressedSize;
+                        return true;
+                    }
 
                     var array = value as BlittableJsonReaderArray;
                     if (array != null)
-                        return array.Length;
+                    {
+                        value = array.Length;
+                        return true;
+                    }
 
-                    return null;
+                    value = null;
+                    return false;
                 }
 
                 if (leftPath == "Count")
                 {
                     var array = value as BlittableJsonReaderArray;
                     if (array != null)
-                        return array.Length;
+                    {
+                        value = array.Length;
+                        return true;
+                    }
 
-                    return null;
+                    value = null;
+                    return false;
                 }
 
                 if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
@@ -58,17 +72,18 @@ namespace Raven.Server.Json
                         value = accessor.GetValue(leftPath, value);
 
                         if (value == null)
-                            return null;
+                            return false;
 
                     } while (indexOfPropertySeparator != -1);
 
-                    return value;
+                    return true;
                 }
 
                 throw new InvalidOperationException($"Could not extract {path} from {document.Key}.");
             }
 
-            return TypeConverter.ConvertForIndexing(value);
+            value = TypeConverter.ConvertForIndexing(value);
+            return true;
         }
     }
 }

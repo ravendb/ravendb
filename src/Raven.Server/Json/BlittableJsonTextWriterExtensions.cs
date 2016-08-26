@@ -884,19 +884,7 @@ namespace Raven.Server.Json
             if (metadataOnly)
                 document.RemoveAllPropertiesExceptMetadata();
 
-            try
-            {
-                context.Write(writer, document.Data);
-            }
-            catch (Exception e)
-            {
-                if (e is AggregateException)
-                {
-                    
-                }
-
-                throw;
-            }
+            context.Write(writer, document.Data);
         }
     }
 }

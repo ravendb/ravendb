@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     continue;
 
-                ExtractValueFromDocument(fieldToFetch, doc, result);
+                MaybeExtractValueFromDocument(fieldToFetch, doc, result);
             }
 
             if (doc == null)
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Queries.Results
                 result[Constants.Indexing.Fields.DocumentIdFieldName] = doc.Key;
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
-                ExtractValueFromDocument(fieldToFetch, doc, result);
+                MaybeExtractValueFromDocument(fieldToFetch, doc, result);
 
             return ReturnProjection(result, doc, score, context);
         }
@@ -232,9 +232,13 @@ namespace Raven.Server.Documents.Queries.Results
             return _context.ReadForMemory(ms, field.Name);
         }
 
-        private static void ExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
+        private static void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
-            toFill[fieldToFetch.Name.Value] = BlittableJsonTraverserHelper.Read(BlittableJsonTraverser.Default, document, fieldToFetch.Name);
+            object value;
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, fieldToFetch.Name, out value) == false)
+                return;
+
+            toFill[fieldToFetch.Name.Value] = value;
         }
     }
 }
