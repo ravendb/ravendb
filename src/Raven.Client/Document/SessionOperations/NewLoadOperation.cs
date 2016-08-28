@@ -13,7 +13,7 @@ namespace Raven.Client.Document.SessionOperations
         private readonly InMemoryDocumentSessionOperations _session;
         private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<NewLoadOperation>("Raven.Client");
 
-        private SortedSet<string> _ids;
+        private string[] _ids;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
 
         public NewLoadOperation(InMemoryDocumentSessionOperations session)
@@ -41,7 +41,7 @@ namespace Raven.Client.Document.SessionOperations
                 throw new ArgumentNullException(nameof(id), "The document id cannot be null");
 
             if (_ids == null)
-                _ids = new SortedSet<string> {id};
+                _ids = new[] {id};
             if (_session.IsLoadedOrDeleted(id))
                 return;
 
@@ -50,8 +50,8 @@ namespace Raven.Client.Document.SessionOperations
 
         public void ByIds(IEnumerable<string> ids)
         {
-            _ids = new SortedSet<string>(ids);
-            foreach (var id in _ids)
+            _ids = ids.ToArray();
+            foreach (var id in _ids.Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 ById(id);
             }
@@ -59,7 +59,7 @@ namespace Raven.Client.Document.SessionOperations
 
         public T GetDocument<T>()
         {
-            return GetDocument<T>(_ids.ElementAt(0));
+            return GetDocument<T>(_ids[0]);
         }
 
         private T GetDocument<T>(string id)
@@ -78,7 +78,10 @@ namespace Raven.Client.Document.SessionOperations
             var entity = _session.ConvertToEntity(typeof(T), id, document);
             try
             {
-                _session.IdByEntities.Add(entity, id);
+                _session.EntitiesMetadata.Add(entity, new InMemoryDocumentSessionOperations.EntityMetadata
+                {
+                    Id = id,
+                });
             }
             catch (Exception)
             {
@@ -100,10 +103,10 @@ namespace Raven.Client.Document.SessionOperations
 
         public T[] GetDocuments<T>()
         {
-            var finalResults = new T[_ids.Count];
-            for (int i = 0; i < _ids.Count; i++)
+            var finalResults = new T[_ids.Length];
+            for (int i = 0; i < _ids.Length; i++)
             {
-                var id = _ids.ElementAt(i);
+                var id = _ids[i];
                 finalResults[i] = GetDocument<T>(id);
             }
             return finalResults;
