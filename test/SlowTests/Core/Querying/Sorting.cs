@@ -18,9 +18,9 @@ namespace SlowTests.Core.Querying
     public class Sorting : RavenTestBase
     {
         [Fact]
-        public async Task BasicSorting()
+        public void BasicSorting()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

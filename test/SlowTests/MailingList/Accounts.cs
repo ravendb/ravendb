@@ -9,9 +9,9 @@ namespace SlowTests.MailingList
     public class Accounts : RavenTestBase
     {
         [Fact]
-        public async Task TestLoadAccountByTypeContains()
+        public void TestLoadAccountByTypeContains()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -23,9 +23,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task TestLoadAccountByTypeAny()
+        public void TestLoadAccountByTypeAny()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

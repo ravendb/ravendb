@@ -31,9 +31,9 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task CanReset()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase).ConfigureAwait(false);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
                 var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
@@ -41,7 +41,7 @@ namespace FastTests.Client.Indexing
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
 
-                await store.AsyncDatabaseCommands.ResetIndexAsync(index.Name).ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.ResetIndexAsync(index.Name);
 
                 indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
@@ -52,9 +52,9 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task CanDelete()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase).ConfigureAwait(false);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
                 var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
@@ -62,7 +62,7 @@ namespace FastTests.Client.Indexing
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
 
-                await store.AsyncDatabaseCommands.DeleteIndexAsync(index.Name).ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.DeleteIndexAsync(index.Name);
 
                 indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(0, indexes.Count);
@@ -72,46 +72,46 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task CanStopAndStart()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase).ConfigureAwait(false);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
                 database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
 
-                var statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+                var statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
 
                 Assert.Equal(2, statuses.Length);
                 Assert.Equal("Running", statuses[0].Status);
                 Assert.Equal("Running", statuses[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync().ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync();
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
 
                 Assert.Equal(2, statuses.Length);
                 Assert.Equal("Paused", statuses[0].Status);
                 Assert.Equal("Paused", statuses[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StartIndexingAsync().ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.Admin.StartIndexingAsync();
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
 
                 Assert.Equal(2, statuses.Length);
                 Assert.Equal("Running", statuses[0].Status);
                 Assert.Equal("Running", statuses[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StopIndexAsync(statuses[1].Name).ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.Admin.StopIndexAsync(statuses[1].Name);
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
 
                 Assert.Equal(2, statuses.Length);
                 Assert.Equal("Running", statuses[0].Status);
                 Assert.Equal("Paused", statuses[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StartIndexAsync(statuses[1].Name).ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.Admin.StartIndexAsync(statuses[1].Name);
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
 
                 Assert.Equal(2, statuses.Length);
                 Assert.Equal("Running", statuses[0].Status);
@@ -122,14 +122,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task GetStats()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenSession())
@@ -143,12 +143,12 @@ namespace FastTests.Client.Indexing
                     Assert.Equal(1, users.Count);
                 }
 
-                var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128).ConfigureAwait(false);
+                var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128);
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
                 var request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                var json = await request.ReadResponseJsonAsync();
                 var stats = json.JsonDeserialization<IndexStats>();
 
                 Assert.Equal(index.IndexId, stats.Id);
@@ -173,14 +173,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task SetLockModeAndSetPriority()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenSession())
@@ -194,23 +194,23 @@ namespace FastTests.Client.Indexing
                     Assert.Equal(1, users.Count);
                 }
 
-                var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128).ConfigureAwait(false);
+                var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128);
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
                 var request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                var json = await request.ReadResponseJsonAsync();
                 var stats = json.JsonDeserialization<IndexStats>();
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                 Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
-                await store.AsyncDatabaseCommands.SetIndexLockAsync(index.Name, IndexLockMode.LockedIgnore).ConfigureAwait(false);
-                await store.AsyncDatabaseCommands.SetIndexPriorityAsync(index.Name, IndexingPriority.Error).ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.SetIndexLockAsync(index.Name, IndexLockMode.LockedIgnore);
+                await store.AsyncDatabaseCommands.SetIndexPriorityAsync(index.Name, IndexingPriority.Error);
 
                 request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                json = await request.ReadResponseJsonAsync();
                 stats = json.JsonDeserialization<IndexStats>();
 
                 Assert.Equal(index.IndexId, stats.Id);
@@ -222,14 +222,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task GetErrors()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenSession())
@@ -245,7 +245,7 @@ namespace FastTests.Client.Indexing
 
                 var database = await Server.ServerStore.DatabasesLandlord
                     .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0))
-                    .ConfigureAwait(false);
+                    ;
 
                 var index = database.IndexStore.GetIndexes().First();
                 var now = SystemTime.UtcNow;
@@ -259,7 +259,7 @@ namespace FastTests.Client.Indexing
 
                 index._indexStorage.UpdateStats(SystemTime.UtcNow, batchStats);
 
-                var error = await store.AsyncDatabaseCommands.GetIndexErrorsAsync(index.Name).ConfigureAwait(false);
+                var error = await store.AsyncDatabaseCommands.GetIndexErrorsAsync(index.Name);
                 Assert.Equal(index.Name, error.Name);
                 Assert.Equal(2, error.Errors.Length);
                 Assert.Equal("Map", error.Errors[0].Action);
@@ -272,13 +272,13 @@ namespace FastTests.Client.Indexing
                 Assert.True(error.Errors[1].Error.Contains("Could not create analyzer:"));
                 Assert.Equal(nowNext, error.Errors[1].Timestamp);
 
-                var errors = await store.AsyncDatabaseCommands.GetIndexErrorsAsync().ConfigureAwait(false);
+                var errors = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
                 Assert.Equal(1, errors.Length);
 
-                errors = await store.AsyncDatabaseCommands.GetIndexErrorsAsync(new[] { index.Name }).ConfigureAwait(false);
+                errors = await store.AsyncDatabaseCommands.GetIndexErrorsAsync(new[] { index.Name });
                 Assert.Equal(1, errors.Length);
 
-                var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name).ConfigureAwait(false);
+                var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
                 Assert.Equal(2, stats.ErrorsCount);
             }
         }
@@ -286,14 +286,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task GetDefinition()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenSession())
@@ -309,15 +309,15 @@ namespace FastTests.Client.Indexing
 
                 var database = await Server.ServerStore.DatabasesLandlord
                     .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0))
-                    .ConfigureAwait(false);
+                    ;
 
                 var index = database.IndexStore.GetIndexes().First();
                 var serverDefinition = index.GetIndexDefinition();
 
-                var definition = await store.AsyncDatabaseCommands.GetIndexAsync("do-not-exist").ConfigureAwait(false);
+                var definition = await store.AsyncDatabaseCommands.GetIndexAsync("do-not-exist");
                 Assert.Null(definition);
 
-                definition = await store.AsyncDatabaseCommands.GetIndexAsync(index.Name).ConfigureAwait(false);
+                definition = await store.AsyncDatabaseCommands.GetIndexAsync(index.Name);
                 Assert.Equal(serverDefinition.Name, definition.Name);
                 Assert.Equal(serverDefinition.IsSideBySideIndex, definition.IsSideBySideIndex);
                 Assert.Equal(serverDefinition.IsTestIndex, definition.IsTestIndex);
@@ -344,7 +344,7 @@ namespace FastTests.Client.Indexing
                     Assert.Equal(serverField.TermVector, field.TermVector);
                 }
 
-                var definitions = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128).ConfigureAwait(false);
+                var definitions = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128);
                 Assert.Equal(1, definitions.Length);
                 Assert.Equal(index.Name, definitions[0].Name);
             }
@@ -353,14 +353,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task GetTerms()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 string indexName;
@@ -379,7 +379,7 @@ namespace FastTests.Client.Indexing
                 var terms = await store
                     .AsyncDatabaseCommands
                     .GetTermsAsync(indexName, "Name", null, 128)
-                    .ConfigureAwait(false);
+                    ;
 
                 Assert.Equal(2, terms.Length);
                 Assert.True(terms.Any(x => string.Equals(x, "Fitzchak", StringComparison.OrdinalIgnoreCase)));
@@ -390,14 +390,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task Performance()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 string indexName1;
@@ -443,14 +443,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task DeleteByIndex()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 string indexName;
@@ -469,30 +469,30 @@ namespace FastTests.Client.Indexing
                 var operation = await store
                     .AsyncDatabaseCommands
                     .DeleteByIndexAsync(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false })
-                    .ConfigureAwait(false);
+                    ;
 
                 await operation
                     .WaitForCompletionAsync()
-                    .ConfigureAwait(false);
+                    ;
 
                 var statistics = await store
                     .AsyncDatabaseCommands
                     .GetStatisticsAsync()
-                    .ConfigureAwait(false);
+                    ;
 
                 Assert.Equal(1, statistics.CountOfDocuments);
                 var documents = store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
                 Assert.Equal(1, documents.Result.Length);
                 Assert.Equal("Raven/Hilo/users", documents.Result[0].Key);
 
-                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync().ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync();
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 var e = Assert.Throws<ErrorResponseException>(() => store
@@ -506,14 +506,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task UpdateByIndex()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 string indexName;
@@ -532,11 +532,11 @@ namespace FastTests.Client.Indexing
                 var operation = await store
                     .AsyncDatabaseCommands
                     .UpdateByIndexAsync(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false })
-                    .ConfigureAwait(false);
+                    ;
 
                 await operation
                     .WaitForCompletionAsync()
-                    .ConfigureAwait(false);
+                    ;
 
                 using (var session = store.OpenSession())
                 {
@@ -552,14 +552,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task GetIndexNames()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 string indexName;
@@ -584,14 +584,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task CanExplain()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenSession())
@@ -623,7 +623,7 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task MoreLikeThis()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

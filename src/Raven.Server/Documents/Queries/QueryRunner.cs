@@ -34,9 +34,11 @@ namespace Raven.Server.Documents.Queries
         {
             DocumentQueryResult result;
 
-            if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
-                indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
+            if (indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
             {
+                if (indexName.Length == "dynamic".Length)
+                    throw new InvalidOperationException("Dynamic query needs to specify collection that is applies to. The expected index name is 'dynamic/[collection-name]'.");
+
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
                 result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);

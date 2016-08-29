@@ -71,9 +71,9 @@ namespace SlowTests.Tests.Track
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task ChildrenHasMultipleTransports_Raven()
+        public void ChildrenHasMultipleTransports_Raven()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // Create Index
                 new TransportsIndex().Execute(store);

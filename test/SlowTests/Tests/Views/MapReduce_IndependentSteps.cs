@@ -50,7 +50,7 @@ select new {
         }
 
         [Fact]
-        public async Task CanGetReducedValues()
+        public void CanGetReducedValues()
         {
             var values = new[]
             {
@@ -67,7 +67,7 @@ select new {
                 "{blog_id: 5, comments: [{}]}",
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 

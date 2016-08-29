@@ -20,9 +20,9 @@ namespace SlowTests.MailingList.Apo
         }
 
         [Fact]
-        public async Task LazyWhereAndOrderBy()
+        public void LazyWhereAndOrderBy()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

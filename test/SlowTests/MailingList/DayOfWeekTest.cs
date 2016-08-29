@@ -15,9 +15,9 @@ namespace SlowTests.MailingList
     public class DayOfWeekTest : RavenTestBase
     {
         [Fact]
-        public async Task CanQueryDatesByDayOfWeek()
+        public void CanQueryDatesByDayOfWeek()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var knownDay = DateTime.Parse("2014-03-31").Date; // This is a Monday
                 using (var session = store.OpenSession())

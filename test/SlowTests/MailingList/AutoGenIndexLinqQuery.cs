@@ -38,9 +38,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task ShouldWork()
+        public void ShouldWork()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var bookName = "Book";
                 using (var session = documentStore.OpenSession())

@@ -30,9 +30,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanFilterByProductId()
+        public void CanFilterByProductId()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var productIds = new string[] { "products/1", "products/2" };
                 var productIds2 = new string[] { "products/3", "products/4" };

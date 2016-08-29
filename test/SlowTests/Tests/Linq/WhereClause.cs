@@ -25,9 +25,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WillRespectRenames()
+        public void WillRespectRenames()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -40,9 +40,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task HandlesNegative()
+        public void HandlesNegative()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -54,9 +54,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task HandlesNegativeEquality()
+        public void HandlesNegativeEquality()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -68,9 +68,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task HandleDoubleRangeSearch()
+        public void HandleDoubleRangeSearch()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -83,9 +83,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanHandleCasts()
+        public void CanHandleCasts()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -97,9 +97,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task StartsWith()
+        public void StartsWith()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -112,9 +112,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task StartsWithEqTrue()
+        public void StartsWithEqTrue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -127,9 +127,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task StartsWithEqFalse()
+        public void StartsWithEqFalse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -142,9 +142,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task StartsWithNegated()
+        public void StartsWithNegated()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -158,9 +158,9 @@ namespace SlowTests.Tests.Linq
 
 
         [Fact]
-        public async Task IsNullOrEmpty()
+        public void IsNullOrEmpty()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -173,9 +173,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmptyEqTrue()
+        public void IsNullOrEmptyEqTrue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -188,9 +188,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmptyEqFalse()
+        public void IsNullOrEmptyEqFalse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -203,9 +203,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmptyNegated()
+        public void IsNullOrEmptyNegated()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -218,9 +218,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmpty_Any()
+        public void IsNullOrEmpty_Any()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -233,9 +233,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmpty_Any_Negated_Not_Supported()
+        public void IsNullOrEmpty_Any_Negated_Not_Supported()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -249,9 +249,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmpty_AnyEqTrue()
+        public void IsNullOrEmpty_AnyEqTrue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -264,9 +264,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmpty_AnyEqFalse()
+        public void IsNullOrEmpty_AnyEqFalse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -279,9 +279,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmpty_AnyNegated()
+        public void IsNullOrEmpty_AnyNegated()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -296,9 +296,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task AnyWithPredicateShouldBeNotSupported()
+        public void AnyWithPredicateShouldBeNotSupported()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -312,9 +312,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task BracesOverrideOperatorPrecedence_second_method()
+        public void BracesOverrideOperatorPrecedence_second_method()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -329,9 +329,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task BracesOverrideOperatorPrecedence_third_method()
+        public void BracesOverrideOperatorPrecedence_third_method()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -345,9 +345,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanForceUsingIgnoreCase()
+        public void CanForceUsingIgnoreCase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -361,9 +361,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCompareValueThenPropertyGT()
+        public void CanCompareValueThenPropertyGT()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -377,9 +377,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCompareValueThenPropertyGE()
+        public void CanCompareValueThenPropertyGE()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -393,9 +393,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCompareValueThenPropertyLT()
+        public void CanCompareValueThenPropertyLT()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -409,9 +409,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCompareValueThenPropertyLE()
+        public void CanCompareValueThenPropertyLE()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -425,9 +425,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCompareValueThenPropertyEQ()
+        public void CanCompareValueThenPropertyEQ()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -441,9 +441,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCompareValueThenPropertyNE()
+        public void CanCompareValueThenPropertyNE()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -457,9 +457,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleEquality()
+        public void CanUnderstandSimpleEquality()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -483,9 +483,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleEqualityWithVariable()
+        public void CanUnderstandSimpleEqualityWithVariable()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -500,9 +500,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleContains()
+        public void CanUnderstandSimpleContains()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -516,9 +516,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleContainsWithClauses()
+        public void CanUnderstandSimpleContainsWithClauses()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -535,9 +535,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleContainsInExpression1()
+        public void CanUnderstandSimpleContainsInExpression1()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -553,9 +553,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleContainsInExpression2()
+        public void CanUnderstandSimpleContainsInExpression2()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -571,9 +571,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleStartsWithInExpression1()
+        public void CanUnderstandSimpleStartsWithInExpression1()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -590,9 +590,9 @@ namespace SlowTests.Tests.Linq
 
 
         [Fact]
-        public async Task CanUnderstandSimpleStartsWithInExpression2()
+        public void CanUnderstandSimpleStartsWithInExpression2()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -609,9 +609,9 @@ namespace SlowTests.Tests.Linq
 
 
         [Fact]
-        public async Task CanUnderstandSimpleContainsWithVariable()
+        public void CanUnderstandSimpleContainsWithVariable()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -626,9 +626,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task NoOpShouldProduceEmptyString()
+        public void NoOpShouldProduceEmptyString()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -641,9 +641,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandAnd()
+        public void CanUnderstandAnd()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -657,9 +657,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandOr()
+        public void CanUnderstandOr()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -673,9 +673,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WithNoBracesOperatorPrecedenceIsHonored()
+        public void WithNoBracesOperatorPrecedenceIsHonored()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -690,9 +690,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task BracesOverrideOperatorPrecedence()
+        public void BracesOverrideOperatorPrecedence()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -707,9 +707,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandLessThan()
+        public void CanUnderstandLessThan()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -723,9 +723,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task NegatingSubClauses()
+        public void NegatingSubClauses()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -741,9 +741,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandEqualOnDate()
+        public void CanUnderstandEqualOnDate()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -757,9 +757,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandLessThanOrEqualsTo()
+        public void CanUnderstandLessThanOrEqualsTo()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -773,9 +773,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandGreaterThan()
+        public void CanUnderstandGreaterThan()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -789,9 +789,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandGreaterThanOrEqualsTo()
+        public void CanUnderstandGreaterThanOrEqualsTo()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -805,9 +805,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandProjectionOfOneField()
+        public void CanUnderstandProjectionOfOneField()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -821,9 +821,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandProjectionOfMultipleFields()
+        public void CanUnderstandProjectionOfMultipleFields()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -838,9 +838,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleEqualityOnInt()
+        public void CanUnderstandSimpleEqualityOnInt()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -855,9 +855,9 @@ namespace SlowTests.Tests.Linq
 
 
         [Fact]
-        public async Task CanUnderstandGreaterThanOnInt()
+        public void CanUnderstandGreaterThanOnInt()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -871,9 +871,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandMethodCalls()
+        public void CanUnderstandMethodCalls()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -887,9 +887,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandConvertExpressions()
+        public void CanUnderstandConvertExpressions()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -904,9 +904,9 @@ namespace SlowTests.Tests.Linq
 
 
         [Fact]
-        public async Task CanChainMultipleWhereClauses()
+        public void CanChainMultipleWhereClauses()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -920,9 +920,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleAny_Dynamic()
+        public void CanUnderstandSimpleAny_Dynamic()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -934,9 +934,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanUnderstandSimpleAny_Static()
+        public void CanUnderstandSimpleAny_Static()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -948,9 +948,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task AnyOnCollection()
+        public void AnyOnCollection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -962,9 +962,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task AnyOnCollectionEqTrue()
+        public void AnyOnCollectionEqTrue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -976,9 +976,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task AnyOnCollectionEqFalse()
+        public void AnyOnCollectionEqFalse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -990,9 +990,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WillWrapLuceneSaveKeyword_NOT()
+        public void WillWrapLuceneSaveKeyword_NOT()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -1004,9 +1004,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WillWrapLuceneSaveKeyword_OR()
+        public void WillWrapLuceneSaveKeyword_OR()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -1018,9 +1018,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WillWrapLuceneSaveKeyword_AND()
+        public void WillWrapLuceneSaveKeyword_AND()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -1032,9 +1032,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WillNotWrapCaseNotMatchedLuceneSaveKeyword_And()
+        public void WillNotWrapCaseNotMatchedLuceneSaveKeyword_And()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

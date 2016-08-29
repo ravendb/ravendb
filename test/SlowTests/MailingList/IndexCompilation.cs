@@ -17,9 +17,9 @@ namespace SlowTests.MailingList
     public class IndexCompilation : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanCompileIndex()
+        public void CanCompileIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new AccommodationFlightGeoNodePriceCalendarIndex().Execute(store);
             }

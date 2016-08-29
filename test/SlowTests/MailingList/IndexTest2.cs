@@ -26,9 +26,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanIndexAndQuery()
+        public void CanIndexAndQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 

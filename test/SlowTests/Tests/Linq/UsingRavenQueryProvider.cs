@@ -42,9 +42,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Can_perform_Skip_Take_Query()
+        public void Can_perform_Skip_Take_Query()
         {
-            using (var db = await GetDocumentStore())
+            using (var db = GetDocumentStore())
             {
                 db.Initialize();
 
@@ -93,9 +93,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Can_perform_First_and_FirstOrDefault_Query()
+        public void Can_perform_First_and_FirstOrDefault_Query()
         {
-            using (var db = await GetDocumentStore())
+            using (var db = GetDocumentStore())
             {
                 db.Initialize();
 
@@ -132,9 +132,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Can_perform_Single_and_SingleOrDefault_Query()
+        public void Can_perform_Single_and_SingleOrDefault_Query()
         {
-            using (var db = await GetDocumentStore())
+            using (var db = GetDocumentStore())
             {
                 db.Initialize();
 
@@ -175,9 +175,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Can_perform_Boolean_Queries()
+        public void Can_perform_Boolean_Queries()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string indexName = "UserIndex";
                 using (var session = store.OpenSession())
@@ -219,13 +219,13 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Can_perform_DateTime_Comparison_Queries()
+        public void Can_perform_DateTime_Comparison_Queries()
         {
             DateTime firstTime = SystemTime.UtcNow;
             DateTime secondTime = firstTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
             DateTime thirdTime = secondTime.AddMonths(1);  // use .AddHours(1) to get a second bug, timezone related
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string indexName = "UserIndex";
                 using (var session = store.OpenSession())
@@ -286,9 +286,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact] // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/105)
-        public async Task Does_Not_Ignore_Expressions_Before_Where()
+        public void Does_Not_Ignore_Expressions_Before_Where()
         {
-            using (var db = await GetDocumentStore())
+            using (var db = GetDocumentStore())
             {
                 db.Initialize();
 
@@ -319,9 +319,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
-        public async Task Can_Use_Static_Fields_In_Where_Clauses()
+        public void Can_Use_Static_Fields_In_Where_Clauses()
         {
-            using (var db = await GetDocumentStore())
+            using (var db = GetDocumentStore())
             {
                 db.Initialize();
 
@@ -363,9 +363,9 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        public async Task Can_Use_Static_Properties_In_Where_Clauses()
+        public void Can_Use_Static_Properties_In_Where_Clauses()
         {
-            using (var db = await GetDocumentStore())
+            using (var db = GetDocumentStore())
             {
                 db.Initialize();
 
@@ -397,9 +397,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
-        public async Task Can_use_inequality_to_compare_dates()
+        public void Can_use_inequality_to_compare_dates()
         {
-            using (var db = await GetDocumentStore())
+            using (var db = GetDocumentStore())
             {
                 db.Initialize();
 
@@ -437,9 +437,9 @@ namespace SlowTests.Tests.Linq
 
         [Fact] // See issue #91 http://github.com/ravendb/ravendb/issues/issue/91 and 
         //discussion here http://groups.google.com/group/ravendb/browse_thread/thread/3df57d19d41fc21
-        public async Task Can_do_projection_in_query_result()
+        public void Can_do_projection_in_query_result()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -504,9 +504,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Throws_exception_when_overloaded_distinct_called()
+        public void Throws_exception_when_overloaded_distinct_called()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -605,9 +605,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
-        public async Task Can_Use_In_Array_In_Where_Clause()
+        public void Can_Use_In_Array_In_Where_Clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -633,9 +633,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Can_Use_Strings_In_Array_In_Where_Clause()
+        public void Can_Use_Strings_In_Array_In_Where_Clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -679,9 +679,9 @@ namespace SlowTests.Tests.Linq
 
 
         [Fact]
-        public async Task Can_Use_Enums_In_Array_In_Where_Clause()
+        public void Can_Use_Enums_In_Array_In_Where_Clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -706,9 +706,9 @@ namespace SlowTests.Tests.Linq
             }
         }
         [Fact]
-        public async Task Can_Use_Enums_In_IEnumerable_In_Where_Clause()
+        public void Can_Use_Enums_In_IEnumerable_In_Where_Clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -736,9 +736,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
-        public async Task Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
+        public void Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -766,9 +766,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
-        public async Task Can_Use_In_Params_In_Where_Clause()
+        public void Can_Use_In_Params_In_Where_Clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -794,9 +794,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
-        public async Task Can_Use_In_IEnumerable_In_Where_Clause()
+        public void Can_Use_In_IEnumerable_In_Where_Clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -823,9 +823,9 @@ namespace SlowTests.Tests.Linq
             }
         }
         [Fact]
-        public async Task Can_Use_In_IEnumerable_Not_In_Where_Clause_on_Id()
+        public void Can_Use_In_IEnumerable_Not_In_Where_Clause_on_Id()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
                 var guid1 = Guid.NewGuid();

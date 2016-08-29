@@ -33,13 +33,13 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded()
+        public void ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded()
         {
             var index = new UsersAndFriendsIndex();
             var definition = index.CreateIndexDefinition();
             definition.MaxIndexOutputsPerDocument = 2;
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

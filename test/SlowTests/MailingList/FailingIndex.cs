@@ -34,9 +34,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task ShouldBeAbleToCreate()
+        public void ShouldBeAbleToCreate()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

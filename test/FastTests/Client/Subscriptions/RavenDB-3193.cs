@@ -16,7 +16,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task ShouldRespectCollectionCriteria()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {

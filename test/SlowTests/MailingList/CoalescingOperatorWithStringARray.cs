@@ -16,9 +16,9 @@ namespace SlowTests.MailingList
     public class CoalescingOperatorWithStringArray : RavenTestBase
     {
         [Fact]
-        public async Task CanQueryIndexContainingStringArray()
+        public void CanQueryIndexContainingStringArray()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new MyIndex().Execute(store);
                 using (var session = store.OpenSession())

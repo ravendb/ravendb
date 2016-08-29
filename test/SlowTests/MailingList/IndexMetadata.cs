@@ -31,9 +31,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanCreateIndex()
+        public void CanCreateIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_DeleteStatus().Execute(store);
             }

@@ -40,9 +40,9 @@ namespace SlowTests.Tests.Track
         }
 
         [Fact]
-        public async Task SyncWorks()
+        public void SyncWorks()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Track
         [Fact]
         public async Task AsyncShouldWorkToo()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 

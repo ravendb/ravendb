@@ -81,9 +81,9 @@ namespace SlowTests.MailingList.RobStats
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task Should_get_stats_whe_using_lazy()
+        public void Should_get_stats_whe_using_lazy()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TheIndex().Execute(store);
                 using (var session = store.OpenSession())

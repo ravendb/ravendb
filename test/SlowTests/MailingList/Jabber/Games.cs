@@ -61,9 +61,9 @@ namespace SlowTests.MailingList.Jabber
         }
 
         [Fact]
-        public async Task CanUseTransformResults()
+        public void CanUseTransformResults()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupTestGameData(store);
                 new GameServers_ConnectedPlayers().Execute(store);

@@ -14,7 +14,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Query_on_enum()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Query_on_nested_field()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -95,7 +95,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Query_on_collection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {

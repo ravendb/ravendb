@@ -30,9 +30,9 @@ namespace SlowTests.Core.Indexing
     public class ResultTransformers : RavenTestBase
     {
         [Fact]
-        public async Task BasicTransformer()
+        public void BasicTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var transformer1 = new Companies_NameTransformer();
                 transformer1.Execute(store);
@@ -117,9 +117,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task BasicTransformerWithLoadDocuments()
+        public void BasicTransformerWithLoadDocuments()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var transformer = new CompanyEmployeesTransformer();
                 transformer.Execute(store);
@@ -180,9 +180,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact(Skip = "Missing feature: Collation and https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanApplyTransformerOnQueryResults()
+        public void CanApplyTransformerOnQueryResults()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Companies_SortByName().Execute(store);
                 new CompanyFullAddressTransformer().Execute(store);
@@ -229,9 +229,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanApplyTransformerOnDynamicQueryResults()
+        public void CanApplyTransformerOnDynamicQueryResults()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new CompanyFullAddressTransformer());
 
@@ -276,9 +276,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanLoadDocumentInTransformer()
+        public void CanLoadDocumentInTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Posts_ByContent().Execute(store);
                 new PostWithContentTransformer().Execute(store);
@@ -314,9 +314,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task CanSpecifyTransformerParameterAndIncludeInTransformer()
+        public void CanSpecifyTransformerParameterAndIncludeInTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_ByName().Execute(store);
                 new UserWithCustomDataAndAddressIncludeTransformer().Execute(store);
@@ -358,9 +358,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task CanUseMetadataForInTransformer()
+        public void CanUseMetadataForInTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new PostWithMetadataForTransformer().Execute(store);
 
@@ -386,9 +386,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task CanUseAsDocumentInTransformer()
+        public void CanUseAsDocumentInTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new PostWithAsDocumentTransformer().Execute(store);
 
@@ -417,9 +417,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task CanUseTransformerWithParameterOrDefault()
+        public void CanUseTransformerWithParameterOrDefault()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Users_CountByLastName();
                 index.Execute(store);

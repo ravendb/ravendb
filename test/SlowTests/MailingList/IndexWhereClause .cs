@@ -9,9 +9,9 @@ namespace SlowTests.MailingList
     public class IndexWhereClause : RavenTestBase
     {
         [Fact]
-        public async Task Where_clause_with_greater_than_or_less_than()
+        public void Where_clause_with_greater_than_or_less_than()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new MyIndex().Execute(store);
 

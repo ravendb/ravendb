@@ -17,9 +17,9 @@ namespace SlowTests.Tests.Indexes
     public class ComplexIndexOnNotAnalyzedField : RavenTestBase
     {
         [Fact]
-        public async Task CanQueryOnKey()
+        public void CanQueryOnKey()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put("companies/", null,
                        RavenJObject.Parse("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}"),

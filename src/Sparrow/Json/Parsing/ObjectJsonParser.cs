@@ -53,6 +53,18 @@ namespace Sparrow.Json.Parsing
                     Remove(name);
                 Properties.Enqueue(Tuple.Create(name, value));
             }
+            get
+            {
+                foreach (var property in Properties)
+                {
+                    if (property.Item1 != name)
+                        continue;
+
+                    return property.Item2;
+                }
+
+                return null;
+            }
         }
     }
 

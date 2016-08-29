@@ -19,7 +19,7 @@ namespace FastTests.Client.BulkInsert
                 new FooBar { Name = "Mega John" },
                 new FooBar { Name = "Mega Jane" }
             };
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var bulkInsert = store.BulkInsert())
                 {

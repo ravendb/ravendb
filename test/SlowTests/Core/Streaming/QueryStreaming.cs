@@ -19,9 +19,9 @@ namespace SlowTests.Core.Streaming
     public class QueryStreaming : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Query streaming")]
-        public async Task CanStreamQueryResults()
+        public void CanStreamQueryResults()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_ByName().Execute(store);
 

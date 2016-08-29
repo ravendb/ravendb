@@ -30,9 +30,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task UnlessAccessedLazyQueriesAreNoOp()
+        public void UnlessAccessedLazyQueriesAreNoOp()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -44,9 +44,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task WithPaging()
+        public void WithPaging()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -67,9 +67,9 @@ namespace SlowTests.Tests.MultiGet
 
 
         [Fact]
-        public async Task CanGetQueryStats()
+        public void CanGetQueryStats()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -106,9 +106,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task WithQueuedActions()
+        public void WithQueuedActions()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -131,9 +131,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task WithQueuedActions_Load()
+        public void WithQueuedActions_Load()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -153,9 +153,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task LazyOperationsAreBatched()
+        public void LazyOperationsAreBatched()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -171,9 +171,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task LazyMultiLoadOperationWouldBeInTheSession()
+        public void LazyMultiLoadOperationWouldBeInTheSession()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -207,9 +207,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task LazyWithProjection()
+        public void LazyWithProjection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -239,9 +239,9 @@ namespace SlowTests.Tests.MultiGet
 
 
         [Fact]
-        public async Task LazyWithProjection2()
+        public void LazyWithProjection2()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -270,9 +270,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
+        public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -301,9 +301,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task CanGetStatisticsWithLazyQueryResults()
+        public void CanGetStatisticsWithLazyQueryResults()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

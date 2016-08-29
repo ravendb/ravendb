@@ -8,9 +8,9 @@ namespace SlowTests.MailingList.PhilJones
     public class Projections : RavenTestBase
     {
         [Fact]
-        public async Task WorkWithRealTypes()
+        public void WorkWithRealTypes()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

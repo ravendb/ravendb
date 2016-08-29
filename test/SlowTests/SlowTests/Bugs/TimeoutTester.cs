@@ -94,9 +94,9 @@ namespace SlowTests.SlowTests.Bugs
         }
 
         [Fact]
-        public async Task will_timeout_query_after_some_time()
+        public void will_timeout_query_after_some_time()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Answers_ByAnswerEntity().Execute(store);
                 new Answers_ByAnswerEntityTransformer().Execute(store);
@@ -153,7 +153,7 @@ namespace SlowTests.SlowTests.Bugs
                                 session.SaveChanges();
                             }
                         }
-                    }, TaskCreationOptions.LongRunning);
+                    });
                     tasks.Add(thread);
                 }
 

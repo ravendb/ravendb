@@ -30,9 +30,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task TimeSpanWontTriggerPut()
+        public void TimeSpanWontTriggerPut()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new MusicSearchIndex().Execute(store);
 

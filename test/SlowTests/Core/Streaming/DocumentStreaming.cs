@@ -17,9 +17,9 @@ namespace SlowTests.Core.Streaming
     public class DocumentStreaming : RavenTestBase
     {
         [Fact(Skip = "Missing feature: /docs/stream")]
-        public async Task CanStreamDocumentsStartingWith()
+        public void CanStreamDocumentsStartingWith()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -47,9 +47,9 @@ namespace SlowTests.Core.Streaming
         }
 
         [Fact(Skip = "Missing feature: /docs/stream")]
-        public async Task CanStreamDocumentsFromSpecifiedEtag()
+        public void CanStreamDocumentsFromSpecifiedEtag()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 long? fromEtag;
 

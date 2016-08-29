@@ -25,20 +25,20 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanCreate()
+        public void CanCreate()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Dec().Execute(store);
             }
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task IgnoresLocale()
+        public void IgnoresLocale()
         {
             using (CultureHelper.EnsureCulture(new CultureInfo("de")))
             {
-                using (var store = await GetDocumentStore())
+                using (var store = GetDocumentStore())
                 {
                     new Dec().Execute(store);
                 }

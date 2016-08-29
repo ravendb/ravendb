@@ -22,9 +22,9 @@ namespace SlowTests.Core.Indexing
     public class CustomAnalyzers : RavenTestBase
     {
         [Fact]
-        public async Task CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
+        public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Companies_SortByName().Execute(store);
 
@@ -62,9 +62,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions()
+        public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Companies_CustomAnalyzers().Execute(store);
 

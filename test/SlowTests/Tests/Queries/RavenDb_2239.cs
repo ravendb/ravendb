@@ -132,9 +132,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact(Skip = "Missing feature: query streaming")]
-        public async Task SmallLogTransformerTest()
+        public void SmallLogTransformerTest()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var sw = new Stopwatch();
                 sw.Restart();
@@ -171,9 +171,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact(Skip = "Missing feature: query streaming")]
-        public async Task FullLogTransformerDelay()
+        public void FullLogTransformerDelay()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var withTransformer = new Stopwatch();
                 var withoutTransformer = new Stopwatch();

@@ -11,9 +11,9 @@ namespace SlowTests.Tests.Linq
     public class ListIndexOf : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanUseIndexOf()
+        public void CanUseIndexOf()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProjectsIndex().Execute(store);
 

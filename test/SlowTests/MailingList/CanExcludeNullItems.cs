@@ -16,9 +16,9 @@ namespace SlowTests.MailingList
     public class CanExcludedNullItems : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task WillSupportLast()
+        public void WillSupportLast()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

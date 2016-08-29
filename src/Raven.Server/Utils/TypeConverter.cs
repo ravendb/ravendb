@@ -72,6 +72,10 @@ namespace Raven.Server.Utils
             if (charEnumerable != null)
                 return new string(charEnumerable.ToArray());
 
+            var bytes = value as byte[];
+            if (bytes != null)
+                return System.Convert.ToBase64String(bytes);
+
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);
 
@@ -187,7 +191,16 @@ namespace Raven.Server.Utils
 
             if (targetType == typeof(DateTime))
             {
-                var s = value as string ?? value as LazyStringValue;
+                if (value is DateTimeOffset)
+                    return (T)(object)((DateTimeOffset)value).DateTime;
+
+                var s = value as string;
+                if (s == null)
+                {
+                    var lzv = value as LazyStringValue;
+                    if (lzv != null)
+                        s = lzv;
+                }
 
                 if (s != null)
                 {

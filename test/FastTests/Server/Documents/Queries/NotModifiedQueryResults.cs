@@ -13,7 +13,7 @@ namespace FastTests.Server.Documents.Queries
         [Fact]
         public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {

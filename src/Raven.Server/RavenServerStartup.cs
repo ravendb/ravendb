@@ -6,15 +6,15 @@ using System.Xml;
 using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NLog.Config;
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
+using Raven.Client.Exceptions;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using Raven.Server.Routing;
-using Raven.Server.TrafficWatch;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using LogManager = NLog.LogManager;
 
 namespace Raven.Server
@@ -34,27 +34,12 @@ namespace Raven.Server
             });
 
             var router = app.ApplicationServices.GetService<RequestRouter>();
+            var server = app.ApplicationServices.GetService<RavenServer>();
             app.Run(async context =>
             {
                 try
                 {
-                    var sp = Stopwatch.StartNew();
-                    var tenantName = await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
-
-                    var trafficWatchData = new TrafficWatchNotification
-                    {
-                        RequestUri = context.Request.GetDisplayUrl(), // TODO ADIADI - we need RequestUri.. 
-                        ElapsedMilliseconds = sp.ElapsedMilliseconds,
-                        CustomInfo = "N/A", // TODO ADIADI :: ??
-                        HttpMethod = context.Request.Method,
-                        ResponseStatusCode = context.Response.StatusCode,
-                        TenantName = tenantName ?? "<system>", // TODO ADIADI - <system> ?
-                        TimeStamp = SystemTime.UtcNow,
-                        InnerRequestsCount = 0, // TODO ADIADI - ??
-                        QueryTimings = null // TODO ADIADI - ???
-                    };
-
-                    TrafficWatchManager.DispatchMessage(trafficWatchData);
+                    await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 }
                 catch (Exception e)
                 {
@@ -73,27 +58,43 @@ namespace Raven.Server
                     if (response.HasStarted == false)
                         response.StatusCode = 500;
 
-                    var sb = new StringBuilder();
-                    sb.Append("{\r\n\t\"Url\":\"")
-                        .Append(context.Request.Path).Append('?').Append(context.Request.QueryString)
-                        .Append("\",")
-                        .Append("\r\n\t\"Error\":\"");
-
-                    string errorString;
-
-                    try
+                    JsonOperationContext ctx;
+                    using (server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                     {
-                        errorString = e.ToAsyncString();
-                    }
-                    catch (Exception)
-                    {
-                        errorString = e.ToString();
-                    }
+                        // this should be changed to BlittableJson
+                        var djv = new DynamicJsonValue
+                        {
+                            ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",
+                            ["Type"] = e.GetType().FullName,
+                            ["Message"] = e.Message
+                        };
 
-                    sb.Append(errorString.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n"));
-                    sb.Append("\"\r\n}");
+                        string errorString;
 
-                    await response.WriteAsync(sb.ToString());
+                        try
+                        {
+                            errorString = e.ToAsyncString();
+                        }
+                        catch (Exception)
+                        {
+                            errorString = e.ToString();
+                        }
+
+                        djv["Error"] = errorString;
+
+                        var indexCompilationException = e as IndexCompilationException;
+                        if (indexCompilationException != null)
+                        {
+                            djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
+                            djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
+                        }
+
+                        using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
+                        {
+                            var json = ctx.ReadObject(djv, "exception");
+                            writer.WriteObject(json);
+                        }
+                    }
                 }
             });
         }

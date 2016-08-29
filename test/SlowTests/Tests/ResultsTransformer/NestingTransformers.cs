@@ -93,9 +93,9 @@ namespace SlowTests.Tests.ResultsTransformer
 
 
         [Fact]
-        public async Task CanCallMultipleTransformers()
+        public void CanCallMultipleTransformers()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductTransformer().Execute(store);
                 new ProductTransformer2().Execute(store);
@@ -115,9 +115,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanCallTransformerPerItem()
+        public void CanCallTransformerPerItem()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductTransformer().Execute(store);
                 new CallAnotherTransformerPerItem().Execute(store);
@@ -137,9 +137,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanCallTransformerAllItem()
+        public void CanCallTransformerAllItem()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductTransformer().Execute(store);
                 new CallAnotherTransformerPerAllItems().Execute(store);

@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task It_should_be_found()
+        public void It_should_be_found()
         {
             var customer = new Customer()
             {
@@ -35,7 +35,7 @@ namespace SlowTests.MailingList
             Order order = null;
 
             // red
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // green
                 //var documentStore = new DocumentStore()

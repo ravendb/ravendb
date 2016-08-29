@@ -13,7 +13,7 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public async Task LockingIndexesInMemoryWillNotFail()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new IndexSample
                 {

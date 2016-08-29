@@ -25,7 +25,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task CreateSubscription()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
@@ -46,7 +46,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task BasicSusbscriptionTest()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 await CreateDocuments(store, 1);
 
@@ -83,7 +83,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task SubscriptionStrategyConnectIfFree()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 await CreateDocuments(store, 1);
 
@@ -143,7 +143,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task SubscriptionWaitStrategy()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 await CreateDocuments(store, 1);
 
@@ -208,7 +208,7 @@ namespace FastTests.Client.Subscriptions
 
                         Assert.False(completed == taskStarted);
 
-                        Assert.True(await ackSentAmre.WaitAsync(50000));
+                        Assert.True(await ackSentAmre.WaitAsync(TimeSpan.FromSeconds(50)));
 
                         acceptedSubscription.Dispose();
 
@@ -229,7 +229,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task SubscriptionSimpleTakeOverStrategy()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 await CreateDocuments(store, 1);
 
@@ -255,7 +255,7 @@ namespace FastTests.Client.Subscriptions
                         acceptedSusbscriptionList.Add(x);
                     });
 
-                     var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
+                    var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
 
                     acceptedSubscription.AfterAcknowledgment +=
                         () => batchProccessedByFirstSubscription.SetByAsyncCompletion();
@@ -270,7 +270,7 @@ namespace FastTests.Client.Subscriptions
                         Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000), "no doc");
                     }
 
-                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(5000), "no ack");
+                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(5)), "no ack");
 
                     Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 

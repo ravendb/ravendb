@@ -14,9 +14,9 @@ namespace SlowTests.MailingList
         private const string SampleLogfileStoreId = "123";
 
         [Fact]
-        public async Task AutoIndexReuseFails()
+        public void AutoIndexReuseFails()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

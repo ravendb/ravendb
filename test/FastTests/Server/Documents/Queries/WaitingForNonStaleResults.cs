@@ -15,7 +15,7 @@ namespace FastTests.Server.Documents.Queries
         {
             long? lastEtagOfUser;
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -43,7 +43,7 @@ namespace FastTests.Server.Documents.Queries
         [Fact]
         public async Task As_of_now_usage()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -68,7 +68,7 @@ namespace FastTests.Server.Documents.Queries
         [Fact]
         public async Task Throws_if_exceeds_timeout()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Admin.StopIndexing();
 

@@ -27,9 +27,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task DynamicLuceneQuery()
+        public void DynamicLuceneQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new FTSIndex().Execute(store);
 

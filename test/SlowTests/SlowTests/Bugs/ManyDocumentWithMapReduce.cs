@@ -17,9 +17,9 @@ namespace SlowTests.SlowTests.Bugs
         }
 
         [Fact]
-        public async Task WouldBeIndexedProperly()
+        public void WouldBeIndexedProperly()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.MaxPageSize)] = "10000"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.MaxPageSize)] = "10000"))
             {
                 using (var session = store.OpenSession())
                 {

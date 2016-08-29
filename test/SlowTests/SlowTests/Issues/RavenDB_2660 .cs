@@ -33,9 +33,9 @@ namespace SlowTests.SlowTests.Issues
         }
 
         [Fact]
-        public async Task ShouldCorrectlyIndexGroups()
+        public void ShouldCorrectlyIndexGroups()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new PeopleByName().Execute(store);
 

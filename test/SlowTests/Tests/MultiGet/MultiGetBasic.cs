@@ -40,7 +40,7 @@ namespace SlowTests.Tests.MultiGet
         [Fact]
         public async Task CanUseMultiGetToBatchGetDocumentRequests()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var docs = $"/databases/{store.DefaultDatabase}/docs";
                 using (var session = store.OpenSession())
@@ -85,7 +85,7 @@ namespace SlowTests.Tests.MultiGet
         [Fact]
         public async Task CanUseMultiQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -138,7 +138,7 @@ namespace SlowTests.Tests.MultiGet
         [Fact]
         public async Task CanHandleCaching()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var docs = $"/databases/{store.DefaultDatabase}/docs";
                 using (var session = store.OpenSession())

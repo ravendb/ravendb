@@ -20,10 +20,10 @@ namespace SlowTests.MailingList
     public class Arun : RavenTestBase
     {
         [Fact]
-        public async Task SaveDynamicEntityWithStronglyTypedProperties()
+        public void SaveDynamicEntityWithStronglyTypedProperties()
         {
             RavenQueryStatistics stats = null;
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new BookSearch().Execute(store);
 

@@ -75,9 +75,9 @@ namespace SlowTests.SlowTests.Issues
         }
 
         [Fact]
-        public async Task OptimizationShouldWork_NewIndexedWillGetPrecomputedDocumentsToIndexToAvoidRetrievingAllDocumentsFromDisk()
+        public void OptimizationShouldWork_NewIndexedWillGetPrecomputedDocumentsToIndexToAvoidRetrievingAllDocumentsFromDisk()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -148,9 +148,9 @@ namespace SlowTests.SlowTests.Issues
         }
 
         [Fact]
-        public async Task NewIndexesForWhichOptimizationIsNotAppliedShouldBeProcessesCorrectly()
+        public void NewIndexesForWhichOptimizationIsNotAppliedShouldBeProcessesCorrectly()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -178,9 +178,9 @@ namespace SlowTests.SlowTests.Issues
         }
 
         [Fact]
-        public async Task ShouldGetAllNecessaryDocumentsToIndex()
+        public void ShouldGetAllNecessaryDocumentsToIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

@@ -12,9 +12,9 @@ namespace SlowTests.MailingList
     public class HierarchyTests : RavenTestBase
     {
         [Fact]
-        public async Task CanQueryByNavigationItemHierarchy()
+        public void CanQueryByNavigationItemHierarchy()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
 

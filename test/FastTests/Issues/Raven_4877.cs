@@ -32,7 +32,7 @@ namespace Raven.SlowTests.Issues
         }
 
         [Fact]
-        public async void CanQueryWhenContainsAnyIsEmpty()
+        public void CanQueryWhenContainsAnyIsEmpty()
         {
             var noPets = new string[0];
             var coolPets = new[] { "Brian", "Garfield", "Nemo" };
@@ -41,7 +41,7 @@ namespace Raven.SlowTests.Issues
             var sadUser = new User { Name = "Michael", Pets = noPets };
             var happyUser = new User { Name = "Maxim", Pets = coolPets };
 
-            var store = await GetDocumentStore();
+            var store = GetDocumentStore();
 
             new Users_ByNameAndPets().Execute(store);
             

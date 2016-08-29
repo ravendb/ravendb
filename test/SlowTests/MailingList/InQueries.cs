@@ -14,9 +14,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task WhenQueryContainsQuestionMark()
+        public void WhenQueryContainsQuestionMark()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -36,9 +36,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task WhenQueryContainsOneElement()
+        public void WhenQueryContainsOneElement()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -59,9 +59,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task WhenElementcontainsCommas()
+        public void WhenElementcontainsCommas()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -82,9 +82,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task WhenElementcontainsCommasInMiddleOfList()
+        public void WhenElementcontainsCommasInMiddleOfList()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

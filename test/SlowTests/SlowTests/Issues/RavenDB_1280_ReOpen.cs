@@ -18,11 +18,11 @@ namespace SlowTests.SlowTests.Issues
     public class RavenDB_1280_ReOpen : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task Can_Index_With_Missing_LoadDocument_References()
+        public void Can_Index_With_Missing_LoadDocument_References()
         {
             const int iterations = 8000;
             var sp = Stopwatch.StartNew();
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "50"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "50"))
             {
                 new EmailIndex().Execute(store);
 

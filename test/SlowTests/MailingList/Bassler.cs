@@ -18,9 +18,9 @@ namespace SlowTests.MailingList
     public class Bassler : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task Test()
+        public void Test()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new App_WaiverWaitlistItemSearch().Execute(store);
                 using (var session = store.OpenSession())

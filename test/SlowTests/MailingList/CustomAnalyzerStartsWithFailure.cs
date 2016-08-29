@@ -27,9 +27,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task query_customanalyzer_with_equals()
+        public void query_customanalyzer_with_equals()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -47,9 +47,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task query_customanalyzer_with_starswith()
+        public void query_customanalyzer_with_starswith()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
                 using (IDocumentSession session = store.OpenSession())

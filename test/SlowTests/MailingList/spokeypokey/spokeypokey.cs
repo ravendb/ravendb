@@ -33,9 +33,9 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
         [Fact]
-        public async Task Can_use_barn_index2()
+        public void Can_use_barn_index2()
         {
-            using (var docStore = await GetDocumentStore())
+            using (var docStore = GetDocumentStore())
             {
                 docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) =>
                 {

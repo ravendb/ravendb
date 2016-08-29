@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanApplyBasicScriptAsPatch()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -74,7 +74,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task ComplexVariableTest()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":null}"), null);
 
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanUseTrim()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":' somebody@somewhere.com '}"), null);
 
@@ -113,7 +113,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanUseMathFloor()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":' somebody@somewhere.com '}"), null);
 
@@ -130,7 +130,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanUseSplit()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":'somebody@somewhere.com'}"), null);
 
@@ -149,7 +149,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task ComplexVariableTest2()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Contact\":null}"), null);
 
@@ -171,7 +171,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanUseLoDash()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Contact\":null}"), null);
 
@@ -193,7 +193,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanPatchUsingRavenJObjectVars()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -216,7 +216,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanRemoveFromCollectionByValue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -234,7 +234,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanRemoveFromCollectionByCondition()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -252,7 +252,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanPatchUsingVars()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -273,7 +273,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanHandleNonsensePatching()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -293,7 +293,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanThrowIfValueIsWrong()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -316,7 +316,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanOutputDebugInformation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -332,7 +332,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CannotUseInfiniteLoop()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -352,7 +352,7 @@ namespace FastTests.Server.Documents.Patching
         [Fact]
         public async Task CanUseToISOString()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var date = DateTime.UtcNow;
                 var dateOffset = DateTime.Now.AddMilliseconds(100);
@@ -376,7 +376,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanUpdateBasedOnAnotherDocumentProperty()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -406,7 +406,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanPatchMetadata()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -433,7 +433,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanUpdateOnMissingProperty()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -455,7 +455,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task WillNotErrorOnMissingDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PatchAsync("products/1", new PatchRequest
                 {
@@ -467,7 +467,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanCreateDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -492,7 +492,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanUpdateDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -522,7 +522,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanCreateMultipleDocuments()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -550,7 +550,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CreateDocumentWillThrowIfEmptyKeyProvided()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -581,7 +581,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CreateDocumentShouldThrowInvalidEtagException()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -599,7 +599,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task ShouldThrowConcurrencyExceptionIfNonCurrentEtagWasSpecified()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -624,7 +624,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanCreateEmptyDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -645,7 +645,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CreateDocumentShouldThrowIfSpecifiedJsonIsNullOrEmptyString()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
@@ -663,7 +663,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanCreateDocumentsIfPatchingAppliedByIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -709,7 +709,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task PreventRecursion()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -740,7 +740,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanPerformAdvancedPatching()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -768,7 +768,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         [Fact]
         public async Task CanPerformAdvancedWithSetBasedUpdates()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var item1 = new CustomType
                 {

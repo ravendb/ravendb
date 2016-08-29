@@ -20,9 +20,9 @@ namespace SlowTests.Core.Querying
     public class Paging : RavenTestBase
     {
         [Fact]
-        public async Task BasicPaging()
+        public void BasicPaging()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

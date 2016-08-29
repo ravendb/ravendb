@@ -16,7 +16,7 @@ namespace SlowTests.Tests.Sorting
     public class AlphaNumericSorting : RavenTestBase
     {
         [Fact]
-        public async Task basic_alphanumeric_sort()
+        public void basic_alphanumeric_sort()
         {
             var titles = new List<string>
             {
@@ -26,7 +26,7 @@ namespace SlowTests.Tests.Sorting
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -64,13 +64,13 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Fact]
-        public async Task number_and_decimal_alphanumeric_sort()
+        public void number_and_decimal_alphanumeric_sort()
         {
             var titles = new List<string> { ".303-inch machine guns", "3 point 2 and what goes with it", "0.25 mm", "3.1416 and all that", ".300 Vickers machine gun", "1-4-5 boogie-woogie" };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -108,7 +108,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Fact]
-        public async Task basic_sequence_of_characters()
+        public void basic_sequence_of_characters()
         {
             var titles = new List<string>
             {
@@ -118,7 +118,7 @@ namespace SlowTests.Tests.Sorting
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -156,7 +156,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Fact]
-        public async Task order_by_two_parameters_alphanumeric()
+        public void order_by_two_parameters_alphanumeric()
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", "3"));
@@ -166,7 +166,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("2", "4"));
             localTracks.Add(CreateTrack("1.1", "1"));
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -204,7 +204,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Fact]
-        public async Task order_by_two_parameters_first_alphanumeric_than_long()
+        public void order_by_two_parameters_first_alphanumeric_than_long()
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", year: 2005));
@@ -215,7 +215,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("2", year: 2012));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -253,7 +253,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Fact]
-        public async Task order_by_two_parameters_first_long_than_alphanumeric()
+        public void order_by_two_parameters_first_long_than_alphanumeric()
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1.01", year: 2015));
@@ -264,7 +264,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("1.1", year: 2015));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -311,7 +311,7 @@ namespace SlowTests.Tests.Sorting
                 localTracks.Add(CreateTrack(str));
             }
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.BulkInsert())
                 {
@@ -364,7 +364,7 @@ namespace SlowTests.Tests.Sorting
                 localTracks.Add(CreateTrack(str));
             }
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.BulkInsert())
                 {
@@ -417,7 +417,7 @@ namespace SlowTests.Tests.Sorting
                 localTracks.Add(CreateTrack(str));
             }
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.BulkInsert())
                 {
@@ -519,7 +519,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Fact]
-        public async Task dynamic_query_should_work()
+        public void dynamic_query_should_work()
         {
             var titles = new List<string>
             {
@@ -529,7 +529,7 @@ namespace SlowTests.Tests.Sorting
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

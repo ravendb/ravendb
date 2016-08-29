@@ -160,7 +160,7 @@ namespace FastTests
 
         private static int _counter;
 
-        protected virtual async Task<DocumentStore> GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null,
+        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null,
            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
@@ -192,7 +192,7 @@ namespace FastTests
             ModifyStore(store);
             store.Initialize();
 
-            await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
+            store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
             store.AfterDispose += (sender, args) =>
             {
                 var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);

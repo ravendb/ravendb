@@ -63,9 +63,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerWithQueryOnLoad()
+        public void CanUseResultsTransformerWithQueryOnLoad()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -85,9 +85,9 @@ namespace SlowTests.Tests.ResultsTransformer
 
 
         [Fact]
-        public async Task CanUseResultsTransformerWithQueryOnLoadWithRemoteClient()
+        public void CanUseResultsTransformerWithQueryOnLoadWithRemoteClient()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -106,9 +106,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerWithQueryWithRemoteDatabase()
+        public void CanUseResultsTransformerWithQueryWithRemoteDatabase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -131,9 +131,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
+        public void CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -156,9 +156,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerWithQuery()
+        public void CanUseResultsTransformerWithQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -181,9 +181,9 @@ namespace SlowTests.Tests.ResultsTransformer
         }
 
         [Fact]
-        public async Task CanUseResultsTransformerWithInclude()
+        public void CanUseResultsTransformerWithInclude()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductWithParametersAndInclude().Execute(store);
                 using (var session = store.OpenSession())
