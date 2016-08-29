@@ -175,7 +175,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void CanQueryOnFlagArrays()
         {
             using (var store = GetDocumentStore())
