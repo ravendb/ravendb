@@ -10,6 +10,18 @@ class getDocumentsPreviewCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet> {
+        var query = this.doQuery()
+                        .fail(() => this.createSystemIndexAndTryAgain());
+        return query;
+    }
+
+    doQuery() {
+        var resultsSelector = (dto: documentPreviewDto) => {
+            var collection = new collectionInfo(dto);
+            var items = collection.results;
+            return new pagedResultSet(items, collection.totalResults);
+        };
+
         var args = {
             collection: this.collectionName,
             start: this.skip,
@@ -17,15 +29,20 @@ class getDocumentsPreviewCommand extends commandBase {
             binding: this.bindings
         };
 
-        var resultsSelector = (dto: documentPreviewDto) => {
-            var collection = new collectionInfo(dto);
-            var items = collection.results;
-            return new pagedResultSet(items, collection.totalResults);
-        };
         var url = "/doc-preview";
-        var query = this.query(url, args, this.database, resultsSelector);
-        query.fail((response: JQueryXHR) => this.reportError("Failed to get documents preview", response.responseText, response.statusText));
-        return query;
+        return this.query(url, args, this.database, resultsSelector);
+    }
+
+    createSystemIndexAndTryAgain() {
+        // Calling silverlight/ensureStartup creates/updates the system index.
+        this.query("/silverlight/ensureStartup", null, this.database)
+            .done(() =>
+            {
+                this.doQuery();
+            })
+            .fail((response: JQueryXHR) => {
+                this.reportError("Failed to get documents preview", response.responseText, response.statusText);
+            });
     }
 }
 
