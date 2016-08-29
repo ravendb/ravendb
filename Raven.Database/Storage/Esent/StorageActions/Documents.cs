@@ -280,12 +280,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
             }
 
-            var serializedSizeOnDisk = metadataBuffer.Length + docSize;
-            cacher.SetCachedDocument(key, existingEtag, dataAsJson, metadata, serializedSizeOnDisk);
-
             return new JsonDocument
             {
-                SerializedSizeOnDisk = serializedSizeOnDisk,
+                SerializedSizeOnDisk = metadataBuffer.Length + docSize,
                 Key = key,
                 DataAsJson = dataAsJson,
                 NonAuthoritativeInformation = false,
@@ -417,22 +414,22 @@ namespace Raven.Database.Storage.Esent.StorageActions
                                                      Encoding.Unicode);
                
                 var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-                var size = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
-                stat.TotalSize += size;
+                var metadataSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
+                var docSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
+                stat.TotalSize += docSize + metadataSize;
                 if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                 {
-                    stat.System.Update(size, key);
+                    stat.System.Update(docSize, key);
                 }
-
 
                 var entityName = metadata.Value<string>(Constants.RavenEntityName);
                 if (string.IsNullOrEmpty(entityName))
                 {
-                    stat.NoCollection.Update(size, key);
+                    stat.NoCollection.Update(docSize, key);
                 }
                 else
                 {
-                    stat.IncrementCollection(entityName, size, key);
+                    stat.IncrementCollection(entityName, docSize, key);
                 }
 
                 if (metadata.ContainsKey("Raven-Delete-Marker"))
