@@ -2,12 +2,16 @@
     <div id="right-options-panel" class="flex-window">
         <div class="panel flex-window-head">
             <div class="panel-body">
-                <h4>Properties</h4>
-                <p class="small" data-bind="with: metadata">
-                    <strong>Etag:</strong> <span data-bind="text: etag, attr: {title:etag}"></span><br />
-                    <strong>Last-Modified:</strong> <span data-bind="text: lastModifiedFullDate, attr: {title:lastModifiedFullDate}"></span><br />
-                    <strong>Size:</strong> <span data-bind="text: $root.documentSize() , attr: {title:$root.documentSize() }"></span> KB
-                </p>
+                <h3 class="margin-none">Properties</h3>
+                <hr class="small" />
+                <dl class="dl-horizontal small" data-bind="with: metadata">
+                    <dt>Etag:</dt>
+                    <dd data-bind="text: etag, attr: {title:etag}"></dd>
+                    <dt>Modified:</dt>
+                    <dd data-bind="text: lastModifiedFullDate, attr: {title:lastModifiedFullDate}"></dd>
+                    <dt>Size:</dt>
+                    <dd><span data-bind="text: $root.documentSize() , attr: {title:$root.documentSize() }"></span> KB</dd>
+                </dl>
             </div>
         </div>
         <div class="panel flex-window-scroll flex-window margin-none">
@@ -38,47 +42,49 @@
                         </button>
                     </div>
                 </div>
-                <input type="search" class="form-control" placeholder="search" />
+                <div class="search-documents">
+                    <input type="search" class="form-control" placeholder="search" /><span class="icon-search"></span>
+                </div>
             </div>
             <div class="flex-window-scroll">
                 <div class="panel-body">
                     <ul class="objects-list">
-                        <li><a href="#" class="database">brickpile</a></li>
-                        <li><a href="#" class="database">brics</a></li>
-                        <li><a href="#" class="database">fs</a></li>
-                        <li><a href="#" class="database">IdentityTests</a></li>
-                        <li><a href="#" class="database">IdentityTryOuts</a></li>
-                        <li><a href="#" class="filesystem">jspatchtest</a></li>
-                        <li><a href="#" class="database">logs</a></li>
-                        <li><a href="#" class="database">Media</a></li>
-                        <li><a href="#" class="database">Northwind</a></li>
-                        <li><a href="#" class="database">QuartzDemo</a></li>
-                        <li><a href="#" class="database">r1</a></li>
-                        <li><a href="#" class="database">rep1</a></li>
-                        <li><a href="#" class="filesystem">rep2</a></li>
-                        <li><a href="#" class="filesystem">sortings</a></li>
-                        <li><a href="#" class="database">T1</a></li>
-                        <li><a href="#" class="database">test</a></li>
-                        <li><a href="#" class="counter">test2</a></li>
-                        <li><a href="#" class="timeseries">ThisIsTest</a></li>
-                        <li><a href="#" class="database">brickpile</a></li>
-                        <li><a href="#" class="database">brics</a></li>
-                        <li><a href="#" class="database">fs</a></li>
-                        <li><a href="#" class="database">IdentityTests</a></li>
-                        <li><a href="#" class="database">IdentityTryOuts</a></li>
-                        <li><a href="#" class="filesystem">jspatchtest</a></li>
-                        <li><a href="#" class="database">logs</a></li>
-                        <li><a href="#" class="database">Media</a></li>
-                        <li><a href="#" class="database">Northwind</a></li>
-                        <li><a href="#" class="database">QuartzDemo</a></li>
-                        <li><a href="#" class="database">r1</a></li>
-                        <li><a href="#" class="database">rep1</a></li>
-                        <li><a href="#" class="filesystem">rep2</a></li>
-                        <li><a href="#" class="filesystem">sortings</a></li>
-                        <li><a href="#" class="database">T1</a></li>
-                        <li><a href="#" class="database">test</a></li>
-                        <li><a href="#" class="counter">test2</a></li>
-                        <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                        <li><a href="#" class="document">brickpile</a></li>
+                        <li><a href="#" class="document">brics</a></li>
+                        <li><a href="#" class="document">fs</a></li>
+                        <li><a href="#" class="document">IdentityTests</a></li>
+                        <li><a href="#" class="document">IdentityTryOuts</a></li>
+                        <li><a href="#" class="document">jspatchtest</a></li>
+                        <li><a href="#" class="document">logs</a></li>
+                        <li><a href="#" class="document">Media</a></li>
+                        <li><a href="#" class="document">Northwind</a></li>
+                        <li><a href="#" class="document">QuartzDemo</a></li>
+                        <li><a href="#" class="document">r1</a></li>
+                        <li><a href="#" class="document">rep1</a></li>
+                        <li><a href="#" class="document">rep2</a></li>
+                        <li><a href="#" class="document">sortings</a></li>
+                        <li><a href="#" class="document">T1</a></li>
+                        <li><a href="#" class="document">test</a></li>
+                        <li><a href="#" class="document">test2</a></li>
+                        <li><a href="#" class="document">ThisIsTest</a></li>
+                        <li><a href="#" class="document">brickpile</a></li>
+                        <li><a href="#" class="document">brics</a></li>
+                        <li><a href="#" class="document">fs</a></li>
+                        <li><a href="#" class="document">IdentityTests</a></li>
+                        <li><a href="#" class="document">IdentityTryOuts</a></li>
+                        <li><a href="#" class="document">jspatchtest</a></li>
+                        <li><a href="#" class="document">logs</a></li>
+                        <li><a href="#" class="document">Media</a></li>
+                        <li><a href="#" class="document">Northwind</a></li>
+                        <li><a href="#" class="document">QuartzDemo</a></li>
+                        <li><a href="#" class="document">r1</a></li>
+                        <li><a href="#" class="document">rep1</a></li>
+                        <li><a href="#" class="document">rep2</a></li>
+                        <li><a href="#" class="document">sortings</a></li>
+                        <li><a href="#" class="document">T1</a></li>
+                        <li><a href="#" class="document">test</a></li>
+                        <li><a href="#" class="document">test2</a></li>
+                        <li><a href="#" class="document">ThisIsTest</a></li>
                     </ul>
                 </div>
             </div>
@@ -89,16 +95,18 @@
         <div class="flex-winddow-head">
             <div class="clearfix">
                 <h2 class="pull-left-sm">
-                    <span data-bind="attr: { class: isDocumentStarred()?'icon-star-filled favorite':'icon-star' }"></span> 
-                    <input id="documentName" type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }" />
+                    <a class="reset-color"><span data-bind="attr: { class: isDocumentStarred()?'icon-star-filled favorite':'icon-star' }"></span></a>
+                    Orders/123123123 
+                    <input id="documentName" type="text" class="edit-inline" data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }" />
+                    <a class="icon-edit reset-color"></a>
                 </h2>
                 <div class="pull-right-sm" data-bind="visible: displayDocumentChangeNotification()"><small><span class="icon-warning text-warning"></span> Document has beend modified outside of studio. <a href="#" data-bind="click: refreshDocument">click here to refresh</a></small></div>
             </div>
             <div class="btn-bar">
                 <div class="pull-left-sm">
                     <div class="btn-group">
-                        <button type="submit" class="btn btn-sm btn-success" data-bind="enable: isSaveEnabled"><span class="icon-save"></span> Save</button>
-                        <button type="button" class="btn btn-sm btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <button type="submit" class="btn btn-success" data-bind="enable: isSaveEnabled"><span class="icon-save"></span> Save</button>
+                        <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
@@ -107,12 +115,12 @@
                             <li><a href="#">Save as...</a></li>
                         </ul>
                     </div>
-                    <button type="button" data-bind="click: deleteDocument" class="btn btn-sm btn-danger"><span class="icon-trash"></span> Delete</button>
+                    <button type="button" data-bind="click: deleteDocument" class="btn btn-danger"><span class="icon-trash"></span> Delete</button>
                 </div>
                 <div class="pull-right-sm">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-default" data-bind="click: toClipboard"><span class="icon-copy"></span> Copy</button>
-                        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <button type="button" class="btn btn-default" data-bind="click: toClipboard"><span class="icon-copy"></span> Copy</button>
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
@@ -122,9 +130,9 @@
                     </div>
                 </div>
             </div>
-            <hr />
+            <hr class="small" />
             <div class="clearfix">
-                <div class="btn-group btn-group-xs pull-right" role="group" aria-label="...">
+                <div class="btn-group btn-group-sm pull-right" role="group">
                     <button type="button" class="btn btn-default" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> Format</button>
                     <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> Toggle collapse</button>
                     <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> Toggle new lines</button>
