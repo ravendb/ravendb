@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class TestIndexAndTransforSubcollections : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void CanTransformMultipleIndexResult()
         {
-            using (var store = NewDocumentStore())                                                                        
+            using (var store = GetDocumentStore())
             {
                 new IndexSubCollection().Execute(store);
                 new IndexSubCollectionResultTransformer().Execute(store);
@@ -36,7 +36,7 @@ namespace Raven.Tests.MailingList
                 {
                     var result = session.Query<IndexSubCollectionResult, IndexSubCollection>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow()
-                                .SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(true))
+                            .SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(true))
                         .TransformWith<IndexSubCollectionResultTransformer, IndexSubCollectionProjection>()
                         .ToList();
 
@@ -47,51 +47,50 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-    }
 
-
-    public class ItemWithSubCollection
-    {
-        public string Name { get; set; }
-        public IList<string> SubCollection { get; set; }
-    }
-
-    public class IndexSubCollectionResult
-    {
-        public string Name { get; set; }
-        public string SubItem { get; set; }
-    }
-
-    public class IndexSubCollectionProjection
-    {
-        public string TransformedSubItem { get; set; }
-    }
-
-    public class IndexSubCollection : AbstractIndexCreationTask<ItemWithSubCollection>
-    {
-        public IndexSubCollection()
+        private class ItemWithSubCollection
         {
-            Map = docs => from doc in docs
-                          from subItem in doc.SubCollection
-                          select new
-                          {
-                              doc.Name,
-                              SubItem = subItem
-                          };
-
-            StoreAllFields(FieldStorage.Yes);
+            public string Name { get; set; }
+            public IList<string> SubCollection { get; set; }
         }
-    }
 
-    public class IndexSubCollectionResultTransformer : AbstractTransformerCreationTask<IndexSubCollectionResult>
-    {
-        public IndexSubCollectionResultTransformer()
+        private class IndexSubCollectionResult
         {
-            TransformResults = results => from result in results
-                                          select new
-                                          {
-                                              TransformedSubItem = "transformed_" + result.SubItem
-                                          };
+            public string Name { get; set; }
+            public string SubItem { get; set; }
+        }
+
+        private class IndexSubCollectionProjection
+        {
+            public string TransformedSubItem { get; set; }
+        }
+
+        private class IndexSubCollection : AbstractIndexCreationTask<ItemWithSubCollection>
+        {
+            public IndexSubCollection()
+            {
+                Map = docs => from doc in docs
+                    from subItem in doc.SubCollection
+                    select new
+                    {
+                        doc.Name,
+                        SubItem = subItem
+                    };
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class IndexSubCollectionResultTransformer : AbstractTransformerCreationTask<IndexSubCollectionResult>
+        {
+            public IndexSubCollectionResultTransformer()
+            {
+                TransformResults = results => from result in results
+                    select new
+                    {
+                        TransformedSubItem = "transformed_" + result.SubItem
+                    };
+            }
         }
     }
 }

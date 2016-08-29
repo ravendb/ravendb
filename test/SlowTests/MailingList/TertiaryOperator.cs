@@ -3,21 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class TertiaryOperator : RavenTest
+    public class TertiaryOperator : RavenTestBase
     {
         [Fact]
         public void Breaks()
         {
-           using (var store = NewDocumentStore())
+           using (var store = GetDocumentStore())
            {
                store.ExecuteIndex(new BadIndex());
                store.ExecuteTransformer(new BadTransformer());
@@ -27,14 +27,14 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Works()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new GoodIndex());
                 store.ExecuteTransformer(new GoodTransformer());
             }
         }
 
-        public class BadIndex : AbstractIndexCreationTask<Widget>
+        private class BadIndex : AbstractIndexCreationTask<Widget>
         {
             public BadIndex()
             {
@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class BadTransformer : AbstractTransformerCreationTask<Widget>
+        private class BadTransformer : AbstractTransformerCreationTask<Widget>
         {
             public BadTransformer()
             {
@@ -61,13 +61,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Container
+        private class Container
         {
             public string Id { get; set; }
             public Dictionary<string, List<string>> ContainedWidgetIds { get; set; }
         }
 
-        public class GoodIndex : AbstractIndexCreationTask<Widget>
+        private class GoodIndex : AbstractIndexCreationTask<Widget>
         {
             public GoodIndex()
             {
@@ -81,7 +81,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class GoodTransformer : AbstractTransformerCreationTask<Widget>
+        private class GoodTransformer : AbstractTransformerCreationTask<Widget>
         {
             public GoodTransformer()
             {
@@ -95,7 +95,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Widget
+        private class Widget
         {
             public string Id { get; set; }
             public string ContainerId { get; set; }

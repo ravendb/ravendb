@@ -1,19 +1,17 @@
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class TestRavenIncludes : RavenTestBase
     {
         [Fact]
         public void CanIncludeRelatedDocuments()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 
@@ -41,7 +39,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        class SampleData
+        private class SampleData
         {
             public SampleData(string name)
             {
@@ -64,7 +62,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        class SampleData_Index : AbstractIndexCreationTask<SampleData>
+        private class SampleData_Index : AbstractIndexCreationTask<SampleData>
         {
             public SampleData_Index()
             {
@@ -72,7 +70,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        class IncludedData
+        private class IncludedData
         {
             public string Id { get; set; }
         }

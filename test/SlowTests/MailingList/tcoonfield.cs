@@ -1,26 +1,22 @@
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class tcoonfield : RavenTest
+    public class tcoonfield : RavenTestBase
     {
-        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-        {
-        }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void ShouldUpdateIndexWhenProductNoLongerInIt()
         {
             //Arrange
             var product = new Product("MyName", ActiveStatus.Live);
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.RegisterListener(new NoStaleQueriesListener());
                 new Product_AvailableForSale().Execute(store);
@@ -47,12 +43,12 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public enum ActiveStatus
+        private enum ActiveStatus
         {
             Live, NotLive, Discontinued
         }
 
-        public class Product
+        private class Product
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -65,7 +61,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Product_AvailableForSale : AbstractIndexCreationTask<Product>
+        private class Product_AvailableForSale : AbstractIndexCreationTask<Product>
         {
             public Product_AvailableForSale()
             {
@@ -79,7 +75,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class NoStaleQueriesListener : IDocumentQueryListener
+        private class NoStaleQueriesListener : IDocumentQueryListener
         {
             public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
             {
