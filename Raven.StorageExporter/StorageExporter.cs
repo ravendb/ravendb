@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Bundles.Compression.Plugin;
 using Raven.Bundles.Encryption.Plugin;
@@ -64,10 +65,15 @@ namespace Raven.StorageExporter
                 jsonWriter.WriteStartArray();
                 WriteIndexes(jsonWriter);
                 jsonWriter.WriteEndArray();
-                //documents
+                //Documents
                 jsonWriter.WritePropertyName("Docs");
                 jsonWriter.WriteStartArray();
                 WriteDocuments(jsonWriter);
+                jsonWriter.WriteEndArray();
+                //Attachments
+                jsonWriter.WritePropertyName("Attachments");
+                jsonWriter.WriteStartArray();
+                WriteAttachments(jsonWriter);
                 jsonWriter.WriteEndArray();
                 //Transformers
                 jsonWriter.WritePropertyName("Transformers");
@@ -97,10 +103,10 @@ namespace Raven.StorageExporter
             }
         }
 
-        private static void ReportCorruptedDocument(string stage, long currentDocsCount, string error)
+        private static void ReportCorrupted(string stage, long currentDocsCount, string error)
         {
             ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red,
-                "Failed to export {0}: document number {1} failed to export, skipping it, error: {2}", 
+                "Failed to export {0} number {1}, skipping it, error: {2}", 
                 stage, currentDocsCount, error);
         }
 
@@ -153,7 +159,7 @@ namespace Raven.StorageExporter
                 catch (Exception e)
                 {
                     currentDocsCount++;
-                    ReportCorruptedDocument("documents", currentDocsCount, e.Message);
+                    ReportCorrupted("document", currentDocsCount, e.Message);
                 }
                 finally
                 {
@@ -165,12 +171,12 @@ namespace Raven.StorageExporter
 
         private void ExtractDocumentsFromEtag(JsonTextWriter jsonWriter, long totalDocsCount)
         {
-            var currentLastEtag = DocumentsStartEtag;
-
             Debug.Assert(DocumentsStartEtag != Etag.Empty);
+
+            var currentLastEtag = DocumentsStartEtag;
             ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Yellow, "Starting to export documents as of etag={0}\n" +
-                    "TotalDocCount doesn't substract skipped items\n", DocumentsStartEtag);
-            currentLastEtag.DecrementBy(1);
+                    "Total documents count doesn't substract skipped items\n", DocumentsStartEtag);
+            currentLastEtag = currentLastEtag.DecrementBy(1);
 
             var ct = new CancellationToken();
             long currentDocsCount = 0;
@@ -196,6 +202,7 @@ namespace Raven.StorageExporter
                 catch (Exception e)
                 {
                     currentDocsCount++;
+                    currentLastEtag = currentLastEtag.IncrementBy(1);
                     ReportCorruptedDocumentWithEtag("documents", currentDocsCount, e.Message, currentLastEtag);
                 }
                 finally
@@ -247,25 +254,97 @@ namespace Raven.StorageExporter
         private void WriteIdentities(JsonTextWriter jsonWriter)
         {
             long totalIdentities = 0;
-            int currentIdentitiesCount = 0;
+            var currentIdentitiesCount = 0;
             do
             {
                 storage.Batch(accsesor =>
                 {
                     var identities = accsesor.General.GetIdentities(currentIdentitiesCount, batchSize, out totalIdentities);
-                    var filteredIdentities = identities.Where(x=>FilterIdentity(x.Key));
+                    var filteredIdentities = identities.Where(x => FilterIdentity(x.Key));
                     foreach (var identityInfo in filteredIdentities)
+                    {
+                        new RavenJObject
                         {
-                            new RavenJObject
-                                {
-                                    { "Key", identityInfo.Key }, 
-                                    { "Value", identityInfo.Value }
-                                }.WriteTo(jsonWriter);
-                        }
-                currentIdentitiesCount += identities.Count();
-                ReportProgress("identities", currentIdentitiesCount, totalIdentities);
-            });
+                            {"Key", identityInfo.Key},
+                            {"Value", identityInfo.Value}
+                        }.WriteTo(jsonWriter);
+                    }
+                    currentIdentitiesCount += identities.Count();
+                    ReportProgress("identities", currentIdentitiesCount, totalIdentities);
+                });
             } while (totalIdentities > currentIdentitiesCount);
+        }
+
+        private void WriteAttachments(JsonTextWriter jsonWriter)
+        {
+            long totalAttachmentsCount = 0;
+            storage.Batch(accsesor => totalAttachmentsCount = accsesor.Attachments.GetAttachmentsCount());
+            if (totalAttachmentsCount == 0)
+                return;
+
+            var lastEtag = Etag.Empty;
+            long currentAttachmentsCount = 0;
+            do
+            {
+                var previousAttachmentCount = currentAttachmentsCount;
+
+                try
+                {
+                    storage.Batch(accsesor =>
+                    {
+                        var attachments = accsesor.Attachments.GetAttachmentsAfter(lastEtag, batchSize, long.MaxValue);
+                        foreach (var attachmentInformation in attachments)
+                        {
+                            var attachment = accsesor.Attachments.GetAttachment(attachmentInformation.Key);
+                            if (attachment == null)
+                            {
+                                ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Couldn't find attachment '{0}'", attachmentInformation.Key);
+                                continue;
+                            }
+
+                            var data = attachment.Data;
+                            attachment.Data = () =>
+                            {
+                                var memoryStream = new MemoryStream();
+                                storage.Batch(accessor => data().CopyTo(memoryStream));
+                                memoryStream.Position = 0;
+                                return memoryStream;
+                            };
+
+                            var attachmentData = attachment.Data().ReadData();
+                            if (attachmentData == null)
+                            {
+                                ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "No data was found for attachment '{0}'", attachment.Key);
+                                continue;
+                            }
+                            var ravenJsonObj = new RavenJObject
+                            {
+                                { "Data", attachmentData },
+                                { "Metadata", attachmentInformation.Metadata },
+                                { "Key", attachmentInformation.Key },
+                                { "Etag", new RavenJValue(attachmentInformation.Etag.ToString()) }
+                            };
+                            ravenJsonObj.WriteTo(jsonWriter);
+
+                            lastEtag = attachmentInformation.Etag;
+                            currentAttachmentsCount++;
+                            if (currentAttachmentsCount % batchSize == 0)
+                                ReportProgress("attachments", currentAttachmentsCount, totalAttachmentsCount);
+                        }
+                    });
+                }
+                catch (Exception e)
+                {
+                    lastEtag = lastEtag.IncrementBy(1);
+                    currentAttachmentsCount++;
+                    ReportCorrupted("attachment", currentAttachmentsCount, e.Message);
+                }
+                finally
+                {
+                    if (currentAttachmentsCount > previousAttachmentCount)
+                        ReportProgress("attachments", currentAttachmentsCount, totalAttachmentsCount);
+                }
+            } while (currentAttachmentsCount < totalAttachmentsCount);
         }
 
         public bool FilterIdentity(string identityName)
