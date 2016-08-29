@@ -87,7 +87,7 @@ namespace Raven.Server.TrafficWatch
 
                 while (_cancellationTokenSource.IsCancellationRequested == false)
                 {
-                    var result = await _manualResetEvent.WaitAsync(5000).ConfigureAwait(false);
+                    var result = await _manualResetEvent.WaitAsync(TimeSpan.FromMilliseconds(5000)).ConfigureAwait(false);
                     if (_cancellationTokenSource.IsCancellationRequested)
                         break;
 

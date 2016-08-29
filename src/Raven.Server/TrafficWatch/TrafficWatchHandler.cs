@@ -72,6 +72,8 @@ namespace Raven.Server.TrafficWatch
         private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
         {
             var debugTag = "traffic-watch/websocket";
+            string id = "N/A";
+            TrafficWatchConnection connection = null;
             try
             {
                 var buffer = context.GetManagedBuffer();
@@ -111,7 +113,7 @@ namespace Raven.Server.TrafficWatch
                             using (var reader = builder.CreateReader())
                             {
                                 // TODO ADIADI :: from class WebSeocketRequest, ParseWebSocketRequestAsync :: replace to Token + Resource Name + (User ?? / apikey) + Uri? + string Id? + ActiveResource
-                                string token, id;
+                                string token;
                                 if (reader.TryGet("Token", out token) == false)
                                     throw new ArgumentNullException(nameof(token), "Command argument is mandatory");
                                 if (reader.TryGet("id", out id) == false)
@@ -121,7 +123,7 @@ namespace Raven.Server.TrafficWatch
 
                                 // should have here token, id, active tenat, resource name. .
 
-                                var connection = new TrafficWatchConnection(webSocket, id, ServerStore.ServerShutdown);
+                                connection = new TrafficWatchConnection(webSocket, id, ServerStore.ServerShutdown);
                                 TrafficWatchManager.AddConnection(connection);
                                 var sendTask = connection.StartSendingNotifications();
                             }
@@ -133,13 +135,10 @@ namespace Raven.Server.TrafficWatch
             {
                 /* Client was disconnected, write to log */
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Client was disconnected during TrafficWatch session Id={connection.Id}", ex);
+                    Logger.Info($"Client was disconnected during TrafficWatch session Id={id}", ex);
+                if (connection != null)
+                    TrafficWatchManager.Disconnect(connection);
             }
-            finally
-            {
-                TrafficWatchManager.Disconnect(connection);
-            }
-            await sendTask;
         }
     }
 }

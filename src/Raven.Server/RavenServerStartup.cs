@@ -9,10 +9,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NLog.Config;
+using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server.Routing;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using LogManager = NLog.LogManager;
@@ -39,7 +41,25 @@ namespace Raven.Server
             {
                 try
                 {
-                    await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+                    var sp = Stopwatch.StartNew();
+                    var tenant = await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+
+                    var twn = new TrafficWatchNotification
+                    {
+                        TimeStamp = DateTime.UtcNow,
+                        RequestId = 0, // TODO ?
+                        HttpMethod = context.Request.Method,
+                        ElapsedMilliseconds = sp.ElapsedMilliseconds,
+                        ResponseStatusCode = context.Response.StatusCode,
+                        RequestUri = "uri", // TODO ?
+                        AbsoluteUri = "uri", // TODO ?
+                        TenantName = tenant,
+                        CustomInfo = "custom info", // TODO ?
+                        InnerRequestsCount = 0, // TODO ?
+                        QueryTimings = null, // TODO ?
+                    };
+
+                    TrafficWatchManager.DispatchMessage(twn);
                 }
                 catch (Exception e)
                 {
