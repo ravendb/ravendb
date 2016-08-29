@@ -28,7 +28,7 @@ namespace Raven.Tests.MailingList
         public void CryptoStream_should_read_and_write_properly(int expectedSizeInBytes)
         {
             var data = new byte[expectedSizeInBytes];
-            new Random().NextBytes(data);
+            new System.Random().NextBytes(data);
 
             const string encryptionKey = "Byax1jveejqio9Urcdjw8431iQYKkPg6Ig4OxHdxSAU=";
             var encryptionKeyBytes = Convert.FromBase64String(encryptionKey);
@@ -69,7 +69,7 @@ namespace Raven.Tests.MailingList
         public void CryptoStream_should_show_unencrypted_length_properly(int expectedSizeInBytes)
         {
             var data = new byte[expectedSizeInBytes];
-            new Random().NextBytes(data);
+            new System.Random().NextBytes(data);
 
             const string encryptionKey = "Byax1jveejqio9Urcdjw8431iQYKkPg6Ig4OxHdxSAU=";
             var encryptionKeyBytes = Convert.FromBase64String(encryptionKey);
