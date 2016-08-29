@@ -1,13 +1,12 @@
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class NullableBoolQuery : RavenTest
+    public class NullableBoolQuery : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public bool? Active { get; set; }
         }
@@ -15,17 +14,17 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQuery_Simple()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    session.Store(new Item{Active = true});
+                    session.Store(new Item { Active = true });
                     session.SaveChanges();
                 }
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    Assert.NotEmpty	(session.Query<Item>()
+                    Assert.NotEmpty(session.Query<Item>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow())
                         .Where(x => x.Active == true)
                         .ToList());
@@ -36,7 +35,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQuery_Null()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

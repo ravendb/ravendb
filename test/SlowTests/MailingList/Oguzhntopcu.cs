@@ -3,23 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
-using Xunit;
 using Raven.Client.Linq;
+using SlowTests.Utils;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Oguzhntopcu : RavenTest
+    public class Oguzhntopcu : RavenTestBase
     {
-        internal class Result
+        private class Result
         {
             public string Id { get; set; }
             public string UserName { get; set; }
@@ -30,7 +29,7 @@ namespace Raven.Tests.MailingList
             public string Body { get; set; }
         }
 
-        internal class Transformed
+        private class Transformed
         {
             public string Id { get; set; }
             public string UserName { get; set; }
@@ -41,7 +40,7 @@ namespace Raven.Tests.MailingList
             public string Body { get; set; }
         }
 
-        internal class SearchIndex : AbstractMultiMapIndexCreationTask<Result>
+        private class SearchIndex : AbstractMultiMapIndexCreationTask<Result>
         {
             public SearchIndex()
             {
@@ -73,40 +72,40 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from x in results
                                     group x by x.Id
                                         into g
-                                        select new
-                                        {
-                                            Id = g.Key,
-                                            g.FirstOrDefault(i => i.UserName != null).UserName,
-                                            g.FirstOrDefault(i => i.Password != null).Password,
-                                            g.FirstOrDefault(i => i.SenderId != null).SenderId,
-                                            g.FirstOrDefault(i => i.Title != null).Title,
-                                            g.FirstOrDefault(i => i.Body != null).Body,
-                                            PostStatus = g.SelectMany(i => i.PostStatus).Where(i => i != PostStatus.None).ToArray(),
-                                        };
+                                    select new
+                                    {
+                                        Id = g.Key,
+                                        g.FirstOrDefault(i => i.UserName != null).UserName,
+                                        g.FirstOrDefault(i => i.Password != null).Password,
+                                        g.FirstOrDefault(i => i.SenderId != null).SenderId,
+                                        g.FirstOrDefault(i => i.Title != null).Title,
+                                        g.FirstOrDefault(i => i.Body != null).Body,
+                                        PostStatus = g.SelectMany(i => i.PostStatus).Where(i => i != PostStatus.None).ToArray(),
+                                    };
 
                 Index(i => i.UserName, FieldIndexing.Analyzed);
             }
         }
 
-        internal class SearchTransformer : AbstractTransformerCreationTask<Result>
+        private class SearchTransformer : AbstractTransformerCreationTask<Result>
         {
             public SearchTransformer()
             {
                 TransformResults = results => from x in results
-                                                          select new
-                                                          {
-                                                              x.Id,
-                                                              x.UserName,
-                                                              x.Password,
-                                                              x.SenderId,
-                                                              x.Title,
-                                                              x.Body,
-                                                              x.PostStatus
-                                                          };
+                                              select new
+                                              {
+                                                  x.Id,
+                                                  x.UserName,
+                                                  x.Password,
+                                                  x.SenderId,
+                                                  x.Title,
+                                                  x.Body,
+                                                  x.PostStatus
+                                              };
             }
         }
 
-        internal class User
+        private class User
         {
             public string Id { get; set; }
             public string UserName { get; set; }
@@ -115,7 +114,7 @@ namespace Raven.Tests.MailingList
             public ReducedPost[] ReducedPosts { get; set; }
         }
 
-        internal class Post
+        private class Post
         {
             public string Id { get; set; }
             public string SenderId { get; set; }
@@ -126,12 +125,12 @@ namespace Raven.Tests.MailingList
             public string Body { get; set; }
         }
 
-        internal class ReducedPost
+        private class ReducedPost
         {
             public string Id { get; set; }
         }
 
-        public enum PostStatus : byte
+        private enum PostStatus : byte
         {
             None = 0,
             Ok = 1,
@@ -140,26 +139,7 @@ namespace Raven.Tests.MailingList
             Deleted = 8,
         }
 
-        public Oguzhntopcu()
-        {
-            DocumentStore = new EmbeddableDocumentStore
-            {
-                RunInMemory = true,
-                Conventions =
-                {
-                    SaveEnumsAsIntegers = true
-                }
-            };
-            DocumentStore.Initialize();
-            DocumentStore.ExecuteIndex(new SearchIndex());
-            DocumentStore.ExecuteTransformer(new SearchTransformer());
-
-            PopulateData();
-        }
-
-        public EmbeddableDocumentStore DocumentStore { get; set; }
-
-        public IEnumerable<object> FakeDatas
+        private IEnumerable<object> FakeDatas
         {
             get
             {
@@ -169,10 +149,10 @@ namespace Raven.Tests.MailingList
                     Password = "pass",
                     UserName = "user",
                     ReducedPosts = new[]
-                                                        {
-                                                            new ReducedPost {Id = "post/1"},
-                                                            new ReducedPost {Id = "post/2"}
-                                                        },
+                    {
+                        new ReducedPost {Id = "post/1"},
+                        new ReducedPost {Id = "post/2"}
+                    },
                 };
 
                 yield return new Post
@@ -198,35 +178,38 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryOnFlagArrays()
         {
-            using (var session = DocumentStore.OpenSession())
+            using (var store = GetDocumentStore())
             {
-                var query = session.Query<Result, SearchIndex>()
-                    .Customize(i => i.WaitForNonStaleResults())
-                                                       .Where(i => i.PostStatus.Equals(PostStatus.Edited))
-                                                       .TransformWith<SearchTransformer, Transformed>();
+                store.Conventions.SaveEnumsAsIntegers = true;
+                store.ExecuteIndex(new SearchIndex());
+                store.ExecuteTransformer(new SearchTransformer());
 
-                var data = query.FirstOrDefault();
-                Assert.Empty(DocumentStore.SystemDatabase.Statistics.Errors);
-                Assert.NotNull(data);
-                Assert.NotNull(data.PostStatus);
-                //Assert.Contains(PostStatus.Edited, data.PostStatus);
+                PopulateData(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Result, SearchIndex>()
+                        .Customize(i => i.WaitForNonStaleResults())
+                                                           .Where(i => i.PostStatus.Equals(PostStatus.Edited))
+                                                           .TransformWith<SearchTransformer, Transformed>();
+
+                    var data = query.FirstOrDefault();
+                    TestHelper.AssertNoIndexErrors(store);
+                    Assert.NotNull(data);
+                    Assert.NotNull(data.PostStatus);
+                    //Assert.Contains(PostStatus.Edited, data.PostStatus);
+                }
             }
         }
 
-        public void PopulateData()
+        private void PopulateData(IDocumentStore store)
         {
-            using (var session = DocumentStore.OpenSession())
+            using (var session = store.OpenSession())
             {
                 FakeDatas.ToList().ForEach(session.Store);
 
                 session.SaveChanges();
             }
-        }
-
-        public override void Dispose()
-        {
-            DocumentStore.Dispose();
-            base.Dispose();
         }
     }
 }

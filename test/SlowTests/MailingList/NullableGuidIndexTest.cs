@@ -1,23 +1,22 @@
 using System;
 using System.Linq;
-using Raven.Client.Embedded;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class NullableGuidIndexTest : RavenTest
+    public class NullableGuidIndexTest : RavenTestBase
     {
-        public class TestDocument
+        private class TestDocument
         {
             public string Id { get; set; }
 
             public Guid? OptionalExternalId { get; set; }
         }
 
-        public class TestDocumentIndex : AbstractIndexCreationTask<TestDocument>
+        private class TestDocumentIndex : AbstractIndexCreationTask<TestDocument>
         {
             public TestDocumentIndex()
             {
@@ -27,10 +26,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void Can_query_against_nullable_guid()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TestDocumentIndex().Execute(store.DatabaseCommands, store.Conventions);
 
@@ -46,7 +45,9 @@ namespace Raven.Tests.MailingList
                     TestDocument[] results = session.Query<TestDocument, TestDocumentIndex>()
                         .Customize(c => c.WaitForNonStaleResultsAsOfLastWrite())
                         .ToArray();
-                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
+
+                    TestHelper.AssertNoIndexErrors(store);
+                    Assert.NotEmpty(results);
                     Assert.NotEmpty(results);
                 }
             }

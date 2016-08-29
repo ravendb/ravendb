@@ -59,9 +59,19 @@ namespace Raven.Server.Documents.Transformers
 
             Slice keySlice;
             if (keyLazy != null)
+            {
+                if (keyLazy.Length == 0)
+                    return DynamicNullObject.Null;
+
                 keySlice = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size);
+            }
             else
+            {
+                if (keyString.Length == 0)
+                    return DynamicNullObject.Null;
+
                 keySlice = Slice.From(_documentsContext.Allocator, keyString);
+            }
 
             // making sure that we normalize the case of the key so we'll be able to find
             // it in case insensitive manner

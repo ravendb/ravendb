@@ -3,18 +3,18 @@
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
 // //-----------------------------------------------------------------------
-using Raven.Tests.Common;
 
-using Xunit;
 using System.Linq;
+using FastTests;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class NullableEnums : RavenTest
+    public class NullableEnums : RavenTestBase
     {
         #region MonitorCategory enum
 
-        public enum MonitorCategory
+        private enum MonitorCategory
         {
             Normal,
             WideScreen
@@ -25,7 +25,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryByEnum()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryByNullableEnum()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -72,11 +72,11 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryByNullableEnumThatIsNull()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new ModelWithEnum {NullableCategory = null});
+                    session.Store(new ModelWithEnum { NullableCategory = null });
                     session.SaveChanges();
                 }
 
@@ -91,7 +91,7 @@ namespace Raven.Tests.MailingList
 
         #region Nested type: ModelWithEnum
 
-        public class ModelWithEnum
+        private class ModelWithEnum
         {
             public MonitorCategory Category { get; set; }
             public MonitorCategory? NullableCategory { get; set; }

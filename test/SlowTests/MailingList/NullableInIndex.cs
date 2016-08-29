@@ -3,18 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public sealed class NullableInIndex : RavenTestBase
     {
-        public sealed class Document
+        private sealed class Document
         {
             public TimeSpan? Time
             {
@@ -23,7 +24,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public sealed class Documents_ByTime : AbstractIndexCreationTask<Document>
+        private sealed class Documents_ByTime : AbstractIndexCreationTask<Document>
         {
             public Documents_ByTime()
             {
@@ -37,16 +38,16 @@ namespace Raven.Tests.MailingList
         }
 
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void Works()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                Assert.DoesNotThrow(() => new Documents_ByTime().Execute(store));
+                new Documents_ByTime().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Document{Time = TimeSpan.FromSeconds(3)});
+                    session.Store(new Document { Time = TimeSpan.FromSeconds(3) });
                     session.Store(new Document { Time = null });
                     session.SaveChanges();
                 }
@@ -59,7 +60,7 @@ namespace Raven.Tests.MailingList
                     Assert.Equal(1, x);
                 }
 
-                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                TestHelper.AssertNoIndexErrors(store);
             }
         }
     }

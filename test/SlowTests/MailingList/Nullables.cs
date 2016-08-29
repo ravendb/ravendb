@@ -1,15 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Tests.Common;
-
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.MailingList
-{ /// <summary>
+namespace SlowTests.MailingList
+{
+    /// <summary>
     /// This test demonstrates an exception being thrown when sorting nullable Ints in Dynamic Fields.
     /// "Invalid shift value in prefixCoded string (is encoded value really an INT?)"
     /// 
@@ -18,24 +16,19 @@ namespace Raven.Tests.MailingList
     /// 
     /// Current Build: 2073
     /// </summary>
-    public class NullableExample : RavenTest
+    public class NullableExample : RavenTestBase
     {
-        public class Doc
+        private class Doc
         {
             public string DocId { get; set; }
             public Dictionary<string, object> Map { get; set; }
         }
 
-
-        
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void InvalidShirt()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-
-                store.Initialize();
-
                 store.DatabaseCommands.Delete("1", null);
                 store.DatabaseCommands.Delete("2", null);
                 store.DatabaseCommands.Delete("3", null);
@@ -45,45 +38,46 @@ namespace Raven.Tests.MailingList
                 store.DatabaseCommands.DeleteIndex("test");
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = "from doc in docs select new { DocId = doc.DocId, _ = doc.Map.Select(p => CreateField(p.Key, p.Value)) }",
-                    SortOptions = new Dictionary<string, SortOptions> { { "X", SortOptions.Int } }
+                    Maps = { "from doc in docs.Docs select new { DocId = doc.DocId, _ = doc.Map.Select(p => CreateField(p.Key, p.Value)) }" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        { "X", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
+                    }
                 });
                 using (var session = store.OpenSession())
-            {
-                // Insert valid documents.
-                session.Store(new Doc { DocId = "1", Map = new Dictionary<string, object> { { "X", 1 } } }, "1");
-                session.Store(new Doc { DocId = "2", Map = new Dictionary<string, object> { { "X", 2 } } }, "2");
-                session.Store(new Doc { DocId = "3", Map = new Dictionary<string, object> { { "X", 3 } } }, "3");
-                // Doc 4 has no "X" in it's map.
-                session.Store(new Doc { DocId = "4", Map = new Dictionary<string, object>() }, "4");
-                session.SaveChanges();
-
-                // Everything works fine.
-                var sortedResults = session.Advanced
-                    .DocumentQuery<Doc>("test")
-                    .AddOrder("X", true)
-                    .WaitForNonStaleResults()
-                    .ToList();
-
-                Assert.NotNull(sortedResults);
-                Assert.Equal(4, sortedResults.Count);
-                Assert.Equal("3", sortedResults[0].DocId);
-                Assert.Equal("2", sortedResults[1].DocId);
-                Assert.Equal("1", sortedResults[2].DocId);
-                Assert.Equal("4", sortedResults[3].DocId);
-
-                // Doc 5 has a null value for X
-                session.Store(new Doc { DocId = "5", Map = new Dictionary<string, object> { { "X", null } } }, "5");
-                session.SaveChanges();
-
-                Assert.DoesNotThrow(() =>
                 {
-                    // Invalid shift value in prefixCoded string (is encoded value really an INT?)
-                    var throwsExceptions = session.Advanced
+                    // Insert valid documents.
+                    session.Store(new Doc { DocId = "1", Map = new Dictionary<string, object> { { "X", 1 } } }, "1");
+                    session.Store(new Doc { DocId = "2", Map = new Dictionary<string, object> { { "X", 2 } } }, "2");
+                    session.Store(new Doc { DocId = "3", Map = new Dictionary<string, object> { { "X", 3 } } }, "3");
+                    // Doc 4 has no "X" in it's map.
+                    session.Store(new Doc { DocId = "4", Map = new Dictionary<string, object>() }, "4");
+                    session.SaveChanges();
+
+                    // Everything works fine.
+                    var sortedResults = session.Advanced
                         .DocumentQuery<Doc>("test")
                         .AddOrder("X", true)
                         .WaitForNonStaleResults()
                         .ToList();
+
+                    Assert.NotNull(sortedResults);
+                    Assert.Equal(4, sortedResults.Count);
+                    Assert.Equal("3", sortedResults[0].DocId);
+                    Assert.Equal("2", sortedResults[1].DocId);
+                    Assert.Equal("1", sortedResults[2].DocId);
+                    Assert.Equal("4", sortedResults[3].DocId);
+
+                    // Doc 5 has a null value for X
+                    session.Store(new Doc { DocId = "5", Map = new Dictionary<string, object> { { "X", null } } }, "5");
+                    session.SaveChanges();
+
+                    // Invalid shift value in prefixCoded string (is encoded value really an INT?)
+                    var throwsExceptions = session.Advanced
+                            .DocumentQuery<Doc>("test")
+                            .AddOrder("X", true)
+                            .WaitForNonStaleResults()
+                            .ToList();
 
                     /*Url: "/indexes/NullableExample?query=&start=0&pageSize=128&aggregation=None&sort=-X"
 
@@ -114,8 +108,8 @@ namespace Raven.Tests.MailingList
                     at Raven.Database.Server.Responders.Index.GetIndexQueryResult(IHttpContext context, String index) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 262
                     at Raven.Database.Server.HttpServer.DispatchRequest(IHttpContext ctx) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\HttpServer.cs:line 685
                     at Raven.Database.Server.HttpServer.HandleActualRequest(IHttpContext ctx) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\HttpServer.cs:line 447*/
-                });
-            }}
+                }
+            }
         }
     }
 }

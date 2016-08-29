@@ -3,18 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class NullableSorting : RavenTest
+    public class NullableSorting : RavenTestBase
     {
-        public class Blog
+        private class Blog
         {
             public int Id { get; set; }
             public decimal? Price { get; set; }
@@ -31,14 +31,14 @@ namespace Raven.Tests.MailingList
                                    Price = b.Price
                                };
                 Index(b => b.Price, FieldIndexing.Default);
-                Sort(b => b.Price, SortOptions.Double);
+                Sort(b => b.Price, SortOptions.NumericDouble);
             }
         }
 
         [Fact]
         public void SortByNullableDecimal()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -57,7 +57,7 @@ namespace Raven.Tests.MailingList
                      .Advanced
                      .DocumentQuery<Blog, Blog_Search>()
                      .WaitForNonStaleResults()
-                     .OrderBy(x=>x.Price)
+                     .OrderBy(x => x.Price)
                      .ToArray();
 
                     var ids = result.Select(b => b.Id).ToArray();

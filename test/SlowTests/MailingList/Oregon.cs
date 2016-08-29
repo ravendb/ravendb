@@ -1,16 +1,16 @@
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Raven.Tests.Core.Utils.Entities;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Oregon : RavenTest
+    public class Oregon : RavenTestBase
     {
         [Fact]
         public void CanQueryForOregon()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Fails()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -46,7 +46,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Dummy
+        private class Dummy
         {
             public bool Boolean { get; set; }
             public Dummy Object { get; set; }
