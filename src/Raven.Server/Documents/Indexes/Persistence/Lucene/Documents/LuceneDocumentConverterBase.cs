@@ -231,6 +231,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
+            if (valueType == ValueType.Lucene)
+            {
+                yield return (AbstractField)value;
+                yield break;
+            }
+
             if (valueType == ValueType.Double)
             {
                 yield return GetOrCreateField(path, null, ((LazyDoubleValue)value).Inner, null, storage, indexing, termVector);
@@ -283,6 +289,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is IEnumerable) return ValueType.Enumerable;
 
             if (value is LazyDoubleValue) return ValueType.Double;
+
+            if (value is AbstractField) return ValueType.Lucene;
 
             if (value is IConvertible) return ValueType.Convertible;
 
@@ -462,7 +470,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             DateTimeOffset,
 
-            Enum
+            Enum,
+
+            Lucene
         }
     }
 }

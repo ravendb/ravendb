@@ -1,17 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Tests.Common;
-
-using Xunit;
 using System.Linq;
+using FastTests;
+using Raven.Client.Indexing;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class NicolasGarfinkiel : RavenTest
+    public class NicolasGarfinkiel : RavenTestBase
     {
-        public class LaboratoryTrial
+        private class LaboratoryTrial
         {
             public DateTimeOffset CreatedDate { get; set; }
 
@@ -25,7 +23,7 @@ namespace Raven.Tests.MailingList
 
         }
 
-        public class Patient
+        private class Patient
         {
 
             public string Firstname { get; set; }
@@ -36,27 +34,24 @@ namespace Raven.Tests.MailingList
 
         }
 
-        protected override void CreateDefaultIndexes(IDocumentStore documentStore)
-        {
-        }
-
         [Fact]
         public void CanQueryDynamically()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.SystemDatabase.Configuration.Core.MaxNumberOfParallelProcessingTasks = 1;
                 store.DatabaseCommands.PutIndex("Foos/TestIndex", new IndexDefinition()
                 {
-                    Map =
+                    Maps =
+                    {
                         @"from doc in docs.LaboratoryTrials
             select new
             {
                 _ = doc.Patient.IdCards.Select((Func<dynamic,dynamic>)(x => new Field(x.Key, x.Value, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS)))
             }"
+                    }
                 }, true);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new LaboratoryTrial
                     {
@@ -77,7 +72,7 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-                using(var session=store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var laboratoryTrials = session.Advanced.DocumentQuery<LaboratoryTrial>("Foos/TestIndex")
                         .WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromHours(1))

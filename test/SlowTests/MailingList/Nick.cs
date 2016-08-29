@@ -1,38 +1,39 @@
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Nick : RavenTest
+    public class Nick : RavenTestBase
     {
         [Flags]
-        public enum MyEnum
+        private enum MyEnum
         {
             None = 0,
             First = 1,
             Second = 2
         }
 
-        public class Entity
+        private class Entity
         {
             public string Id { set; get; }
             public string Name { set; get; }
             public MyEnum Status { set; get; }
         }
 
-        public class MyIndex : AbstractIndexCreationTask<Entity, MyIndex.Result>
+        private class MyIndex : AbstractIndexCreationTask<Entity, MyIndex.Result>
         {
             public class Result
             {
+#pragma warning disable 649,169
                 public bool IsFirst;
                 public bool IsSecond;
+#pragma warning restore 649,169
             }
 
             public MyIndex()
@@ -40,25 +41,19 @@ namespace Raven.Tests.MailingList
                 Map = entities => from entity in entities
                                   select new
                                   {
-                                    IsFirst = (entity.Status & MyEnum.First) == MyEnum.First,
-                                    IsSecond = (entity.Status & MyEnum.Second) == MyEnum.Second
+                                      IsFirst = (entity.Status & MyEnum.First) == MyEnum.First,
+                                      IsSecond = (entity.Status & MyEnum.Second) == MyEnum.Second
                                   };
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void CanQueryUsingBitwiseOperations()
         {
-            using (var store = new EmbeddableDocumentStore
+            using (var store = GetDocumentStore())
             {
-                RunInMemory = true,
-                Conventions =
-                    {
-                        SaveEnumsAsIntegers = true
-                    }
-            })
-            {
-                store.Initialize();
+                store.Conventions.SaveEnumsAsIntegers = true;
+
                 new MyIndex().Execute(store);
 
                 using (var session = store.OpenSession())
@@ -80,7 +75,7 @@ namespace Raven.Tests.MailingList
                         .As<Entity>()
                         .ToList();
 
-                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                    TestHelper.AssertNoIndexErrors(store);
 
                     Assert.NotEmpty(results);
                 }
