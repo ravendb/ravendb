@@ -169,7 +169,7 @@ namespace Voron.Impl.Journal
                         lastSyncedJournal = journalNumber;
                     }
 
-                    if (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal)
+                    if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
                     {
                         var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * _compressionPager.PageSize);
                         var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
@@ -188,6 +188,10 @@ namespace Voron.Impl.Journal
             }
 
             _files = _files.AppendRange(journalFiles);
+
+            if (lastSyncedTxId == -1 && requireHeaderUpdate)
+                throw new VoronUnrecoverableErrorException(
+                    "First transaction initializing the structure of Voron database is corrupted. Cannot access internal database metadata. Create a new database to recover.");
 
             Debug.Assert(lastSyncedTxId >= 0);
             Debug.Assert(lastSyncedJournal >= 0);
