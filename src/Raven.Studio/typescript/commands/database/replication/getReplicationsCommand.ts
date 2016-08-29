@@ -8,7 +8,7 @@ class getReplicationsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<configurationDocumentDto<replicationsDto>> {
-        var url = "/configuration/document/Raven/Replication/Destinations";
+        var url = "/configuration/document/Raven/Replication/Destinations";//TODO: use endpoints
         return this.query<configurationDocumentDto<replicationsDto>>(url, null, this.db);
     }
 

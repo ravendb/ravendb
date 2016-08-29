@@ -18,7 +18,7 @@ class getDebugMetricsCommand extends commandBase {
     }
 
     private getQueryUrlFragment(): string {
-        return "/debug/metrics";
+        return "/debug/metrics";//TODO: use endpoints
     }
 }
 

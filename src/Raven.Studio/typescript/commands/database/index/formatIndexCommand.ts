@@ -8,7 +8,7 @@ class formatIndexCommand extends commandBase {
     }
 
     execute(): JQueryPromise<string[]> {
-        var url = "/debug/format-index";
+        var url = "/debug/format-index";//TODO: use endpoints
         return this.post(url, JSON.stringify(this.mapReduceArray), this.db);
     }
 }

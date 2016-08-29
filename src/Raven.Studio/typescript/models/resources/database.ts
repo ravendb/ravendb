@@ -1,5 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
+import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 import databaseStatistics = require("models/resources/databaseStatistics");
@@ -44,7 +45,11 @@ class database extends resource {
 
     activate() {
         this.isLoaded(true);
-        ko.postbox.publish("ActivateDatabase", this);
+        ko.postbox.publish(EVENTS.Resource.Activate,
+        {
+            type: TenantType.Database,
+            resource: this
+        });
     }
 
     saveStatistics(dto: databaseStatisticsDto) {

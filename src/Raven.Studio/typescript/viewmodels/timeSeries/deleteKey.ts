@@ -5,7 +5,7 @@ import timeSeries = require("models/timeSeries/timeSeries");
 
 class deleteKey extends dialogViewModelBase {
 
-    public deletionTask = $.Deferred();
+    deletionTask = $.Deferred();
     private deletionStarted = false;
 
     constructor(private type: string, private key: string, private ts: timeSeries) {

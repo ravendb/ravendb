@@ -8,7 +8,7 @@ class getLogsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pluginsInfoDto> {
-        var url = "/debug/plugins";
+        var url = "/debug/plugins";//TODO: use endpoints
         return this.query<pluginsInfoDto>(url, null, this.db);
     }
 }

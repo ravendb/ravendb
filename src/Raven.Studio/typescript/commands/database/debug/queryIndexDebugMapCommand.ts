@@ -13,7 +13,7 @@ class queryIndexDebugMapCommand extends commandBase {
             debug: "map"
         };
         
-        var url = "/indexes/" + this.indexName;
+        var url = "/indexes/" + this.indexName;//TODO: use endpoints
         return this.query(url, $.extend({}, baseArgs, this.args), this.db, r => r.Results);
     }
 }

@@ -1,5 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts" />
-//TODO: <amd-dependency path="ace/mode/json_newline_friendly" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 
@@ -11,7 +10,7 @@ import ace = require("ace/ace");
 class aceEditorBindingHandler {
 
     defaults = {
-        theme: "ace/theme/xcode",
+        theme: "ace/theme/ambiance",
         fontSize: "16px",
         lang: "ace/mode/csharp",
         readOnly: false,

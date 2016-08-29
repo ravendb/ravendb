@@ -10,7 +10,7 @@ class getIndexingStatusCommand extends commandBase {
     execute(): JQueryPromise<string> {
         var result = $.Deferred();
 
-        var url = "/admin/indexingStatus";
+        var url = "/admin/indexingStatus";//TODO: use endpoints
         this.query(url, null, this.db)
             .done((indexingStatus) => result.resolve(indexingStatus))
             .fail((response: JQueryXHR) => {

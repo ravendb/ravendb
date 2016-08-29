@@ -24,6 +24,7 @@ import genUtils = require("common/generalUtils");
 import changeSubscription = require("common/changeSubscription");
 import changesContext = require("common/changesContext");
 import documentHelpers = require("common/helpers/database/documentHelpers");
+import copyToClipboard = require("common/copyToClipboard");
 
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -41,18 +42,24 @@ class editDocument extends viewModelBase {
 
     isCreatingNewDocument = ko.observable(false);
     userSpecifiedId = ko.observable("");
+    loadedDocumentName = ko.observable<string>("");
     docEditor: AceAjax.Editor;
+    entityName = ko.observable<string>("");
 
     $documentName: JQuery;
     $docEditor: JQuery;
 
-    isConflictDocument = ko.observable<boolean>();
+    isConflictDocument = ko.observable<boolean>(false);
+    isDocumentStarred = ko.observable<boolean>(false);
+    isInDocMode = ko.observable<boolean>(true);
+    isNewLineFriendlyMode = ko.observable<boolean>(false);
+    autoCollapseMode = ko.observable<boolean>(false);
+    isSaving = ko.observable<boolean>(false);
+    displayDocumentChangeNotification = ko.observable<boolean>(false);
     
     metaPropsToRestoreOnSave: any[] = [];
-    editedDocId: KnockoutComputed<string>;
-    loadedDocumentName = ko.observable<string>("");
 
-    isInDocMode = ko.observable(true);
+    changeNotification: changeSubscription;
     databaseForEditedDoc: database;
 
     docMode = {
@@ -72,13 +79,8 @@ class editDocument extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     documentSize: KnockoutComputed<string>;
     docTitle: KnockoutComputed<string>;
-    isNewLineFriendlyMode = ko.observable(false);
-    autoCollapseMode = ko.observable(false);
-    newLineToggle = '\\n'; //TODO: remove me?
-    isSystemDocumentByDocTitle = ko.observable(false); //TODO: do we need it?
-    isSaving = ko.observable<boolean>(false);
-    documentChangeNotificationMessage = ko.observable<string>();
-    changeNotification: changeSubscription;
+    editedDocId: KnockoutComputed<string>;
+    
     
     constructor() {
         super();
@@ -116,6 +118,7 @@ class editDocument extends viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
         }
 
+        //TODO: bind with with right panel collection
         if (navigationArgs && navigationArgs.list && navigationArgs.item) {
             var itemIndex = parseInt(navigationArgs.item, 10);
             if (!isNaN(itemIndex)) {
@@ -146,7 +149,6 @@ class editDocument extends viewModelBase {
         this.$documentName = $(editDocument.documentNameSelector);
         this.$docEditor = $(editDocument.docEditorSelector);
 
-        this.$docEditor.resize(); //TODO: avoid this event
         this.isNewLineFriendlyMode.subscribe(val => {
             this.updateNewlineLayoutInDocument(val);
         });
@@ -156,8 +158,10 @@ class editDocument extends viewModelBase {
         super.compositionComplete();
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
 
+        // preload json newline friendly mode to avoid issues with document save
+        (<any>ace).config.loadModule("ace/mode/json_newline_friendly");
+
         this.$docEditor.on('DynamicHeightSet', () => this.docEditor.resize());
-        this.$docEditor.bind("paste", function () { this.text.valueHasMutated() }); //TODO: test me!
         this.focusOnEditor();
     }
 
@@ -167,11 +171,11 @@ class editDocument extends viewModelBase {
     }
 
     private activateById(id: string) {
-        var canActivateResult = $.Deferred();
+        var canActivateResult = $.Deferred<canActivateResultDto>();
         this.databaseForEditedDoc = appUrl.getDatabase();
         this.loadDocument(id)
             .done(() => {
-                //TODO:this.changeNotification = this.createDocumentChangeNotification(args.id);
+                //TODO:this.changeNotification = this.createDocumentChangeNotification(id);
                 this.addNotification(this.changeNotification);
                 canActivateResult.resolve({ can: true });
             })
@@ -183,7 +187,7 @@ class editDocument extends viewModelBase {
     }
 
     private activateByIndex(indexName: string, query: string, argSorts: string, argItem: any) {
-        var canActivateResult = $.Deferred();
+        var canActivateResult = $.Deferred<canActivateResultDto>();
         this.isInDocMode(false);
         var sorts: querySort[];
 
@@ -252,14 +256,11 @@ class editDocument extends viewModelBase {
         this.docTitle = ko.pureComputed<string>(() => {
             if (this.isInDocMode()) {
                 if (this.isCreatingNewDocument()) {
-                    this.isSystemDocumentByDocTitle(false);
                     return "New Document";
                 } else {
                     var editedDocId = this.editedDocId();
 
                     if (editedDocId) {
-                        this.isSystemDocumentByDocTitle(editedDocId.startsWith("Raven/"));
-
                         var lastIndexInEditedDocId = editedDocId.lastIndexOf("/") + 1;
                         if (lastIndexInEditedDocId > 0) {
                             editedDocId = editedDocId.slice(lastIndexInEditedDocId);
@@ -273,7 +274,6 @@ class editDocument extends viewModelBase {
             }
         });
     }
-
 
     createDocumentChangeNotification(docId: string) {
         return changesContext.currentResourceChangesApi().watchDocument(docId, (n: documentChangeNotificationDto) => this.documentChangeNotification(n));
@@ -289,9 +289,7 @@ class editDocument extends viewModelBase {
             return;
         }
 
-        var message = "Document was changed, new Etag: " + n.Etag;
-        this.documentChangeNotificationMessage(message);
-        $(".changeNotification").highlight();
+        this.displayDocumentChangeNotification(true);
     }
 
     updateNewlineLayoutInDocument(unescapeNewline: boolean) {
@@ -332,8 +330,12 @@ class editDocument extends viewModelBase {
         this.document(newDocument);
     }
 
+    toClipboard() {
+        copyToClipboard.copy(this.documentText(), "Document has been copied to clipboard");
+    }
+
     toggleNewlineMode() {
-        if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 150) {
+        if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 1024) {
             app.showMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
                 .then((dialogResult: string) => {
                     if (dialogResult === "Continue") {
@@ -359,6 +361,15 @@ class editDocument extends viewModelBase {
         this.docEditor.getSession().foldAll();
         var folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
         folds.map(f => this.docEditor.getSession().expandFold(f));
+    }
+
+    saveAsNew() {
+        var userId = this.userSpecifiedId();
+        var slashPosition = userId.indexOf("/", 0);
+        if (slashPosition !== -1) {
+            this.userSpecifiedId(userId.substr(0, slashPosition + 1));
+        }
+        this.saveDocument();
     }
 
     saveDocument() {
@@ -477,7 +488,7 @@ class editDocument extends viewModelBase {
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = '00000000-0000-0000-0000-000000000000';
+        target['@etag'] = "0";
         target['Raven-Entity-Name'] = target['Raven-Entity-Name'] || document.getEntityNameFromId(id);
         target['@id'] = id;
     }
@@ -525,7 +536,7 @@ class editDocument extends viewModelBase {
                 this.loadedDocumentName("");
             }
 
-            this.documentChangeNotificationMessage("");
+            this.displayDocumentChangeNotification(false);
         });
     }
 
@@ -594,7 +605,7 @@ class editDocument extends viewModelBase {
                             this.dirtyFlag().reset(); //Resync Changes
                         }
 
-                        this.documentChangeNotificationMessage("");
+                        this.displayDocumentChangeNotification(false);
 
                         if (!!newTotalResultCount) {
                             list.totalResultCount(newTotalResultCount);
@@ -607,10 +618,6 @@ class editDocument extends viewModelBase {
     navigateToCollection(collectionName: string) {
         var collectionUrl = appUrl.forDocuments(collectionName, this.activeDatabase());
         router.navigate(collectionUrl);
-    }
-
-    navigateToDocuments() {
-        this.navigateToCollection(null);
     }
 
     updateUrl(docId: string) {
@@ -631,6 +638,8 @@ class editDocument extends viewModelBase {
             if (meta.id != undefined) {
                 this.userSpecifiedId(meta.id);
             }
+
+            this.entityName(document.getEntityNameFromId(meta.id));
         }
     }
 
@@ -656,20 +665,7 @@ class editDocument extends viewModelBase {
         });
     }
 
-    getColorClass(documentId: string) {
-        var entityName = document.getEntityNameFromId(documentId);
-        if (entityName) {
-            return collection.getCollectionCssClass(entityName, this.activeDatabase());
-        }
-
-        return "";
-    }
-
-    generateCollectionName(ravenEntityName: string) { //TODO: move to utils
-        return ravenEntityName || (this.isSystemDocumentByDocTitle() ? 'System Documents' : 'No Collection');    
-    }
-
-    generateCode() { //TODO: move to helper
+    generateCode() {
         var doc: document = this.document();
         var generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         var deffered = generate.execute();

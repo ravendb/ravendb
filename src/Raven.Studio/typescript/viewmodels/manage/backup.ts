@@ -8,6 +8,7 @@ import backupDatabaseCommand = require("commands/maintenance/backupDatabaseComma
 import backupFilesystemCommand = require("commands/filesystem/backupFilesystemCommand");
 import backupCounterStorageCommand = require("commands/counter/backupCounterStorageCommand");
 import getResourceDrives = require("commands/resources/getResourceDrives");
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class resourceBackup {
     incremental = ko.observable<boolean>(false);
@@ -27,8 +28,6 @@ class resourceBackup {
         var location = this.backupLocation().toLowerCase().substr(0, 3);
         return resourceDrives.indexOf(location) !== -1;
     }); 
-
-    has40Features = ko.computed(() => shell.has40Features());
 
     constructor(private type: TenantType, private resources: KnockoutObservableArray<resource>) {
         this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
@@ -100,7 +99,7 @@ class backupDatabase extends viewModelBase {
     isForbidden = ko.observable<boolean>();
 
     canActivate(args: any): any {
-        this.isForbidden(!shell.isGlobalAdmin());
+        this.isForbidden(!accessHelper.isGlobalAdmin());
         return true;
     }
 

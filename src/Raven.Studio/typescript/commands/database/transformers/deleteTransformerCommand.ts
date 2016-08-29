@@ -9,7 +9,7 @@ class deleteTransformerCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         this.reportInfo("Deleting " + this.transName + "...");
-        return this.del("/transformers/" + this.transName, null, this.db)
+        return this.del("/transformers/" + this.transName, null, this.db)//TODO: use endpoints
             .fail((response: JQueryXHR) => this.reportError("Failed to delete transformer " + this.transName, response.responseText))
             .done(() => this.reportSuccess("Deleted " + this.transName));
     }

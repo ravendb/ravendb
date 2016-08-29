@@ -21,7 +21,7 @@ class listDiskPerformanceRunsCommand extends commandBase {
             };
         };
 
-        return this.query("/indexes/dynamic/DiskIoPerformanceRuns", args, this.db, (r: any) => r.Results.map(mapper));
+        return this.query("/indexes/dynamic/DiskIoPerformanceRuns", args, this.db, (r: any) => r.Results.map(mapper));//TODO: use endpoints
     }
 }
 

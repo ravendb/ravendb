@@ -4,6 +4,7 @@ import apiKey = require("models/auth/apiKey");
 class getApiKeysCommand extends commandBase {
     
     execute(): JQueryPromise<Array<apiKey>> {
+        //TODO: use new dedicated endpoint
         var args = {
             startsWith: "Raven/ApiKeys/",
             exclude: <string>null,

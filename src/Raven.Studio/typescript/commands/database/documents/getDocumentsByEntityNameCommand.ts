@@ -20,7 +20,7 @@ class getDocumentsByEntityNameCommand extends commandBase {
         };
 
         var resultsSelector = (dto: collectionInfoDto) => new collectionInfo(dto);
-        var url =  "/indexes/Raven/DocumentsByEntityName";
+        var url = "/indexes/Raven/DocumentsByEntityName";//TODO: use endpoints
         var documentsTask = $.Deferred();
         this.query(url, args, this.collection.ownerDatabase, resultsSelector)
             .fail(response => {

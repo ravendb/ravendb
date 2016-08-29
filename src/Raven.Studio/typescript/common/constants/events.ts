@@ -1,16 +1,27 @@
-﻿
-export const Menu = {
+﻿const Menu = {
     LevelChanged: 'MainMenu.LevelChanged'
 };
 
-export const ResourceSwitcher = {
+const ResourceSwitcher = {
     Show: 'ResourceSwitcher.Show',
     Hide: 'ResourceSwitcher.Hide',
     ItemSelected: 'ResourceSwitcher.ItemSelected'
 };
 
-export const SearchBox = {
+const SearchBox = {
     Show: 'SearchBox.Show',
     Hide: 'SearchBox.Hide',
     Input: 'SearchBox.ItemSelected'
+};
+
+const Resource = {
+    Activate: 'Resource.Activate',
+    Disconnect: 'Resource.Disconnect'
+};
+
+export = {
+    Menu,
+    ResourceSwitcher,
+    SearchBox,
+    Resource
 };

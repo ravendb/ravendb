@@ -74,7 +74,7 @@ class globalConfigReplications extends viewModelBase {
         var db: database = null;
         if (db) {
             //TODO:
-            if (this.settingsAccess.isForbidden()) {
+            if (settingsAccessAuthorizer.isForbidden()) {
                 deferred.resolve({ can: true });
             } else {
                 $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
@@ -106,7 +106,8 @@ class globalConfigReplications extends viewModelBase {
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.replicationsSetup().requestTimeSlaThreshold, this.replicationsSetup().showRequestTimeSlaThreshold]);
-        this.isSetupSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.replicationsSetupDirtyFlag().isDirty());
+        this.isSetupSaveEnabled = ko.computed(() =>
+            !settingsAccessAuthorizer.isReadOnly() && this.replicationsSetupDirtyFlag().isDirty());
 
         var combinedFlag = ko.computed(() => {
             var f1 = this.replicationConfigDirtyFlag().isDirty();

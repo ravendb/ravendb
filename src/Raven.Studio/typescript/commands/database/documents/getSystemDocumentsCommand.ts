@@ -22,7 +22,7 @@ class getSystemDocumentsCommand extends commandBase {
         };
 
         var deferred = $.Deferred();
-        var docsQuery = this.query("/docs", args, this.db, (dtos: documentDto[]) => dtos.map(dto => new document(dto)));
+        var docsQuery = this.query("/docs", args, this.db, (dtos: documentDto[]) => dtos.map(dto => new document(dto)));//TODO: use endpoints
         docsQuery.done((results: documentDto[]) => {
             var documents = results.map(dto => new document(dto));
             //var totalResultCount = documents.length; 

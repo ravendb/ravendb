@@ -11,7 +11,7 @@ class getVersioningsCommand extends commandBase {
         var documentResult = $.Deferred();
         var resultsSelector = (result: versioningEntryDto[]) =>
             result.map((dto: versioningEntryDto) => new versioningEntry(dto, true));
-        var url = "/docs";
+        var url = "/docs";//TODO: use endpoints
         var args = {
             startsWith: this.getGlobalConfig ? "Raven/Global/Versioning": "Raven/Versioning",
             start: 0,

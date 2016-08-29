@@ -8,7 +8,7 @@ import fileDownloader = require("common/fileDownloader");
 import resource = require("models/resources/resource");
 import enableQueryTimings = require("commands/database/query/enableQueryTimings");
 import database = require("models/resources/database");
-import shell = require("viewmodels/shell");
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class trafficWatch extends viewModelBase {
     logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
@@ -46,7 +46,7 @@ class trafficWatch extends viewModelBase {
             return "";
         });
 
-        this.isForbidden(shell.isGlobalAdmin() === false);
+        this.isForbidden(accessHelper.isGlobalAdmin() === false);
         this.filter.throttle(250).subscribe(() => this.filterEntries());
         this.filterDuration.throttle(250).subscribe(() => this.filterEntries());
     }

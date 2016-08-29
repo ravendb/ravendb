@@ -8,7 +8,7 @@ class dismissAlertCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/operation/alert/dismiss";
+        var url = "/operation/alert/dismiss";//TODO: use endpoints
         var args = {
             key: this.alertUniqueKey
         }

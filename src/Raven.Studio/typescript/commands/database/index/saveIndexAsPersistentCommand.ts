@@ -12,7 +12,7 @@ class saveIndexAsPersistentCommand extends commandBase {
         this.reportInfo("Persisting " + this.indexToPersist.name + "...");
 
         // Deliberately not URL-encoding index name, as it causes the operation to fail on the server.
-        var url = "/indexes/" + this.indexToPersist.name + "?op=forceWriteToDisk";
+        var url = "/indexes/" + this.indexToPersist.name + "?op=forceWriteToDisk";//TODO: use endpoints
         var saveTask = this.post(url, null, this.db);
         saveTask.done(() => {
             this.reportSuccess("Persisted " + this.indexToPersist.name);

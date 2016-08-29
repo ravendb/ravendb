@@ -11,7 +11,7 @@ class deleteIndexCommand extends commandBase {
         const args = {
             name: this.indexName
         };
-        return this.del("/indexes" + this.urlEncodeArgs(args), null, this.db)
+        return this.del("/indexes" + this.urlEncodeArgs(args), null, this.db)//TODO: use endpoints
             .fail((response: JQueryXHR) => this.reportError("Failed to delete index " + this.indexName, response.responseText))
             .done(() => this.reportSuccess("Deleted " + this.indexName));
     }

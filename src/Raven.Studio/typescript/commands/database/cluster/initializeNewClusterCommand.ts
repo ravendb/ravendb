@@ -9,7 +9,7 @@ class initializeNewClusterCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        return this.patch("/admin/cluster/initialize-new-cluster", null, this.db)
+        return this.patch("/admin/cluster/initialize-new-cluster", null, this.db)//TODO: use endpoints
             .done(() => this.reportSuccess("New cluster has been initialized"))
             .fail((response: JQueryXHR) => this.reportError("Unable to initialize new cluster", response.responseText, response.statusText));
     }

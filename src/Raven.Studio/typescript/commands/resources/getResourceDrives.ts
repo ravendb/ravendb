@@ -11,7 +11,7 @@ class getResourceDrives extends commandBase {
             type: this.type,
             name: this.name
         };
-        var url = "/debug/resource-drives";
+        var url = "/debug/resource-drives";//TODO: use endpoints
 
         return this.query(url, args);
     }

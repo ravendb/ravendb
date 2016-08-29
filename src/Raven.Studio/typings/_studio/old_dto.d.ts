@@ -1,4 +1,5 @@
 /// <reference path="../../typescript/common/constants.ts"/>
+/// <reference path="../server/include.ts"/>
 
 interface collectionInfoDto extends indexResultsDto<documentDto> {
 }

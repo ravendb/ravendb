@@ -13,7 +13,7 @@ class documentHelpers {
             documentNodesFlattenedList.push(doc[curField]);
         });
 
-        for (var documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
+        for (let documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
             var curField = documentNodesFlattenedList[documentNodesCursor];
             if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
 
@@ -22,7 +22,7 @@ class documentHelpers {
                 }
             }
             else if (typeof curField == "object" && !!curField) {
-                for (var curInnerField in curField) {
+                for (let curInnerField in curField) {
                     documentNodesFlattenedList.push(curField[curInnerField]);
                 }
             }

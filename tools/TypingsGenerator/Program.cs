@@ -8,6 +8,7 @@ using Raven.Client.Connection;
 using Raven.Client.Data;
 using System.Reflection;
 using Raven.Client.Data.Queries;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
 using TypeScripter;
@@ -24,11 +25,19 @@ namespace TypingsGenerator
             Directory.CreateDirectory(TargetDirectory);
 
             var scripter = new Scripter()
-                .UsingAssemblies(new[] { typeof(Default).GetTypeInfo().Assembly, typeof(DocumentDatabase).GetTypeInfo().Assembly })
                 .UsingFormatter(new TsFormatter
                     {
                         EnumsAsString = true
                     });
+
+            scripter
+               .WithTypeMapping(TsPrimitive.String, typeof(Guid))
+               .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
+               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
+               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
+               .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
+               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken));
+
             scripter = ConfigureTypes(scripter);
             Directory.Delete(TargetDirectory, true);
             Directory.CreateDirectory(TargetDirectory);
@@ -40,17 +49,14 @@ namespace TypingsGenerator
         {
             var ignoredTypes = new HashSet<Type>
             {
-                typeof(RavenJObject),
-                typeof(RavenJValue),
-                typeof(RavenJArray),
-                typeof(RavenJToken)
             };
 
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
+            scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
 
             scripter.AddType(typeof(DatabaseStatistics));
-            scripter.AddType(typeof(QueryResult));
+            scripter.AddType(typeof(IndexDefinition));
 
             return scripter;
         }

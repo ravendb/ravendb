@@ -1,5 +1,5 @@
 ﻿
-import * as EVENTS from "common/constants/events"
+import EVENTS = require("common/constants/events");
 
 /*
     Events emitted through ko.postbox

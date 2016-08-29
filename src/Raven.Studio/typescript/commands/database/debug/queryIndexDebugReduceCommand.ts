@@ -14,7 +14,7 @@ class queryIndexDebugReduceCommand extends commandBase {
             key: this.key,
             level: this.level
         };
-        var url = "/indexes/" + this.indexName;
+        var url = "/indexes/" + this.indexName;//TODO: use endpoints
         return this.query(url, args, this.db, r => r.Results);
     }
 }

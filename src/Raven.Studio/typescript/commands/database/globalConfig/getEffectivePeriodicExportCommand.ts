@@ -8,7 +8,7 @@ class getEffectivePriodicExportCommand extends commandBase {
     }
 
     execute(): JQueryPromise<configurationDocumentDto<periodicExportSetupDto>> {
-        var url = "/configuration/document/Raven/Backup/Periodic/Setup";
+        var url = "/configuration/document/Raven/Backup/Periodic/Setup";//TODO: use endpoints
         return this.query<configurationDocumentDto<periodicExportSetupDto>>(url, null, this.db);
     }
 

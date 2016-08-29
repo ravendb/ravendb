@@ -12,7 +12,7 @@ class saveTransformerCommand extends commandBase {
     execute(): JQueryPromise<transformer> {
         var doneTask = $.Deferred();
         
-        var saveTransformerUrl = "/transformers/" + this.trans.name();
+        var saveTransformerUrl = "/transformers/" + this.trans.name();//TODO: use endpoints
         var saveTransformerPutArgs = JSON.stringify(this.trans.toSaveDto());
         
 

@@ -16,8 +16,6 @@ class globalConfigCustomFunctions extends viewModelBase {
     canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     activated = ko.observable<boolean>(false);
 
-    settingsAccess = new settingsAccessAuthorizer();
-
     docEditor: AceAjax.Editor;
     textarea: any;
     text: KnockoutComputed<string>;
@@ -32,7 +30,7 @@ class globalConfigCustomFunctions extends viewModelBase {
         this.fetchCustomFunctions();
 
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
-        this.isSaveEnabled = ko.computed<boolean>(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed<boolean>(() => !settingsAccessAuthorizer.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     attached() {

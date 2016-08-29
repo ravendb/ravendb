@@ -20,7 +20,6 @@ class customFunctionsEditor extends viewModelBase {
 
     constructor() {
         super();
-        this.layout.setMode(true);
         aceEditorBindingHandler.install();
         this.documentText = ko.observable<string>("");
         this.globalDocumentText = ko.observable<string>("");

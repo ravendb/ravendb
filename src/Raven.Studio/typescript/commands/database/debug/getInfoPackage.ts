@@ -22,7 +22,7 @@ class getInfoPackage extends commandBase {
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
                 var isSystem = true;
-                var url = appUrl.forResourceQuery(this.db)  + (isSystem ? '/admin/debug/info-package' : '/debug/info-package');
+                var url = appUrl.forResourceQuery(this.db) + (isSystem ? '/admin/debug/info-package' : '/debug/info-package');//TODO: use endpoints
                 url += '?singleUseAuthToken=' + token;
                 if (this.withStackTrace && isSystem) {
                     url += "&stacktrace=true";

@@ -218,7 +218,7 @@ interface Storage {
 
 interface DurandalRouteConfiguration {
     tooltip?: string;
-    dynamicHash?: KnockoutComputed<string>;
+    dynamicHash?: KnockoutObservable<string> | (() => string);
 }
 
 declare module AceAjax {

@@ -20,7 +20,7 @@ class createDatabaseCommand extends commandBase {
             "Disabled": false
         };
 
-        var url = "/admin/databases/" + this.databaseName;
+        var url = "/admin/databases/" + this.databaseName;//TODO: use endpoints
         return this.put(url, JSON.stringify(databaseDoc), null, { dataType: undefined })
             //TODO: delete? .then(() => this.query("/databases/" + this.databaseName + "/silverlight/ensureStartup", null, null)) // Forces creation of system indexes.
             .done(() => this.reportSuccess(this.databaseName + " created"))

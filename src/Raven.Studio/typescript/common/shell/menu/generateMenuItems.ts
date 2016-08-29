@@ -1,132 +1,282 @@
 ﻿
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import accessHelper = require("viewModels/shell/accessHelper");
+import activeResourceTracker = require("viewmodels/resources/activeResourceTracker");
+import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
-interface GenerateMenuItemOptions {
-    activeDatabase: KnockoutObservable<database>;
-    canExposeConfigOverTheWire: KnockoutObservable<boolean>;
-    isGlobalAdmin: KnockoutObservable<boolean>;
-}
+export = generateMenuItems;
 
-export type menuItemType = "separator" | "intermediate" | "leaf";
-
-export interface menuItem {
-    type: menuItemType;
-}
-
-export class separatorMenuItem implements menuItem {
-    title: string;
-    type: menuItemType = "separator";
-
-    constructor(title: string) {
-        this.title = title;
-    }
-}
-
-export class intermediateMenuItem implements menuItem {
-    title: string;
-    children: menuItem[];
-    css: string;
-    type: menuItemType = "intermediate";
-
-    constructor(title: string, children: menuItem[], css?: string) {
-        this.title = title;
-        this.children = children;
-        this.css = css;
-    }
-}
-
-export class leafMenuItem implements menuItem {
-    title: string;
-    tooltip: string;
-    nav: boolean;
-    route: string | Array<string>;
-    moduleId: string;
-    hash: KnockoutComputed<string>;
-    dynamicHash: KnockoutComputed<string>;
-    css: string;
-    path: KnockoutComputed<string>;
-    type: menuItemType = "leaf";
-
-    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash }: {
-        title: string,
-        tooltip?: string,
-        route: string | Array<string>,
-        moduleId: string,
-        nav: boolean,
-        hash?: KnockoutComputed<string>,
-        dynamicHash?: KnockoutComputed<string>,
-        css?: string
-    }) {
-        this.title = title;
-        this.route = route;
-        this.moduleId = moduleId;
-        this.nav = nav;
-        this.hash = hash;
-        this.dynamicHash = dynamicHash;
-        this.css = css;
-        this.path = ko.computed(() => {
-            if (this.hash) {
-                return this.hash();
-            } else if (this.dynamicHash) {
-                return this.dynamicHash();
-            }
-
-            return null;
-        });
-    }
-}
-
-export function generateMenuItems(opts: GenerateMenuItemOptions) {
+function generateMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     let menuItems: menuItem[] = [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         getQueryMenuItem(appUrls),
         new separatorMenuItem('Manage'),
-        getTasksMenuItem(appUrls, opts.activeDatabase),
+        getTasksMenuItem(appUrls, activeResourceTracker.default.database),
         getSettingsMenuItem(appUrls),
-        getStatsMenuItem(appUrls, opts),
+        getStatsMenuItem(appUrls),
         new separatorMenuItem('Server'),
-        getResourcesMenuItem(appUrls, opts),
-        getManageServerMenuItem(appUrls, opts),
+        getResourcesMenuItem(appUrls),
+        getManageServerMenuItem(appUrls),
         new leafMenuItem({
-                route: '',
-                moduleId: '',
-                title: 'About',
-                tooltip: "About",
-                nav: true,
-                css: 'fa fa-question-mark',
-                hash: ko.computed(() => 'TODO')
-            })
+            route: '',
+            moduleId: '',
+            title: 'About',
+            tooltip: "About",
+            nav: true,
+            css: 'fa fa-question-mark',
+            dynamicHash: ko.computed(() => 'TODO')
+        })
     ];
 
     return menuItems;
 }
 
-function getManageServerMenuItem(appUrls: computedAppUrls,
-    { canExposeConfigOverTheWire, isGlobalAdmin, activeDatabase }: GenerateMenuItemOptions) {
+function getManageServerMenuItem(appUrls: computedAppUrls) {
+    let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
     var items: menuItem[] = [
-
+        new intermediateMenuItem("Global config", [
+            new leafMenuItem({
+                route: "admin/settings/globalConfig",
+                moduleId: "viewmodels/manage/globalConfig/globalConfigPeriodicExport",
+                title: "Periodic export",
+                tooltip: "",
+                nav: true,
+                dynamicHash: appUrl.forGlobalConfigPeriodicExport
+            }),
+            new leafMenuItem({
+                route: "admin/settings/globalConfigDatabaseSettings",
+                moduleId: "viewmodels/manage/globalConfig/globalConfigDatabaseSettings",
+                title: "Cluster-wide database settings",
+                tooltip: "Global cluster-wide database settings",
+                nav: true,
+                dynamicHash: appUrl.forGlobalConfigDatabaseSettings
+            }),
+            new leafMenuItem({
+                route: "admin/settings/globalConfigReplication",
+                moduleId: "viewmodels/manage/globalConfig/globalConfigReplications",
+                title: "Replication",
+                tooltip: "Global replication settings",
+                nav: true,
+                dynamicHash: appUrl.forGlobalConfigReplication
+            }),
+            new leafMenuItem({
+                route: "admin/settings/globalConfigSqlReplication",
+                moduleId: "viewmodels/manage/globalConfig/globalConfigSqlReplication",
+                title: "SQL Replication",
+                tooltip: "Global SQL replication settings",
+                nav: true,
+                dynamicHash: appUrl.forGlobalConfigSqlReplication
+            }),
+            new leafMenuItem({
+                route: "admin/settings/globalConfigQuotas",
+                moduleId: "viewmodels/manage/globalConfig/globalConfigQuotas",
+                title: "Quotas",
+                tooltip: "Global quotas settings",
+                nav: true,
+                dynamicHash: appUrl.forGlobalConfigQuotas
+            }),
+            new leafMenuItem({
+                route: "admin/settings/globalConfigCustomFunctions",
+                moduleId: "viewmodels/manage/globalConfig/globalConfigCustomFunctions",
+                title: "Custom functions",
+                tooltip: "Global custom functions settings",
+                nav: true,
+                dynamicHash: appUrl.forGlobalConfigCustomFunctions
+            }),
+            new leafMenuItem({
+                route: "admin/settings/globalConfigVersioning",
+                moduleId: "viewmodels/manage/globalConfig/globalConfigVersioning",
+                title: "Versioning",
+                tooltip: "Global versioning settings",
+                nav: true,
+                dynamicHash: appUrl.forGlobalConfigVersioning
+            })     
+        ]),
+        new leafMenuItem({
+            route: ['admin/settings', 'admin/settings/apiKeys'],
+            moduleId: 'viewmodels/manage/apiKeys',
+            title: 'API Keys',
+            nav: true,
+            dynamicHash: appUrl.forApiKeys,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/cluster',
+            moduleId: "viewmodels/manage/cluster",
+            title: "Cluster",
+            nav: true,
+            dynamicHash: appUrl.forCluster,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
+            route: "admin/settings/serverSmuggling",
+            moduleId: "viewmodels/manage/serverSmuggling",
+            title: "Server Smuggling",
+            nav: true,
+            dynamicHash: appUrl.forServerSmugging,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/backup',
+            moduleId: 'viewmodels/manage/backup',
+            title: 'Backup',
+            nav: true,
+            dynamicHash: appUrl.forBackup,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/compact',
+            moduleId: 'viewmodels/manage/compact',
+            title: 'Compact',
+            nav: true,
+            dynamicHash: appUrl.forCompact,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/restore',
+            moduleId: 'viewmodels/manage/restore',
+            title: 'Restore',
+            nav: true,
+            dynamicHash: appUrl.forRestore,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/adminLogs',
+            moduleId: 'viewmodels/manage/adminLogs',
+            title: 'Admin Logs',
+            nav: true,
+            dynamicHash: appUrl.forAdminLogs,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/topology',
+            moduleId: 'viewmodels/manage/topology',
+            title: 'Server Topology',
+            nav: true,
+            dynamicHash: appUrl.forServerTopology,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/trafficWatch',
+            moduleId: 'viewmodels/manage/trafficWatch',
+            title: 'Traffic Watch',
+            nav: true,
+            dynamicHash: appUrl.forTrafficWatch,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/licenseInformation',
+            moduleId: 'viewmodels/manage/licenseInformation',
+            title: 'License Information',
+            nav: true,
+            dynamicHash: appUrl.forLicenseInformation,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debugInfo',
+            moduleId: 'viewmodels/manage/infoPackage',
+            title: 'Gather Debug Info',
+            nav: true,
+            dynamicHash: appUrl.forDebugInfo,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/ioTest',
+            moduleId: 'viewmodels/manage/ioTest',
+            title: 'IO Test',
+            nav: true,
+            dynamicHash: appUrl.forIoTest,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/diskIoViewer',
+            moduleId: 'viewmodels/manage/diskIoViewer',
+            title: 'Disk IO Viewer',
+            nav: true,
+            dynamicHash: appUrl.forDiskIoViewer,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/console',
+            moduleId: "viewmodels/manage/console",
+            title: "Administrator JS Console",
+            nav: true,
+            dynamicHash: appUrl.forAdminJsConsole,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/studioConfig',
+            moduleId: 'viewmodels/manage/studioConfig',
+            title: 'Studio Config',
+            nav: true,
+            dynamicHash: appUrl.forStudioConfig,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/hotSpare',
+            moduleId: 'viewmodels/manage/hotSpare',
+            title: 'Hot Spare',
+            nav: true,
+            dynamicHash: appUrl.forHotSpare,
+            enabled: accessHelper.isGlobalAdmin
+        })
     ];
 
     return new intermediateMenuItem('Manage server', items, 'icon-settings');
 }
 
-function getResourcesMenuItem(appUrls: computedAppUrls, opts: GenerateMenuItemOptions) {
-    return new leafMenuItem({
+function getResourcesMenuItem(appUrls: computedAppUrls) {
+    var items = [
+        new leafMenuItem({
             route: ["", "resources"],
-            title: "Resources",
+            title: "Dashboard",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'fa fa-dashboard',
+            dynamicHash: appUrls.resourcesManagement
+        }),
+        new separatorMenuItem(),
+        new leafMenuItem({
+            route: [""],
+            title: "New database",
             moduleId: "viewmodels/resources/resources",
             nav: true,
             css: 'icon-resources',
-            hash: appUrls.resourcesManagement
-        });
+        }),
+        new leafMenuItem({
+            route: [""],
+            title: "New filesystem",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'icon-resources',
+        }),
+        new leafMenuItem({
+            route: [""],
+            title: "New counter",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'icon-resources',
+        }),
+        new leafMenuItem({
+            route: [""],
+            title: "New time serie",
+            moduleId: "viewmodels/resources/resources",
+            nav: true,
+            css: 'icon-resources',
+        })
+    ];
+
+    return new intermediateMenuItem("Resources", items, "icon-resources");
 }
 
-function getStatsMenuItem(
-    appUrls: computedAppUrls,
-    { canExposeConfigOverTheWire, isGlobalAdmin, activeDatabase }: GenerateMenuItemOptions) {
+function getStatsMenuItem(appUrls: computedAppUrls) {
+    let activeDatabase = activeResourceTracker.default.database;
     var items: menuItem[] = [
         new intermediateMenuItem('Indexing', [
             new leafMenuItem({
@@ -160,7 +310,7 @@ function getStatsMenuItem(
                 tooltip: "Prefetches",
                 nav: true,
                 dynamicHash: appUrls.indexPrefetches
-            }) 
+            })
         ], 'icon-indexes'),
         new intermediateMenuItem('Storage', [
             new leafMenuItem({
@@ -168,7 +318,7 @@ function getStatsMenuItem(
                 moduleId: 'viewmodels/database/status/storage/statusStorageOnDisk',
                 title: 'On disk',
                 tooltip: "Shows disk usage for active resource",
-                nav: isGlobalAdmin(),
+                nav: accessHelper.isGlobalAdmin(),
                 dynamicHash: appUrls.statusStorageOnDisk
             }),
             new leafMenuItem({
@@ -176,7 +326,7 @@ function getStatsMenuItem(
                 moduleId: 'viewmodels/database/status/storage/statusStorageBreakdown',
                 title: 'Internal storage Breakdown',
                 tooltip: "Shows detailed information about internal storage breakdown",
-                nav: isGlobalAdmin(),
+                nav: accessHelper.isGlobalAdmin(),
                 dynamicHash: appUrls.statusStorageBreakdown
             }),
             new leafMenuItem({
@@ -258,7 +408,7 @@ function getStatsMenuItem(
                 moduleId: 'viewmodels/database/status/debug/statusDebugRoutes',
                 title: 'Routes',
                 tooltip: "Displays all available routes",
-                nav: isGlobalAdmin(),
+                nav: accessHelper.isGlobalAdmin(),
                 dynamicHash: appUrls.statusDebugRoutes
             }),
             new leafMenuItem({
@@ -323,7 +473,7 @@ function getStatsMenuItem(
             moduleId: 'viewmodels/database/status/requests/requestTracing',
             title: 'Request tracing',
             tooltip: "Displays recent requests with their status and execution times",
-            nav: canExposeConfigOverTheWire(),
+            nav: accessHelper.canExposeConfigOverTheWire(),
             dynamicHash: appUrls.requestsTracing
         }),
         new leafMenuItem({
@@ -407,7 +557,7 @@ function getStatsMenuItem(
             route: 'databases/status/infoPackage',
             moduleId: 'viewmodels/manage/infoPackage',
             title: 'Gather Debug Info',
-            nav: canExposeConfigOverTheWire(),
+            nav: accessHelper.canExposeConfigOverTheWire(),
             dynamicHash: appUrls.infoPackage
         })
     ];
@@ -665,7 +815,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/documents",
             moduleId: "viewmodels/database/documents/documents",
-            hash: appUrls.documents,
+            dynamicHash: appUrls.documents,
             css: 'icon-plus'
         }),
         new leafMenuItem({
@@ -674,7 +824,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             route: "database/conflicts",
             moduleId: "viewmodels/database/conflicts/conflicts",
             css: 'icon-plus',
-            hash: appUrls.conflicts
+            dynamicHash: appUrls.conflicts
         }),
         new leafMenuItem({
             title: "Patch",
@@ -682,7 +832,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             route: "databases/patch(/:recentPatchHash)",
             moduleId: "viewmodels/database/patch/patch",
             css: 'icon-plus',
-            hash: appUrls.patch
+            dynamicHash: appUrls.patch
         }),
         new leafMenuItem({
             route: "databases/edit",

@@ -8,7 +8,7 @@ class getNextOperationId extends commandBase {
     }
 
     execute() {
-        var operationId = this.query("/studio-tasks/next-operation-id", null, this.rs);
+        var operationId = this.query("/studio-tasks/next-operation-id", null, this.rs);//TODO: use endpoints
         return operationId;
     }
 }

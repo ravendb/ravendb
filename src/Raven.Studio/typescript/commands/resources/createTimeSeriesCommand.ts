@@ -23,7 +23,7 @@ class createTimeSeriesCommand extends commandBase {
             "Disabled": false
         };
 
-        var url = "/admin/ts/" + this.timeSeriesName;
+        var url = "/admin/ts/" + this.timeSeriesName;//TODO: use endpoints
         
         var createTask = this.put(url, JSON.stringify(timeSeriesDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.timeSeriesName + " created"));

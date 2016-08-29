@@ -16,7 +16,7 @@ class getCachedCollectionsCount extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        return this.query("/studio-tasks/collection/counts", {fromDate : this.lastQueryDate}, this.ownerDb);
+        return this.query("/studio-tasks/collection/counts", { fromDate: this.lastQueryDate }, this.ownerDb);//TODO: use endpoints
     }
 }
 

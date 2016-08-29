@@ -9,7 +9,7 @@ class ChangeNodeVotingModeCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        return this.post("/admin/cluster/changeVotingMode?isVoting=" + !(this.connectionInfo.IsNoneVoter),   
+        return this.post("/admin/cluster/changeVotingMode?isVoting=" + !(this.connectionInfo.IsNoneVoter),   //TODO: use endpoints
         ko.toJSON(this.connectionInfo) , 
         this.db,
         { dataType: 'text' })
