@@ -1,25 +1,24 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Embedded;
+using FastTests;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Pfeffer : RavenTest
+    public class Pfeffer : RavenTestBase
     {
         [Fact]
         public void QueryingUsingObjects()
         {
-            using (var store =  NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer += serializer =>
                 {
                     serializer.TypeNameHandling = TypeNameHandling.All;
                 };
                 using (var session = store.OpenSession())
+
                 {
                     var obj = new Outer { Examples = new List<IExample>() { new Example { Provider = "Test", Id = "Abc" } } };
                     session.Store(obj);
@@ -31,24 +30,24 @@ namespace Raven.Tests.MailingList
                     var arr = session.Query<Outer>().Customize(c => c.WaitForNonStaleResults())
                         .Where(o => o.Examples.Any(e => e == ex))
                         .ToArray();
-                    WaitForUserToContinueTheTest(store);
+                    //WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, arr.Length);
                 }
             }
         }
 
         // Define other methods and classes here
-        public interface IExample
+        private interface IExample
         {
         }
 
-        public class Outer
+        private class Outer
         {
             public int Id { get; set; }
             public IList<IExample> Examples { get; set; }
         }
 
-        public class Example : IExample
+        private class Example : IExample
         {
             public string Provider { get; set; }
             public string Id { get; set; }

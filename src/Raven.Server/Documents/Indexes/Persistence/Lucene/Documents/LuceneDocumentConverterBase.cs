@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.Null:
                 case ValueType.EmptyString:
                 case ValueType.Numeric:
+                case ValueType.BlittableJsonObject:
+                case ValueType.DynamicJsonObject:
                     defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS;
                     break;
                 default:
