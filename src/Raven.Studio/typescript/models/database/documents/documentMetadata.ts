@@ -12,6 +12,7 @@ class documentMetadata {
     nonStandardProps: Array<string>;
 
     lastModifiedFullDate: KnockoutComputed<string>;
+    lastModifiedAsAgo: KnockoutComputed<string>;
     now = ko.observable(new Date());
 
     constructor(dto?: documentMetadataDto) {
@@ -26,12 +27,19 @@ class documentMetadata {
             setInterval(() => this.now(new Date()), 60*1000);
 
             this.ravenLastModified = dto['Raven-Last-Modified'];
+            this.lastModifiedAsAgo = ko.computed(() => {
+                if (!!this.ravenLastModified) {
+                    const lastModifiedMoment = moment(this.ravenLastModified);
+                    return lastModifiedMoment.from(this.now());
+                }
+                return "";
+            });
+
             this.lastModifiedFullDate = ko.computed(() => {
                 if (!!this.ravenLastModified) {
                     const lastModifiedMoment = moment(this.ravenLastModified);
-                    const timeSince = lastModifiedMoment.from(this.now());
                     const fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
-                    return timeSince + " (" + fullTimeSinceUtc + ")";
+                    return fullTimeSinceUtc;
                 }
                 return "";
             });

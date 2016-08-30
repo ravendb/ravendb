@@ -56,7 +56,7 @@ class commandBase {
         }
     }
     
-    head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
+    protected head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
         var ajax = this.ajax(relativeUrl, args, "HEAD", resource);
         if (resultsSelector) {
             var task = $.Deferred();
@@ -84,30 +84,30 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert);
     }
 
-    reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    protected reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
 
     /*
      * Performs a DELETE rest call.
     */
-    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 
-    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "POST", resource, options, timeToAlert);
     }
 
-    patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    protected patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "PATCH", resource, options);
     }
 
-    evalJs(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    protected evalJs(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "EVAL", resource, options);
     }
 
@@ -209,7 +209,7 @@ class commandBase {
         return ajaxTask.promise();
     }
 
-    retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {
+    private retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {
         this.ajax.apply(this, orignalArguments).done((results: any, status: any, xhr: any) => {
             task.resolve(results, status, xhr);
         }).fail((request: any, status: any, error: any) => {

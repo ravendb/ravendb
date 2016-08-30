@@ -378,9 +378,13 @@ class appUrl {
         return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
     }
 
-    static forNewDoc(db: database): string {
+    static forNewDoc(db: database, collection: string = null): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
-        return "#databases/edit?" + databaseUrlPart;
+        var url = "#databases/edit?" + databaseUrlPart;
+        if (collection) {
+            url += "&new=" + encodeURIComponent(collection);
+        }
+        return url;
     }
 
 

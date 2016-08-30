@@ -95,12 +95,26 @@
         <div class="flex-winddow-head">
             <div class="clearfix">
                 <h2 class="pull-left-sm">
-                    <a class="reset-color"><span data-bind="attr: { class: isDocumentStarred()?'icon-star-filled favorite':'icon-star' }"></span></a>
-                    Orders/123123123 
-                    <input id="documentName" type="text" class="edit-inline" data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }" />
-                    <a class="icon-edit reset-color"></a>
+                    <span data-bind="if: isCreatingNewDocument()">
+                        <span data-bind="if: provideCustomNameForNewDocument()">
+                            <input id="documentName" required="required" type="text" class="edit-inline" placeholder="document ID"
+                                   data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }, customValidity: userSpecifiedIdCustomValidityError" />
+                        </span>
+                        <span data-bind="if: !provideCustomNameForNewDocument()">
+                            <span data-bind="visible: collectionForNewDocument(), text: collectionForNewDocument() + '/'"></span>
+                            <span>&lt;auto-generated ID&gt;</span>
+                            <a data-bind="click: enableCustomNameProvider" class="icon-edit reset-color"></a>
+                        </span>
+                    </span>     
+                    <span data-bind="if: !isCreatingNewDocument()">
+                        <a class="reset-color"><span data-bind="attr: { class: isDocumentStarred()?'icon-star-filled favorite':'icon-star' }"></span></a>
+                        <span data-bind="text: userSpecifiedId"></span>
+                    </span>
                 </h2>
-                <div class="pull-right-sm" data-bind="visible: displayDocumentChangeNotification()"><small><span class="icon-warning text-warning"></span> Document has beend modified outside of studio. <a href="#" data-bind="click: refreshDocument">click here to refresh</a></small></div>
+                <div class="pull-left-sm" data-bind="!isCreatingNewDocument()">
+                    Last modified <span data-bind="text: metadata().lastModifiedAsAgo"></span>
+                </div>
+                <div class="pull-right-sm" data-bind="visible: displayDocumentChangeNotification()"><small><span class="icon-warning text-warning"></span> Document has been modified outside of studio. <a href="#" data-bind="click: refreshDocument">click here to refresh</a></small></div>
             </div>
             <div class="btn-bar">
                 <div class="pull-left-sm">
