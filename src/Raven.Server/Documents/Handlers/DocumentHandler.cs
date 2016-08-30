@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -339,7 +340,14 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(cmd);
 
+                if (cmd.ExceptionDispatchInfo?.SourceException != null )
+                    if (cmd.ExceptionDispatchInfo?.SourceException  is Voron.Exceptions.ConcurrencyException)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                }
+                
                 cmd.ExceptionDispatchInfo?.Throw();
+                
 
                 HttpContext.Response.StatusCode = 201;
 
