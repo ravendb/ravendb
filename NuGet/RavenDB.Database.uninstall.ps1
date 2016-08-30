@@ -11,7 +11,3 @@ function Remove($items) {
 }
 
 Remove($project.ProjectItems)
-
-$file = $project.ProjectItems.AddFromFile("$toolsPath\Raven.Studio.Html5.zip")
-$copyToOutput = $file.Properties.Item("CopyToOutputDirectory")
-$copyToOutput.Value = 1

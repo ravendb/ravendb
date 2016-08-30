@@ -719,13 +719,13 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
     @("Raven.Client.MvcIntegration.???") |% { Copy-Item "$base_dir\Raven.Client.MvcIntegration\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 }
 
     New-Item $nuget_dir\RavenDB.Database\lib\net45 -Type directory | Out-Null
-    New-Item $nuget_dir\RavenDB.Database\content -Type directory | Out-Null
     New-Item $nuget_dir\RavenDB.Database\tools -Type directory | Out-Null
     Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
     Copy-Item $base_dir\NuGet\RavenDB.Database.install.ps1 $nuget_dir\RavenDB.Database\tools\install.ps1
+    Copy-Item $base_dir\NuGet\RavenDB.Database.uninstall.ps1 $nuget_dir\RavenDB.Database\tools\uninstall.ps1
     @("Raven.Database.???", "Raven.Abstractions.???") `
          |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
-    Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\content
+    Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\tools
     Copy-Item $base_dir\NuGet\readme.txt $nuget_dir\RavenDB.Database\ -Recurse
 
     New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
