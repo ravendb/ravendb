@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using SlowTests.Core.Indexing;
 using SlowTests.SlowTests.Bugs;
 
@@ -8,15 +9,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            Parallel.For(0, 1000, i =>
             {
-                Console.WriteLine(i);
-
-                using (var x = new TimeoutTester())
+                using (var x = new Fanout())
                 {
-                    x.will_timeout_query_after_some_time();
+                    x.ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded();
                 }
-            }
+                Console.WriteLine(i);
+            });
         }
     }
 }

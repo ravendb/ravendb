@@ -242,7 +242,7 @@ namespace FastTests
                 : TimeSpan.FromSeconds(20));
 
             var spinUntil = SpinWait.SpinUntil(() =>
-                databaseCommands.GetStatistics().StaleIndexes.Length == 0,
+                databaseCommands.GetStatistics().Indexes.All(x=>x.IsStale == false),
                 timeout.Value);
 
             if (spinUntil)
