@@ -87,6 +87,7 @@ namespace Raven.Server.Documents.Indexes
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         private DateTime? _lastQueryingTime;
+        private DateTime? _lastIndexingTime;
 
         public readonly HashSet<string> Collections;
 
@@ -241,6 +242,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Priority = _indexStorage.ReadPriority(tx);
                 _lastQueryingTime = SystemTime.UtcNow;
+                _lastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
             }
         }
 
@@ -376,8 +378,6 @@ namespace Raven.Server.Documents.Indexes
                     if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, collection, cutoff.Value) > 0)
                         return true;
                 }
-
-
             }
 
             return false;
@@ -437,6 +437,7 @@ namespace Raven.Server.Documents.Indexes
                         _mre.Reset();
 
                         var stats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
+                        _lastIndexingTime = stats.StartTime;
                         using (var scope = stats.CreateScope())
                         {
                             try
@@ -914,17 +915,17 @@ namespace Raven.Server.Documents.Indexes
                     //if (f == Constants.TemporaryScoreValue)
                     //    continue;
 
-                    if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
+                    if (f.StartsWith(Constants.Indexing.Fields.RandomFieldName) || f.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    if (f.StartsWith(Constants.AlphaNumericFieldName))
+                    if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
                     {
                         f = SortFieldHelper.CustomField(f).Name;
                         if (string.IsNullOrEmpty(f))
                             throw new ArgumentException("Alpha numeric sorting requires a field name");
                     }
 
-                    if (IndexPersistence.ContainsField(f) == false && f.StartsWith(Constants.DistanceFieldName) == false && IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+                    if (IndexPersistence.ContainsField(f) == false && f.StartsWith(Constants.Indexing.Fields.DistanceFieldName) == false && IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
                         throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
                 }
             }
@@ -932,12 +933,10 @@ namespace Raven.Server.Documents.Indexes
 
         private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            var stats = ReadStats(indexContext.Transaction);
-
             result.IndexName = Name;
             result.IsStale = isStale;
-            result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
-            result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
+            result.IndexTimestamp = _lastIndexingTime ?? DateTime.MinValue;
+            result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 

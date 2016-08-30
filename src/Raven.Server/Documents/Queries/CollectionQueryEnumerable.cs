@@ -40,8 +40,8 @@ namespace Raven.Server.Documents.Queries
         private class Enumerator : IEnumerator<Document>
         {
             private static readonly char[] InSeparator = { ',' };
-            private static readonly string InPrefix = $"@in<{Constants.DocumentIdFieldName}>:";
-            private static readonly string EqualPrefix = $"{Constants.DocumentIdFieldName}:";
+            private static readonly string InPrefix = $"@in<{Constants.Indexing.Fields.DocumentIdFieldName}>:";
+            private static readonly string EqualPrefix = $"{Constants.Indexing.Fields.DocumentIdFieldName}:";
 
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Queries
                     if (_inner == null)
                     {
                         _inner = _ids != null && _ids.Count > 0
-                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize).GetEnumerator() 
+                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize).GetEnumerator()
                             : _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize).GetEnumerator();
 
                         _innerCount = 0;
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Queries
                     _innerCount++;
 
                     var doc = _fieldsToFetch.IsProjection
-                                ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, _fieldsToFetch, _context)
+                                ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
                                 : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Queries
                         count++;
 
                         var doc = _fieldsToFetch.IsProjection
-                                ? MapQueryResultRetriever.GetProjectionFromDocument(document, _fieldsToFetch, _context)
+                                ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
                                 : document;
 
                         if (doc.Data.Count <= 0)

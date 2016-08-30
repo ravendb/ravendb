@@ -13,7 +13,7 @@ class getIndexTermsCommand extends commandBase {
             name: this.indexName, 
             pageSize: 1024
         };
-        var url = "/indexes/terms" + this.urlEncodeArgs(urlArgs);
+        var url = "/indexes/terms" + this.urlEncodeArgs(urlArgs);//TODO: use endpoints
         return this.query(url, null, this.db);
     }
 } 

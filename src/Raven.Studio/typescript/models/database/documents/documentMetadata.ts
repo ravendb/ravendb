@@ -23,18 +23,18 @@ class documentMetadata {
             this.tempIndexScore = dto['Temp-Index-Score'];
             this.lastModified = dto['Last-Modified'];
 
+            setInterval(() => this.now(new Date()), 60*1000);
+
+            this.ravenLastModified = dto['Raven-Last-Modified'];
             this.lastModifiedFullDate = ko.computed(() => {
-                if (!!this.lastModified) {
-                    var lastModifiedMoment = moment(this.lastModified);
-                    var timeSince = lastModifiedMoment.from(this.now());
-                    var fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
+                if (!!this.ravenLastModified) {
+                    const lastModifiedMoment = moment(this.ravenLastModified);
+                    const timeSince = lastModifiedMoment.from(this.now());
+                    const fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
                     return timeSince + " (" + fullTimeSinceUtc + ")";
                 }
                 return "";
             });
-            setInterval(() => this.now(new Date()), 60*1000);
-
-            this.ravenLastModified = dto['Raven-Last-Modified'];
             this.etag = dto['@etag'];
 
             for (var property in dto) {

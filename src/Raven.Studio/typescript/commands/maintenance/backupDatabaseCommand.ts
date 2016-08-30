@@ -11,7 +11,7 @@ class backupDatabaseCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var result = $.Deferred();
 
-        this.query('/admin/databases/' + this.db.name, null, null /* We should query the system URL here */)
+        this.query('/admin/databases/' + this.db.name, null, null /* We should query the system URL here */)//TODO: use endpoints
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to fetch database document!", response.responseText, response.statusText);
                 result.reject();
@@ -21,7 +21,7 @@ class backupDatabaseCommand extends commandBase {
                     BackupLocation: this.backupLocation,
                     DatabaseDocument: doc
                 };
-                this.post('/admin/backup?incremental=' + this.incremental, JSON.stringify(args), this.db, { dataType: 'text' })
+                this.post('/admin/backup?incremental=' + this.incremental, JSON.stringify(args), this.db, { dataType: 'text' })//TODO: use endpoints
                     .fail((response: JQueryXHR) => {
                         this.reportError("Failed to create backup!", response.responseText, response.statusText);
                         result.reject();

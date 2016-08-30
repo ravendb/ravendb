@@ -14,7 +14,7 @@ class getEffectiveSettingsCommand extends commandBase {
 
     execute(): JQueryPromise<document> {
         var resultsSelector = (queryResult: queryResultDto) => new document(queryResult);
-        var url = "/configuration/global/settings";
+        var url = "/configuration/global/settings";//TODO: use endpoints
         return this.query(url, null, null, resultsSelector);
     }
 }

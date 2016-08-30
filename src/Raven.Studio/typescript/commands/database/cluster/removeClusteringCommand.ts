@@ -9,7 +9,7 @@ class removeClusteringCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        return this.patch("/admin/cluster/remove-clustering", null, this.db)
+        return this.patch("/admin/cluster/remove-clustering", null, this.db)//TODO: use endpoints
             .done(() => this.reportSuccess("Removed cluster entirely and performed cleanup."))
             .fail((response: JQueryXHR) => this.reportError("Unable to remove cluster and perform cleanup", response.responseText, response.statusText));
     }

@@ -23,7 +23,7 @@ class createCounterStorageCommand extends commandBase {
             "Disabled": false
         };
 
-        var url = "/admin/cs/" + this.counterStorageName;
+        var url = "/admin/cs/" + this.counterStorageName;//TODO: use endpoints
         
         var createTask = this.put(url, JSON.stringify(filesystemDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.counterStorageName + " created"));

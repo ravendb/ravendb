@@ -8,7 +8,7 @@ class getStatusDebugConfigCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/debug/config";
+        var url = "/debug/config";//TODO: use endpoints
         return this.query<any>(url, null, this.db);
     }
 }

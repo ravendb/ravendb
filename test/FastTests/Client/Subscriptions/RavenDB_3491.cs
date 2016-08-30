@@ -53,7 +53,7 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
+                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
                         subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
                         subscription.Subscribe(docs.Add);
@@ -212,7 +212,7 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
+                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
                         subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
                         subscription.Subscribe(docs.Add);

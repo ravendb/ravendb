@@ -1,5 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
+import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 import fileSystemStatistics = require("models/filesystem/fileSystemStatistics");
@@ -28,7 +29,11 @@ class filesystem extends resource {
 
     activate() {
         this.isLoaded(true);
-        ko.postbox.publish("ActivateFilesystem", this);
+        ko.postbox.publish(EVENTS.Resource.Activate,
+        {
+            type: TenantType.FileSystem,
+            resource: this
+        });
     }
 
     saveStatistics(dto: filesystemStatisticsDto) {

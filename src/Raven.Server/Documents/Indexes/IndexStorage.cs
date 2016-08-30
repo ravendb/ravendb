@@ -168,6 +168,17 @@ namespace Raven.Server.Documents.Indexes
             return errors;
         }
 
+        public DateTime? ReadLastIndexingTime(RavenTransaction tx)
+        {
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+
+            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+            if (lastIndexingTime == null)
+                return null;
+
+            return DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
+        }
+
         public IndexStats ReadStats(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);

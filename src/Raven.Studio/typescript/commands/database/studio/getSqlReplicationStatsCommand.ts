@@ -15,7 +15,7 @@ class getSqlReplicationStatsCommand extends commandBase {
             sqlReplicationName: this.sqlReplicationName
         };
 
-        var url = "/studio-tasks/get-sql-replication-stats";
+        var url = "/studio-tasks/get-sql-replication-stats";//TODO: use endpoints
 
         var resultsSelector = function (result: any) {
             result.Value["Name"] = result.Key;

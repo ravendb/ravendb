@@ -1,11 +1,14 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
+import EVENTS = require("common/constants/events");
+import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
 import viewLocator = require("durandal/viewLocator");
 
 import menu = require("common/shell/menu");
+import activeResourceTracker = require("viewmodels/resources/activeResourceTracker");
 import resourceSwitcher = require("common/shell/resourceSwitcher");
 import searchBox = require("common/shell/searchBox");
 import resource = require("models/resources/resource");
@@ -36,18 +39,12 @@ import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 import extensions = require("common/extensions");
-import serverBuildReminder = require("common/serverBuildReminder");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
-import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
@@ -60,10 +57,10 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import getStudioConfig = require("commands/getStudioConfig");
 
 import viewModelBase = require("viewmodels/viewModelBase");
+import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
-import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import getHotSpareInformation = require("commands/licensing/GetHotSpareInformation");
 
@@ -72,67 +69,24 @@ class shell extends viewModelBase {
     static studioConfigDocumentId = "Raven/StudioConfig";
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
     static originalEnvironmentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
+    private activeResource: KnockoutObservable<resource> = activeResourceTracker.default.resource;
     selectedColor = shell.selectedEnvironmentColorStatic;
     selectedEnvironmentText = ko.computed(() => this.selectedColor().name + " Environment");
     canShowEnvironmentText = ko.computed(() => this.selectedColor().name !== "Default");
 
     renewOAuthTokenTimeoutId: number;
-    showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
-    showLogOutButton: KnockoutComputed<boolean>;
-    static isGlobalAdmin = ko.observable<boolean>(false);
-    static canReadWriteSettings = ko.observable<boolean>(false);
-    static canReadSettings = ko.observable<boolean>(false);
-    static canExposeConfigOverTheWire = ko.observable<boolean>(false);
-    maxResourceNameWidth: KnockoutComputed<string>;
-    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ throttle: 100 });
+    showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption()); //TODO:
+    showLogOutButton: KnockoutComputed<boolean>; //TODO:
+    
+    isLoadingStatistics = ko.computed(() => !!this.activeResource() && !this.activeResource().statistics()).extend({ throttle: 100 });
 
     static databases = ko.observableArray<database>();
-    listedResources: KnockoutComputed<resource[]>;
-    isActiveDatabaseDisabled: KnockoutComputed<boolean>;
-    canShowDatabaseNavbar = ko.computed(() =>
-        !!this.lastActivatedResource()
-        && this.lastActivatedResource().type === TenantType.Database
-        && (this.appUrls.isAreaActive("databases")() || this.appUrls.isAreaActive("resources")()));
     databasesLoadedTask: JQueryPromise<any>;
-    goToDocumentSearch: KnockoutObservable<string>;
-    goToDocumentSearchResults = ko.observableArray<string>();
-
     static fileSystems = ko.observableArray<fileSystem>();
-    isActiveFileSystemDisabled: KnockoutComputed<boolean>;
-    canShowFileSystemNavbar = ko.computed(() =>
-        !!this.lastActivatedResource()
-        && this.lastActivatedResource().type === TenantType.FileSystem
-        && (this.appUrls.isAreaActive("filesystems")() || this.appUrls.isAreaActive("resources")()));
-
-    canShowFileSystemSettings = ko.computed(() => {
-        if (!this.canShowFileSystemNavbar()) return false;
-        var fs = <fileSystem>this.lastActivatedResource();
-        return fs.activeBundles.contains("Versioning");
-    });
-
     static counterStorages = ko.observableArray<counterStorage>();
-    isActiveCounterStorageDisabled: KnockoutComputed<boolean>;
-    canShowCountersNavbar = ko.computed(() =>
-        !!this.lastActivatedResource()
-        && this.lastActivatedResource().type === TenantType.CounterStorage
-        && (this.appUrls.isAreaActive("counterstorages")() || this.appUrls.isAreaActive("resources")()));
-
     static timeSeries = ko.observableArray<timeSeries>();
-    isActiveTimeSeriesDisabled: KnockoutComputed<boolean>;
-    canShowTimeSeriesNavbar = ko.computed(() =>
-        !!this.lastActivatedResource()
-        && this.lastActivatedResource().type === TenantType.TimeSeries
-        && (this.appUrls.isAreaActive("timeseries")() || this.appUrls.isAreaActive("resources")()));
 
-    canShowResourcesNavbar = ko.computed(() => {
-        var canDb = this.canShowDatabaseNavbar();
-        var canFs = this.canShowFileSystemNavbar();
-        var canCs = this.canShowCountersNavbar();
-        var canTs = this.canShowTimeSeriesNavbar();
-        return canDb || canFs || canCs || canTs;
-    });
-
-    static resources = ko.computed<resource[]>(() => {
+    static resources = ko.computed<resource[]>(() => { //TODO: delete me ?
         var databases: resource[] = shell.databases();
         var fileSystems: resource[] = shell.fileSystems();
         var counterStorages: resource[] = shell.counterStorages();
@@ -154,27 +108,16 @@ class shell extends viewModelBase {
 
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
-    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
-    newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
-    activeArea = ko.observable<string>("Databases");
-    hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
     showSplash = viewModelBase.showSplash;
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
 
-    mainMenu = new menu({
-        canExposeConfigOverTheWire: shell.canExposeConfigOverTheWire,
-        isGlobalAdmin: shell.isGlobalAdmin,
-        activeDatabase: this.activeDatabase
-    });
+    mainMenu = new menu();
     searchBox = new searchBox();
-    resourceSwitcher = new resourceSwitcher();
-
-    //TODO: delete me!
-    static has40Features = ko.computed(() => shell.serverMainVersion() >= 4);
+    resourceSwitcher = new resourceSwitcher(shell.resources);
 
     private globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];
@@ -201,32 +144,28 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("SelectNone", () => this.selectNone());
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.activateDatabase(db));
-        ko.postbox.subscribe("ActivateFilesystem", (fs: fileSystem) => this.activateFileSystem(fs));
-        ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.activateCounterStorage(cs));
-        ko.postbox.subscribe("ActivateTimeSeries", (ts: timeSeries) => this.activateTimeSeries(ts));
+
+        ko.postbox.subscribe(EVENTS.Resource.Activate, ({ type, resource }: resourceActivatedEventArgs) => {
+           if (type === TenantType.Database) {
+               return this.activateDatabase(resource as database);
+           } else if (type === TenantType.FileSystem) {
+               return this.activateFileSystem(resource as fileSystem);
+           } else if (type === TenantType.CounterStorage) {
+               return this.activateCounterStorage(resource as counterStorage);
+           } else if (type === TenantType.TimeSeries) {
+               return this.activateTimeSeries(resource as timeSeries);
+            }
+
+            throw new Error(`Invalid resource type ${ type }`);
+        });
+
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
-        this.goToDocumentSearch = ko.observable<string>();
-        this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
         enableResizeBindingHandler.install();
         helpBindingHandler.install();
-
-        this.isActiveDatabaseDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeDatabase()));
-        this.isActiveFileSystemDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeFilesystem()));
-        this.isActiveCounterStorageDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeCounterStorage()));
-        this.isActiveTimeSeriesDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeTimeSeries()));
-
-        this.listedResources = ko.computed(() => {
-            var currentResource = this.lastActivatedResource();
-            if (!!currentResource) {
-                return shell.resources().filter(rs => (rs.type !== currentResource.type || (rs.type === currentResource.type && rs.name !== currentResource.name)));
-            }
-            return shell.resources();
-        });
 
         this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("4.0." + v.BuildVersion));
     }
@@ -250,52 +189,17 @@ class shell extends viewModelBase {
         window.addEventListener("beforeunload", self.destroyChangesApi.bind(self));
 
         $(window).bind("storage", (e: any) => {
-            if (e.originalEvent.key === eventSourceSettingStorage.localStorageName) {
-                if (!JSON.parse(e.originalEvent.newValue)) {
-                    self.destroyChangesApi();
-                } else {
-                    // enable changes api
-                    this.globalChangesApi = new changesApi(null);
-                    this.notifications = this.createNotifications();
-                }
-            } else if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
+            if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
                 this.onLogOut();
             }
         });
 
-        this.maxResourceNameWidth = ko.computed(() => {
-            if (this.canShowResourcesNavbar() && !!this.lastActivatedResource()) {
-                var navigationLinksWidth = 50;
-                if (this.canShowDatabaseNavbar()) {
-                    navigationLinksWidth += 804;
-                } else if (this.canShowFileSystemNavbar()) {
-                    navigationLinksWidth += 600;
-                } else if (this.canShowCountersNavbar()) {
-                    navigationLinksWidth += 600; //todo: calculate
-                }
-                else if (this.canShowTimeSeriesNavbar()) {
-                    navigationLinksWidth += 600; //todo: calculate
-                }
-
-                var brandWidth = this.getWidth("brand");
-                var logOutWidth = this.getWidth("logOut");
-                var continueTestWidth = this.getWidth("continueTest");
-                var featureNameWidth = this.getWidth("featureName");
-
-                var freeSpace = $(window).width() - (navigationLinksWidth + brandWidth + logOutWidth + continueTestWidth + featureNameWidth);
-                var maxWidth = Math.floor(freeSpace);
-                return maxWidth + "px";
-            }
-            return "1px";
-        });
-
-        $(window).resize(() => self.lastActivatedResource.valueHasMutated());
+        $(window).resize(() => self.activeResource.valueHasMutated());
         //TODO: return shell.fetchLicenseStatus();
 
     }
 
     private setupRouting() {
-
         let routes = this.getRoutesForNewLayout();
         routes.pushAll(routes);
         router.map(routes).buildNavigationModel();
@@ -303,14 +207,6 @@ class shell extends viewModelBase {
         router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
 
         appUrl.mapUnknownRoutes(router);
-    }
-
-    private isActiveResourceDisabled(rs: resource): boolean {
-        return !!rs ? rs.disabled() || !rs.isLicensed() : false;
-    }
-
-    private getWidth(tag: string): number {
-        return $("#" + tag).length > 0 ? $("#" + tag).width() : 0;
     }
 
     private destroyChangesApi() {
@@ -325,28 +221,12 @@ class shell extends viewModelBase {
         super.attached();
 
         var target = document.getElementById("splash-spinner");
-        //this.spinner.stop();
         this.showSplash.subscribe((show: boolean) => {
             if (show) {
                 this.spinner.spin(target);
             } else {
                 this.spinner.stop();
             }
-        });
-
-        jwerty.key("ctrl+alt+n", e => {
-            e.preventDefault();
-            this.newDocument();
-        });
-
-        jwerty.key("enter", e => {
-            e.preventDefault();
-            return false;
-        }, this, "#goToDocInput");
-
-        router.activeInstruction.subscribe(val => {
-            if (!!val && (<string>val.config.route).split('/').length == 1) //if it's a root navigation item.
-                this.activeArea(val.config.title);
         });
 
         sys.error = (e: any) => {
@@ -572,10 +452,15 @@ class shell extends viewModelBase {
             changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
             changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
         ];
-        var isNotADatabase = this.currentConnectedResource instanceof database === false;
+        var isNotADatabase = this.isPreviousDifferentKind(TenantType.Database);
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
 
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof database && r.name === db.name));
+        this.setSelectedResourceInCollection(db);
+    }
+
+    private isPreviousDifferentKind(currentType: TenantType) {
+        return !this.currentConnectedResource ||
+            this.currentConnectedResource.type !== currentType;
     }
 
     private fetchDbStats(db: database) {
@@ -597,10 +482,10 @@ class shell extends viewModelBase {
         var changesSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchFsFolders("", () => this.fetchFsStats(fs))
         ];
-        var isNotAFileSystem = this.currentConnectedResource instanceof fileSystem === false;
+        var isNotAFileSystem = this.isPreviousDifferentKind(TenantType.FileSystem);
         this.updateChangesApi(fs, isNotAFileSystem, () => this.fetchFsStats(fs), changesSubscriptionArray);
 
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof fileSystem && r.name === fs.name));
+        this.setSelectedResourceInCollection(fs);
     }
 
     private fetchFsStats(fs: fileSystem) {
@@ -614,7 +499,7 @@ class shell extends viewModelBase {
 
     private disconnectFromCurrentResource() {
         shell.disconnectFromResourceChangesApi();
-        this.lastActivatedResource(null);
+        activeResourceTracker.default.resource(null);
         this.currentConnectedResource = null; //TODO
     }
 
@@ -623,10 +508,9 @@ class shell extends viewModelBase {
             changesContext.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
             changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.fetchCsStats(cs))
         ];
-        var isNotACounterStorage = this.currentConnectedResource instanceof counterStorage === false;
+        var isNotACounterStorage = this.isPreviousDifferentKind(TenantType.CounterStorage);
         this.updateChangesApi(cs, isNotACounterStorage, () => this.fetchCsStats(cs), changesSubscriptionArray);
-
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof counterStorage && r.name === cs.name));
+        this.setSelectedResourceInCollection(cs);
     }
 
     private fetchCsStats(cs: counterStorage) {
@@ -642,10 +526,16 @@ class shell extends viewModelBase {
             changesContext.currentResourceChangesApi().watchAllTimeSeries(() => this.fetchTsStats(ts)),
             changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.fetchTsStats(ts))
         ];
-        var isNotATimeSeries = this.currentConnectedResource instanceof timeSeries === false;
+        var isNotATimeSeries = this.isPreviousDifferentKind(TenantType.TimeSeries);
         this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTsStats(ts), changesSubscriptionArray);
 
-        shell.resources().forEach((r: resource) => r.isSelected(r instanceof timeSeries && r.name === ts.name));
+        this.setSelectedResourceInCollection(ts);
+    }
+
+    private setSelectedResourceInCollection(toSelect: resource) {
+        shell.resources()
+            .forEach((r: resource) =>
+                r.isSelected(r.type === toSelect.type && r.name === toSelect.name));
     }
 
     private fetchTsStats(ts: timeSeries) {
@@ -726,7 +616,6 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
-            this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
         }
     }
 
@@ -773,33 +662,29 @@ class shell extends viewModelBase {
 
         var databasesLoadTask = shell.reloadDatabases();
         var fileSystemsLoadTask = shell.reloadFileSystems();
-        var counterStoragesLoadTask = shell.has40Features() ? shell.reloadCounterStorages() : null;
-        var timeSeriesLoadTask = shell.has40Features() ? shell.reloadTimeSeries() : null;
+        var counterStoragesLoadTask = shell.reloadCounterStorages();
+        var timeSeriesLoadTask = shell.reloadTimeSeries();
 
         $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
             .done(() => {
                 var connectedResource = this.currentConnectedResource;
                 var resourceObservableArray: any = shell.databases;
-                var activeResourceObservable: any = this.activeDatabase;
                 var isNotDatabase = !(connectedResource instanceof database);
                 if (isNotDatabase && connectedResource instanceof fileSystem) {
                     resourceObservableArray = shell.fileSystems;
-                    activeResourceObservable = this.activeFilesystem;
                 }
                 else if (isNotDatabase && connectedResource instanceof counterStorage) {
                     resourceObservableArray = shell.counterStorages;
-                    activeResourceObservable = this.activeCounterStorage;
                 }
                 else if (isNotDatabase && connectedResource instanceof timeSeries) {
                     resourceObservableArray = shell.timeSeries;
-                    activeResourceObservable = this.activeTimeSeries;
                 }
-                this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
+                this.selectNewActiveResourceIfNeeded(resourceObservableArray);
             });
     }
 
-    private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any) {
-        var activeResource = activeResourceObservable();
+    private selectNewActiveResourceIfNeeded(resourceObservableArray: KnockoutObservableArray<any>) {
+        var activeResource = this.activeResource();
         var actualResourceObservableArray = resourceObservableArray();
 
         if (!!activeResource && actualResourceObservableArray.contains(activeResource) === false) {
@@ -807,8 +692,7 @@ class shell extends viewModelBase {
                 resourceObservableArray().first().activate();
             } else { //if (actualResourceObservableArray.length == 0)
                 shell.disconnectFromResourceChangesApi();
-                activeResourceObservable(null);
-                this.lastActivatedResource(null);
+                this.activeResource(null);
             }
 
             this.navigate(appUrl.forResources());
@@ -985,10 +869,10 @@ class shell extends viewModelBase {
         new getServerConfigsCommand()
             .execute()
             .done((serverConfigs: serverConfigsDto) => {
-                shell.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
-                shell.canReadWriteSettings(serverConfigs.CanReadWriteSettings);
-                shell.canReadSettings(serverConfigs.CanReadSettings);
-                shell.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
+                accessHelper.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
+                accessHelper.canReadWriteSettings(serverConfigs.CanReadWriteSettings);
+                accessHelper.canReadSettings(serverConfigs.CanReadSettings);
+                accessHelper.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
             })
             .always(() => deferred.resolve());
 
@@ -1039,8 +923,7 @@ class shell extends viewModelBase {
             this.activeFilesystem().activate();
         } else if (!!this.activeCounterStorage()) {
             this.activeCounterStorage().activate();
-        }
-        else if (!!this.activeTimeSeries()) {
+        } else if (!!this.activeTimeSeries()) {
             this.activeTimeSeries().activate();
         }
 
@@ -1083,7 +966,6 @@ class shell extends viewModelBase {
         } else {
             NProgress.done();
             NProgress.configure({ showSpinner: false });
-            //this.showAlert(new alertArgs(alertType.danger, "Load time is too long", "The server might not be responding."));
             $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
         }
     }
@@ -1135,16 +1017,16 @@ class shell extends viewModelBase {
         }
     }
 
-    newDocument() {
-        this.launchDocEditor(null);
-    }
-
     private activateDatabaseWithName(databaseName: string) {
         if (this.databasesLoadedTask) {
             this.databasesLoadedTask.done(() => {
                 var matchingDatabase = shell.databases().first(db => db.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
-                    ko.postbox.publish("ActivateDatabase", matchingDatabase);
+                    ko.postbox.publish(EVENTS.Resource.Activate,
+                    {
+                        resource: matchingDatabase,
+                        type: TenantType.Database
+                    });
                 }
             });
         }
@@ -1157,27 +1039,6 @@ class shell extends viewModelBase {
             changesContext.currentResourceChangesApi().dispose();
             changesContext.currentResourceChangesApi(null);
         }
-    }
-
-    getCurrentActiveFeatureName() {
-        if (this.appUrls.isAreaActive("admin")()) {
-            return "Manage Your Server";
-        } else {
-            return "Resources";
-        }
-    }
-
-    getCurrentActiveFeatureHref() {
-        if (this.appUrls.isAreaActive("admin")()) {
-            return this.appUrls.adminSettings();
-        } else {
-            return this.appUrls.resources();
-        }
-    }
-
-    goToDoc(doc: documentMetadataDto) {
-        this.goToDocumentSearch("");
-        this.navigate(appUrl.forEditDoc((<any>doc)["@metadata"]["@id"], null, null, this.activeDatabase()));
     }
 
     getDocCssClass(doc: documentMetadataDto) {
@@ -1240,20 +1101,6 @@ class shell extends viewModelBase {
             .done((result: supportCoverageDto) => {
                 license.supportCoverage(result);
             });
-    }
-
-    fetchGoToDocSearchResults(query: string) {
-        if (query.length >= 2) {
-            new getDocumentsMetadataByIDPrefixCommand(query, 10, this.activeDatabase())
-                .execute()
-                .done((results: string[]) => {
-                    if (this.goToDocumentSearch() === query) {
-                        this.goToDocumentSearchResults(results);
-                    }
-                });
-        } else if (query.length == 0) {
-            this.goToDocumentSearchResults.removeAll();
-        }
     }
 
     showApiKeyDialog() {

@@ -8,7 +8,7 @@ class getSqlReplicationPerfStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/debug/sql-replication-perf-stats";
+        var url = "/debug/sql-replication-perf-stats";//TODO: use endpoints
         return this.query<any>(url, null, this.db);
     }
 }

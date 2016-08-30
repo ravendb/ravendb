@@ -7,7 +7,7 @@ import appUrl = require("common/appUrl");
 import configurationSetting = require("models/database/globalConfig/configurationSetting");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
-import shell = require('viewmodels/shell');
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class quotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
@@ -32,7 +32,7 @@ class quotas extends viewModelBase {
         super.canActivate(args);
         var deferred = $.Deferred();
 
-        this.isForbidden(shell.isGlobalAdmin() == false);
+        this.isForbidden(accessHelper.isGlobalAdmin() == false);
         if (this.isForbidden() == false) {
             var db = this.activeDatabase();
             // fetch current quotas from the database

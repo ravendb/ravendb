@@ -20,7 +20,7 @@ class queryIndexCommand extends commandBase {
     }
 
     getUrl() {
-        var url = "/queries/" + this.indexName;
+        var url = "/queries/" + this.indexName;//TODO: use endpoints
         //var resultsTransformerUrlFragment = this.transformer && this.transformer.name() ? "&resultsTransformer=" + this.transformer.name() : ""; // This should not be urlEncoded, as it breaks the query.
         var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
         var urlArgs = this.urlEncodeArgs({
@@ -37,7 +37,7 @@ class queryIndexCommand extends commandBase {
     }
 
     getCsvUrl() {
-        var url = "/streams/query/" + this.indexName;
+        var url = "/streams/query/" + this.indexName;//TODO: use endpoints
         var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
         var urlArgs = this.urlEncodeArgs({
             query: this.queryText ? this.queryText : undefined,

@@ -28,7 +28,7 @@ namespace Raven.Server.Documents
 
         private static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly TableSchema ConflictsSchema = new TableSchema();
-        private static readonly TableSchema TombstonesSchema = new TableSchema();
+        private static readonly TableSchema _tombstonesSchema = new TableSchema();
 
         static DocumentsStorage()
         {
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
                 IsGlobal = true
             });
 
-            TombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            _tombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1,
@@ -91,19 +91,19 @@ namespace Raven.Server.Documents
                 Name = "Tombstones"
             });
 
-            TombstonesSchema.DefineFixedSizeIndex("CollectionEtags", new TableSchema.FixedSizeSchemaIndexDef
+            _tombstonesSchema.DefineFixedSizeIndex("CollectionEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = false
             });
 
-            TombstonesSchema.DefineFixedSizeIndex("AllTombstonesEtags", new TableSchema.FixedSizeSchemaIndexDef
+            _tombstonesSchema.DefineFixedSizeIndex("AllTombstonesEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = true
             });
 
-            TombstonesSchema.DefineFixedSizeIndex("DeletedEtags", new TableSchema.FixedSizeSchemaIndexDef()
+            _tombstonesSchema.DefineFixedSizeIndex("DeletedEtags", new TableSchema.FixedSizeSchemaIndexDef()
             {
                 StartIndex = 2,
                 IsGlobal = false
@@ -123,6 +123,7 @@ namespace Raven.Server.Documents
 
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
+        private UnmanagedBuffersPool _unmanagedBuffersPool;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -136,6 +137,12 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentsStorage)}");
+
+            exceptionAggregator.Execute(() =>
+            {
+                _unmanagedBuffersPool?.Dispose();
+                _unmanagedBuffersPool = null;
+            });
 
             exceptionAggregator.Execute(() =>
             {
@@ -276,7 +283,7 @@ namespace Raven.Server.Documents
 
             var prefixSlice = GetSliceFromKey(context, prefix);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
+            foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith:true))
             {
                 var document = TableValueToDocument(context, result);
                 string documentKey = document.Key;
@@ -343,7 +350,7 @@ namespace Raven.Server.Documents
             {
                 if (result.Id == etag)
                     continue;
-
+                
                 if (start > 0)
                 {
                     start--;
@@ -439,7 +446,7 @@ namespace Raven.Server.Documents
             if (doc != null)
                 return Tuple.Create<Document, DocumentTombstone>(doc, null);
 
-            var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var tombstoneTable = new Table(_tombstonesSchema, context.Transaction.InnerTransaction);
             var tvr = tombstoneTable.ReadByKey(loweredKey);
             return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, tvr));
         }
@@ -476,7 +483,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(TombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
             }
             catch (InvalidDataException)
             {
@@ -485,7 +492,7 @@ namespace Raven.Server.Documents
             }
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag))
             {
                 if (start > 0)
                 {
@@ -529,7 +536,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(TombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
             }
             catch (InvalidDataException)
             {
@@ -538,7 +545,7 @@ namespace Raven.Server.Documents
             }
 
             var result = table
-                .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
+                .SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
                 .FirstOrDefault();
 
             if (result == null)
@@ -554,7 +561,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(TombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
             }
             catch (InvalidDataException)
             {
@@ -562,7 +569,7 @@ namespace Raven.Server.Documents
                 return 0;
             }
             return table
-                    .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes["DeletedEtags"], etag)
+                    .SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["DeletedEtags"], etag)
                     .Count();
         }
 
@@ -579,7 +586,7 @@ namespace Raven.Server.Documents
             var buffer = context.GetNativeTempBuffer(
                 byteCount
                 + sizeof(char) * key.Length); // for the lower calls
-
+            
             fixed (char* pChars = key)
             {
                 var destChars = (char*)buffer;
@@ -598,12 +605,6 @@ namespace Raven.Server.Documents
         public static void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey, out int lowerSize,
             out byte* key, out int keySize)
         {
-            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
-            if (byteCount > 512)
-                throw new ArgumentException(
-                    $"Key cannot exceed 512 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
-                    nameof(str));
-
             // Because we need to also store escape positions for the key when we store it
             // we need to store it as a lazy string value.
             // But lazy string value has two lengths, one is the string length, and the other 
@@ -617,7 +618,7 @@ namespace Raven.Server.Documents
             // The total length of the string is stored in the actual table (and include the var int size 
             // prefix.
 
-
+            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
             var jsonParserState = new JsonParserState();
             jsonParserState.FindEscapePositionsIn(str);
             var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
@@ -641,6 +642,9 @@ namespace Raven.Server.Documents
 
                 lowerSize = Encoding.UTF8.GetBytes(destChars, str.Length, lowerKey, byteCount);
 
+                if (lowerSize > 512)
+                    ThrowKeyTooBig(str, lowerSize);
+
                 key = buffer + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
                 keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
@@ -657,6 +661,13 @@ namespace Raven.Server.Documents
                 jsonParserState.WriteEscapePositionsTo(writePos + keySize);
                 keySize += escapePositionsSize + maxKeyLenSize;
             }
+        }
+
+        private static void ThrowKeyTooBig(string str, int lowerSize)
+        {
+            throw new ArgumentException(
+                $"Key cannot exceed 512 bytes, but the key was {lowerSize} bytes. The invalid key is '{str}'.",
+                nameof(str));
         }
 
         private static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
@@ -828,8 +839,8 @@ namespace Raven.Server.Documents
                 };
 
                 var col = "#" + collectionName; // TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
-                TombstonesSchema.Create(context.Transaction.InnerTransaction, col);
-                var table = new Table(TombstonesSchema, col, context.Transaction.InnerTransaction);
+                _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
+                var table = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
 
                 table.Insert(tbv);
             }
@@ -975,7 +986,7 @@ namespace Raven.Server.Documents
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
-                    var table = new Table(TombstonesSchema, existingTombstone.Collection, context.Transaction.InnerTransaction);
+                    var table = new Table(_tombstonesSchema, existingTombstone.Collection, context.Transaction.InnerTransaction);
                     table.Delete(existingTombstone.StorageId);
                 }
             }
@@ -1020,15 +1031,15 @@ namespace Raven.Server.Documents
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             var col = "#" + originalCollectionName;// TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
-            TombstonesSchema.Create(context.Transaction.InnerTransaction, col);
-            var tombstoneTable = new Table(TombstonesSchema, col, context.Transaction.InnerTransaction);
+            _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
+            var tombstoneTable = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
             // delete a tombstone if it exists
             tombstoneTable.DeleteByKey(Slice.From(context.Allocator, lowerKey, lowerSize));
 
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-            var oldValue = table.ReadByKey(Slice.External(context.Allocator, lowerKey, (ushort)lowerSize));
+            var oldValue = table.ReadByKey(Slice.External(context.Allocator, lowerKey, (ushort) lowerSize));
 
             if (changeVector == null)
             {
@@ -1061,7 +1072,7 @@ namespace Raven.Server.Documents
                 {
                     int size;
                     var pOldEtag = oldValue.Read(1, out size);
-                    var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
+                    var oldEtag = IPAddress.NetworkToHostOrder(*(long*) pOldEtag);
                     if (expectedEtag != null && oldEtag != expectedEtag)
                         throw new ConcurrencyException(
                             $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
@@ -1083,7 +1094,7 @@ namespace Raven.Server.Documents
                 _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, originalCollectionName, key,
                     newEtagBigEndian, document);
                 _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
-                    Slice.External(context.Allocator, lowerKey, (ushort)lowerSize), document);
+                    Slice.External(context.Allocator, lowerKey, (ushort) lowerSize), document);
             }
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -1333,7 +1344,7 @@ namespace Raven.Server.Documents
             Table table;
             try
             {
-                table = new Table(TombstonesSchema, "#" + collection, transaction);
+                table = new Table(_tombstonesSchema, "#" + collection, transaction);
             }
             catch (InvalidDataException)
             {
@@ -1342,7 +1353,7 @@ namespace Raven.Server.Documents
             }
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleting tombstones earlier than {etag} in {collection}");
-            table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
+            table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
         }
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
@@ -1386,7 +1397,7 @@ namespace Raven.Server.Documents
             var etagsTree = context.Transaction.InnerTransaction.CreateTree("LastReplicatedEtags");
             etagsTree.Add(
                 Slice.From(context.Allocator, dbId),
-                Slice.External(context.Allocator, (byte*)&etag, sizeof(long))
+                Slice.External(context.Allocator, (byte*) &etag, sizeof (long))
                 );
         }
 

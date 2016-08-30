@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
                             BlittableJsonReaderObject metadata;
-                            cmd.Document.TryGet(Constants.Metadata, out metadata);
+                            cmd.Document.TryGet(Constants.Metadata.Key, out metadata);
 
                             Reply.Add(new DynamicJsonValue
                             {

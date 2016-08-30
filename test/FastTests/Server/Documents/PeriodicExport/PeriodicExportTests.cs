@@ -155,7 +155,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         return false;
                     var periodicExportStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
                     return periodicExportStatus.LastDocsEtag > 0;
-                });
+                }, TimeSpan.FromSeconds(10));
 
                 var statusDocument = await store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
                 var etagForExports = statusDocument.Etag;
@@ -164,7 +164,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "ayende" });
                     await session.SaveChangesAsync();
                 }
-                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports);
+                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports, TimeSpan.FromSeconds(10));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -216,7 +216,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         return false;
                     var periodicExportStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
                     return periodicExportStatus.LastDocsEtag > 0;
-                });
+                }, TimeSpan.FromSeconds(10));
 
                 var statusDocument = await store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
                 var etagForExports = statusDocument.Etag;
@@ -225,7 +225,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "ayende" });
                     await session.SaveChangesAsync();
                 }
-                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports);
+                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports, TimeSpan.FromSeconds(10));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))

@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private Logger _logger;
 
-        private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
-        private readonly Term _reduceKeyHash = new Term(Constants.ReduceKeyFieldName, "Dummy");
+        private readonly Term _documentId = new Term(Constants.Indexing.Fields.DocumentIdFieldName, "Dummy");
+        private readonly Term _reduceKeyHash = new Term(Constants.Indexing.Fields.ReduceKeyFieldName, "Dummy");
 
         private readonly string _name;
 

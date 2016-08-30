@@ -16,12 +16,12 @@ class deleteLocalReplicationsSetupCommand extends commandBase {
 
 
     private deleteConflictResolution(): JQueryPromise<any> {
-        var url = "/docs?id=Raven/Replication/Config";
+        var url = "/docs?id=Raven/Replication/Config";//TODO: use endpoints
         return this.del(url, null, this.db);
     }
 
     private deleteLocalDestinations(): JQueryGenericPromise<any> {
-        var url = "/docs?id=Raven/Replication/Destinations";
+        var url = "/docs?id=Raven/Replication/Destinations";//TODO: use endpoints
         return this.del(url, null, this.db);
     }
 }

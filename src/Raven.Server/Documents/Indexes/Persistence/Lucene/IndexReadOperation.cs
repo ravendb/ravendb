@@ -11,8 +11,6 @@ using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
@@ -104,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
 
-                        var result = retriever.Get(document);
+                        var result = retriever.Get(document, scoreDoc.Score);
                         if (scope.TryIncludeInResults(result) == false)
                         {
                             skippedResults.Value++;
@@ -192,7 +190,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 int returnedResults = 0;
                 for (int i = query.Start; i < intersectResults.Count && (i - query.Start) < pageSizeBestGuess; i++)
                 {
-                    var document = _searcher.Doc(intersectResults[i].LuceneId);
+                    var indexResult = intersectResults[i];
+                    var document = _searcher.Doc(indexResult.LuceneId);
 
                     string key;
                     if (retriever.TryGetKey(document, out key) && scope.WillProbablyIncludeInResults(key) == false)
@@ -202,7 +201,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                     }
 
-                    var result = retriever.Get(document);
+                    var result = retriever.Get(document, indexResult.Score);
                     if (scope.TryIncludeInResults(result) == false)
                     {
                         skippedResults.Value++;
@@ -300,7 +299,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var sortOptions = SortOptions.String;
 
-                if (InvariantCompare.IsPrefix(x.Field, Constants.AlphaNumericFieldName, CompareOptions.None))
+                if (x.Field == Constants.Indexing.Fields.IndexFieldScoreName)
+                    return SortField.FIELD_SCORE;
+
+                if (InvariantCompare.IsPrefix(x.Field, Constants.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
                 {
                     var customField = SortFieldHelper.CustomField(x.Field);
                     if (string.IsNullOrEmpty(customField.Name))
@@ -354,7 +356,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var documentQuery = new BooleanQuery();
 
             if (string.IsNullOrWhiteSpace(query.DocumentId) == false)
-                documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
+                documentQuery.Add(new TermQuery(new Term(Constants.Indexing.Fields.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
 
             foreach (var key in query.MapGroupFields.Keys)
                 documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
@@ -372,7 +374,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 mlt.SetStopWords(stopWords);
 
             var fieldNames = query.Fields ?? ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
-                                    .Where(x => x != Constants.DocumentIdFieldName && x != Constants.ReduceKeyFieldName)
+                                    .Where(x => x != Constants.Indexing.Fields.DocumentIdFieldName && x != Constants.Indexing.Fields.ReduceKeyFieldName)
                                     .ToArray();
 
             mlt.SetFieldNames(fieldNames);
@@ -409,14 +411,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 var doc = _searcher.Doc(hit.Doc);
-                var id = doc.Get(Constants.DocumentIdFieldName) ?? doc.Get(Constants.ReduceKeyFieldName);
+                var id = doc.Get(Constants.Indexing.Fields.DocumentIdFieldName) ?? doc.Get(Constants.Indexing.Fields.ReduceKeyFieldName);
                 if (id == null)
                     continue;
 
                 if (ids.Add(id) == false)
                     continue;
 
-                yield return retriever.Get(doc);
+                yield return retriever.Get(doc, hit.Score);
             }
         }
 

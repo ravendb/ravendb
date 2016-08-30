@@ -9,7 +9,7 @@ class updateRaftClusterCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        return this.post("/admin/cluster/update", ko.toJSON(this.connectionInfo), this.db, { dataType: undefined })
+        return this.post("/admin/cluster/update", ko.toJSON(this.connectionInfo), this.db, { dataType: undefined })//TODO: use endpoints
             .done(() => this.reportSuccess("Configuration was updated"))
             .fail((response: JQueryXHR) => this.reportError("Failed to update node configuration", response.responseText, response.statusText));
     }

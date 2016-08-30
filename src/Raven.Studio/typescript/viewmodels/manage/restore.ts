@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
+import accessHelper = require("viewmodels/shell/accessHelper");
 import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
@@ -56,8 +57,8 @@ class resourceRestore {
 }
 
 class restore extends viewModelBase {
-    private dbRestoreOptions = new resourceRestore(this, database.type, shell.databases);
-    private fsRestoreOptions = new resourceRestore(this, filesystem.type, shell.fileSystems);
+    private dbRestoreOptions: resourceRestore = new resourceRestore(this, database.type, shell.databases);
+    private fsRestoreOptions: resourceRestore = new resourceRestore(this, filesystem.type, shell.fileSystems);
 
     disableReplicationDestinations = ko.observable<boolean>(false);
     generateNewDatabaseId = ko.observable<boolean>(false);
@@ -68,7 +69,7 @@ class restore extends viewModelBase {
     canActivate(args: any): any {
         var deferred = $.Deferred();
 
-        this.isForbidden(shell.isGlobalAdmin() === false);
+        this.isForbidden(accessHelper.isGlobalAdmin() === false);
         if (this.isForbidden() === false) {
             this.isBusy(true);
             var self = this;

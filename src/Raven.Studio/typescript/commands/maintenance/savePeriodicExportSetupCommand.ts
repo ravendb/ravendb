@@ -22,13 +22,13 @@ class savePeriodicExportSetupCommand extends commandBase {
                 'If-None-Match': this.setupToPersist.getEtag()
             }
         }
-        var url = this.globalConfig? "/configuration/global/settings" : "/admin/databases/" + this.db.name;
+        var url = this.globalConfig ? "/configuration/global/settings" : "/admin/databases/" + this.db.name;//TODO: use endpoints
         var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
         return this.put(url, putArgs, null, jQueryOptions);
     }
 
     private saveSetup(): JQueryPromise<any> {
-        var url = this.globalConfig ? "/docs?id=Raven/Global/Backup/Periodic/Setup" : "/docs?id=Raven/Backup/Periodic/Setup";
+        var url = this.globalConfig ? "/docs?id=Raven/Global/Backup/Periodic/Setup" : "/docs?id=Raven/Backup/Periodic/Setup";//TODO: use endpoints
         var putArgs = JSON.stringify(this.setupToPersist.toDto());
         return this.put(url, putArgs, this.db);
     }

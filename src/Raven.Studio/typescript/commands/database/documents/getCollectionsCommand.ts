@@ -74,7 +74,7 @@ class getCollectionsCommand extends commandBase {
         // This appears to be new behavior as of 3.0: Raven doesn't create this index automatically for the system database.
 
         // Calling silverlight/ensureStartup creates the system index.
-        this.query("/silverlight/ensureStartup", null, this.ownerDb)
+        this.query("/silverlight/ensureStartup", null, this.ownerDb)//TODO: use endpoints
             .done(() => this.retryQuery(deferred, originalReadError))
             .fail(() => this.onErrorReadingCollections(deferred, originalReadError));
     }

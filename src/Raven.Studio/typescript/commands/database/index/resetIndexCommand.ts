@@ -8,7 +8,7 @@ class resetIndexCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/indexes/" + this.indexNameToReset;
+        var url = "/indexes/" + this.indexNameToReset;//TODO: use endpoints
         return this.reset(url, null, this.db)
             .done(() => this.reportSuccess("Index " + this.indexNameToReset + " successfully reset"))
             .fail((response: JQueryXHR) => this.reportError("Failed to reset index: " + this.indexNameToReset, response.responseText, response.statusText));

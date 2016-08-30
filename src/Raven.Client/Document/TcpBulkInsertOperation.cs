@@ -329,8 +329,8 @@ namespace Raven.Client.Document
 
             await AssertValidServerConnection().ConfigureAwait(false);// we should never actually get here, the await will throw
 
-            metadata[Constants.MetadataDocId] = id;
-            data[Constants.Metadata] = metadata;
+            metadata[Constants.Metadata.Id] = id;
+            data[Constants.Metadata.Key] = metadata;
 
             MemoryStream jsonBuffer;
             while (true)

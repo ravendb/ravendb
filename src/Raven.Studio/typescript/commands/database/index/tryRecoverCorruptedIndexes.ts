@@ -8,7 +8,7 @@ class tryRecoverCorruptedIndexes extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/indexes/try-recover-corrupted";
+        var url = "/indexes/try-recover-corrupted";//TODO: use endpoints
         return this.patch(url, null, this.db)
             .done(() => this.reportSuccess("The recovery operation started in the background"))
             .fail((response: JQueryXHR) => this.reportError("Failed to start recovery operation", response.responseText, response.statusText));

@@ -1,12 +1,12 @@
 import getStatusDebugRoutesCommand = require("commands/database/debug/getStatusDebugRoutesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import shell = require('viewmodels/shell');
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class statusDebugRoutes extends viewModelBase {
     data = ko.observable<string>();
     editor: AceAjax.Editor;
-    isGlobalAdmin = shell.isGlobalAdmin;
+    isGlobalAdmin = accessHelper.isGlobalAdmin;
 
     constructor() {
         super();

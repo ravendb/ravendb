@@ -66,7 +66,7 @@ namespace Raven.Client.Shard
 
             if (shardStrategy.Conventions.FindIdentityProperty(shardingProperty.ToProperty()))
             {
-                shardFieldForQuerying = Constants.DocumentIdFieldName;
+                shardFieldForQuerying = Constants.Indexing.Fields.DocumentIdFieldName;
             }
 
             var pattern = string.Format(@"

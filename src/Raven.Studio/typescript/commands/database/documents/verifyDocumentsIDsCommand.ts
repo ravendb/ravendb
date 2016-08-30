@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class verifyDocumentsIDsCommand extends commandBase {
 
@@ -42,7 +43,8 @@ class verifyDocumentsIDsCommand extends commandBase {
         } 
 
         if (this.docIDs.length > 0) {
-            var postResult = this.post("/docs?metadata-only=true", JSON.stringify(this.docIDs), this.db);
+            var url = endpoints.databases.document.docs;
+            var postResult = this.post(url + "?metadata-only=true", JSON.stringify(this.docIDs), this.db);
             postResult.fail((xhr: JQueryXHR) => verifyResult.reject(xhr));
             postResult.done((queryResult: queryResultDto) => {
                 if (queryResult && queryResult.Results) {

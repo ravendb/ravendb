@@ -1,26 +1,36 @@
-import * as EVENTS from "common/constants/events";
-import database = require("models/resources/database");
-import {
-    generateMenuItems,
-    menuItem,
-    intermediateMenuItem,
-    leafMenuItem } from "common/shell/menuItems";
+/// <reference path="../../../typings/tsd.d.ts"/>
+
+import EVENTS = require("common/constants/events");
+import router = require("plugins/router");
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import generateMenuItems = require("common/shell/menu/generateMenuItems");
 
 class menu {
 
     private $mainMenu: JQuery;
     private $mainMenuAnchors: JQuery;
-    private $mainMenuLists: JQuery;
+    private $mainMenuLevels: JQuery;
 
     private level: number;
     private type: string = 'menu';
 
     items: Array<menuItem>;
 
+    private itemsIndex: KnockoutComputed<{ [key: string]: leafMenuItem }>;
+
     routerConfiguration(): Array<DurandalRouteConfiguration> {
         return this.items
             .map(getMenuItemDurandalRoutes)
-            .reduce((result, next) => result.concat(next), []);
+            .reduce((result, next) => result.concat(next), [])
+            .reduce((result: any[], next: any) => {
+                let nextJson = JSON.stringify(next);
+                if (!result.some(x => JSON.stringify(x) === nextJson)) {
+                    result.push(next);
+                }
+
+                return result;
+            }, []) as Array<DurandalRouteConfiguration>;
     }
 
     static convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration {
@@ -29,51 +39,141 @@ class menu {
             title: leaf.title,
             moduleId: leaf.moduleId,
             nav: leaf.nav,
-            dynamicHash: leaf.hash
+            dynamicHash: leaf.dynamicHash
         };
     }
 
-    constructor(opts: {
-        activeDatabase: KnockoutObservable<database>,
-        canExposeConfigOverTheWire: KnockoutObservable<boolean>,
-        isGlobalAdmin: KnockoutObservable<boolean>
-    }) {
-        this.items = generateMenuItems(opts);
+    constructor() {
+        this.items = generateMenuItems();
+        this.itemsIndex = ko.computed(() => this.calculateMenuItemsIndex());
     }
 
     initialize () {
         this.$mainMenu = $('#main-menu');
         this.$mainMenuAnchors = $('#main-menu a');
-        this.$mainMenuLists = $('#main-menu ul');
+        this.$mainMenuLevels = $('#main-menu [data-level]');
 
-        let self = this;
+        let self: menu = this;
         this.$mainMenuAnchors.on('click', function (e) {
-            var a = this as HTMLAnchorElement;
-            var $list = $(a).closest('ul');
-            var hasOpenSubmenus = $list.find('.level-show').length;
-            var isOpenable = $(a).siblings('.level').length;
+            let a = this as HTMLAnchorElement;
+            let $a = $(a);
+            if ($a.is('.back')) {
+                return handleBack();
+            }
+
+            let deepestOpenLevel = self.getDeepestOpenLevelElement();
+            if (deepestOpenLevel && $(deepestOpenLevel).find(a).length === 0) {
+                return;
+            }
+
+            let $list = $a.closest('.level');
+            let hasOpenSubmenus = $list.find('.level-show').length;
+            let isOpenable = $a.siblings('.level').length;
 
             if (!hasOpenSubmenus && isOpenable) {
-                $(a).parent().children('.level').addClass('level-show');
+                $a.parent().children('.level').addClass('level-show');
                 e.stopPropagation();
             }
 
             self.updateLevel();
+
+            function handleBack() {
+                $a.closest('.level').removeClass('level-show');
+                self.updateLevel();
+            }
         });
 
-        this.$mainMenuLists.on('click', e => {
+        this.$mainMenuLevels.on('click', function (e) {
             e.stopPropagation();
 
-            this.$mainMenuLists
+            let clickedLevelElement = this as HTMLElement;
+            let deepestOpenLevelElement = self.getDeepestOpenLevelElement();
+            if (clickedLevelElement === deepestOpenLevelElement) {
+                return;
+            }
+
+            $(clickedLevelElement)
                 .find('.level-show')
                 .removeClass('level-show');
 
-            this.updateLevel();
+            self.updateLevel();
         });
 
         let $body = $('body');
         $('.menu-collapse-button').click(
             () => $body.toggleClass('menu-collapse'));
+
+        router.on('router:navigation:complete', () => {
+            this.setActiveMenuItem();
+        });
+
+        this.setActiveMenuItem();
+    }
+
+    private setActiveMenuItem() {
+        let hashToItem = this.itemsIndex();
+        let item: leafMenuItem = hashToItem[document.location.hash];
+
+        if (!item) {
+            return;
+        }
+
+        this.$mainMenu.find('li').removeClass('active');
+        this.$mainMenuLevels.removeClass('level-show');
+
+        $(`#main-menu a[href='${item.path()}']`)
+            .parent()
+            .addClass('active')
+            .parents('.level')
+            .addClass('level-show');
+
+        this.updateLevel();
+    }
+
+    private calculateMenuItemsIndex(): ({ [key: string]: leafMenuItem }) {
+        return this.items
+            .reduce((result: menuItem[], next: menuItem) =>
+                result.concat(flatten(next)), [] as menuItem[])
+            .filter((x: leafMenuItem) => !!x.path())
+            .reduce((result: { [key: string]: leafMenuItem }, next: leafMenuItem) => {
+                result[next.path()] = next;
+                return result;
+            }, {} as { [key: string]: leafMenuItem });
+
+        function flatten(item: menuItem): Array<menuItem> {
+            if (item.type === 'intermediate') {
+                return (item as intermediateMenuItem).children
+                    .map(flatten)
+                    .reduce((result, child) => result.concat(child), []);
+            } else if (item.type === 'leaf') {
+                return [ item ];
+            }
+
+            return [];
+        }
+    }
+
+    private getDeepestOpenLevelElement() {
+        return this.$mainMenuLevels.find('.level-show')
+            .toArray()
+            .reduce((result: HTMLElement, nextEl: HTMLElement) => {
+                if (!result) {
+                    return nextEl;
+                }
+
+                var resultLevel = this.parseLevel(result);
+                var curLevel = this.parseLevel(nextEl);
+
+                if (resultLevel > curLevel) {
+                    return result;
+                }
+
+                return nextEl;
+            }, null);
+    }
+
+    private parseLevel(el: HTMLElement) {
+        return parseInt(el.dataset['level']);
     }
 
     private emitLevelChanged() {

@@ -424,13 +424,16 @@ namespace Sparrow.Json
 
         public int GetPropertyIndex(StringSegment name)
         {
+            if (_propCount == 0)
+                return -1;
+
             if (_cachedProperties != null)
             {
                 var propName = _context.GetLazyStringForFieldWithCaching(name.Value);
                 return _cachedProperties.GetPropertyId(propName);
             }
 
-            int min = 0, max = _propCount;
+            int min = 0, max = _propCount - 1;
             var comparer = _context.GetLazyStringForFieldWithCaching(name.Value);
 
             int mid = comparer.LastFoundAt ?? (min + max) / 2;

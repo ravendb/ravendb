@@ -12,7 +12,6 @@ class adminLogsClient {
     public connectionClosingTask: JQueryDeferred<any>;
     public connectionOpeningTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
-    private eventSource: EventSource;
     private readyStateOpen = 1;
     private eventsId: string;
     private isCleanClose: boolean = false;
@@ -37,9 +36,7 @@ class adminLogsClient {
         if ("WebSocket" in window) {
             this.connectWebSocket(connectionString);
         } else {
-            //The browser doesn't support nor websocket nor eventsource
-            //or we are in IE10 or IE11 and the server doesn't support WebSockets.
-            //Anyway, at this point a warning message was already shown. 
+            // The browser doesn't support websocket
             this.connectionOpeningTask.reject();
         }
     }
@@ -115,22 +112,14 @@ class adminLogsClient {
 
     dispose() {
         this.connectionOpeningTask.done(() => {
-            var isCloseNeeded: boolean;
+            if (this.webSocket) {
+                if (this.webSocket.readyState === this.readyStateOpen) {
+                    console.log("Disconnecting from WebSocket Logs API");
+                    this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
+                }
 
-            if (isCloseNeeded = this.webSocket && this.webSocket.readyState == this.readyStateOpen){
-                console.log("Disconnecting from WebSocket Logs API");
-                this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
-            }
-            else if (isCloseNeeded = this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
-                console.log("Disconnecting from EventSource Logs API");
-                this.eventSource.close();
-                this.connectionClosingTask.resolve();
-            }
-
-            if (isCloseNeeded) {
                 this.send('disconnect', undefined, false);
                 this.isCleanClose = true;
-                
             }
         });
     }

@@ -8,7 +8,7 @@ class getLogsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<logDto[]> {
-        var url = "/logs";
+        var url = "/logs";//TODO: use endpoints
         return this.query<logDto[]>(url, null, this.db);
     }
 }

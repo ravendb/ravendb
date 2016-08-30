@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Voron;
+using Voron.Exceptions;
 using Xunit;
 
 namespace SlowTests.Voron
@@ -159,7 +160,7 @@ namespace SlowTests.Voron
             
             StopDatabase();
             
-            CorruptPage(lastJournal, page: 4, pos: 3);
+            CorruptPage(lastJournal, page: 6, pos: 3);
 
             StartDatabase();
             using (var tx = Env.WriteTransaction())
@@ -215,11 +216,10 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptPage(lastJournal - 1, page: 2, pos: 3);
+            CorruptPage(lastJournal - 1, page: 3, pos: 3);
 
             StartDatabase();
             Assert.Equal(currentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
-
         }
 
 
@@ -296,6 +296,20 @@ namespace SlowTests.Voron
                 fileStream.Position = page * _options.PageSize;
                 fileStream.Write(buffer, 0, buffer.Length);
             }
+        }
+
+        [Fact]
+        public void ShouldThrowIfFirstTransactionIsCorruptedBecauseWeCannotAccessMetadataThen()
+        {
+            RequireFileBasedPager();
+
+            var currentJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
+
+            StopDatabase();
+
+            CorruptPage(currentJournal, page: 2, pos: 3);
+
+            Assert.Throws<VoronUnrecoverableErrorException>(() => StartDatabase());
         }
     }
 }

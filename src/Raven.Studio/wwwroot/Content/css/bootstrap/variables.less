@@ -7,17 +7,17 @@
 //
 //## Gray and brand colors for use across Bootstrap.
 
-@gray-base:              #283232;
-@gray-darker:            #333c3c;
-@gray-dark:              #3d4646;
+@gray-base:              #1e2626;
+@gray-darker:            #2c3333;
+@gray-dark:              #3a4242;
 @gray:                   #686f6f;
 @gray-light:             #a9adad;
 @gray-lighter:           #e9eaea;
 
-@brand-primary:         #ee3442;
+@brand-primary:         #ee3442;// #ff7f66; //#ee3442;
 @brand-success:         #5cb85c;
 @brand-info:            #5bc0de;
-@brand-warning:         #f0ad4e;
+@brand-warning:         #ffcf21;
 @brand-danger:          #d9534f;
 
 
@@ -49,15 +49,15 @@
 @font-family-base:        @font-family-sans-serif;
 
 @font-size-base:          15px;
-@font-size-large:         ceil((@font-size-base * 1.25)); // ~18px
-@font-size-small:         ceil((@font-size-base * 0.85)); // ~12px
+@font-size-large:         ceil((@font-size-base * 1.25));
+@font-size-small:         ceil((@font-size-base * 0.85));
 
-@font-size-h1:            floor((@font-size-base * 2.6)); // ~36px
-@font-size-h2:            floor((@font-size-base * 2.15)); // ~30px
-@font-size-h3:            ceil((@font-size-base * 1.7)); // ~24px
-@font-size-h4:            ceil((@font-size-base * 1.25)); // ~18px
-@font-size-h5:            @font-size-base;
-@font-size-h6:            ceil((@font-size-base * 0.85)); // ~12px
+@font-size-h1:            floor((@font-size-base * 2.15));
+@font-size-h2:            floor((@font-size-base * 1.7)); 
+@font-size-h3:            ceil((@font-size-base * 1.25)); 
+@font-size-h4:            @font-size-base; 
+@font-size-h5:            ceil((@font-size-base * 0.80));
+@font-size-h6:            9px;
 
 //** Unit-less `line-height` for use in components like buttons.
 @line-height-base:        1.8; // 27/15
@@ -87,7 +87,7 @@
 //
 //## Define common padding and border radius sizes and more. Values based on 14px text and 1.428 line-height (~20px to start).
 
-@padding-base-vertical:     6px;
+@padding-base-vertical:     8px;
 @padding-base-horizontal:   12px;
 
 @padding-large-vertical:    10px;
@@ -97,7 +97,7 @@
 @padding-small-horizontal:  10px;
 
 @padding-xs-vertical:       1px;
-@padding-xs-horizontal:     5px;
+@padding-xs-horizontal:     9px;
 
 @line-height-large:         1.3333333; // extra decimals for Win 8.1 Chrome
 @line-height-small:         1.5;
@@ -144,29 +144,35 @@
 
 @btn-font-weight:                normal;
 
-@btn-default-color:              #333;
-@btn-default-bg:                 #fff;
-@btn-default-border:             #ccc;
+@btn-default-color:              @gray-lighter;
+@btn-default-bg:                 @gray-dark;
+@btn-default-border:             @gray-dark;
+@btn-default-icon:               inherit;
 
-@btn-primary-color:              #fff;
+@btn-primary-color:              @gray-lighter;
 @btn-primary-bg:                 @brand-primary;
 @btn-primary-border:             darken(@btn-primary-bg, 5%);
+@btn-primary-icon:               inherit;
 
-@btn-success-color:              #fff;
-@btn-success-bg:                 @brand-success;
+@btn-success-color:              @gray-lighter;
+@btn-success-bg:                 #285a32;
 @btn-success-border:             darken(@btn-success-bg, 5%);
+@btn-success-icon:               #59b36b;
 
-@btn-info-color:                 #fff;
-@btn-info-bg:                    @brand-info;
+@btn-info-color:                 @gray-lighter;
+@btn-info-bg:                    #2b5266;
 @btn-info-border:                darken(@btn-info-bg, 5%);
+@btn-info-icon:                  #4c90b3;
 
-@btn-warning-color:              #fff;
-@btn-warning-bg:                 @brand-warning;
+@btn-warning-color:              @gray-lighter;
+@btn-warning-bg:                 #a69533;
 @btn-warning-border:             darken(@btn-warning-bg, 5%);
+@btn-warning-icon:               #e6cc47;
 
-@btn-danger-color:               #fff;
-@btn-danger-bg:                  @brand-danger;
+@btn-danger-color:               @gray-lighter;
+@btn-danger-bg:                  #783232;
 @btn-danger-border:              darken(@btn-danger-bg, 5%);
+@btn-danger-icon:                #e65f5f;
 
 @btn-link-disabled-color:        @gray-light;
 
@@ -503,19 +509,19 @@
 //
 //## Define colors for form feedback states and, by default, alerts.
 
-@state-success-text:             #3c763d;
+@state-success-text:             @brand-success;
 @state-success-bg:               #dff0d8;
 @state-success-border:           darken(spin(@state-success-bg, -10), 5%);
 
-@state-info-text:                #31708f;
+@state-info-text:                @brand-info;
 @state-info-bg:                  #d9edf7;
 @state-info-border:              darken(spin(@state-info-bg, -10), 7%);
 
-@state-warning-text:             #8a6d3b;
+@state-warning-text:             @brand-warning;
 @state-warning-bg:               #fcf8e3;
 @state-warning-border:           darken(spin(@state-warning-bg, -10), 5%);
 
-@state-danger-text:              #a94442;
+@state-danger-text:              @brand-danger;
 @state-danger-bg:                #f2dede;
 @state-danger-border:            darken(spin(@state-danger-bg, -10), 5%);
 
@@ -873,4 +879,4 @@
 //** Point at which .dl-horizontal becomes horizontal
 @dl-horizontal-breakpoint:    @grid-float-breakpoint;
 //** Horizontal line color.
-@hr-border:                   @gray-lighter;
+@hr-border:                   @gray;

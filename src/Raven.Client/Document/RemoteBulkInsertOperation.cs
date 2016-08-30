@@ -260,7 +260,7 @@ namespace Raven.Client.Document
 //
 //
 //            metadata["@id"] = id;
-//            data[Constants.Metadata] = metadata;
+//            data[Constants.Metadata.Key] = metadata;
 //
 //            for (int i = 0; i < 2; i++)
 //            {

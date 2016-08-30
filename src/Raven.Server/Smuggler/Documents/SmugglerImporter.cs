@@ -294,22 +294,22 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var document in Documents)
                 {
                     BlittableJsonReaderObject metadata;
-                    if (document.TryGet(Constants.Metadata, out metadata) == false)
+                    if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
                         throw new InvalidOperationException("A document must have a metadata");
                     // We are using the id term here and not key in order to be backward compatiable with old export files.
                     string key;
-                    if (metadata.TryGet(Constants.MetadataDocId, out key) == false)
+                    if (metadata.TryGet(Constants.Metadata.Id, out key) == false)
                         throw new InvalidOperationException("Document's metadata must include the document's key.");
 
                     DynamicJsonValue mutatedMetadata;
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
-                    mutatedMetadata.Remove(Constants.MetadataDocId);
-                    mutatedMetadata.Remove(Constants.MetadataEtagId);
+                    mutatedMetadata.Remove(Constants.Metadata.Id);
+                    mutatedMetadata.Remove(Constants.Metadata.Etag);
 
                     if (IsRevision)
                     {
                         long etag;
-                        if (metadata.TryGet(Constants.MetadataEtagId, out etag) == false)
+                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                             throw new InvalidOperationException("Document's metadata must include the document's key.");
 
                         _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document);
@@ -317,7 +317,7 @@ namespace Raven.Server.Smuggler.Documents
                     else if (_buildVersion < 4000 && key.Contains("/revisions/"))
                     {
                         long etag;
-                        if (metadata.TryGet(Constants.MetadataEtagId, out etag) == false)
+                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                             throw new InvalidOperationException("Document's metadata must include the document's key.");
 
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);

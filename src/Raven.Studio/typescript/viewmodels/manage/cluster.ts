@@ -31,7 +31,6 @@ class cluster extends viewModelBase {
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     clusterMode: KnockoutComputed<boolean>;
-    settingsAccess = new settingsAccessAuthorizer();
 
     constructor() {
         super();
@@ -44,7 +43,7 @@ class cluster extends viewModelBase {
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        if (this.settingsAccess.isForbidden()) {
+        if (settingsAccessAuthorizer.isForbidden()) {
             deferred.resolve({ can: true });
         } else {
             $.when(this.fetchClusterTopology(null), this.fetchDatabaseId(null), this.fetchServerUrl(null))

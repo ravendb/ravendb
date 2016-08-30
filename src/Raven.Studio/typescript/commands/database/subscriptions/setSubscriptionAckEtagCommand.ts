@@ -17,7 +17,7 @@ class setSubscriptionAckEtagCommand extends commandBase {
             id: this.id,
             newEtag: this.newEtag
         };
-        var url = "/subscriptions/setSubscriptionAckEtag" + this.urlEncodeArgs(args);
+        var url = "/subscriptions/setSubscriptionAckEtag" + this.urlEncodeArgs(args);//TODO: use endpoints
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => this.reportSuccess("Successfully set acknowledged etag"))
             .fail((response) => this.reportError("Failed to set subscription acknowledged etag!", response.responseText, response.statusText));

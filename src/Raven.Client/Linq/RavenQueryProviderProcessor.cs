@@ -878,11 +878,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitSearch(expression);
                     break;
                 case "OrderByScore":
-                    documentQuery.AddOrder(Constants.Headers.TemporaryScoreValue, false);
+                    documentQuery.AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, false);
                     VisitExpression(expression.Arguments[0]);
                     break;
                 case "OrderByScoreDescending":
-                    documentQuery.AddOrder(Constants.Headers.TemporaryScoreValue, true);
+                    documentQuery.AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, true);
                     VisitExpression(expression.Arguments[0]);
                     break;
                 case "Intersect":
@@ -1392,7 +1392,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (result.MaybeProperty != null &&
                 queryGenerator.Conventions.FindIdentityProperty(result.MaybeProperty))
             {
-                fieldName = Constants.DocumentIdFieldName;
+                fieldName = Constants.Indexing.Fields.DocumentIdFieldName;
                 fieldType = typeof(string);
             }
 
@@ -1725,10 +1725,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var identityProperty = documentQuery.DocumentConvention.GetIdentityProperty(typeof(T));
             if (identityProperty != null && identityProperty.Name == docField)
             {
-                FieldsToFetch.Add(Constants.DocumentIdFieldName);
+                FieldsToFetch.Add(Constants.Indexing.Fields.DocumentIdFieldName);
                 if (identityProperty.Name != renamedField)
                 {
-                    docField = Constants.DocumentIdFieldName;
+                    docField = Constants.Indexing.Fields.DocumentIdFieldName;
                 }
             }
             else
@@ -1745,7 +1745,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         FieldsToRename.Add(new RenamedField
                         {
                             NewField = renamedField,
-                            OriginalField = Constants.DocumentIdFieldName
+                            OriginalField = Constants.Indexing.Fields.DocumentIdFieldName
                         });
                     }
                 }
@@ -1833,7 +1833,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                                     "and aren't going to sort according to your expectations.\r\n" +
                                                     "You can create a stand-in property to hold the numeric value, and do a range query on that.");
                 }
-                return Constants.DocumentIdFieldName;
+                return Constants.Indexing.Fields.DocumentIdFieldName;
             }
             if (documentQuery.DocumentConvention.UsesRangeType(value) && !expression.Path.EndsWith("_Range"))
                 return expression.Path + "_Range";

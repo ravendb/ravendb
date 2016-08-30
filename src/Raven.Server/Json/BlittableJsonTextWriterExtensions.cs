@@ -1,9 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -12,7 +11,6 @@ using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 
 namespace Raven.Server.Json
@@ -861,35 +859,18 @@ namespace Raven.Server.Json
                 if (document == null)
                     continue;
 
-                using (document.Data)
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                if (document == Document.ExplicitNull)
                 {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    writer.WriteDocument(context, document, metadataOnly);
-                }
-            }
-
-            writer.WriteEndArray();
-        }
-
-        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, int start, int count)
-        {
-            writer.WriteStartArray();
-
-            var first = true;
-            foreach (var document in documents.Skip(start).Take(count))
-            {
-                if (document == null)
+                    writer.WriteNull();
                     continue;
+                }
 
                 using (document.Data)
                 {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
                     writer.WriteDocument(context, document, metadataOnly);
                 }
             }

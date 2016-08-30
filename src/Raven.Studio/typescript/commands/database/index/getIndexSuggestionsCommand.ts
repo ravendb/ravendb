@@ -14,7 +14,7 @@ class getIndexSuggestionsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<suggestionsDto> {
-        var url = '/suggest/' + this.indexName;
+        var url = '/suggest/' + this.indexName;//TODO: use endpoints
         var args = {
             term: this.term,
             field: this.field,

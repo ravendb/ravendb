@@ -214,7 +214,7 @@ namespace Raven.Client.Indexes
             var name = GetPropertyName(member.Name, exprType);
             if (TranslateToDocumentId(instance, member, exprType))
             {
-                name = Constants.DocumentIdFieldName;
+                name = Constants.Indexing.Fields.DocumentIdFieldName;
             }
             if (instance != null)
             {

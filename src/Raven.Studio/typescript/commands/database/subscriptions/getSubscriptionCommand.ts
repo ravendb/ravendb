@@ -13,7 +13,7 @@ class getSubscriptionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Array<Subscription>> {
-        var url = "/debug/subscriptions";
+        var url = "/debug/subscriptions";//TODO: use endpoints
 
         var resultsSelector = (subscriptions: Array<subscriptionDto>) => subscriptions.map((subscription: subscriptionDto) =>
             new Subscription(subscription.SubscriptionId, subscription.AckEtag));

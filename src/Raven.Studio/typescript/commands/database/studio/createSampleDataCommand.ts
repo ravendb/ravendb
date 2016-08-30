@@ -9,7 +9,7 @@ class createSampleDataCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Creating Sample Data, Please wait...");
 
-        return this.post("/studio-tasks/createSampleData", null, this.db, { dataType: 'text' })
+        return this.post("/studio-tasks/createSampleData", null, this.db, { dataType: 'text' })//TODO: use endpoints
             .fail((response: JQueryXHR) => this.reportError("Failed to create sample data", response.responseText, response.statusText))
             .done(() => this.reportSuccess("Sample data creation completed"));
     }

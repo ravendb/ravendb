@@ -147,7 +147,7 @@ namespace Raven.Abstractions.Extensions
             {
                 if (prefixesInHeadersToIgnore.Any(prefix => header.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                     continue;
-                if (header.Key == Constants.DocumentIdFieldName)
+                if (header.Key == Constants.Indexing.Fields.DocumentIdFieldName)
                     continue;
                 if (headersToIgnore.Contains(header.Key))
                     continue;

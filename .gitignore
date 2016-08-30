@@ -86,6 +86,7 @@ src/Raven.Studio/wwwroot/App/**/*.js
 src/Raven.Studio/wwwroot/App/**/*.js.map
 
 src/Raven.Studio/typescript/endpoints.ts
+src/Raven.Studio/typescript/configuration.ts
 src/Raven.Studio/typings/server/include.ts
 src/Raven.Studio/typings/**/*.d.ts
 src/Raven.Studio/typings/globals

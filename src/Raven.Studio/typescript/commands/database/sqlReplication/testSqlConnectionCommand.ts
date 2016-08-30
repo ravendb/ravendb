@@ -11,7 +11,7 @@ import database = require("models/resources/database");
              factoryName: this.factoryName,
              connectionString: this.connectionString
          };
-         return this.query<any>("/studio-tasks/test-sql-replication-connection", args, this.db,null, 60000);
+         return this.query<any>("/studio-tasks/test-sql-replication-connection", args, this.db, null, 60000);//TODO: use endpoints
      }
  }
 

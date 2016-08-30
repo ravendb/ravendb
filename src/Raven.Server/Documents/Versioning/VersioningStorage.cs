@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata, out metadata))
+            if (document.TryGet(Constants.Metadata.Key, out metadata))
             {
                 bool disableVersioning;
                 if (metadata.TryGet(Constants.Versioning.RavenDisableVersioning, out disableVersioning))

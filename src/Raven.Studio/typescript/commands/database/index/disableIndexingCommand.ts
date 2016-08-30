@@ -16,7 +16,7 @@ class disableIndexingCommand extends commandBase {
             id: this.dbName,
             isSettingIndexingDisabled: this.isSettingIndexingDisabled
         }
-        var url = "/admin/databases-toggle-indexing" + this.urlEncodeArgs(args);
+        var url = "/admin/databases-toggle-indexing" + this.urlEncodeArgs(args);//TODO: use endpoints
         var toggleTask = this.post(url, null, null, { dataType: undefined });
         toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + " indexing in "+ this.dbName ));
         toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " indexing in " + this.dbName, response.responseText, response.statusText));

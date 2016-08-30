@@ -7,7 +7,7 @@ class createSampleDataClassCommand extends commandBase {
     }
 
     execute(): JQueryPromise<string> {
-        return this.query<string>("/studio-tasks/createSampleDataClass", null, this.db);
+        return this.query<string>("/studio-tasks/createSampleDataClass", null, this.db);//TODO: use endpoints
      }
 }
 

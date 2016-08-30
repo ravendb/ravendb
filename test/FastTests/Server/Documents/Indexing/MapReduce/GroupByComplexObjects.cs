@@ -270,7 +270,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         "sport", "books"
                     },
-                    [Constants.Metadata] = new DynamicJsonValue
+                    [Constants.Metadata.Key] = new DynamicJsonValue
                     {
                         [Constants.Headers.RavenEntityName] = "Users"
                     }
@@ -294,7 +294,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         "music", "sport"
                     },
-                    [Constants.Metadata] = new DynamicJsonValue
+                    [Constants.Metadata.Key] = new DynamicJsonValue
                     {
                         [Constants.Headers.RavenEntityName] = "Users"
                     }
@@ -318,7 +318,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         ["Country"] = "UK"
                     },
-                    [Constants.Metadata] = new DynamicJsonValue
+                    [Constants.Metadata.Key] = new DynamicJsonValue
                     {
                         [Constants.Headers.RavenEntityName] = "Users"
                     }
