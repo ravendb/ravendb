@@ -22,6 +22,7 @@ using Raven.Server.Utils;
 
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Xunit;
 
 namespace FastTests
 {
@@ -303,8 +304,7 @@ namespace FastTests
                         RemoveUsedPort(NonReusedTcpServerPort);
                     });
                 }
-            }
-
+				
             exceptionAggregator.ThrowIfNeeded();
         }
     }

@@ -17,6 +17,7 @@ using Sparrow.Logging;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Lucene.Net.Support;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
@@ -39,7 +40,8 @@ namespace Raven.Server.Documents.Replication
 
         private long _lastSentEtag;
         private DateTime _lastSentTime;
-        private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
+		private readonly Dictionary<long, ReplicationItem> _replicationBatch = new Dictionary<long, ReplicationItem>();
+		private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
         private string _destinationLastKnownChangeVectorString;
         private TcpClient _tcpClient;
         private NetworkStream _stream;
@@ -336,24 +338,54 @@ namespace Raven.Server.Documents.Replication
 
         private void SendDocuments(List<Document> docs, long lastEtag)
         {
-            if (_log.IsInfoEnabled)
-                _log.Info(
-                    $"Starting sending replication batch ({_database.Name}) with {docs.Count:#,#;;0} docs and last etag {lastEtag}");
+			_replicationBatch.Clear();
 
-            var sw = Stopwatch.StartNew();
+			foreach (
+				   var collectionName in
+				   _database.DocumentsStorage.GetTombstoneCollections(_context.Transaction.InnerTransaction))
+			{
+				foreach (
+				 var tombstone in
+				 _database.DocumentsStorage.GetTombstonesAfter(_context, collectionName, lastEtag, 0, 1024, docs.Last().Etag))
+				{
+					_replicationBatch.Add(tombstone.Etag,new ReplicationItem
+					{
+						Key = tombstone.Key,
+						ChangeVector = tombstone.ChangeVector,
+						Data = null
+					});
+				}
+			}
+
+			if (_log.IsInfoEnabled)
+				_log.Info(
+					$"Starting sending replication batch ({_database.Name}) with {docs.Count:#,#;;0} docs, {_replicationBatch.Count} tombstones and last etag {lastEtag}");
+
+			foreach (var doc in docs)
+	        {
+		        _replicationBatch.Add(doc.Etag,new ReplicationItem
+		        {
+			        Key = doc.Key,
+					ChangeVector = doc.ChangeVector,
+					Data = doc.Data
+		        });
+	        }
+
+			var sw = Stopwatch.StartNew();
 	        var headerJson = new DynamicJsonValue
 	        {
 		        ["Type"] = "ReplicationBatch",
 		        ["LastEtag"] = lastEtag,
-		        ["Documents"] = docs.Count
+		        ["Documents"] = _replicationBatch.Count
 	        };
 	        _context.Write(_writer, headerJson);
             _writer.Flush();
-            foreach (var document in docs)
-            {
-                WriteDocumentToServer(document);
-            }
 
+	        foreach (var item in _replicationBatch.OrderBy(x => x.Key))
+	        {
+		        WriteDocumentToServer(item.Value.Key,item.Value.ChangeVector,item.Value.Data);
+	        }
+  
             // we can release the read transaction while we are waiting for 
             // reply from the server and hold it for a long time
             _context.Transaction.Dispose();
@@ -373,60 +405,77 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void WriteDocumentToServer(Document doc)
-        {
-            var changeVectorSize = doc.ChangeVector.Length * sizeof(ChangeVectorEntry);
+		//private unsafe void WriteDocumentToServer(Document doc)
+		private unsafe void WriteDocumentToServer(
+			LazyStringValue key,
+			ChangeVectorEntry[] changeVector, 
+			BlittableJsonReaderObject data)
+		{
+            var changeVectorSize = changeVector.Length * sizeof(ChangeVectorEntry);
             var requiredSize = changeVectorSize +
                                sizeof(int) + // # of change vectors
                                sizeof(int) + // size of document key
-                               doc.Key.Size +
+							   key.Size +
                                sizeof(int) // size of document
                 ;
             if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(doc);
+                ThrowTooManyChangeVectorEntries(key,changeVector);
 
             fixed (byte* pTemp = _tempBuffer)
-            {
-                int tempBufferPos = 0;
-                fixed (ChangeVectorEntry* pChangeVectorEntries = doc.ChangeVector)
-                {
-                    *(int*)pTemp = doc.ChangeVector.Length;
-                    tempBufferPos += sizeof(int);
-                    Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
-                    tempBufferPos += changeVectorSize;
-                }
-                *(int*)(pTemp + tempBufferPos) = doc.Key.Size;
-                tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, doc.Key.Buffer, doc.Key.Size);
-                tempBufferPos += doc.Key.Size;
-                *(int*)(pTemp + tempBufferPos) = doc.Data.Size;
-                tempBufferPos += sizeof(int);
-                var docReadPos = 0;
-                while (docReadPos < doc.Data.Size)
-                {
-                    var sizeToCopy = Math.Min(doc.Data.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
-                    if (sizeToCopy == 0) // buffer is full, need to flush it
-                    {
-                        _stream.Write(_tempBuffer, 0, tempBufferPos);
-                        tempBufferPos = 0;
-                        continue;
-                    }
-                    Memory.Copy(pTemp + tempBufferPos, doc.Data.BasePointer + docReadPos, sizeToCopy);
-                    tempBufferPos += sizeToCopy;
-                    docReadPos += sizeToCopy;
-                }
-                if (tempBufferPos != 0)
-                {
-                    _stream.Write(_tempBuffer, 0, tempBufferPos);
-                }
-            }
-        }
+			{
+				int tempBufferPos = 0;
+				fixed (ChangeVectorEntry* pChangeVectorEntries = changeVector)
+				{
+					*(int*) pTemp = changeVector.Length;
+					tempBufferPos += sizeof(int);
+					Memory.Copy(pTemp + tempBufferPos, (byte*) pChangeVectorEntries, changeVectorSize);
+					tempBufferPos += changeVectorSize;
+				}
+				*(int*) (pTemp + tempBufferPos) = key.Size;
+				tempBufferPos += sizeof(int);
+				Memory.Copy(pTemp + tempBufferPos, key.Buffer, key.Size);
+				tempBufferPos += key.Size;
 
-        private static void ThrowTooManyChangeVectorEntries(Document doc)
+				//if data == null --> this is a tombstone
+				if (data != null)
+				{
+					*(int*) (pTemp + tempBufferPos) = data.Size;
+					tempBufferPos += sizeof(int);
+
+					var docReadPos = 0;
+					while (docReadPos < data?.Size)
+					{
+						var sizeToCopy = Math.Min(data.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
+						if (sizeToCopy == 0) // buffer is full, need to flush it
+						{
+							_stream.Write(_tempBuffer, 0, tempBufferPos);
+							tempBufferPos = 0;
+							continue;
+						}
+						Memory.Copy(pTemp + tempBufferPos, data.BasePointer + docReadPos, sizeToCopy);
+						tempBufferPos += sizeToCopy;
+						docReadPos += sizeToCopy;
+					}
+				}
+				else
+				{
+					//tombstone have size == -1
+					*(int*)(pTemp + tempBufferPos) = -1;
+					tempBufferPos += sizeof(int);
+				}
+
+				if (tempBufferPos != 0)
+				{
+					_stream.Write(_tempBuffer, 0, tempBufferPos);
+				}
+			}
+		}
+
+        private static void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)
         {
-            throw new ArgumentOutOfRangeException(nameof(doc),
-                "Document " + doc.Key + " has too many change vector entries to replicate: " +
-                doc.ChangeVector.Length);
+            throw new ArgumentOutOfRangeException("doc",
+                "Document " + key + " has too many change vector entries to replicate: " +
+				changeVector.Length);
         }
 
 
@@ -512,5 +561,13 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
-    }
+
+		private struct ReplicationItem
+		{
+			public LazyStringValue Key;
+			public ChangeVectorEntry[] ChangeVector;
+			public BlittableJsonReaderObject Data;
+		}
+
+	}
 }

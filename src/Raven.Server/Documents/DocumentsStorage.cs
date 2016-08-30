@@ -479,7 +479,13 @@ namespace Raven.Server.Documents
             return doc;
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstonesAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
+        public IEnumerable<DocumentTombstone> GetTombstonesAfter(
+			DocumentsOperationContext context, 
+			string collection, 
+			long etag, 
+			int start, 
+			int take,
+			long? maxEtag = null)
         {
             Table table;
             try
@@ -503,9 +509,18 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
+	            if (maxEtag.HasValue && EtagValueFromTombstone(result) > maxEtag.Value)
+					yield break;
+
                 yield return TableValueToTombstone(context, result);
             }
         }
+
+	    private long EtagValueFromTombstone(TableValueReader tvr)
+	    {
+		    int size;			
+			return IPAddress.NetworkToHostOrder(*(long*)tvr.Read(1, out size));
+		}
 
         public long GetLastDocumentEtag(DocumentsOperationContext context, string collection)
         {
@@ -797,6 +812,11 @@ namespace Raven.Server.Documents
             etagTree.Add(LastEtagSlice, Slice.External(context.Allocator, (byte*) &etag, sizeof(long)));
         }
 
+	    public void AddTombstone(DocumentsOperationContext context, string key, ChangeVectorEntry[] changeVector)
+	    {
+		    
+	    }
+
         private void CreateTombstone(DocumentsOperationContext context, 
             Table collectionDocsTable, 
             Document doc, 
@@ -858,7 +878,6 @@ namespace Raven.Server.Documents
 
             var keySlice = Slice.External(context.Allocator, lowerKey, keySize);
             DeleteConflictsFor(context, keySlice);
-
         }
 
 
@@ -952,7 +971,7 @@ namespace Raven.Server.Documents
             {
                 var existingDoc = existing.Item1;
                 fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
-                {
+			    {					
                     conflictsTable.Set(new TableValueBuilder
                     {
                         {lowerKey, lowerSize},
@@ -994,15 +1013,28 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
             {
-                conflictsTable.Set(new TableValueBuilder
-                {
-                    {lowerKey, lowerSize},
-                    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
-                    {keyPtr, keySize},
-                    {incomingDoc.BasePointer, incomingDoc.Size}
-                });
-            }
-        }
+			    if (incomingDoc != null) //this would be null if the incomingDoc is a tombstone
+			    {
+				    conflictsTable.Set(new TableValueBuilder
+				    {
+					    {lowerKey, lowerSize},
+					    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
+					    {keyPtr, keySize},
+					    {incomingDoc.BasePointer, incomingDoc.Size}
+				    });
+			    }
+			    else
+			    {					
+					conflictsTable.Set(new TableValueBuilder
+					{
+						{lowerKey, lowerSize},
+						{(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
+						{keyPtr, keySize},
+						{ null , 0 }
+					});
+				}
+			}
+	    }
 
         public PutResult Put(DocumentsOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document,

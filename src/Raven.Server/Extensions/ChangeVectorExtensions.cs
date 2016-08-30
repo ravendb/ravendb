@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
@@ -9,8 +11,15 @@ namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
     {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Dictionary<Guid, long> ToDictionary(this ChangeVectorEntry[] changeVector)
+		{
+			return changeVector.ToDictionary(x => x.DbId, x => x.Etag);
+		}
+
+
 		//note - this is a helper to use in unit tests only
-	    public static ChangeVectorEntry FromJson(this RavenJToken self)
+		public static ChangeVectorEntry FromJson(this RavenJToken self)
 	    {
 		    return new ChangeVectorEntry
 			{
@@ -43,9 +52,9 @@ namespace Raven.Server.Extensions
                     return true;
             }
             return false;
-        }
+        }	
 
-        public static string Format(this ChangeVectorEntry[] changeVector)
+		public static string Format(this ChangeVectorEntry[] changeVector)
         {
             if (changeVector.Length == 0)
                 return "[]";

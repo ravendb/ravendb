@@ -163,17 +163,28 @@ namespace Raven.Server.Documents.Replication
                     foreach (var doc in _replicatedDocs)
                     {
                         ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);
-                        var json = new BlittableJsonReaderObject(
-                            buffer + doc.Position + (doc.ChangeVectorCount * sizeof(ChangeVectorEntry))
-                            , doc.DocumentSize, _context);
+
+
+		                BlittableJsonReaderObject json = null;
+		                if (doc.DocumentSize >= 0) //no need to load document data for tombstones
+												// document size == -1 --> doc is a tombstone
+		                {
+			                json = new BlittableJsonReaderObject(
+				                buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
+				                doc.DocumentSize, _context);
+		                }
 
                         switch (GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector))
                         {
                             case ConflictStatus.Update:
                                 TcpConnection.DocumentDatabase.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+				                }
+				                else
+				                {
+					                _database.DocumentsStorage.AddTombstone(_context,doc.Id,_tempReplicatedChangeVector);
+				                }
                                 break;
                             case ConflictStatus.ShouldResolveConflict:
-
                                 _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
                                 goto case ConflictStatus.Update;
                             case ConflictStatus.Conflict:
@@ -267,9 +278,6 @@ namespace Raven.Server.Documents.Replication
 
             if (!messageType.Equals("ReplicationBatch", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Expected the message 'Type = ReplicationBatch' field, but has 'Type={messageType}'. This is likely a bug.");
-
-
-
         }
 
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {TcpConnection.DocumentDatabase.Name})";
