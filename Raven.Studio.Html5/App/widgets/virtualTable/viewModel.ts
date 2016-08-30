@@ -152,8 +152,6 @@ class ctor {
             var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
             return numOfRowsInUse === 0 && !this.settings.rowsAreLoading();
         });
-
-        this.registerColumnResizing();
     }
 
     // Attached is called by Durandal when the view is attached to the DOM.
@@ -176,6 +174,10 @@ class ctor {
         if (this.settings.useContextMenu) {
             this.setupContextMenu();
         }
+    }
+
+    compositionComplete() {
+        this.registerColumnResizing();
     }
 
     detached() {
@@ -326,11 +328,11 @@ class ctor {
                 window.cancelAnimationFrame(existingHandleToCancel);
             }
             result = window.requestAnimationFrame(action);
-        } else if (window.msRequestAnimationFrame) {
-            if (window.msCancelRequestAnimationFrame) {
-                window.msCancelRequestAnimationFrame(existingHandleToCancel);
+        } else if ((<any>window).msRequestAnimationFrame) {
+            if ((<any>window).msCancelRequestAnimationFrame) {
+                (<any>window).msCancelRequestAnimationFrame(existingHandleToCancel);
             }
-            result = window.msRequestAnimationFrame(action);
+            result = (<any>window).msRequestAnimationFrame(action);
         } else {
             if (existingHandleToCancel) {
                 window.clearTimeout(existingHandleToCancel);
