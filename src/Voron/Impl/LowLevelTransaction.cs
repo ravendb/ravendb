@@ -400,6 +400,8 @@ namespace Voron.Impl
 
             var newPage = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
+            
+            UnmanagedMemory.Set(newPage.Pointer, 0, Environment.Options.PageSize * numberOfPages);
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
 
