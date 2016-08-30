@@ -212,7 +212,7 @@
 @input-color-placeholder:        @gray-light;
 
 //** Default `.form-control` height
-@input-height-base:              (@line-height-computed + (@padding-base-vertical * 2) + 2);
+@input-height-base:              (@line-height-computed + (@padding-base-vertical * 2) - 2);
 //** Large `.form-control` height
 @input-height-large:             (ceil(@font-size-large * @line-height-large) + (@padding-large-vertical * 2) + 2);
 //** Small `.form-control` height
@@ -225,7 +225,7 @@
 @legend-border-color:            #e5e5e5;
 
 //** Background color for textual input addons
-@input-group-addon-bg:           @gray-lighter;
+@input-group-addon-bg:           @gray;
 //** Border color for textual input addons
 @input-group-addon-border-color: @input-border;
 

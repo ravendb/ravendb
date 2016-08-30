@@ -1,6 +1,8 @@
 
 @import "bootstrap/variables.less";
 @import "fonts.less";
+@import "bootstrap/mixins";
+@import "checkbox-toggle.less";
 @import "icons.less";
 
 @import "testing-elements.less"; /* do not include in final build */
@@ -1328,7 +1330,11 @@ hr {
     }
 }
 
-
+.panel {
+    .form-control {
+        background-color:@gray-dark;
+    }
+}
 
 /* SCROLLBARS */
 
