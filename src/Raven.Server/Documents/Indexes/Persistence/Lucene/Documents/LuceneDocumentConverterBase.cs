@@ -362,6 +362,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             else
             {
                 field = cached.Field;
+                if (lazyValue != null && cached.LazyStringReader == null)
+                    cached.LazyStringReader = new LazyStringReader();
+                if (blittableValue != null && cached.BlittableObjectReader == null)
+                    cached.BlittableObjectReader = new BlittableObjectReader();
 
                 if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
                 {
