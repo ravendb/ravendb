@@ -121,7 +121,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 if (tcpConnectionOptions.Id == id)
                 {
-                    tcpConnectionOptions.Dispose();
+                    // force a disconnection
+                    tcpConnectionOptions.Stream.Dispose();
+                    tcpConnectionOptions.TcpClient.Dispose();
                     return Task.CompletedTask;
 
                 }
