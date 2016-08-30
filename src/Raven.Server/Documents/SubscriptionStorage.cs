@@ -329,7 +329,7 @@ namespace Raven.Server.Documents
 
         private void SetSubscriptionConnectionStats(SubscriptionConnection connection, DynamicJsonValue config)
         {
-            config["ClientUri"] = connection.ClientEndpoint.ToString();
+            config["ClientUri"] = connection.TcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
             config["ConnectedAt"] = connection.Stats.ConnectedAt;
             config["ConnectionException"] = connection.ConnectionException;
 
@@ -396,6 +396,7 @@ namespace Raven.Server.Documents
                 context.Write(writer, subscriptionData);
             }
         }
+        
         public long GetRunningCount()
         {
             return _subscriptionStates.Count(x=>x.Value.Connection!=null);

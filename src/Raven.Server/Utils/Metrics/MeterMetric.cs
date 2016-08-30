@@ -5,8 +5,6 @@ namespace Raven.Server.Utils.Metrics
 {
     public sealed class MeterMetric : IDisposable
     {
-        public static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(1);
-
         private long _count;
         private int _currentTickCount= 0;
 
@@ -20,7 +18,7 @@ namespace Raven.Server.Utils.Metrics
 
         public MeterMetric()
         {
-            MetricsScheduler.Instance.StartTickingMetric(TickInterval, this);
+            MetricsScheduler.Instance.StartTickingMetric(this);
             _startTime = Clock.Nanoseconds;
         }
 

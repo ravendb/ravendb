@@ -70,7 +70,7 @@ namespace Raven.Server.Utils.Metrics
             } while (_done.WaitOne(Math.Max(millisecondsDelay, 0)) == false);
         }
 
-        public void StartTickingMetric(TimeSpan interval, MeterMetric tickable)
+        public void StartTickingMetric(MeterMetric tickable)
         {
             _scheduledActions.TryAdd(tickable);
         }

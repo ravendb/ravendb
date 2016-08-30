@@ -39,6 +39,7 @@ namespace Raven.Server
             {
                 try
                 {
+                    context.Response.StatusCode = 200;
                     await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 }
                 catch (Exception e)
@@ -55,7 +56,7 @@ namespace Raven.Server
                     //TODO: Proper json output, not like this
                     var response = context.Response;
 
-                    if (response.HasStarted == false)
+                    if (response.HasStarted == false && response.StatusCode < 400)
                         response.StatusCode = 500;
 
                     JsonOperationContext ctx;
