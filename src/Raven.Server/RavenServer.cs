@@ -318,8 +318,6 @@ namespace Raven.Server
                                     ["Exception"] = e.ToString()
                                 });
                             }
-
-                            tcp.Dispose();
                         }
                     }
                 }

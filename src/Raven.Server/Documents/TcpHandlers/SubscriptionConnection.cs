@@ -49,13 +49,13 @@ namespace Raven.Server.Documents.TcpHandlers
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
 
             Stats = new SubscriptionConnectionStats();
-            TcpConnection.GetTypeSpecificStats = this.GetTypeSpecificStats;
+            TcpConnection.GetTypeSpecificStats = GetTypeSpecificStats;
         }
 
-
-        public void GetTypeSpecificStats(BlittableJsonTextWriter writer, DocumentsOperationContext context)
+        private void GetTypeSpecificStats(JsonOperationContext context, DynamicJsonValue val)
         {
-            TcpConnection.DocumentDatabase.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(writer,context,SubscriptionId);
+            var details = TcpConnection.DocumentDatabase.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(context, SubscriptionId);
+            val["Details"] = details;
         }
 
         private async Task<bool> ParseSubscriptionOptionsAsync()

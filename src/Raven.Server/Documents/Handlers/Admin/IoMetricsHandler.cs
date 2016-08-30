@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     ["Start"] = start.GetDefaultRavenFormat(),
                     ["Size"] = recentMetric.Size,
-                    ["HumaneSize"] = Humane(recentMetric.Size),
+                    ["HumaneSize"] = Sizes.Humane(recentMetric.Size),
                     ["Duration"] = recentMetric.Duration / FrequencyInMs,
                     ["Type"] = recentMetric.Type.ToString()
                 });
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     ["Start"] = start.GetDefaultRavenFormat(),
                     ["End"] = end.GetDefaultRavenFormat(),
                     ["Size"] = historyMetric.TotalSize,
-                    ["HumaneSize"] = Humane(historyMetric.TotalSize),
+                    ["HumaneSize"] = Sizes.Humane(historyMetric.TotalSize),
                     ["Duration"] = (historyMetric.TotalTimeEnd - historyMetric.TotalTimeStart) / FrequencyInMs,
                     ["ActiveDuration"] = historyMetric.TotalTime / FrequencyInMs,
                     ["MaxDuration"] = historyMetric.MaxTime / FrequencyInMs,
@@ -102,25 +103,6 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             return djv;
-        }
-
-        public static string Humane(long? size)
-        {
-            if (size == null)
-                return null;
-
-            var absSize = Math.Abs(size.Value);
-            const double GB = 1024 * 1024 * 1024;
-            const double MB = 1024 * 1024;
-            const double KB = 1024;
-
-            if (absSize > GB) // GB
-                return string.Format("{0:#,#.##} GBytes", size / GB);
-            if (absSize > MB)
-                return string.Format("{0:#,#.##} MBytes", size / MB);
-            if (absSize > KB)
-                return string.Format("{0:#,#.##} KBytes", size / KB);
-            return string.Format("{0:#,#} Bytes", size);
         }
     }
 }

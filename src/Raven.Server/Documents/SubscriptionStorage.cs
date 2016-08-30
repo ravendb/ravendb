@@ -238,7 +238,7 @@ namespace Raven.Server.Documents
                 _logger.Info($"Subscription with id {subscriptionId} connection was dropped");
         }
 
-        private unsafe DynamicJsonValue ExtractSubscriptionConfigValue(TableValueReader tvr, DocumentsOperationContext context)
+        private unsafe DynamicJsonValue ExtractSubscriptionConfigValue(TableValueReader tvr, JsonOperationContext context)
         {
             int size;
             var subscriptionId =
@@ -247,7 +247,10 @@ namespace Raven.Server.Documents
                 *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out size);
             var timeOfReceivingLastAck =
                 *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.TimeOfReceivingLastAck, out size);
-            var criteria = new BlittableJsonReaderObject(tvr.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out size), size, context);
+            var ptr = tvr.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out size);
+            var data = context.GetMemory(size);
+            Memory.Copy((byte*) data.Address, ptr, size);
+            var criteria = new BlittableJsonReaderObject((byte*)data.Address, size, context);
             
             return new DynamicJsonValue
                 {
@@ -258,15 +261,19 @@ namespace Raven.Server.Documents
                 };
         }
 
-        private void GetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData, bool writeHistory = false)
+        private void SetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
         {
             var subscriptionConnection = subscriptionState.Connection;
             if (subscriptionConnection != null)
                 SetSubscriptionConnectionStats(subscriptionConnection, subscriptionData);
 
-            if (!writeHistory) return;
+            SetSubscriptionHistory(subscriptionState, subscriptionData);
+        }
 
-            var recentConnections = new List<DynamicJsonValue>();
+        private void SetSubscriptionHistory(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
+        {
+            var recentConnections = new DynamicJsonArray();
+            subscriptionData["RecentConnections"] = recentConnections;
 
             foreach (var connection in subscriptionState.RecentConnections)
             {
@@ -275,18 +282,16 @@ namespace Raven.Server.Documents
                 recentConnections.Add(connectionStats);
             }
 
-            subscriptionData["RecentConnections"] = new DynamicJsonArray(recentConnections);
-            recentConnections.Clear();
 
+            var rejectedConnections = new DynamicJsonArray();
+            subscriptionData["RecentRejectedConnections"] = rejectedConnections;
             foreach (var connection in subscriptionState.RecentRejectedConnections)
             {
                 var connectionStats = new DynamicJsonValue();
                 SetSubscriptionConnectionStats(connection, connectionStats);
-                recentConnections.Add(connectionStats);
+                rejectedConnections.Add(connectionStats);
             }
 
-            subscriptionData["RecentRejectedConnections"] =
-                new DynamicJsonArray(recentConnections);
         }
 
         public unsafe void GetAllSubscriptions(BlittableJsonTextWriter writer,
@@ -315,7 +320,7 @@ namespace Raven.Server.Documents
 
                     if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
                     {
-                        GetSubscriptionStateData(subscriptionState, subscriptionData);
+                        SetSubscriptionStateData(subscriptionState, subscriptionData);
                     }
 
                     taken++;
@@ -369,7 +374,7 @@ namespace Raven.Server.Documents
                     }
 
                     var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
-                    GetSubscriptionStateData(subscriptionState, subscriptionData);
+                    SetSubscriptionStateData(subscriptionState, subscriptionData);
                     connections.Add(subscriptionData);
                     taken++;
                 }
@@ -379,21 +384,22 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void GetRunningSubscriptionConnectionHistory(BlittableJsonTextWriter writer, DocumentsOperationContext context, long subscriptionId)
+        public DynamicJsonValue GetRunningSubscriptionConnectionHistory(JsonOperationContext context, long subscriptionId)
         {
             SubscriptionState subscriptionState;
-            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState)) return;
+            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState)) return null;
 
             var subscriptionConnection = subscriptionState.Connection;
-            if (subscriptionConnection == null) return;
+            if (subscriptionConnection == null) return null;
 
             using (var tx = _environment.ReadTransaction())
             {
                 var subscriptionData =
                     ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
-                GetSubscriptionStateData(subscriptionState, subscriptionData, true);
+                SetSubscriptionStateData(subscriptionState, subscriptionData);
+                SetSubscriptionHistory(subscriptionState, subscriptionData);
 
-                context.Write(writer, subscriptionData);
+                return subscriptionData;
             }
         }
         
