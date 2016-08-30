@@ -485,12 +485,39 @@
                     </div>
                 </div>
                 <div class="flex-window-scroll">
-                    <div id="docEditor">
-                        function foo(items) {
-                        var x = "All this is syntax highlighted";
-                        return x;
-                        }
-                    </div>
+                    <div id="docEditor">{
+    "Company": "companies/65",
+    "Employee": "employees/1",
+    "OrderedAt": "1998-05-06T00:00:00.0000000",
+    "RequireAt": "1998-06-03T00:00:00.0000000",
+    "ShippedAt": null,
+    "ShipTo": {
+        "Line1": "2817 Milton Dr.",
+        "Line2": null,
+        "City": "Albuquerque",
+        "Region": "NM",
+        "PostalCode": "87110",
+        "Country": "USA"
+    },
+    "ShipVia": "shippers/2",
+    "Freight": 8.53,
+    "Lines": [
+        {
+            "Product": "products/2",
+            "ProductName": "Chang",
+            "PricePerUnit": 19,
+            "Quantity": 24,
+            "Discount": 0.2
+        },
+        {
+            "Product": "products/3",
+            "ProductName": "Aniseed Syrup",
+            "PricePerUnit": 10,
+            "Quantity": 4,
+            "Discount": 0
+        }
+    ]
+}</div>
                 </div>
             </div>
         </div>
@@ -503,7 +530,7 @@
     <script>
         var editor = ace.edit("docEditor");
         editor.setTheme("ace/theme/pastel_on_dark");
-        editor.getSession().setMode("mode/javascript");
+        editor.getSession().setMode("ace/mode/json");
     </script>
 </body>
 </html>
