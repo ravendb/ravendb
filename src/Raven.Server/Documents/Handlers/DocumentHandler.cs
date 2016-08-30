@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.Handlers
             public long? ExepctedEtag;
             public BlittableJsonReaderObject Document;
             public DocumentDatabase Database;
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
+            public ConcurrencyException ConcurrencyException;
             public PutResult PutResult;
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (ConcurrencyException e)
                 {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
+                    ConcurrencyException = e;
                 }
             }
         }
@@ -340,15 +340,22 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(cmd);
 
-                if (cmd.ExceptionDispatchInfo?.SourceException != null )
-                    if (cmd.ExceptionDispatchInfo?.SourceException  is Voron.Exceptions.ConcurrencyException)
+                if (cmd.ConcurrencyException != null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Key");
+                        writer.WriteString(cmd.PutResult.Key);
+                        writer.WriteComma();
+                        writer.WritePropertyName("Error");
+                        writer.WriteString(cmd.ConcurrencyException.Message);
+                        writer.WriteEndObject();
+                    }
+                    return;
                 }
                 
-                cmd.ExceptionDispatchInfo?.Throw();
-                
-
                 HttpContext.Response.StatusCode = 201;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

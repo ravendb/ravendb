@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml;
 using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
@@ -21,6 +22,8 @@ namespace Raven.Server
 {
     public class RavenServerStartup
     {
+        private RequestRouter _router;
+        private RavenServer _server;
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
@@ -33,71 +36,75 @@ namespace Raven.Server
                 ReceiveBufferSize = 4096,
             });
 
-            var router = app.ApplicationServices.GetService<RequestRouter>();
-            var server = app.ApplicationServices.GetService<RavenServer>();
-            app.Run(async context =>
+            _router = app.ApplicationServices.GetService<RequestRouter>();
+            _server = app.ApplicationServices.GetService<RavenServer>();
+            app.Run(RequestHandler);
+        }
+
+        private async Task RequestHandler(HttpContext context)
+        {
+            try
             {
-                try
+                context.Response.StatusCode = 200;
+                await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+            }
+            catch (Exception e)
+            {
+                if (context.RequestAborted.IsCancellationRequested)
+                    return;
+
+                //TODO: special handling for argument exception (400 bad request)
+                //TODO: database not found (503)
+                //TODO: operaton cancelled (timeout)
+                //TODO: Invalid data exception 422
+
+
+                //TODO: Proper json output, not like this
+                var response = context.Response;
+
+                if (response.HasStarted == false && response.StatusCode < 400)
+                    response.StatusCode = 500;
+
+                JsonOperationContext ctx;
+                using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
-                    context.Response.StatusCode = 200;
-                    await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
-                }
-                catch (Exception e)
-                {
-                    if (context.RequestAborted.IsCancellationRequested)
-                        return;
-
-                    //TODO: special handling for argument exception (400 bad request)
-                    //TODO: database not found (503)
-                    //TODO: operaton cancelled (timeout)
-                    //TODO: Invalid data exception 422
-
-
-                    //TODO: Proper json output, not like this
-                    var response = context.Response;
-
-                    if (response.HasStarted == false && response.StatusCode < 400)
-                        response.StatusCode = 500;
-
-                    JsonOperationContext ctx;
-                    using (server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
+                    // this should be changed to BlittableJson
+                    var djv = new DynamicJsonValue
                     {
-                        // this should be changed to BlittableJson
-                        var djv = new DynamicJsonValue
-                        {
-                            ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",
-                            ["Type"] = e.GetType().FullName,
-                            ["Message"] = e.Message
-                        };
+                        ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",
+                        ["Type"] = e.GetType().FullName,
+                        ["Message"] = e.Message
+                    };
 
-                        string errorString;
+                    string errorString;
 
-                        try
-                        {
-                            errorString = e.ToAsyncString();
-                        }
-                        catch (Exception)
-                        {
-                            errorString = e.ToString();
-                        }
+                    try
+                    {
+                        errorString = e.ToAsyncString();
+                    }
+                    catch (Exception)
+                    {
+                        errorString = e.ToString();
+                    }
 
-                        djv["Error"] = errorString;
+                    djv["Error"] = errorString;
 
-                        var indexCompilationException = e as IndexCompilationException;
-                        if (indexCompilationException != null)
-                        {
-                            djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
-                            djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
-                        }
+                    var indexCompilationException = e as IndexCompilationException;
+                    if (indexCompilationException != null)
+                    {
+                        djv[nameof(IndexCompilationException.IndexDefinitionProperty)] =
+                            indexCompilationException.IndexDefinitionProperty;
+                        djv[nameof(IndexCompilationException.ProblematicText)] =
+                            indexCompilationException.ProblematicText;
+                    }
 
-                        using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
-                        {
-                            var json = ctx.ReadObject(djv, "exception");
-                            writer.WriteObject(json);
-                        }
+                    using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
+                    {
+                        var json = ctx.ReadObject(djv, "exception");
+                        writer.WriteObject(json);
                     }
                 }
-            });
+            }
         }
     }
 }
