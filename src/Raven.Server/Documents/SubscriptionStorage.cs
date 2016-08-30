@@ -13,6 +13,7 @@ using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Database.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Binary;
@@ -51,9 +52,9 @@ namespace Raven.Server.Documents
             options.SchemaVersion = 1;
             options.TransactionsMode=TransactionsMode.Lazy;
             _environment = new StorageEnvironment(options);
-            _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");
-
             var databaseName = db.Name;
+            _unmanagedBuffersPool = new UnmanagedBuffersPool("Subscriptions", databaseName);
+            
             _logger = LoggerSetup.Instance.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {

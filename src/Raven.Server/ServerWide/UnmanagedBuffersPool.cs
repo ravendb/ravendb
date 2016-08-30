@@ -2,13 +2,17 @@
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using NLog;
+using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Binary;
+using Sparrow.Json;
 
-namespace Sparrow.Json
+namespace Raven.Server.ServerWide
 {
-    public unsafe class UnmanagedBuffersPool : IDisposable
+    public unsafe class UnmanagedBuffersPool : IDisposable, ILowMemoryHandler
     {
         private readonly string _debugTag;
+
+        private readonly string _databaseName;
 
         private static readonly Logger _log = LogManager.GetLogger(nameof(UnmanagedBuffersPool));
 
@@ -16,23 +20,23 @@ namespace Sparrow.Json
 
         private bool _isDisposed;
         
-        public UnmanagedBuffersPool(string debugTag)
+        public UnmanagedBuffersPool(string debugTag, string databaseName = null)
         {
             _debugTag = debugTag;
+            _databaseName = databaseName ?? string.Empty;
             _freeSegments = new ConcurrentStack<AllocatedMemoryData>[32];
             for (int i = 0; i < _freeSegments.Length; i++)
             {
                 _freeSegments[i] = new ConcurrentStack<AllocatedMemoryData>();
             }
+            AbstractLowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
-        // todo: add test that test concurrent handle low memory and allocations
         public void HandleLowMemory()
         {
-            _log.Info("HandleLowMemory was called, will release all pooled memory for: {0}", _debugTag);
+            _log.Info($"HandleLowMemory was called, will release all pooled memory for: {_debugTag}");
             var size = FreeAllPooledMemory();
-            _log.Info("HandleLowMemory freed {1:#,#} bytes in {0}", _debugTag, size);
-
+            _log.Info($"HandleLowMemory freed {size:#,#;;0} bytes in {_debugTag}");
         }
 
         private long FreeAllPooledMemory()
@@ -54,6 +58,16 @@ namespace Sparrow.Json
         {
         }
 
+        public LowMemoryHandlerStatistics GetStats()
+        {
+            return new LowMemoryHandlerStatistics()
+            {
+                Name = _debugTag,
+                DatabaseName = _databaseName,
+                EstimatedUsedMemory = GetAllocatedMemorySize()
+            };
+        }
+
         public long GetAllocatedMemorySize()
         {
             long size = 0;
@@ -64,16 +78,13 @@ namespace Sparrow.Json
                     size += allocatedMemoryData.SizeInBytes;
                 }
             }
-
-            // TODO: This was part of the MemoryStatistics when we moved Json parsing into Sparrow. Remember to reconstruct that when
-            //       we add statistics. 
             return size;
         }
 
         ~UnmanagedBuffersPool()
         {
             if (_isDisposed == false)
-                _log.Warn("UnmanagedBuffersPool for {0} wasn't propertly disposed", _debugTag);
+                _log.Warn($"UnmanagedBuffersPool for {_debugTag} wasn't properly disposed");
 
             Dispose();
         }

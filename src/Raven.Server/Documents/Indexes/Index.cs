@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase = documentDatabase;
                     _environment = environment;
-                    _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
+                    _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}", documentDatabase.Name);
                     _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
