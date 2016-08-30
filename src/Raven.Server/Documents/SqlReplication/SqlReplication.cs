@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             var pageSize = _database.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
-            var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, Statistics.LastTombstonesEtag + 1, 0, pageSize).ToList();
+            var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, Statistics.LastTombstonesEtag, 0, pageSize).ToList();
             if (documents.Count == 0)
                 return false;
 

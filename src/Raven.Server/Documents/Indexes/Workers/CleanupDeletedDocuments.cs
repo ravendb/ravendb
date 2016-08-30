@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     {
                         foreach (
                             var tombstone in
-                            _documentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag + 1, 0, pageSize)
+                            _documentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag, 0, pageSize)
                         )
                         {
                             token.ThrowIfCancellationRequested();
