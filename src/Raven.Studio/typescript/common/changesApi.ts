@@ -8,8 +8,6 @@ import commandBase = require("commands/commandBase");
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
-import changesApiWarnStorage = require("common/changesApiWarnStorage");
 import messagePublisher = require("common/messagePublisher");
 
 class changesApi {
