@@ -201,7 +201,7 @@ namespace Raven.Client.Http
                                 long etag;
                                 if (long.TryParse(response.Headers.ETag.Tag, out etag))
                                 {
-                                    _cache.Set(context, url, etag, blittableJsonReaderObject);
+                                    _cache.Set(url, etag, blittableJsonReaderObject);
                                 }
                             }
                             command.SetResponse(blittableJsonReaderObject);

@@ -38,7 +38,7 @@ namespace Raven.Server.Documents
         private readonly StorageEnvironment _environment;
         private Sparrow.Logging.Logger _logger; 
 
-        private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
+        private readonly UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         public SubscriptionStorage(DocumentDatabase db)
         {
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents
             options.TransactionsMode=TransactionsMode.Lazy;
             _environment = new StorageEnvironment(options);
             var databaseName = db.Name;
-            _unmanagedBuffersPool = new UnmanagedBuffersPool("Subscriptions", databaseName);
+            _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling("Subscriptions", databaseName);
             
             _logger = LoggerSetup.Instance.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef

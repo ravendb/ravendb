@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _initialized;
 
-        protected UnmanagedBuffersPool _unmanagedBuffersPool;
+        protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         private StorageEnvironment _environment;
 
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase = documentDatabase;
                     _environment = environment;
-                    _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}", documentDatabase.Name);
+                    _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);

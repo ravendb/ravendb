@@ -2,17 +2,16 @@
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using NLog;
-using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Binary;
 using Sparrow.Json;
 
-namespace Raven.Server.ServerWide
+namespace Raven.Client.Util
 {
-    public unsafe class UnmanagedBuffersPool : IDisposable, ILowMemoryHandler
+    public class UnmanagedBuffersPool : IDisposable
     {
-        private readonly string _debugTag;
+        protected readonly string _debugTag;
 
-        private readonly string _databaseName;
+        protected readonly string _databaseName;
 
         private static readonly Logger _log = LogManager.GetLogger(nameof(UnmanagedBuffersPool));
 
@@ -29,7 +28,6 @@ namespace Raven.Server.ServerWide
             {
                 _freeSegments[i] = new ConcurrentStack<AllocatedMemoryData>();
             }
-            AbstractLowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
         public void HandleLowMemory()
@@ -56,16 +54,6 @@ namespace Raven.Server.ServerWide
 
         public void SoftMemoryRelease()
         {
-        }
-
-        public LowMemoryHandlerStatistics GetStats()
-        {
-            return new LowMemoryHandlerStatistics()
-            {
-                Name = _debugTag,
-                DatabaseName = _databaseName,
-                EstimatedUsedMemory = GetAllocatedMemorySize()
-            };
         }
 
         public long GetAllocatedMemorySize()

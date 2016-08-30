@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -123,7 +124,7 @@ namespace Raven.Server.Documents
 
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
-        private UnmanagedBuffersPool _unmanagedBuffersPool;
+        private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {

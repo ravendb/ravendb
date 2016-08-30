@@ -13,7 +13,7 @@ namespace FastTests.Blittable
         [Fact]
         public void SerialAllocationAndRelease()
         {
-            using (var pool = new UnmanagedBuffersPool(string.Empty))
+            using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(string.Empty))
             {
                 var allocatedMemory = new List<AllocatedMemoryData>();
                 for (var i = 0; i < 1000; i++)
@@ -30,7 +30,7 @@ namespace FastTests.Blittable
         [Fact]
         public void ParallelAllocationAndReleaseSeperately()
         {
-            using (var pool = new UnmanagedBuffersPool(string.Empty))
+            using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(string.Empty))
             {
                 var allocatedMemory = new global::Sparrow.Collections.ConcurrentSet<AllocatedMemoryData>();
                 Parallel.For(0, 100, x =>
@@ -51,7 +51,7 @@ namespace FastTests.Blittable
         [Fact]
         public void ParallelSerialAllocationAndRelease()
         {
-            using (var pool = new UnmanagedBuffersPool(string.Empty))
+            using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(string.Empty))
             {
                 var allocatedMemory = new BlockingCollection<AllocatedMemoryData>();
                 Task.Run(() =>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -18,10 +19,12 @@ namespace Raven.Client.Http
         private readonly long _maxSize;
         private readonly ConcurrentDictionary<string, HttpCacheItem> _items = new ConcurrentDictionary<string, HttpCacheItem>();
         private long _totalSize;
+        private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
         public HttpCache(long maxSize = 1024 * 1024L * 512L)
         {
             _maxSize = maxSize;
+            _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache), "Client");
         }
 
         public unsafe class HttpCacheItem : IDisposable
@@ -49,6 +52,7 @@ namespace Raven.Client.Http
                 if (Interlocked.CompareExchange(ref Usages, int.MinValue, 0) != 0)
                     return;
 
+                Cache._unmanagedBuffersPool.Return(Allocation);
                 Interlocked.Add(ref Cache._totalSize, -Size);
                 Allocation = null;
 #if DEBUG
@@ -76,9 +80,9 @@ namespace Raven.Client.Http
 
         private Task _cleanupTask;
 
-        public unsafe void Set(JsonOperationContext context, string url, long etag, BlittableJsonReaderObject result)
+        public unsafe void Set(string url, long etag, BlittableJsonReaderObject result)
         {
-            var mem = context.GetMemory(result.Size, longLived:true);
+            var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo((byte*)mem.Address);
             if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
             {
@@ -222,6 +226,7 @@ namespace Raven.Client.Http
             {
                 item.Dispose();
             }
+            _unmanagedBuffersPool.Dispose();
         }
     }
 }

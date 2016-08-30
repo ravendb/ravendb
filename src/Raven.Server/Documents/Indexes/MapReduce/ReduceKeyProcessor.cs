@@ -11,13 +11,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public unsafe class ReduceKeyProcessor
     {
-        private readonly UnmanagedBuffersPool _buffersPool;
+        private readonly UnmanagedBuffersPoolWithLowMemoryHandling _buffersPool;
         private Mode _mode;
         private AllocatedMemoryData _buffer;
         private int _bufferPos;
         private ulong _singleValueHash;
 
-        public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPool buffersPool)
+        public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool)
         {
             _buffersPool = buffersPool;
             if (numberOfReduceFields == 1)
