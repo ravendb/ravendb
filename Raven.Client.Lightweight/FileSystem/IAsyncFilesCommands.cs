@@ -78,6 +78,13 @@ namespace Raven.Client.FileSystem
         /// <param name="etag">	The current file etag used for concurrency checks (null skips check)</param>
         /// <returns>A task that represents the asynchronous rename operation</returns>
         Task RenameAsync(string currentName, string newName, Etag etag = null);
+        /// <summary>
+        /// Copy a file (server side operation)
+        /// </summary>
+        /// <param name="sourceName">The name of the file that you want to copy from</param>
+        /// <param name="targetNAme">The name of the new file you want to copy to</param>
+        /// <param name="etag">The current file etag used for concurrency checks (null skips check)</param>
+        /// <returns>A task that represents the asynchronous copy operation</returns>
         Task CopyAsync(string sourceName, string targetNAme, Etag etag = null);
 
         /// <summary>
@@ -456,6 +463,10 @@ namespace Raven.Client.FileSystem
         /// </summary>
         /// <returns>A task that represents the asynchronous operation</returns>
         Task RetryRenamingAsync();
+        /// <summary>
+        /// Runs a background task that will resume unaccomplished file copies
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation</returns>
         Task RetryCopyingAsync();
     }
 }
