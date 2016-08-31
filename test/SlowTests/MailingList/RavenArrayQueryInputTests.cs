@@ -1,26 +1,25 @@
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class RavenArrayQueryInputTests : RavenTestBase
     {
-        public class Document
+        private class Document
         {
             public string Id { get; set; }
         }
 
-        public class TransformResult
+        private class TransformResult
         {
             public string Id { get; set; }
             public int[] Array { get; set; }
         }
 
-        public class TestTransformer : AbstractTransformerCreationTask<Document>
+        private class TestTransformer : AbstractTransformerCreationTask<Document>
         {
             public TestTransformer()
             {
@@ -30,10 +29,11 @@ namespace Raven.Tests.MailingList
                                                 select d;
             }
         }
+
         [Fact]
         public void CanUseArrayAsQueryInput()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var transformer = new TestTransformer();
                 transformer.Execute(store);
@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var ids = new[] {"documents/3", "documents/1", "documents/2"};
+                    var ids = new[] { "documents/3", "documents/1", "documents/2" };
 
                     session.Load<TestTransformer, TransformResult>(ids, c => c.AddTransformerParameter("array", string.Join(",", ids)));
                 }

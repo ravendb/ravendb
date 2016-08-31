@@ -1,24 +1,22 @@
 using System.Linq;
 using System.Runtime.Serialization;
-
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class RangeQueriesOverSum : RavenTest
+    public class RangeQueriesOverSum : RavenTestBase
     {
         [DataContract]
-        public class Item
+        private class Item
         {
             [DataMember]
             public string Version { get; set; }
         }
 
-        public class TheIndex : AbstractIndexCreationTask<Item, TheIndex.ReduceResult>
+        private class TheIndex : AbstractIndexCreationTask<Item, TheIndex.ReduceResult>
         {
             public class ReduceResult
             {
@@ -41,7 +39,7 @@ namespace Raven.Tests.MailingList
                          select new
                          {
                              Version = g.Key,
-                             ItemsCount = g.Sum(x=>x.ItemsCount)
+                             ItemsCount = g.Sum(x => x.ItemsCount)
                          };
             }
         }
@@ -49,9 +47,9 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryByRangeOverMapReduce()
         {
-            using(var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
-                using(var session = documentStore.OpenSession())
+                using (var session = documentStore.OpenSession())
                 {
                     for (int i = 0; i < 5; i++)
                     {
@@ -68,7 +66,7 @@ namespace Raven.Tests.MailingList
                 using (var session = documentStore.OpenSession())
                 {
                     var results2 = session.Query<TheIndex.ReduceResult, TheIndex>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.ItemsCount > 0)
                         .ToArray();
                     Assert.NotEmpty(results2);
