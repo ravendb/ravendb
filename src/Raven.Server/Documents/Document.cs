@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Sparrow;
 using Sparrow.Json;
@@ -11,17 +10,20 @@ namespace Raven.Server.Documents
 {
     public class Document
     {
+        public static readonly Document ExplicitNull = new Document();
+
         public const string NoCollectionSpecified = "Raven/Empty";
         public const string SystemDocumentsCollection = "Raven/SystemDocs";
 
         private ulong? _hash;
+        private bool _metadataEnsured;
 
         public long Etag;
         public LazyStringValue Key;
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public ChangeVectorEntry[] ChangeVector;
-
+        
         public unsafe ulong DataHash
         {
             get
@@ -33,24 +35,35 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void EnsureMetadata()
+        public void EnsureMetadata(float? indexScore = null)
         {
+            if (_metadataEnsured)
+                return;
+
+            _metadataEnsured = true;
+
             DynamicJsonValue mutatedMetadata;
             BlittableJsonReaderObject metadata;
-            if (Data.TryGet(Constants.Metadata, out metadata))
+            if (Data.TryGet(Constants.Metadata.Key, out metadata))
             {
-                metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
+                if (metadata.Modifications == null)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                mutatedMetadata = metadata.Modifications;
             }
             else
             {
                 Data.Modifications = new DynamicJsonValue(Data)
                 {
-                    [Constants.Metadata] = mutatedMetadata = new DynamicJsonValue()
+                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
                 };
             }
 
-            mutatedMetadata[Constants.MetadataEtagId] = Etag;
-            mutatedMetadata[Constants.MetadataDocId] = Key;
+            mutatedMetadata[Constants.Metadata.Etag] = Etag;
+            mutatedMetadata[Constants.Metadata.Id] = Key;
+
+            if (indexScore.HasValue)
+                mutatedMetadata[Constants.Metadata.IndexScore] = indexScore;
 
             _hash = null;
         }
@@ -59,7 +72,7 @@ namespace Raven.Server.Documents
         {
             foreach (var property in Data.GetPropertyNames())
             {
-                if (string.Equals(property, Constants.Metadata, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(property, Constants.Metadata.Key, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 if (Data.Modifications == null)
@@ -101,12 +114,12 @@ namespace Raven.Server.Documents
             return GetCollectionName(document, out isSystemDocument);
         }
 
-	    public static string GetCollectionName(BlittableJsonReaderObject document, out bool isSystemDocument)
+        public static string GetCollectionName(BlittableJsonReaderObject document, out bool isSystemDocument)
         {
             isSystemDocument = false;
             string collectionName;
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata, out metadata) == false ||
+            if (document.TryGet(Constants.Metadata.Key, out metadata) == false ||
                 metadata.TryGet(Constants.Headers.RavenEntityName, out collectionName) == false)
             {
                 collectionName = NoCollectionSpecified;

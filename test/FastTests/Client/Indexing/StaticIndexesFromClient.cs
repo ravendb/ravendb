@@ -17,14 +17,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task CanPut()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 var input = new IndexDefinition

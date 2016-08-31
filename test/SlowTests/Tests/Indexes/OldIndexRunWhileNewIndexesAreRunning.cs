@@ -18,9 +18,9 @@ namespace SlowTests.Tests.Indexes
     public class OldIndexRunWhileNewIndexesAreRunning : RavenTestBase
     {
         [Fact]
-        public async Task OneBigSave()
+        public void OneBigSave()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
             {
                 using (var session = store.OpenSession())
                 {
@@ -41,9 +41,9 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact]
-        public async Task ShouldWork()
+        public void ShouldWork()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
             {
                 using (var session = store.OpenSession())
                 {

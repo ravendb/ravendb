@@ -18,7 +18,7 @@ class getDatabaseStatsCommand extends commandBase {
     }
 
     private getQueryUrlFragment(): string {
-        return "/stats";
+        return "/stats";//TODO: use endpoints
     }
 }
 

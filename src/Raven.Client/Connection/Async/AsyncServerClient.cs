@@ -564,7 +564,7 @@ namespace Raven.Client.Connection.Async
         private async Task<PutResult> DirectPutAsync(OperationMetadata operationMetadata, string key, long? etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken))
         {
             if (metadata != null)
-                document[Constants.Metadata] = metadata;
+                document[Constants.Metadata.Key] = metadata;
 
             var method = string.IsNullOrEmpty(key) ? HttpMethod.Post : HttpMethod.Put;
 
@@ -2166,7 +2166,7 @@ namespace Raven.Client.Connection.Async
         {
             if (docResult == null)
                 return (false);
-            var metadata = docResult[Constants.Metadata];
+            var metadata = docResult[Constants.Metadata.Key];
             if (metadata == null)
                 return (false);
 

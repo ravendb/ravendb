@@ -39,7 +39,7 @@ namespace SlowTests.SlowTests.Issues
         [Fact]
         public async void ShouldProperlyPageResults()
         {
-            var store = await GetDocumentStore();
+            var store = GetDocumentStore();
 
             new UsersAndFiendsIndex().Execute(store);
 

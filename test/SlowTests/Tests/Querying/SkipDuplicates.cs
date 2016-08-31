@@ -10,9 +10,9 @@ namespace SlowTests.Tests.Querying
     public class SkipDuplicates : RavenTestBase
     {
         [Fact]
-        public async Task WillSkipDuplicates()
+        public void WillSkipDuplicates()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex(
                     "BlogPosts/PostsCountByTag",
@@ -40,9 +40,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task WillNotSkipDuplicates()
+        public void WillNotSkipDuplicates()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex(
                     "BlogPosts/PostsCountByTag",

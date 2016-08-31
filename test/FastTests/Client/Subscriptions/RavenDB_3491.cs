@@ -18,7 +18,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task SubscribtionWithEtag()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var us1 = new User { Id = "users/1", Name = "john", Age = 22 };
                 var us2 = new User { Id = "users/2", Name = "KY", Age = 30 };
@@ -53,7 +53,7 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
+                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
                         subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
                         subscription.Subscribe(docs.Add);
@@ -99,7 +99,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task StronglyTypedSubscribtionWithStartEtag()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var us1 = new User { Id = "users/1", Name = "john", Age = 22 };
                 var us2 = new User { Id = "users/2", Name = "KY", Age = 30 };
@@ -176,7 +176,7 @@ namespace FastTests.Client.Subscriptions
         [Fact(Skip = "Racy - need to fix RavenDB-4734")]
         public async Task SubscribtionWithEtag_MultipleOpens()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var us1 = new User { Id = "users/1", Name = "john", Age = 22 };
                 var us2 = new User { Id = "users/2", Name = "KY", Age = 30 };
@@ -212,7 +212,7 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
+                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
                         subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
                         subscription.Subscribe(docs.Add);

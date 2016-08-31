@@ -27,9 +27,9 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
         [Fact]
-        public async Task Can_deal_with_nulls2()
+        public void Can_deal_with_nulls2()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var categories = new List<Category>
                 {

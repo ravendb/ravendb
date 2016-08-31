@@ -29,7 +29,7 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task QueriesRunning()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 IndexQuery q;
                 using (var session = store.OpenSession())

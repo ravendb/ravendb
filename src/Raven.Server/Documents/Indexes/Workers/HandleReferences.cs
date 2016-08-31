@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _configuration = configuration;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
-            _logger = LoggerSetup.Instance
+            _logger = LoggingSource.Instance
                 .GetLogger<HandleReferences>(_indexStorage.DocumentDatabase.Name);
         }
 
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
                                 case ActionType.Tombstone:
                                     references = _documentsStorage
-                                        .GetTombstonesAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
+                                        .GetTombstonesAfter(databaseContext, referencedCollection, lastReferenceEtag , 0, pageSize)
                                         .Select(tombstone =>
                                         {
                                             _reference.Key = tombstone.Key;

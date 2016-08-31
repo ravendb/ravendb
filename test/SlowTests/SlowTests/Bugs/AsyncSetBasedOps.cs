@@ -17,17 +17,19 @@ namespace SlowTests.SlowTests.Bugs
 {
     public class AsyncSetBasedOps : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string FirstName;
+#pragma warning disable 414,649
             public string LastName;
             public string FullName;
+#pragma warning restore 414,649
         }
 
         [Fact]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
             {
                 string lastUserId = null;
 

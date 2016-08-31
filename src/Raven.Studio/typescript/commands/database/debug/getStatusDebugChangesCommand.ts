@@ -8,7 +8,7 @@ class getStatusDebugChangesCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Array<statusDebugChangesDto>> {
-        var url = "/debug/changes";
+        var url = "/debug/changes";//TODO: use endpoints
         return this.query<Array<statusDebugChangesDto>>(url, null, this.db);
     }
 }

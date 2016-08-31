@@ -415,14 +415,17 @@ namespace Raven.Client.Connection.Implementation
                 {
                     throw new ErrorResponseException(Response, readToEnd, e);
                 }
-                if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
+
+                var type = ravenJObject.Value<string>("Type");
+                if (type == typeof(IndexCompilationException).FullName)
                 {
                     throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
                     {
-                        IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
-                        ProblematicText = ravenJObject.Value<string>("ProblematicText")
+                        IndexDefinitionProperty = ravenJObject.Value<string>(nameof(IndexCompilationException.IndexDefinitionProperty)),
+                        ProblematicText = ravenJObject.Value<string>(nameof(IndexCompilationException.ProblematicText))
                     };
                 }
+
                 if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
                 {
                     throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));

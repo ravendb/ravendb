@@ -27,7 +27,7 @@ namespace Raven.Server.Web.Authentication
         private const int MaxOAuthContentLength = 1500;
         private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
 
-        private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<OAuthApiKeyHandler>("Raven/Server");
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<OAuthApiKeyHandler>("Raven/Server");
 
         [RavenAction("/oauth/api-key", "GET", "/oauth/api-key", NoAuthorizationRequired = true)]
         public async Task OauthGetApiKey()

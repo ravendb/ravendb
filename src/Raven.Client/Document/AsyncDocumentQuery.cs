@@ -473,7 +473,7 @@ namespace Raven.Client.Document
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits)
         {
-            return GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+            return GenerateQueryWithinRadiusOf(Constants.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
         }
 
         /// <summary>
@@ -494,7 +494,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance()
         {
-            OrderBy(Constants.DistanceFieldName);
+            OrderBy(Constants.Indexing.Fields.DistanceFieldName);
             return this;
         }
 
@@ -503,7 +503,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
             return this;
         }
         /// <summary>
@@ -511,7 +511,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng, string spatialFieldName)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), spatialFieldName));
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), spatialFieldName));
             return this;
         }
 
@@ -848,7 +848,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScore()
         {
-            AddOrder(Constants.Headers.TemporaryScoreValue, false);
+            AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, false);
             return this;
         }
 
@@ -857,7 +857,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScoreDescending()
         {
-            AddOrder(Constants.Headers.TemporaryScoreValue, true);
+            AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, true);
             return this;
         }
 

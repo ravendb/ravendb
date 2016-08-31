@@ -8,7 +8,7 @@ class getSingleTransformerCommand extends commandBase {
     }
 
     execute(): JQueryPromise<savedTransformerDto> {
-        var getTransformerUrl = "/transformers/" + this.tranName;
+        var getTransformerUrl = "/transformers/" + this.tranName;//TODO: use endpoints
         return this.query<savedTransformerDto>(getTransformerUrl, null, this.db);
     }
 

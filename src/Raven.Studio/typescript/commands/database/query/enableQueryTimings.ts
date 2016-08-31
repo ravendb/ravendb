@@ -8,7 +8,7 @@ class enableQueryTimings extends commandBase {
     }
 
     execute(): JQueryPromise<string[]> {
-        var url = "/debug/enable-query-timing";
+        var url = "/debug/enable-query-timing";//TODO: use endpoints
         return this.query(url, null, this.db);
     }
 }

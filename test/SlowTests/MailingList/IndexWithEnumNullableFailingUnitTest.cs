@@ -452,9 +452,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task SortByNotWorkingTest()
+        public void SortByNotWorkingTest()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new CultureDataIndex().Execute(store);
             }

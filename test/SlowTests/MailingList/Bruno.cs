@@ -10,9 +10,9 @@ namespace SlowTests.MailingList
     public class Bruno : RavenTestBase
     {
         [Fact]
-        public async System.Threading.Tasks.Task StrangeReduceOnNestedItems()
+        public void StrangeReduceOnNestedItems()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TasksCount_ForPerson().Execute(store);
 

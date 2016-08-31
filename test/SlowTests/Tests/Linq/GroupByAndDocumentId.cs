@@ -44,33 +44,33 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task Test1()
+        public void Test1()
         {
-            await DoTest<Client_ImportSummaryByDate_1>();
+            DoTest<Client_ImportSummaryByDate_1>();
         }
 
         [Fact]
-        public async Task Test2()
+        public void Test2()
         {
-            await DoTest<Client_ImportSummaryByDate_2>();
+            DoTest<Client_ImportSummaryByDate_2>();
         }
 
         [Fact]
-        public async Task Test3()
+        public void Test3()
         {
-            await DoTest<Client_ImportSummaryByDate_3>();
+            DoTest<Client_ImportSummaryByDate_3>();
         }
 
         [Fact]
-        public async Task Test4()
+        public void Test4()
         {
-            await DoTest<Client_ImportSummaryByDate_4>();
+            DoTest<Client_ImportSummaryByDate_4>();
         }
 
-        private async Task DoTest<TIndex>()
+        private void DoTest<TIndex>()
             where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new TIndex());
 

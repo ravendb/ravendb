@@ -148,7 +148,7 @@ class conflicts extends viewModelBase {
     }
 
     getUrlForConflict(conflictVersion: conflictVersion) {
-        return appUrl.forEditDoc(conflictVersion.id, null, 0, this.activeDatabase());
+        return appUrl.forEditDoc(conflictVersion.id, this.activeDatabase());
     }
 
     getTextForVersion(conflictVersion: conflictVersion) {

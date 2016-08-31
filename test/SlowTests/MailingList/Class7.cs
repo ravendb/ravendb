@@ -10,9 +10,9 @@ namespace SlowTests.MailingList
     public class Class7 : RavenTestBase
     {
         [Fact]
-        public async Task ThrowsOnUnindexedSorts()
+        public void ThrowsOnUnindexedSorts()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new PersonIndex().Execute(store);
 

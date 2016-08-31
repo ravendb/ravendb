@@ -8,7 +8,7 @@ class getEffectiveConflictResolutionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<configurationDocumentDto<replicationConfigDto>> {
-        var url = "/configuration/document/Raven/Replication/Config";
+        var url = "/configuration/document/Raven/Replication/Config";//TODO: use endpoints
         return this.query<configurationDocumentDto<replicationConfigDto>>(url, null, this.db);
     }
 

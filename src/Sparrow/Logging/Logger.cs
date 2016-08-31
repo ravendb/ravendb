@@ -5,13 +5,13 @@ namespace Sparrow.Logging
 {
     public class Logger
     {
-        private readonly LoggerSetup _parent;
+        private readonly LoggingSource _parent;
         private readonly string _source;
         private readonly string _logger;
         
         [ThreadStatic] private static LogEntry _logEntry;
 
-        public Logger(LoggerSetup parent,string source, string logger)
+        public Logger(LoggingSource parent,string source, string logger)
         {
             _parent = parent;
             _source = source;

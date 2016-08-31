@@ -7,7 +7,7 @@ namespace Sparrow.Utils
 {
     public class Threading
     {
-        private static readonly Logger _log = LoggerSetup.Instance.GetLogger<Threading>("Raven/Server");
+        private static readonly Logger _log = LoggingSource.Instance.GetLogger<Threading>("Raven/Server");
         private const int SCHED_OTHER = 0;
         private const int SCHED_RR = 2;
 

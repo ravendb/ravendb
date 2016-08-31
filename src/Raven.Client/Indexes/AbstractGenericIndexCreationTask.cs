@@ -160,7 +160,7 @@ namespace Raven.Client.Indexes
 
         protected void StoreAllFields(FieldStorage storage)
         {
-            StoresStrings.Add(Constants.AllFields, storage);
+            StoresStrings.Add(Constants.Indexing.Fields.AllFields, storage);
         }
 
         /// <summary>

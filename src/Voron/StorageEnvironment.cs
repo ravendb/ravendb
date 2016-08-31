@@ -104,7 +104,7 @@ namespace Voron
         {
             try
             {
-                _log = LoggerSetup.Instance.GetLogger<StorageEnvironment>(options.BasePath);
+                _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath);
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();

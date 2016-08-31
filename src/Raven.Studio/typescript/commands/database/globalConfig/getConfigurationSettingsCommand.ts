@@ -9,7 +9,7 @@ class getConfigurationSettingsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<configurationSettings> {
-        var url = "/configuration/settings";
+        var url = "/configuration/settings";//TODO: use endpoints
         var args = {
             key: this.keys
         };

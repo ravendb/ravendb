@@ -75,9 +75,9 @@ namespace SlowTests.MailingList
         }
 
 
-        private async Task TestIndexSetup(params AbstractIndexCreationTask<ObjectWithNullables>[] indexes)
+        private void TestIndexSetup(params AbstractIndexCreationTask<ObjectWithNullables>[] indexes)
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 foreach (var index in indexes)
                 {
@@ -87,27 +87,27 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanUseRaven20BoolIndex()
+        public void CanUseRaven20BoolIndex()
         {
-            await TestIndexSetup(new Raven20Style_NullableBoolean());
+            TestIndexSetup(new Raven20Style_NullableBoolean());
         }
 
         [Fact]
-        public async Task CanUseRaven25BoolIndex()
+        public void CanUseRaven25BoolIndex()
         {
-            await TestIndexSetup(new Raven25Style_NullableBoolean());
+            TestIndexSetup(new Raven25Style_NullableBoolean());
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanUseRaven20DateTimeIndex()
+        public void CanUseRaven20DateTimeIndex()
         {
-            await TestIndexSetup(new Raven20Style_NullableDateTimeOffset());
+            TestIndexSetup(new Raven20Style_NullableDateTimeOffset());
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanUseRaven25DateTimeIndex()
+        public void CanUseRaven25DateTimeIndex()
         {
-            await TestIndexSetup(new Raven25Style_NullableDateTimeOffset());
+            TestIndexSetup(new Raven25Style_NullableDateTimeOffset());
         }
     }
 }

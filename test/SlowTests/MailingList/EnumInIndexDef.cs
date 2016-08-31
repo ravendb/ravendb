@@ -10,9 +10,9 @@ namespace SlowTests.MailingList
     public class EnumInIndexDef : RavenTestBase
     {
         [Fact]
-        public async Task QueryById()
+        public void QueryById()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SomeDocumentIndex().Execute(store);
             }

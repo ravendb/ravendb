@@ -10,9 +10,9 @@ namespace SlowTests.MailingList
     public class IndexTest : RavenTestBase
     {
         [Fact]
-        public async Task FloatArrayIndexTest()
+        public void FloatArrayIndexTest()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new RatingByCategoryIndex());
 

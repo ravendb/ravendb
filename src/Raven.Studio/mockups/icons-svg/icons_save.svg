@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 19.2.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 64 64" style="enable-background:new 0 0 64 64;" xml:space="preserve">
+<style type="text/css">
+	.st0{display:none;}
+	.st1{display:inline;}
+	.st2{fill:none;}
+	.st3{fill:#010101;}
+</style>
+<g class="st0">
+	<rect class="st1" width="64" height="64"/>
+</g>
+<g>
+	<path class="st2" d="M32,34.6c-2.3,0-4.2,0.8-5.7,2.4c-1.5,1.6-2.3,3.5-2.3,5.7c0,2.2,0.8,4.1,2.3,5.6c1.5,1.5,3.4,2.3,5.7,2.3
+		s4.2-0.8,5.7-2.3c1.5-1.5,2.3-3.4,2.3-5.6c0-2.2-0.8-4.1-2.3-5.7C36.2,35.4,34.3,34.6,32,34.6z"/>
+	<rect x="13.3" y="13.3" class="st2" width="26.7" height="10.6"/>
+	<path d="M45.4,8H8V56H56V18.6L45.4,8z M37,40.6c-1.3,1.3-3,2-5,2s-3.6-0.7-5-2c-1.3-1.3-2-3-2-4.9c0-1.9,0.7-3.6,2-5
+		c1.3-1.4,3-2.1,5-2.1s3.6,0.7,5,2.1c1.3,1.4,2,3,2,5C39,37.6,38.3,39.3,37,40.6z M40,21.2H13.3v-7.8H40V21.2z"/>
+</g>
+</svg>

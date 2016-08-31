@@ -8,7 +8,7 @@ class getEffectiveCustomFunctionsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<configurationDocumentDto<customFunctionsDto>> {
-        var url = "/configuration/document/Raven/Javascript/Functions";
+        var url = "/configuration/document/Raven/Javascript/Functions";//TODO: use endpoints
         return this.query<configurationDocumentDto<customFunctionsDto>>(url, null, this.db);
     }
 

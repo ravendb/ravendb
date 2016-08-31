@@ -16,9 +16,9 @@ namespace SlowTests.MailingList
     public class IndexTransformerTest : RavenTestBase
     {
         [Fact]
-        public async Task CanIndexAndQuery()
+        public void CanIndexAndQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SimpleTransformer().Execute(store);
                 new SimpleIndex().Execute(store);

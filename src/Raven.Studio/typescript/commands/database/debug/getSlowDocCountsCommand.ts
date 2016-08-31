@@ -12,7 +12,7 @@ class getSlowDocCountsCommand extends commandBase {
     private calculationCompleted = $.Deferred<debugDocumentStats>();
 
     execute(): JQueryPromise<operationIdDto> {
-        var url = "/debug/sl0w-d0c-c0unts";
+        var url = "/debug/sl0w-d0c-c0unts";//TODO: use endpoints
 
         return this.query<operationIdDto>(url, null, this.db)
             .done((response) => {

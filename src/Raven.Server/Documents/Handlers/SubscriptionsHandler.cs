@@ -94,7 +94,8 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    Database.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(writer, context, id);
+                    var data = Database.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(context, id);
+                    context.Write(writer, data);
                     writer.Flush();
                 }
             }

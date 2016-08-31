@@ -14,7 +14,6 @@ class globalConfigQuotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
 
     activated = ko.observable<boolean>(false);
-    settingsAccess = new settingsAccessAuthorizer();
 
     maximumSize = ko.observable<number>();
     warningLimitThreshold = ko.observable<number>();
@@ -27,7 +26,7 @@ class globalConfigQuotas extends viewModelBase {
         super.canActivate(args);
 
         var deferred = $.Deferred();
-        if (this.settingsAccess.isForbidden()) {
+        if (settingsAccessAuthorizer.isForbidden()) {
             deferred.resolve({ can: true });
         } else {
             // fetch current quotas from the database
@@ -41,7 +40,7 @@ class globalConfigQuotas extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.initializeDirtyFlag();
-        this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !settingsAccessAuthorizer.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     private fetchQuotas(db: database): JQueryPromise<any> {

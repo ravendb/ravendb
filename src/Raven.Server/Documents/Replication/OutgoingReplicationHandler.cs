@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Replication
         {
             _database = database;
             _destination = destination;
-            _log = LoggerSetup.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
+            _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _database.Notifications.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Replication
                 // the other side already have (based on the change vector).
                 if (DateTime.UtcNow - _lastSentTime > _minimalHeartbeatInterval)
                     _waitForChanges.Set();
-			}
+            }
         }
 
         private string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
@@ -265,13 +265,13 @@ namespace Raven.Server.Documents.Replication
                 {
                     _cts.Token.ThrowIfCancellationRequested();					
 
-					foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(_context, lastEtag, 0, 1024))
+                    foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(_context, lastEtag, 0, 1024))
                     {
                         if (sp.ElapsedMilliseconds > timeout)
                             break;
-						_cts.Token.ThrowIfCancellationRequested(); //cancel in the middle of a batch
+                        _cts.Token.ThrowIfCancellationRequested(); //cancel in the middle of a batch
 
-						lastEtag = document.Etag;
+                        lastEtag = document.Etag;
 
                         if (ShouldSkipReplication(document.Key))
                         {
@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 _log.Info($"Skipping replication of {document.Key} because it is a system document");
                             }
-							continue;
+                            continue;
                         }
 
                         // destination already has it
@@ -299,10 +299,10 @@ namespace Raven.Server.Documents.Replication
                         break;
 
                     // if we are at the end, we are done
-	                if (lastEtag == DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction))
-	                {
-		                break;
-	                }
+                    if (lastEtag == DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction))
+                    {
+                        break;
+                    }
                 }
 
                 if (_log.IsInfoEnabled)
@@ -341,13 +341,13 @@ namespace Raven.Server.Documents.Replication
                     $"Starting sending replication batch ({_database.Name}) with {docs.Count:#,#;;0} docs and last etag {lastEtag}");
 
             var sw = Stopwatch.StartNew();
-	        var headerJson = new DynamicJsonValue
-	        {
-		        ["Type"] = "ReplicationBatch",
-		        ["LastEtag"] = lastEtag,
-		        ["Documents"] = docs.Count
-	        };
-	        _context.Write(_writer, headerJson);
+            var headerJson = new DynamicJsonValue
+            {
+                ["Type"] = "ReplicationBatch",
+                ["LastEtag"] = lastEtag,
+                ["Documents"] = docs.Count
+            };
+            _context.Write(_writer, headerJson);
             _writer.Flush();
             foreach (var document in docs)
             {
@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.Replication
             if (_sendingThread != Thread.CurrentThread)
             {
                 _sendingThread?.Join();
-			}
+            }
 
 
         }

@@ -57,9 +57,9 @@ namespace SlowTests.MailingList
 
 
         [Fact]
-        public async System.Threading.Tasks.Task GenerateCorrectIndex()
+        public void GenerateCorrectIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.FindIdentityProperty = info => info.Name == "id";
                 new Task_Index().Execute(store);

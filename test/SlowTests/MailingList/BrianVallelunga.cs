@@ -26,9 +26,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanProjectAndSort()
+        public void CanProjectAndSort()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -56,9 +56,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanSort()
+        public void CanSort()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -85,9 +85,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanProjectAndSort_Remote()
+        public void CanProjectAndSort_Remote()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -115,9 +115,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanSort_Remote()
+        public void CanSort_Remote()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

@@ -14,7 +14,7 @@ class queryIndexDebugDocsCommand extends commandBase {
             startsWith: this.startsWith
         };
         
-        var url = "/indexes/" + this.indexName;
+        var url = "/indexes/" + this.indexName;//TODO: use endpoints
         return this.query(url, args, this.db, r => r.Results);
     }
 }

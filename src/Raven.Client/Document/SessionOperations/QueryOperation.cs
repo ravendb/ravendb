@@ -177,7 +177,7 @@ namespace Raven.Client.Document.SessionOperations
                 return (T)(object)new DynamicJsonObject(result);
             }
 
-            var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
+            var documentId = result.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName); //check if the result contain the reserved name
 
             if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
                                                                                     // We are projecting one field only (although that could be derived from the

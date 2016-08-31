@@ -1,3 +1,4 @@
+import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 import counterStorageStatistics = require("models/counter/counterStorageStatistics");
@@ -25,7 +26,11 @@ class counterStorage extends resource{
 
     activate() {
         this.isLoaded(true);
-        ko.postbox.publish("ActivateCounterStorage", this);
+        ko.postbox.publish(EVENTS.Resource.Activate,
+        {
+            type: TenantType.CounterStorage,
+            resource: this
+        });
     }
 
     saveStatistics(dto: counterStorageStatisticsDto) {

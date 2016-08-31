@@ -10,9 +10,9 @@ namespace SlowTests.MailingList
     public class BadTransformer : RavenTestBase
     {
         [Fact]
-        public async Task CanCreateTransformer()
+        public void CanCreateTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserOrderSummaryTransformer().Execute(store);
             }

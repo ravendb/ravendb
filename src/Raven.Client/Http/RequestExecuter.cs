@@ -22,7 +22,7 @@ namespace Raven.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
-        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
 
         public readonly JsonContextPool ContextPool;
 

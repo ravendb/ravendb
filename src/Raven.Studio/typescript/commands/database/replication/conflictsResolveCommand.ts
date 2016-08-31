@@ -21,7 +21,7 @@ class conflictsResolveCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var promise = $.Deferred();
 
-        var url = "/studio-tasks/replication/conflicts/resolve?resolution=" + this.resolution;
+        var url = "/studio-tasks/replication/conflicts/resolve?resolution=" + this.resolution;//TODO: use endpoints
         this.post(url, null, this.ownerDb)
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to start conflict resolution!", response.responseText, response.statusText);

@@ -59,7 +59,7 @@ namespace FastTests.Voron.Bugs
 
                 env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
 
-                Assert.Equal(1, env.ScratchBufferPool.GetNumberOfAllocations(0)); // we expect 1 page because the journal applicator calls ModifyPage(0) to force flushing
+                Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0)); 
             }
         }
     }

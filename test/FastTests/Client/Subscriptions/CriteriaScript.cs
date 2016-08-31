@@ -15,7 +15,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task BasicCriteriaTest()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
                 await CreateDocuments(store, 1);

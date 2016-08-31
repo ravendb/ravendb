@@ -15,7 +15,7 @@ namespace SlowTests.Smuggler
             var fileInfo = new FileInfo(file);
             Assert.True(fileInfo.Exists);
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), fileInfo.FullName);
 

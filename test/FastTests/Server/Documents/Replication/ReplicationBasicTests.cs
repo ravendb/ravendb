@@ -12,15 +12,15 @@ namespace FastTests.Server.Documents.Replication
         {
             public string Name { get; set; }
             public int Age { get; set; }
-        }	   
+        }
 
-		[Fact]
-        public async Task Master_master_replication_from_etag_zero_without_conflict_should_work()
+        [Fact]
+        public void Master_master_replication_from_etag_zero_without_conflict_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store1);
@@ -69,12 +69,12 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Master_slave_replication_from_etag_zero_should_work()
+        public void Master_slave_replication_from_etag_zero_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
                 SetupReplication(store1, store2);
 
@@ -109,12 +109,12 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Master_slave_replication_with_multiple_PUTS_should_work()
+        public void Master_slave_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
                 SetupReplication(store1, store2);
 
@@ -177,12 +177,12 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Master_master_replication_with_multiple_PUTS_should_work()
+        public void Master_master_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store1);
@@ -267,12 +267,12 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact(Skip = "WIP, not ready to run yet")]
-        public async Task Master_slave_replication_with_exceptions_should_work()
+        public void Master_slave_replication_with_exceptions_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
                 //TODO : configure test code to throw exceptions at server-side during replication
                 //TODO : (find a way to do so)

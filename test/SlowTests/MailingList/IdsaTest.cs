@@ -20,9 +20,9 @@ namespace SlowTests.MailingList
     public class IdsaTest : RavenTestBase
     {
         [Fact]
-        public async Task CanGetEmptyCollection()
+        public void CanGetEmptyCollection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new CasinosSuspensionsIndex().Execute(store);
 

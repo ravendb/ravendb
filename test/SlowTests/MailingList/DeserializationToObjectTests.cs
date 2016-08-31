@@ -8,10 +8,10 @@ namespace SlowTests.MailingList
     public class DeserializationToObjectTests : RavenTestBase
     {
         [Fact]
-        public async Task Query_GivenDbWithComplexObjects_ShouldDeserializePropertiesToOriginalType()
+        public void Query_GivenDbWithComplexObjects_ShouldDeserializePropertiesToOriginalType()
         {
             // Arrange
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
 
                 using (var session = documentStore.OpenSession())

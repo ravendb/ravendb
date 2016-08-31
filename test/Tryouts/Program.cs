@@ -1,21 +1,22 @@
 ﻿using System;
-using FastTests.Server.Documents.Replication;
+using System.Threading.Tasks;
+using SlowTests.Core.Indexing;
+using SlowTests.SlowTests.Bugs;
 
 namespace Tryouts
 {
-
     public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-	        for (int i = 0; i < 1000; i++)
-	        {
-				Console.WriteLine(i);
-		        using (var f = new ReplicationConflictsTests())
-		        {
-			        f.Conflict_should_work_on_master_slave_slave().Wait();
-		        }
-	        }
+            Parallel.For(0, 1000, i =>
+            {
+                using (var x = new Fanout())
+                {
+                    x.ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded();
+                }
+                Console.WriteLine(i);
+            });
         }
     }
 }

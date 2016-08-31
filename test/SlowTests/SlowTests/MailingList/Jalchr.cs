@@ -19,9 +19,9 @@ namespace SlowTests.SlowTests.MailingList
     public class Jalchr : RavenTestBase
     {
         [Fact]
-        public async Task CanGetIdWithCorrectCase()
+        public void CanGetIdWithCorrectCase()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
@@ -60,9 +60,9 @@ namespace SlowTests.SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanGetIdWithCorrectCaseWithTransforms()
+        public void CanGetIdWithCorrectCaseWithTransforms()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;

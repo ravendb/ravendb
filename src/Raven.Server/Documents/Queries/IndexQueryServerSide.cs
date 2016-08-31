@@ -52,9 +52,12 @@ namespace Raven.Server.Documents.Queries
                         case "fetch":
                             result.FieldsToFetch = item.Value;
                             break;
-                        case "defaultField":
+                        case "operator":
                             result.DefaultOperator = "And".Equals(item.Value[0], StringComparison.OrdinalIgnoreCase) ?
                                                             QueryOperator.And : QueryOperator.Or;
+                            break;
+                        case "defaultField":
+                            result.DefaultField = item.Value;
                             break;
                         case "sort":
                             result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();

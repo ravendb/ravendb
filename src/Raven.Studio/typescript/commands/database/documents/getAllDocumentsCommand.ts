@@ -35,7 +35,7 @@ class getAllDocumentsCommand extends commandBase {
         };
 
         var docSelector = (docs: documentDto[]) => docs.map(d => new document(d));
-        return this.query("/docs", args, this.ownerDatabase, docSelector);
+        return this.query("/docs", args, this.ownerDatabase, docSelector);//TODO: use endpoints
     }
 
     private fetchTotalResultCount(): JQueryPromise<number> {

@@ -16,9 +16,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryArrayWithContains()
+        public void CanQueryArrayWithContains()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -38,9 +38,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryListWithContainsAny()
+        public void CanQueryListWithContainsAny()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -71,9 +71,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryListWithContainsAll()
+        public void CanQueryListWithContainsAll()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -104,9 +104,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task DoesNotSupportStrings()
+        public void DoesNotSupportStrings()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

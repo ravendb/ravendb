@@ -8,7 +8,7 @@ class getStatusDebugTasksCommand extends commandBase {
     }
 
     execute(): JQueryPromise<taskMetadataDto[]> {
-        var url = "/debug/tasks";
+        var url = "/debug/tasks";//TODO: use endpoints
         return this.query<taskMetadataDto[]>(url, null, this.db);
     }
 }

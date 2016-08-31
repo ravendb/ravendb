@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Workers
@@ -33,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
-            _logger = LoggerSetup.Instance
+            _logger = LoggingSource.Instance
                 .GetLogger<MapDocuments>(indexStorage.DocumentDatabase.Name);
         }
 

@@ -22,9 +22,9 @@ namespace SlowTests.Core.Querying
     public class Filtering : RavenTestBase
     {
         [Fact]
-        public async Task BasicFiltering()
+        public void BasicFiltering()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

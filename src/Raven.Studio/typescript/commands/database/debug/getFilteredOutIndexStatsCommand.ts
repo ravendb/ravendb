@@ -9,7 +9,7 @@ class getFilteredOutIndexStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<filteredOutIndexStatDto[]> {
-        var url = "/debug/filtered-out-indexes";
+        var url = "/debug/filtered-out-indexes";//TODO: use endpoints
         var parser = d3.time.format.iso;
 
         return this.query<filteredOutIndexStatDto[]>(url, null, this.db, result => {

@@ -12,14 +12,14 @@ class startRestoreCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var result = $.Deferred();
 
-        new deleteDocumentCommand('Raven/Restore/Status', null)
+        new deleteDocumentCommand('Raven/Restore/Status', null)//TODO: use endpoints
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to delete restore status document!", response.responseText, response.statusText);
                 result.reject();
             })
             .done(_=> {
-                this.post('/admin/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })
+                this.post('/admin/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })//TODO: use endpoints
                     .fail((response: JQueryXHR) => {
                         this.reportError("Failed to restore backup!", response.responseText, response.statusText);
                         this.logError(response, result);

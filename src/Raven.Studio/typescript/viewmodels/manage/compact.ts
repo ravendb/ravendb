@@ -5,6 +5,7 @@ import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
 import startFsCompactCommand = require("commands/filesystem/startCompactCommand");
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class resourceCompact {
     resourceName = ko.observable<string>('');
@@ -60,14 +61,14 @@ class resourceCompact {
 
 }
 class compact extends viewModelBase {
-    private dbCompactOptions = new resourceCompact(this, database.type, shell.databases);
-    private fsCompactOptions = new resourceCompact(this, filesystem.type, shell.fileSystems);
+    private dbCompactOptions: resourceCompact = new resourceCompact(this, database.type, shell.databases);
+    private fsCompactOptions: resourceCompact = new resourceCompact(this, filesystem.type, shell.fileSystems);
 
     isBusy = ko.observable<boolean>();
     isForbidden = ko.observable<boolean>();
 
     canActivate(args: any): any {
-        this.isForbidden(shell.isGlobalAdmin() === false);
+        this.isForbidden(accessHelper.isGlobalAdmin() === false);
         return true;
     }
 

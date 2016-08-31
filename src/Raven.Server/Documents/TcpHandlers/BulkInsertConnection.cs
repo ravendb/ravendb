@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -23,12 +24,8 @@ namespace Raven.Server.Documents.TcpHandlers
         public static readonly byte[] WaitingMessage = Encoding.UTF8.GetBytes("{'Type': 'Waiting'}");
         public static readonly byte[] CompletedMessage = Encoding.UTF8.GetBytes("{'Type': 'Completed'}");
 
-        private readonly DocumentDatabase _database;
-        private readonly JsonOperationContext _context;
-        private readonly Stream _stream;
-
+        public readonly TcpConnectionOptions TcpConnection;
         private readonly Logger _logger;
-        private readonly JsonOperationContext.MultiDocumentParser _multiDocumentParser;
 
         private class BulkInsertDoc
         {
@@ -49,13 +46,10 @@ namespace Raven.Server.Documents.TcpHandlers
         private Task _replyToCustomer;
         private Task _insertDocuments;
 
-        public BulkInsertConnection(DocumentDatabase database, JsonOperationContext context, Stream stream, Logger logger, JsonOperationContext.MultiDocumentParser multiDocumentParser)
+        public BulkInsertConnection(TcpConnectionOptions tcpConnection, Logger logger)
         {
-            _database = database;
-            _context = context;
-            _stream = stream;
+            TcpConnection = tcpConnection;
             _logger = logger;
-            _multiDocumentParser = multiDocumentParser;
         }
 
         public void Execute()
@@ -80,7 +74,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 _messagesToClient.Add(CompletedMessage);
                 _messagesToClient.CompleteAdding();
                 _replyToCustomer.Wait();
-                _stream.Flush(); // make sure that everyting goes to the client
+                TcpConnection.Stream.Flush(); // make sure that everyting goes to the client
             }
             catch (AggregateException e)
             {
@@ -143,12 +137,17 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             try
             {
-                var error = _context.ReadObject(new DynamicJsonValue
+                var error = TcpConnection.Context.ReadObject(new DynamicJsonValue
                 {
                     ["Type"] = "Error",
                     ["Exception"] = e.ToString()
                 }, "error/message");
-                _context.Write(_stream, error);
+
+                using (var countingStream = new CountingStream(TcpConnection.Stream))
+                {
+                    TcpConnection.Context.Write(countingStream, error);
+                    TcpConnection.RegisterBytesSent(countingStream.NumberOfWrittenBytes);
+                }
             }
             catch (Exception errorSending)
             {
@@ -170,14 +169,15 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     return;
                 }
-                _stream.Write(bytes, 0, bytes.Length);
+                TcpConnection.Stream.Write(bytes, 0, bytes.Length);
+                TcpConnection.RegisterBytesSent(bytes.Length);
             }
         }
 
         private void InsertDocuments()
         {
             DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 int totalSize = 0;
                 var docsToWrite = new List<BulkInsertDoc>();
@@ -249,18 +249,18 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             string docKey;
                             BlittableJsonReaderObject metadata;
-                            if (reader.TryGet(Constants.Metadata, out metadata) == false)
+                            if (reader.TryGet(Constants.Metadata.Key, out metadata) == false)
                             {
                                 const string message = "'@metadata' is missing in received document for bulk insert";
                                 throw new InvalidDataException(message);
                             }
-                            if (metadata.TryGet(Constants.MetadataDocId, out docKey) == false)
+                            if (metadata.TryGet(Constants.Metadata.Id, out docKey) == false)
                             {
                                 const string message = "'@id' is missing in received document for bulk insert";
                                 throw new InvalidDataException(message);
                             }
 
-                            _database.DocumentsStorage.Put(context, docKey, null, reader);
+                            TcpConnection.DocumentDatabase.DocumentsStorage.Put(context, docKey, null, reader);
 
                         }
                         tx.Commit();
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             tx.Commit();
                         }
                         bool lockTaken = false;
-                        var journal = _database.DocumentsStorage.Environment.Journal;
+                        var journal = TcpConnection.DocumentDatabase.DocumentsStorage.Environment.Journal;
                         Debug.Assert(journal != null);
                         using (journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                         {
@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         if (hasFreeBuffer == false)
                         {
-                            var allocatedMemoryData = _context.GetMemory(len);
+                            var allocatedMemoryData = TcpConnection.Context.GetMemory(len);
                             buffer = new BulkInsertDoc
                             {
                                 Memory = allocatedMemoryData,
@@ -386,7 +386,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     while (len > 0)
                     {
-                        var read = _multiDocumentParser.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
+                        var read = TcpConnection.MultiDocumentParser.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
+                        TcpConnection.RegisterBytesReceived(read);
                         if (read == 0)
                             throw new EndOfStreamException("Could not read expected document");
                         len -= read;
@@ -416,7 +417,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 if (shift == 35)
                     throw new FormatException("Bad variable size int");
-                int r = _multiDocumentParser.ReadByte();
+                int r = TcpConnection.MultiDocumentParser.ReadByte();
                 if (r == -1)
                     return -1;
                 b = (byte)r;
@@ -431,16 +432,23 @@ namespace Raven.Server.Documents.TcpHandlers
             _docsToRelease.Dispose();
             _docsToWrite.Dispose();
             _messagesToClient.Dispose();
+            try
+            {
+                TcpConnection.Dispose();
+            }
+            catch (Exception)
+            {
+            }
         }
 
-        public static void Run(TcpConnectionParams tcpConnectionParams)
+        public static void Run(TcpConnectionOptions tcpConnectionOptions)
         {
             var bulkInsertThread = new Thread(() =>
             {
-                var logger = LoggerSetup.Instance.GetLogger<BulkInsertConnection>(tcpConnectionParams.DocumentDatabase.Name);
+                var logger = LoggingSource.Instance.GetLogger<BulkInsertConnection>(tcpConnectionOptions.DocumentDatabase.Name);
                 try
                 {
-                    using (var bulkInsert = new BulkInsertConnection(tcpConnectionParams.DocumentDatabase, tcpConnectionParams.Context, tcpConnectionParams.Stream, logger, tcpConnectionParams.MultiDocumentParser))
+                    using (var bulkInsert = new BulkInsertConnection(tcpConnectionOptions, logger))
                     {
                         bulkInsert.Execute();
                     }
@@ -453,9 +461,9 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     try
                     {
-                        using (var writer = new BlittableJsonTextWriter(tcpConnectionParams.Context, tcpConnectionParams.Stream))
+                        using (var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context, tcpConnectionOptions.Stream))
                         {
-                            tcpConnectionParams.Context.Write(writer, new DynamicJsonValue
+                            tcpConnectionOptions.Context.Write(writer, new DynamicJsonValue
                             {
                                 ["Type"] = "Error",
                                 ["Exception"] = e.ToString()
@@ -468,7 +476,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 finally
                 {
-                    tcpConnectionParams.Dispose();
+                    tcpConnectionOptions.Dispose();
                 }
             })
             {

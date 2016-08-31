@@ -13,12 +13,12 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task DifferentKeysWithTheSameFirst127CharactersAreDifferent()
+        public void DifferentKeysWithTheSameFirst127CharactersAreDifferent()
         {
             var identicalPrefix = new string('x', 127);
             var aId = identicalPrefix + "a";
             var bId = identicalPrefix + "b";
-            using (var s = await GetDocumentStore())
+            using (var s = GetDocumentStore())
             {
                 using (var session = s.OpenSession())
                 {

@@ -19,7 +19,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public async Task Group_by_string_calculate_count()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -108,7 +108,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public async Task Group_by_string_calculate_sum()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -248,9 +248,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Fact]
-        public async Task Group_by_does_not_support_custom_equality_comparer()
+        public void Group_by_does_not_support_custom_equality_comparer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -271,7 +271,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public async Task Can_project_in_map_reduce()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -317,7 +317,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 Assert.Equal(2, results.Results.Count);
                 Assert.True(results.Results.All(x => x.Keys.Count == 2));
                 Assert.True(results.Results.All(x => x.ContainsKey("City")));
-                Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata)));
+                Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata.Key)));
                 Assert.True(results.Results.Any(x => x.Value<string>("City") == "Torun"));
                 Assert.True(results.Results.Any(x => x.Value<string>("City") == "Hadera"));
             }
@@ -326,7 +326,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public async Task Order_by_string_integer_and_decimal_fields()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -445,9 +445,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Fact]  
-        public async Task Group_by_nested_field_sum_on_collection()
+        public void Group_by_nested_field_sum_on_collection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

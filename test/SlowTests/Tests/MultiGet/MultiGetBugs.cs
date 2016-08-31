@@ -30,9 +30,9 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task CanUseStats()
+        public void CanUseStats()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

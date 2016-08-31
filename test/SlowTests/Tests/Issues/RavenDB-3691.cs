@@ -8,9 +8,9 @@ namespace SlowTests.Tests.Issues
     public class RavenDB_3691 : RavenTestBase
     {
         [Fact]
-        public async Task CanPutDocumentWithMetadataPropertyBeingNull()
+        public void CanPutDocumentWithMetadataPropertyBeingNull()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put("test", null, new RavenJObject(), RavenJObject.FromObject(new { Foo = (string)null }));
             }

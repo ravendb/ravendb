@@ -171,7 +171,7 @@ namespace Raven.Client.Connection
                         if (docResult == null)
                             return;
 
-                        var metadata = docResult[Constants.Metadata];
+                        var metadata = docResult[Constants.Metadata.Key];
                         if (metadata == null)
                             return;
 
@@ -194,7 +194,7 @@ namespace Raven.Client.Connection
                 }
                 if (result.ContainsKey("Conflicts"))
                 {
-                    var id = response.Headers[Constants.DocumentIdFieldName];
+                    var id = response.Headers[Constants.Indexing.Fields.DocumentIdFieldName];
                     var etag = response.GetEtagHeader();
 
                     await TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(

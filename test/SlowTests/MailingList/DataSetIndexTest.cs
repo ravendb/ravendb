@@ -17,9 +17,9 @@ namespace SlowTests.MailingList
         private const int MaxNumberOfItemsInDataSet = 50;
 
         [Fact(Skip = "Missing feature: CreateField")]
-        public async Task can_execute_query_default()
+        public void can_execute_query_default()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
             {
                 new DataSetIndex().Execute(store);
 
@@ -45,9 +45,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "Missing feature: CreateField")]
-        public async Task can_execute_query_lazily()
+        public void can_execute_query_lazily()
         {
-            using (var store = await GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
             {
                 new DataSetIndex().Execute(store);
 

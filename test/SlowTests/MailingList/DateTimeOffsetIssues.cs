@@ -18,9 +18,9 @@ namespace SlowTests.MailingList
         [InlineData("2011-11-05T13:09:17.5402774")]
         [InlineData("2011-11-05T13:09:17.540277")]
 
-        public async Task Adding_DateTimeOffset_To_metadata_should_fetch_it_as_DateTimeOffset(string expectedDateTimeString)
+        public void Adding_DateTimeOffset_To_metadata_should_fetch_it_as_DateTimeOffset(string expectedDateTimeString)
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
                 // Arrange
@@ -81,9 +81,9 @@ namespace SlowTests.MailingList
         [Theory]
         [InlineData("2011-11-05T13:09:17.5402774")]
         [InlineData("2011-11-05T13:09:17.540277")]
-        public async Task Adding_DateTime_to_metadata_should_fetch_it_as_DateTime(string expectedDateTimeString)
+        public void Adding_DateTime_to_metadata_should_fetch_it_as_DateTime(string expectedDateTimeString)
         {
-            using (var _documentStore = await GetDocumentStore())
+            using (var _documentStore = GetDocumentStore())
             {
 
                 // Arrange

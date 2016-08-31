@@ -20,9 +20,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanSaveAndLoad()
+        public void CanSaveAndLoad()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var dateTimeOffset = DateTimeOffset.Now;
                 using (var session = store.OpenSession())

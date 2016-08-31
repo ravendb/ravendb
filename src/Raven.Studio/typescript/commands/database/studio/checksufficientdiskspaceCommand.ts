@@ -11,7 +11,7 @@ class checkSufficientDiskSpaceCommand extends commandBase {
         var args = {
             fileSize: this.fileSize
         }
-        var url = "/studio-tasks/check-sufficient-diskspace";
+        var url = "/studio-tasks/check-sufficient-diskspace";//TODO: use endpoints
         var checkTask = this.query(url, args, this.database, undefined, { dataType: undefined });
 
         return checkTask;

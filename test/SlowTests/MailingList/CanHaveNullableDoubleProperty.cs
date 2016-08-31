@@ -16,9 +16,9 @@ namespace SlowTests.MailingList
     public class CanHaveNullableDoubleProperty : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task WillSupportNullableDoubles()
+        public void WillSupportNullableDoubles()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -43,9 +43,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task WillSupportNullableDoubles2()
+        public void WillSupportNullableDoubles2()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.RegisterListener(new NoStaleQueriesAllowed());
                 store.Initialize();

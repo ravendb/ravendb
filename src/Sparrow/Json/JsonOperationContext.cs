@@ -79,7 +79,12 @@ namespace Sparrow.Json
             return (byte*)_tempBuffer.Address;
         }
 
-        public AllocatedMemoryData GetMemory(int requestedSize, bool longLived = false)
+        public AllocatedMemoryData GetMemory(int requestedSize)
+        {
+            return GetMemory(requestedSize, longLived: false);
+        }
+
+        private AllocatedMemoryData GetMemory(int requestedSize, bool longLived)
         {
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));

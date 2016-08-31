@@ -7,7 +7,7 @@ class getReplicationStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<replicationStatsDocumentDto> {
-        return this.query("/replication/info", null, this.db);
+        return this.query("/replication/info", null, this.db);//TODO: use endpoints
     }
 }
 

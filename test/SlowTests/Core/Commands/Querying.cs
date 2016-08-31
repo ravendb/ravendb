@@ -25,10 +25,10 @@ namespace SlowTests.Core.Commands
     public class Querying : RavenTestBase
     {
         [Fact]
-        public async Task CanDoSimpleQueryOnDatabase()
+        public void CanDoSimpleQueryOnDatabase()
         {
             const string indexName = "CompaniesByName";
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var contact1 = new Contact { FirstName = "Expression Name" };
                 var contact2 = new Contact { FirstName = "Expression First Name" };
@@ -53,9 +53,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public async Task CanProcessLongQueryString()
+        public void CanProcessLongQueryString()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -103,9 +103,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: Streaming")]
-        public async Task CanStreamQueryResult()
+        public void CanStreamQueryResult()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Users_ByName();
                 index.Execute(store);
@@ -129,9 +129,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: Facets")]
-        public async Task CanGetFacets()
+        public void CanGetFacets()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new CameraCost();
                 index.Execute(store);
@@ -310,9 +310,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: Suggestions")]
-        public async Task CanGetSuggestions()
+        public void CanGetSuggestions()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Users_ByName();
                 index.Execute(store);

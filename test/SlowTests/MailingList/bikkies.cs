@@ -10,9 +10,9 @@ namespace SlowTests.MailingList
     public class bikkies : RavenTestBase
     {
         [Fact]
-        public async Task ShouldGetCategoryValues()
+        public void ShouldGetCategoryValues()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Activity_WithCategory().Execute(store);
                 new Activity_WithCategoryTransformer().Execute(store);

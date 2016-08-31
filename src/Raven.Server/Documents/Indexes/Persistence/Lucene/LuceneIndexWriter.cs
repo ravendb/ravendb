@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             maxFieldLength = mfl;
             _indexReaderWarmer = indexReaderWarmer;
             _documentDatabase = documentDatabase;
-            _logger = LoggerSetup.Instance.GetLogger<LuceneIndexWriter>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(documentDatabase.Name);
             RecreateIndexWriter();
         }
 

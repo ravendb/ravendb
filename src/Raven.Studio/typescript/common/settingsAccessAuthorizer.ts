@@ -1,36 +1,35 @@
-import shell = require("viewmodels/shell");
+/// <reference path="../../typings/tsd.d.ts"/>
+
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class settingsAccessAuthorizer {
-    isForbidden: KnockoutComputed<boolean>;
-    isReadOnly: KnockoutComputed<boolean>;
-    canWrite: KnockoutComputed<boolean>;
-    canReadOrWrite: KnockoutComputed<boolean>;
 
-    constructor() {
-        this.isForbidden = ko.computed(() => {
-            var globalAdmin = shell.isGlobalAdmin();
-            var canReadWriteSettings = shell.canReadWriteSettings();
-            var canReadSettings = shell.canReadSettings();
-            return !globalAdmin && !canReadWriteSettings && !canReadSettings;
-        });
-        this.isReadOnly = ko.computed(() => {
-            var globalAdmin = shell.isGlobalAdmin();
-            var canReadWriteSettings = shell.canReadWriteSettings();
-            var canReadSettings = shell.canReadSettings();
-            return !globalAdmin && !canReadWriteSettings && canReadSettings;
-        });
-        this.canReadOrWrite = ko.computed(() => {
-            var globalAdmin = shell.isGlobalAdmin();
-            var canReadWriteSettings = shell.canReadWriteSettings();
-            var canReadSettings = shell.canReadSettings();
-            return globalAdmin || canReadWriteSettings || canReadSettings;
-        });
-        this.canWrite = ko.computed(() => {
-            var globalAdmin = shell.isGlobalAdmin();
-            var canReadWriteSettings = shell.canReadWriteSettings();
-            return globalAdmin || canReadWriteSettings;
-        });
-    }
+    static isForbidden: KnockoutComputed<boolean> = ko.computed(() => {
+        var globalAdmin = accessHelper.isGlobalAdmin();
+        var canReadWriteSettings = accessHelper.canReadWriteSettings();
+        var canReadSettings = accessHelper.canReadSettings();
+        return !globalAdmin && !canReadWriteSettings && !canReadSettings;
+    });
+
+    static isReadOnly: KnockoutComputed<boolean> = ko.computed(() => {
+        var globalAdmin = accessHelper.isGlobalAdmin();
+        var canReadWriteSettings = accessHelper.canReadWriteSettings();
+        var canReadSettings = accessHelper.canReadSettings();
+        return !globalAdmin && !canReadWriteSettings && canReadSettings;
+    });
+
+    static canWrite: KnockoutComputed<boolean> = ko.computed(() => {
+        var globalAdmin = accessHelper.isGlobalAdmin();
+        var canReadWriteSettings = accessHelper.canReadWriteSettings();
+        var canReadSettings = accessHelper.canReadSettings();
+        return globalAdmin || canReadWriteSettings || canReadSettings;
+    });
+
+    static canReadOrWrite: KnockoutComputed<boolean> = ko.computed(() => {
+        var globalAdmin = accessHelper.isGlobalAdmin();
+        var canReadWriteSettings = accessHelper.canReadWriteSettings();
+        return globalAdmin || canReadWriteSettings;
+    });
 }
 
 export = settingsAccessAuthorizer;

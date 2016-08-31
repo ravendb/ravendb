@@ -21,9 +21,9 @@ namespace SlowTests.Tests.Querying
     public class UsingDynamicQueryWithRemoteServer : RavenTestBase
     {
         [Fact]
-        public async Task CanPerformDynamicQueryUsingClientLinqQuery()
+        public void CanPerformDynamicQueryUsingClientLinqQuery()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var blogOne = new Blog { Title = "one", Category = "Ravens" };
                 var blogTwo = new Blog { Title = "two", Category = "Rhinos" };
@@ -53,9 +53,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task CanPerformDynamicQueryUsingClientLuceneQuery()
+        public void CanPerformDynamicQueryUsingClientLuceneQuery()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var blogOne = new Blog { Title = "one", Category = "Ravens" };
                 var blogTwo = new Blog { Title = "two", Category = "Rhinos" };
@@ -85,9 +85,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task CanPerformProjectionUsingClientLinqQuery()
+        public void CanPerformProjectionUsingClientLinqQuery()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var blogOne = new Blog
                 {
@@ -117,9 +117,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task QueryForASpecificTypeDoesNotBringBackOtherTypes()
+        public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var s = documentStore.OpenSession())
                 {
@@ -136,9 +136,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task CanPerformLinqOrderByOnNumericField()
+        public void CanPerformLinqOrderByOnNumericField()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var blogOne = new Blog { SortWeight = 2 };
 
@@ -174,9 +174,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task CanPerformLinqOrderByOnTextField()
+        public void CanPerformLinqOrderByOnTextField()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var blogOne = new Blog { Title = "aaaaa" };
 
@@ -212,9 +212,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
+        public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var blogOne = new Blog
                 {
@@ -267,9 +267,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task CanPerformDynamicQueryWithHighlighting()
+        public void CanPerformDynamicQueryWithHighlighting()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 var blogOne = new Blog
                 {
@@ -325,9 +325,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task ExecutesQueryWithHighlightingsAgainstSimpleIndex()
+        public void ExecutesQueryWithHighlightingsAgainstSimpleIndex()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
                 documentStore.DatabaseCommands.PutIndex(
@@ -396,9 +396,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task ExecutesQueryWithHighlightingsAndProjections()
+        public void ExecutesQueryWithHighlightingsAndProjections()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
                 documentStore.DatabaseCommands.PutIndex(
@@ -450,9 +450,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
+        public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
         {
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
                 documentStore.DatabaseCommands.PutIndex(

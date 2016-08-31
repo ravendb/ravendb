@@ -35,7 +35,7 @@ namespace FastTests.Server.Documents.Expiration
         [Fact]
         public async Task CanAddEntityWithExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await SetupExpiration(store);
 
@@ -82,7 +82,7 @@ namespace FastTests.Server.Documents.Expiration
             var company = new { Name = "Company Name" };
             var companyJson = RavenJObject.FromObject(company);
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await SetupExpiration(store);
 

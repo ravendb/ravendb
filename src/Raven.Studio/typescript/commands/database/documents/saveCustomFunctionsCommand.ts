@@ -12,7 +12,7 @@ class saveCustomFunctionsCommand extends commandBase {
     }
 
     private validateCustomFunctions(document: string):JQueryPromise<any> {
-        return this.post("/studio-tasks/validateCustomFunctions", document, this.db, { dataType: 'text' });
+        return this.post("/studio-tasks/validateCustomFunctions", document, this.db, { dataType: 'text' });//TODO: use endpoints
     }
 
     execute(): JQueryPromise<any> {
@@ -21,7 +21,7 @@ class saveCustomFunctionsCommand extends commandBase {
         return this.validateCustomFunctions(args)
             .fail((response) => this.reportError("Failed to validate custom functions!", response.responseText, response.statusText))
             .then(() => {
-                var url = this.global ? "/docs?id=Raven/Global/Javascript/Functions" : "/docs?id=Raven/Javascript/Functions";
+                var url = this.global ? "/docs?id=Raven/Global/Javascript/Functions" : "/docs?id=Raven/Javascript/Functions";//TODO: use endpoints
                 var saveTask = this.put(url, args, this.db, null);
 
                 saveTask.done(() => this.reportSuccess("Custom functions saved!"));

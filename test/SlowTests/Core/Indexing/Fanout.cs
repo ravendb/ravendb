@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -6,6 +8,8 @@ using Raven.Client.Indexes;
 using Raven.Client.Indexing;
 using Xunit;
 using System.Linq;
+using System.Threading;
+using Newtonsoft.Json;
 
 namespace SlowTests.Core.Indexing
 {
@@ -33,13 +37,13 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded()
+        public void ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded()
         {
             var index = new UsersAndFriendsIndex();
             var definition = index.CreateIndexDefinition();
             definition.MaxIndexOutputsPerDocument = 2;
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -84,8 +88,10 @@ namespace SlowTests.Core.Indexing
 
                 WaitForIndexing(store);
 
-                var errors = store.DatabaseCommands.GetIndexErrors(index.IndexName);
+                SpinWait.SpinUntil(() => store.DatabaseCommands.GetIndexErrors(index.IndexName).Errors.Length > 0, 1000);
 
+                var errors = store.DatabaseCommands.GetIndexErrors(index.IndexName);
+                
                 Assert.Equal(1, errors.Errors.Length);
                 Assert.Contains("Index 'UsersAndFriends' has already produced 3 map results for a source document 'users/2'", errors.Errors[0].Error);
 

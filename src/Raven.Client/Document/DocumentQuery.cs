@@ -54,7 +54,7 @@ namespace Raven.Client.Document
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var identityProperty = DocumentConvention.GetIdentityProperty(typeof(TProjection));
-            var fields = propertyInfos.Select(p => (p == identityProperty) ? Constants.DocumentIdFieldName : p.Name).ToArray();
+            var fields = propertyInfos.Select(p => (p == identityProperty) ? Constants.Indexing.Fields.DocumentIdFieldName : p.Name).ToArray();
             return SelectFields<TProjection>(fields, projections);
         }
 
@@ -128,13 +128,13 @@ namespace Raven.Client.Document
         }
         public IDocumentQuery<T> OrderByScore()
         {
-            AddOrder(Constants.Headers.TemporaryScoreValue, false);
+            AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, false);
             return this;
         }
 
         public IDocumentQuery<T> OrderByScoreDescending()
         {
-            AddOrder(Constants.Headers.TemporaryScoreValue, true);
+            AddOrder(Constants.Indexing.Fields.IndexFieldScoreName, true);
             return this;
         }
 
@@ -822,7 +822,7 @@ namespace Raven.Client.Document
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
         public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
         {
-            return GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+            return GenerateQueryWithinRadiusOf(Constants.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
         }
 
         public IDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
@@ -840,7 +840,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
         {
-            OrderBy(Constants.DistanceFieldName);
+            OrderBy(Constants.Indexing.Fields.DistanceFieldName);
             return this;
         }
 
@@ -849,7 +849,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
             return this;
         }
 
@@ -858,7 +858,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string sortedFieldName)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
             return this;
         }
 

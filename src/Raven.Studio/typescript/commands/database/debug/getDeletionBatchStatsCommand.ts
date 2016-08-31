@@ -9,7 +9,7 @@ class getDeletionBatchStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<deletionBatchInfoDto[]> {
-        var url = "/debug/deletion-batch-stats";
+        var url = "/debug/deletion-batch-stats";//TODO: use endpoints
         var args = { lastId: this.lastId };
         var parser = d3.time.format.iso;
 

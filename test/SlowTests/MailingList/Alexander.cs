@@ -12,9 +12,9 @@ namespace SlowTests.MailingList
     public class Alexander : RavenTestBase
     {
         [Fact]
-        public async Task QueryById()
+        public void QueryById()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
                 store.Conventions.AllowQueriesOnId = true;

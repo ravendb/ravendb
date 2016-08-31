@@ -18,9 +18,9 @@ namespace SlowTests.Core.Querying
     public class Intersection : RavenTestBase
     {
         [Fact]
-        public async Task CanPerformIntersectQuery()
+        public void CanPerformIntersectQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TShirtIndex().Execute(store);
 

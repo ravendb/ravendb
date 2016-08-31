@@ -14,7 +14,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task String_where_clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -37,7 +37,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Numeric_range_where_clause()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -60,7 +60,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Where_clause_and_sorting()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -94,7 +94,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Sorting_by_doubles()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -120,7 +120,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Sorting_by_integers()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -146,7 +146,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Sorting_by_nested_string_field()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -184,7 +184,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Sorting_by_nested_integer_field()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -222,7 +222,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Sorting_by_strings()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -253,7 +253,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Partial_match()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -289,7 +289,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Empty_query()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -328,15 +328,15 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public async Task Can_project_in_map()
         {
-            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak", Age = 30 }).ConfigureAwait(false);
-                    await session.StoreAsync(new User { Name = "Arek", Age = 31 }).ConfigureAwait(false);
-                    await session.StoreAsync(new Order { ShipTo = new Address { City = "New York", Country = "USA" }, Employee = "Arek" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Fitzchak", Age = 30 });
+                    await session.StoreAsync(new User { Name = "Arek", Age = 31 });
+                    await session.StoreAsync(new Order { ShipTo = new Address { City = "New York", Country = "USA" }, Employee = "Arek" });
 
-                    await session.SaveChangesAsync().ConfigureAwait(false);
+                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenSession())

@@ -20,9 +20,9 @@ namespace SlowTests.Core.Bundles
     public class MoreLikeThis : RavenTestBase
     {
         [Fact]
-        public async Task CanUseBasicMoreLikeThis()
+        public void CanUseBasicMoreLikeThis()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Posts_ByTitleAndContent();
                 index.Execute(store);
@@ -57,9 +57,9 @@ namespace SlowTests.Core.Bundles
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanUseMoreLikeThisWithTransformer()
+        public void CanUseMoreLikeThisWithTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Posts_ByTitleAndContent();
                 index.Execute(store);
@@ -106,9 +106,9 @@ namespace SlowTests.Core.Bundles
         }
 
         [Fact]
-        public async Task CanUseMoreLikeThisWithIncludes()
+        public void CanUseMoreLikeThisWithIncludes()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Users_ByName();
                 index.Execute(store);

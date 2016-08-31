@@ -13,8 +13,9 @@ class getDocumentWithMetadataCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<document> {
-        let documentResult = $.Deferred<document>();
+    // we can't use JQueryPromise<document> here as it actually can return any schema
+    execute(): JQueryPromise<any> {
+        let documentResult = $.Deferred<any>();
         let postResult = this.post(endpoints.databases.document.docs, JSON.stringify([this.id]), this.db);
         postResult.fail((xhr: JQueryXHR) => documentResult.reject(xhr));
         postResult.done((queryResult: queryResultDto) => {

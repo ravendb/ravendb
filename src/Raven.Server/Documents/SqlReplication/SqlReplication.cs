@@ -2,33 +2,47 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
-using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.SqlReplication
 {
-    public class SqlReplication : BaseReplicationExecuter
+    public class SqlReplication : IDisposable
     {
         public readonly SqlReplicationConfiguration Configuration;
         public readonly SqlReplicationStatistics Statistics;
 
-        public override string ReplicationUniqueName => "Sql replication of " + Configuration.Name;
+        public string ReplicationUniqueName => "Sql replication of " + Configuration.Name;
+        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
         private bool _shouldWaitForChanges;
         private PredefinedSqlConnection _predefinedSqlConnection;
         public readonly SqlReplicationMetricsCountersManager MetricsCountersManager;
+        protected Logger _logger;
+        protected DocumentDatabase _database;
+        protected Thread _replicationThread;
+        protected bool _disposed;
+        protected CancellationTokenSource _cancellationTokenSource;
+        public AsyncManualResetEvent WaitForChanges;
 
         public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration)
-            : base(database)
         {
+            _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
+            _database = database;
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+            WaitForChanges = new AsyncManualResetEvent(_cancellationTokenSource.Token);
+
             Configuration = configuration;
             Statistics = new SqlReplicationStatistics(configuration.Name);
             MetricsCountersManager = new SqlReplicationMetricsCountersManager();
@@ -62,7 +76,7 @@ namespace Raven.Server.Documents.SqlReplication
             _database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        protected override Task ExecuteReplicationOnce()
+        protected Task ExecuteReplicationOnce()
         {
             if (Configuration.Disabled)
                 return Task.CompletedTask;
@@ -118,7 +132,7 @@ namespace Raven.Server.Documents.SqlReplication
             return Task.CompletedTask;
         }
 
-        protected override bool HasMoreDocumentsToSend()
+        protected bool HasMoreDocumentsToSend()
         {
             return _shouldWaitForChanges;
         }
@@ -127,7 +141,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             var pageSize = _database.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
-            var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, Statistics.LastTombstonesEtag + 1, 0, pageSize).ToList();
+            var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, Statistics.LastTombstonesEtag, 0, pageSize).ToList();
             if (documents.Count == 0)
                 return false;
 
@@ -326,6 +340,102 @@ namespace Raven.Server.Documents.SqlReplication
                 ["Results"] = new DynamicJsonArray(tableQuerySummaries),
                 ["LastAlert"] = Statistics.LastAlert,
             };
+        }
+
+        public void Start()
+        {
+            if (_replicationThread != null)
+                return;
+
+            _replicationThread = new Thread(() =>
+            {
+                // This has lower priority than request processing, so we let the OS
+                // schedule this appropriately
+                Threading.TryLowerCurrentThreadPriority();
+
+                //haven't found better way to synchronize async method
+                AsyncHelpers.RunSync(ExecuteReplicationLoop);
+            })
+            {
+                Name = $"Replication thread, {ReplicationUniqueName}",
+                IsBackground = true
+            };
+
+            _replicationThread.Start();
+        }
+
+        private async Task ExecuteReplicationLoop()
+        {
+            while (_cancellationTokenSource.IsCancellationRequested == false)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Starting replication for '{ReplicationUniqueName}'.");
+
+                WaitForChanges.Reset();
+
+                try
+                {
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                    await ExecuteReplicationOnce();
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Finished replication for '{ReplicationUniqueName}'.");
+                }
+                catch (OutOfMemoryException oome)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Out of memory occured for '{ReplicationUniqueName}'.", oome);
+                    // TODO [ppekrol] GC?
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Exception occured for '{ReplicationUniqueName}'.", e);
+                }
+
+                if (HasMoreDocumentsToSend())
+                    continue;
+
+                try
+                {
+                    //if this returns false, this means canceled token is activated                    
+                    if (await WaitForChanges.WaitAsync() == false)
+                        //thus, if code reaches here, cancellation token source has "cancel" requested
+                        return; 
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        }
+
+        public virtual void Dispose()
+        {
+            try
+            {
+                _cancellationTokenSource.Cancel();					
+            }
+            catch (ObjectDisposedException)
+            {
+                //precaution, should not happen
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("ObjectDisposedException thrown during replication executer disposal, should not happen. Something is wrong here.");
+            }
+            catch (AggregateException e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error during replication executer disposal, most likely it is a bug.",e);
+            }
+            finally
+            {
+                _disposed = true;
+            }
         }
     }
 }

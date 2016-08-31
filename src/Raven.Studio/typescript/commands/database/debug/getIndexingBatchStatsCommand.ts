@@ -10,7 +10,7 @@ class getIndexingBatchStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<indexingBatchInfoDto[]> {
-        var url = "/debug/indexing-batch-stats";
+        var url = "/debug/indexing-batch-stats";//TODO: use endpoints
         var entryMapping = (entry: { key: string, value: any}) => {
             return {
                 indexName: entry.key,
@@ -58,7 +58,7 @@ class getIndexingBatchStatsCommand extends commandBase {
     }
 
     private getQueryUrlFragment(): string {
-        return "/debug/indexing-perf-stats-with-timings";
+        return "/debug/indexing-perf-stats-with-timings";//TODO: use endpoints
     }
 }
 

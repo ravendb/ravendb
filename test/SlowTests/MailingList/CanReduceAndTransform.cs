@@ -72,9 +72,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task WillTransform()
+        public void WillTransform()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (IDocumentSession session = store.OpenSession())
                 {

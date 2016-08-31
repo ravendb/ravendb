@@ -18,8 +18,6 @@ class globalConfigPeriodicExport extends viewModelBase {
     settingsDocument = ko.observable<document>();
     activated = ko.observable<boolean>(false);
 
-    settingsAccess = new settingsAccessAuthorizer();
-
     backupSetup = ko.observable<periodicExportSetup>();
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -31,7 +29,7 @@ class globalConfigPeriodicExport extends viewModelBase {
         var db: database = null;
 
         if (db) {
-            if (this.settingsAccess.isForbidden()) {
+            if (settingsAccessAuthorizer.isForbidden()) {
                 deferred.resolve({ can: true });
             } else {
                 $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
@@ -48,7 +46,7 @@ class globalConfigPeriodicExport extends viewModelBase {
         var self = this;
         this.dirtyFlag = new ko.DirtyFlag([this.backupSetup]);
         this.isSaveEnabled = ko.computed(() => {
-            var isNotReadOnly = !this.settingsAccess.isReadOnly();
+            var isNotReadOnly = !settingsAccessAuthorizer.isReadOnly();
             var onDisk = self.backupSetup().onDiskExportEnabled();
             var remote = self.backupSetup().remoteUploadEnabled();
             var hasAnyOption = onDisk || remote;

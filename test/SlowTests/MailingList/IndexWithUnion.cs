@@ -33,9 +33,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanCreateIndex()
+        public void CanCreateIndex()
         {
-            using (var x = await GetDocumentStore())
+            using (var x = GetDocumentStore())
             {
                 new Index().Execute(x);
             }

@@ -33,12 +33,12 @@ namespace FastTests.Server.OAuth
             }
         };
 
-        public async Task CanGetDocWithValidToken()
+        public void CanGetDocWithValidToken()
         {
             DoNotReuseServer();
 
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            using (var store = await GetDocumentStore(apiKey: "super /" + apiKey.Secret))
+            using (var store = GetDocumentStore(apiKey: "super /" + apiKey.Secret))
             {
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
                 var doc = store.DatabaseCommands.GlobalAdmin.GetApiKey("super");
@@ -56,12 +56,12 @@ namespace FastTests.Server.OAuth
             }
         }
 
-        public async Task CanNotGetDocWithInalidToken()
+        public void CanNotGetDocWithInalidToken()
         {
             DoNotReuseServer();
 
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            using (var store = await GetDocumentStore(apiKey: "super/" + "bad secret"))
+            using (var store = GetDocumentStore(apiKey: "super/" + "bad secret"))
             {
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
                 var doc = store.DatabaseCommands.GlobalAdmin.GetApiKey("super");
@@ -76,11 +76,11 @@ namespace FastTests.Server.OAuth
         }
 
         [Fact]
-        public async Task CanStoreAndDeleteApiKeys()
+        public void CanStoreAndDeleteApiKeys()
         {
             DoNotReuseServer();
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
                 var doc = store.DatabaseCommands.GlobalAdmin.GetApiKey("super");
@@ -103,7 +103,7 @@ namespace FastTests.Server.OAuth
         public async Task CanGetTokenFromServer()
         {
             DoNotReuseServer();
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 StoreSampleDoc(store, "test/1");
 
@@ -141,12 +141,12 @@ namespace FastTests.Server.OAuth
             }
         }
 
-        public async Task ThrowOnForbiddenRequest()
+        public void ThrowOnForbiddenRequest()
         {
             DoNotReuseServer();
 
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-            using (var store = await GetDocumentStore(apiKey: "super/" + "secret"))
+            using (var store = GetDocumentStore(apiKey: "super/" + "secret"))
             {
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
                 var doc = store.DatabaseCommands.GlobalAdmin.GetApiKey("super");

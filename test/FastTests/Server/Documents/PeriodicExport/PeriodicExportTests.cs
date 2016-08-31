@@ -36,7 +36,7 @@ namespace FastTests.Server.Documents.PeriodicExport
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanSetupPeriodicExportWithVeryLargePeriods()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -59,7 +59,7 @@ namespace FastTests.Server.Documents.PeriodicExport
         [Fact, Trait("Category", "Smuggler")]
         public async Task PeriodicExport_should_work_with_long_intervals()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -87,7 +87,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                 SpinWait.SpinUntil(() => store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey).Result != null, 10000);
             }
 
-            using (var store = await GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
                 using (var session = store.OpenAsyncSession())
@@ -101,11 +101,11 @@ namespace FastTests.Server.Documents.PeriodicExport
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportToDirectory()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "oren"});
+                    await session.StoreAsync(new User { Name = "oren" });
                     await session.StoreAsync(new PeriodicExportConfiguration
                     {
                         Active = true,
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                 SpinWait.SpinUntil(() => store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey).Result != null, 10000);
             }
 
-            using (var store = await GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
 
@@ -133,11 +133,11 @@ namespace FastTests.Server.Documents.PeriodicExport
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportToDirectory_MultipleExports()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "oren"});
+                    await session.StoreAsync(new User { Name = "oren" });
                     await session.StoreAsync(new PeriodicExportConfiguration
                     {
                         Active = true,
@@ -155,25 +155,25 @@ namespace FastTests.Server.Documents.PeriodicExport
                         return false;
                     var periodicExportStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
                     return periodicExportStatus.LastDocsEtag > 0;
-                });
+                }, TimeSpan.FromSeconds(10));
 
                 var statusDocument = await store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
                 var etagForExports = statusDocument.Etag;
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "ayende"});
+                    await session.StoreAsync(new User { Name = "ayende" });
                     await session.SaveChangesAsync();
                 }
-                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports);
+                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports, TimeSpan.FromSeconds(10));
             }
 
-            using (var store = await GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var users = await session.LoadAsync<User>(new ValueType[] {1, 2});
+                    var users = await session.LoadAsync<User>(new ValueType[] { 1, 2 });
                     Assert.Equal("oren", users[0].Name);
                     Assert.Equal("ayende", users[1].Name);
                 }
@@ -183,7 +183,7 @@ namespace FastTests.Server.Documents.PeriodicExport
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportToDirectory_MultipleExports_with_long_interval()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -216,19 +216,19 @@ namespace FastTests.Server.Documents.PeriodicExport
                         return false;
                     var periodicExportStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
                     return periodicExportStatus.LastDocsEtag > 0;
-                });
+                }, TimeSpan.FromSeconds(10));
 
                 var statusDocument = await store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
                 var etagForExports = statusDocument.Etag;
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "ayende"});
+                    await session.StoreAsync(new User { Name = "ayende" });
                     await session.SaveChangesAsync();
                 }
-                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports);
+                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports, TimeSpan.FromSeconds(10));
             }
 
-            using (var store = await GetDocumentStore(dbSuffixIdentifier: "2"))
+            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
                 using (var session = store.OpenAsyncSession())

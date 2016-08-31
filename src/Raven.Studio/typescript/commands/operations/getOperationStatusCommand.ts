@@ -16,7 +16,7 @@ class getOperationStatusCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/operation/status";
+        var url = "/operation/status";//TODO: use endpoints
 
         var args = {
             id: this.operationId

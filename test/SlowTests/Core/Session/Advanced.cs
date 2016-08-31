@@ -18,9 +18,9 @@ namespace SlowTests.Core.Session
     public class Advanced : RavenTestBase
     {
         [Fact]
-        public async Task CanGetChangesInformation()
+        public void CanGetChangesInformation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -60,9 +60,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanUseEvict()
+        public void CanUseEvict()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -94,9 +94,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanUseClear()
+        public void CanUseClear()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -128,9 +128,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanUseIsLoaded()
+        public void CanUseIsLoaded()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -157,9 +157,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanUseRefresh()
+        public void CanUseRefresh()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -194,11 +194,11 @@ namespace SlowTests.Core.Session
         }
 
         [Fact(Skip = "Missing feature: Optimistic concurrency")]
-        public async Task CanUseOptmisticConcurrency()
+        public void CanUseOptmisticConcurrency()
         {
             const string entityId = "users/1";
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -226,9 +226,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanGetDocumentUrl()
+        public void CanGetDocumentUrl()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -244,13 +244,13 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanGetDocumentMetadata()
+        public void CanGetDocumentMetadata()
         {
             const string companyId = "companies/1";
             const string attrKey = "SetDocumentMetadataTestKey";
             const string attrVal = "SetDocumentMetadataTestValue";
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put(
                     companyId,
@@ -270,9 +270,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanUseNumberOfRequests()
+        public void CanUseNumberOfRequests()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -295,9 +295,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanUseMaxNumberOfRequestsPerSession()
+        public void CanUseMaxNumberOfRequestsPerSession()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -328,11 +328,11 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanMarkReadOnly()
+        public void CanMarkReadOnly()
         {
             const string categoryName = "MarkReadOnlyTest";
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -357,9 +357,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanGetEtagFor()
+        public void CanGetEtagFor()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put(
                     "companies/1",
@@ -377,12 +377,12 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanLazilyLoadEntity()
+        public void CanLazilyLoadEntity()
         {
             const string COMPANY1_ID = "companies/1";
             const string COMPANY2_ID = "companies/2";
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put(
                     COMPANY1_ID,
@@ -415,12 +415,12 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanExecuteAllPendingLazyOperations()
+        public void CanExecuteAllPendingLazyOperations()
         {
             const string COMPANY1_ID = "companies/1";
             const string COMPANY2_ID = "companies/2";
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put(
                     COMPANY1_ID,
@@ -455,9 +455,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanUseDefer()
+        public void CanUseDefer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -491,9 +491,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task CanAggressivelyCacheFor()
+        public void CanAggressivelyCacheFor()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

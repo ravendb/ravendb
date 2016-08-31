@@ -13,18 +13,18 @@ namespace SlowTests.MailingList
     public class AlexanderLapa : RavenTestBase
     {
         [Fact]
-        public async Task ExecuteIndex_Success()
+        public void ExecuteIndex_Success()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ResourceViewModels_ByTag().Execute(store);
             }
         }
 
         [Fact]
-        public async Task QueryIndex_Success()
+        public void QueryIndex_Success()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ResourceViewModels_ByTag().Execute(store);
 

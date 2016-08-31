@@ -15,9 +15,9 @@ namespace SlowTests.Core.Commands
     public class Patching : RavenTestBase
     {
         [Fact]
-        public async Task CanDoScriptedPatching()
+        public void CanDoScriptedPatching()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put(
                     "posts/1",
@@ -183,9 +183,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: Patching - the ability to generate document Ids during PutDocument")]
-        public async Task CanGenerteDynamicIdsOnPutDocument()
+        public void CanGenerteDynamicIdsOnPutDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put(
                     "posts/1",

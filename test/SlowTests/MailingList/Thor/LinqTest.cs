@@ -63,9 +63,9 @@ namespace SlowTests.MailingList.Thor
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task SingleTransportWithoutChildren_Raven()
+        public void SingleTransportWithoutChildren_Raven()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // Create Index
                 new TransportsIndex().Execute(store);
@@ -92,9 +92,9 @@ namespace SlowTests.MailingList.Thor
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task SingleChildAndNoTransport_Raven()
+        public void SingleChildAndNoTransport_Raven()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // Create Index
                 new TransportsIndex().Execute(store);
@@ -117,9 +117,9 @@ namespace SlowTests.MailingList.Thor
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task MultipleChildrenWithMultipleTransports_Raven()
+        public void MultipleChildrenWithMultipleTransports_Raven()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // Create Index
                 new TransportsIndex().Execute(store);

@@ -2,10 +2,11 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getStatusStorageBreakdownCommand = require("commands/database/debug/getStatusStorageBreakdownCommand");
 import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import shell = require('viewmodels/shell');
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class statusStorageOnDisk extends viewModelBase {
     data = ko.observable<string[]>();
-    isGlobalAdmin = shell.isGlobalAdmin;
+    isGlobalAdmin = accessHelper.isGlobalAdmin;
     canSearch = ko.observable(true);
     progress = ko.observable<string>();
     operationId = ko.observable<number>();

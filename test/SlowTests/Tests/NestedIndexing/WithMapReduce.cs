@@ -67,9 +67,9 @@ namespace SlowTests.Tests.NestedIndexing
         }
 
         [Fact]
-        public async Task CanUseReferencesFromMapReduceMap()
+        public void CanUseReferencesFromMapReduceMap()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ProductSalesByZip().Execute(store);
 

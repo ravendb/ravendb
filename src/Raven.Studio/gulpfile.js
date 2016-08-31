@@ -1,4 +1,4 @@
-﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile' ProjectOpened='restore' />
+﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile-changed:app' ProjectOpened='restore' />
 
 require('./gulp/shim');
 
@@ -10,6 +10,7 @@ var gulp = require('gulp'),
     runSequence = require('run-sequence'),
     exec = require('child_process').exec,
     parseHandlers = require('./gulp/parseHandlers'),
+    parseConfiguration = require('./gulp/parseConfiguration'),
     findNewestFile = require('./gulp/findNewestFile'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util');
@@ -31,7 +32,13 @@ gulp.task('clean', function () {
 gulp.task('parse-handlers', function() {
     return gulp.src(PATHS.handlersToParse)
         .pipe(parseHandlers('endpoints.ts'))
-        .pipe(gulp.dest(PATHS.handlersConstantsTargetDir));
+        .pipe(gulp.dest(PATHS.constantsTargetDir));
+});
+
+gulp.task('parse-configuration', function() {
+    return gulp.src(PATHS.configurationFilesToParse)
+        .pipe(parseConfiguration('configuration.ts'))
+        .pipe(gulp.dest(PATHS.constantsTargetDir));
 });
 
 gulp.task('less:old', function () {
@@ -66,7 +73,6 @@ gulp.task('generate-typings', function(cb) {
 
 gulp.task('compile:test', ['generate-ts'], function() {
      return gulp.src([PATHS.test.tsSource])
-        .pipe(plugins.changed(PATHS.test.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.typescript(tsCompilerConfig))
         .js
@@ -75,6 +81,15 @@ gulp.task('compile:test', ['generate-ts'], function() {
 });
 
 gulp.task('compile:app', ['generate-ts'], function () {
+    return gulp.src([PATHS.tsSource])
+        .pipe(plugins.sourcemaps.init())
+        .pipe(plugins.typescript(tsCompilerConfig))
+        .js
+        .pipe(plugins.sourcemaps.write("."))
+        .pipe(gulp.dest(PATHS.tsOutput));
+});
+
+gulp.task('compile-changed:app', ['generate-ts'], function() {
     return gulp.src([PATHS.tsSource])
         .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
@@ -202,7 +217,7 @@ gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.lessSource, ['less']);
 });
 
-gulp.task('generate-ts', ['parse-handlers', 'generate-typings'], function() {});
+gulp.task('generate-ts', ['parse-handlers', 'parse-configuration', 'generate-typings'], function() {});
 
 gulp.task('restore', ['bower', 'typings']);
 

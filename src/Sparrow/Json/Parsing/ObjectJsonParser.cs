@@ -53,6 +53,18 @@ namespace Sparrow.Json.Parsing
                     Remove(name);
                 Properties.Enqueue(Tuple.Create(name, value));
             }
+            get
+            {
+                foreach (var property in Properties)
+                {
+                    if (property.Item1 != name)
+                        continue;
+
+                    return property.Item2;
+                }
+
+                return null;
+            }
         }
     }
 
@@ -326,7 +338,7 @@ namespace Sparrow.Json.Parsing
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
-                    continue;
+                    return;
                 }
                 if (current is double)
                 {

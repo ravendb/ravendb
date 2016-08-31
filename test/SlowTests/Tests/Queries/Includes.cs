@@ -14,9 +14,9 @@ namespace SlowTests.Tests.Queries
     public class Includes : RavenTestBase
     {
         [Fact]
-        public async Task Can_use_includes_within_multi_load()
+        public void Can_use_includes_within_multi_load()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -50,9 +50,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_primary_string_property()
+        public void can_include_by_primary_string_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -76,9 +76,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_primary_valuetype_property()
+        public void can_include_by_primary_valuetype_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -102,9 +102,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_primary_valuetype_string_property()
+        public void can_include_by_primary_valuetype_string_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -128,9 +128,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_query_with_include_by_primary_string_property()
+        public void can_query_with_include_by_primary_string_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -167,9 +167,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_query_with_include_by_primary_valuetype_property()
+        public void can_query_with_include_by_primary_valuetype_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -206,9 +206,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_primary_list_of_strings()
+        public void can_include_by_primary_list_of_strings()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -241,9 +241,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_primary_list_of_valuetypes()
+        public void can_include_by_primary_list_of_valuetypes()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -277,9 +277,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_secondary_string_property()
+        public void can_include_by_secondary_string_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -303,9 +303,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_secondary_valuetype_property()
+        public void can_include_by_secondary_valuetype_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -329,9 +329,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_list_of_secondary_string_property()
+        public void can_include_by_list_of_secondary_string_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -371,9 +371,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_list_of_secondary_valuetype_property()
+        public void can_include_by_list_of_secondary_valuetype_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -418,9 +418,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task can_include_by_denormalized_property()
+        public void can_include_by_denormalized_property()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

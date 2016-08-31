@@ -8,8 +8,7 @@ class validateExportDatabaseOptionsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-
-        return this.post("/studio-tasks/validateExportOptions", JSON.stringify(this.smugglerOptions), this.db);
+        return this.post("/studio-tasks/validateExportOptions", JSON.stringify(this.smugglerOptions), this.db);//TODO: use endpoints
     }
 }
 

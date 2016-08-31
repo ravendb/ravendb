@@ -97,20 +97,20 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task SelectMany1_Works()
+        public void SelectMany1_Works()
         {
-            await AssertAgainstIndex<Creatives_ClickActions_1>();
+            AssertAgainstIndex<Creatives_ClickActions_1>();
         }
 
         [Fact]
-        public async Task SelectMany2_ShouldWork()
+        public void SelectMany2_ShouldWork()
         {
-            await AssertAgainstIndex<Creatives_ClickActions_2>();
+            AssertAgainstIndex<Creatives_ClickActions_2>();
         }
 
-        private async Task AssertAgainstIndex<TIndex>() where TIndex : AbstractIndexCreationTask, new()
+        private void AssertAgainstIndex<TIndex>() where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 

@@ -62,9 +62,9 @@ namespace SlowTests.MailingList
         /// they ignore the attribute on Email but obey the attribute on Postcode.
         /// </summary>
         [Fact]
-        public async Task WillIgnoreAttribute()
+        public void WillIgnoreAttribute()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new StudentDtos_ByEmailDomain().Execute(store);

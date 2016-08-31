@@ -11,12 +11,12 @@ class extendRaftClusterCommand extends commandBase {
     execute(): JQueryPromise<any> {
         if (this.create) {
 
-            return this.post("/admin/cluster/create", ko.toJSON(this.connectionInfo), this.db, { dataType: undefined })
+            return this.post("/admin/cluster/create", ko.toJSON(this.connectionInfo), this.db, { dataType: undefined })//TODO: use endpoints
                 .done(() => this.reportSuccess("Cluster was created"))
                 .fail((response: JQueryXHR) => this.reportError("Failed to create cluster", response.responseText, response.statusText));
         } else {
 
-            var url = "/admin/cluster/join";
+            var url = "/admin/cluster/join";//TODO: use endpoints
 
             if (this.force) {
                 url += "?force=true";

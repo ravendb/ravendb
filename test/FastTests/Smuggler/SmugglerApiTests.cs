@@ -43,8 +43,8 @@ namespace FastTests.Smuggler
         [Fact]
         public async Task CanExportDirectlyToRemote()
         {
-            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
-            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
             {
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -66,8 +66,8 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
-                using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
+                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
                     using (var session = store1.OpenSession())
                     {
@@ -114,7 +114,7 @@ namespace FastTests.Smuggler
             var file = Path.GetTempFileName();
             try
             {
-                using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -155,7 +155,7 @@ namespace FastTests.Smuggler
                     Assert.Equal(7, stats.CountOfRevisionDocuments);
                 }
 
-                using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
+                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 

@@ -51,6 +51,12 @@ namespace Raven.Server.Documents.Transformers
             IEnumerable transformedResults;
             while (docsEnumerator.MoveNext(out transformedResults))
             {
+                if (docsEnumerator.Current == null)
+                {
+                    yield return Document.ExplicitNull;
+                    continue;
+                }
+
                 using (docsEnumerator.Current.Data)
                 {
                     var values = new DynamicJsonArray();

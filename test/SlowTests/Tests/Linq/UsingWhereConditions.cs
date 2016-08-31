@@ -21,9 +21,9 @@ namespace SlowTests.Tests.Linq
     public class UsingWhereConditions : RavenTestBase
     {
         [Fact]
-        public async Task Can_Use_Where()
+        public void Can_Use_Where()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const string indexName = "CommitByRevision";
                 using (var session = store.OpenSession())

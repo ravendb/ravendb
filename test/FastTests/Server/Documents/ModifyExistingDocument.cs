@@ -12,7 +12,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public async Task ShouldThrowIfChangeRavenEntityName()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await store.AsyncDatabaseCommands.PutAsync("users/1", null, 
                     RavenJObject.Parse("{\"Email\":\"support@ravendb.net\"}"), 

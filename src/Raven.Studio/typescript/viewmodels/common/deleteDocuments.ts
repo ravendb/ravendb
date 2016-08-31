@@ -7,7 +7,7 @@ class deleteDocuments extends dialogViewModelBase {
 
     private documents = ko.observableArray<documentBase>();
     private deletionStarted = false;
-    public deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
+    deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
 
     constructor(documents: Array<documentBase>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);

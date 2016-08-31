@@ -11,29 +11,78 @@ namespace Raven.Abstractions.Data
             InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
         }
 
+        public class Metadata
+        {
+            private Metadata()
+            {
+            }
+
+            public const string Key = "@metadata";
+
+            public const string Id = "@id";
+
+            public const string Etag = "@etag";
+
+            public const string IndexScore = "@index-score";
+        }
+
+        public class Indexing
+        {
+            private Indexing()
+            {
+            }
+
+            public class Fields
+            {
+                private Fields()
+                {
+                }
+
+                public const string AlphaNumericFieldName = "__alphaNumeric";
+
+                public const string RandomFieldName = "__random";
+
+                public const string CustomSortFieldName = "__customSort";
+
+                public const string DocumentIdFieldName = "__document_id";
+
+                public const string ReduceKeyFieldName = "__reduce_key";
+
+                public const string ReduceValueFieldName = "__reduced_val";
+
+                public const string AllFields = "__all_fields";
+
+                public const string DefaultSpatialFieldName = "__spatial";
+
+                public const string SpatialShapeFieldName = "__spatial_shape";
+
+                public const string DistanceFieldName = "__distance";
+
+                public const string IndexFieldScoreName = "__field_score";
+            }
+        }
+
         public class Headers
         {
             private Headers()
             {
             }
 
-        public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
+            public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 
-        public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
+            public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 
-        public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
+            public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
-        public const string RavenShardId = "Raven-Shard-Id";
-        
-        public const string LastModified = "Last-Modified";
+            public const string RavenShardId = "Raven-Shard-Id";
 
-        public const string CreationDate = "Creation-Date";
+            public const string LastModified = "Last-Modified";
 
-        public const string RavenCreationDate = "Raven-Creation-Date";
+            public const string CreationDate = "Creation-Date";
 
-        public const string RavenLastModified = "Raven-Last-Modified";
+            public const string RavenCreationDate = "Raven-Creation-Date";
 
-            public const string TemporaryScoreValue = "Temp-Index-Score";
+            public const string RavenLastModified = "Raven-Last-Modified";
 
             public const string RavenClrType = "Raven-Clr-Type";
 
@@ -91,12 +140,6 @@ namespace Raven.Abstractions.Data
         // TODO: Delete this, we don't have system database anymore
         public const string SystemDatabase = "<system>";
 
-        public const string AlphaNumericFieldName = "__alphaNumeric";
-
-        public const string RandomFieldName = "__random";
-
-        public const string CustomSortFieldName = "__customSort";
-
         public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
 
         public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
@@ -105,21 +148,7 @@ namespace Raven.Abstractions.Data
 
         public const string EmptyString = "EMPTY_STRING";
 
-        public const string DocumentIdFieldName = "__document_id";
-
-        public const string ReduceKeyFieldName = "__reduce_key";
-
-        public const string ReduceValueFieldName = "__reduced_val";
-
         public const string IntersectSeparator = " INTERSECT ";
-
-        public const string AllFields = "__all_fields";
-
-        public const string Metadata = "@metadata";
-
-        public const string MetadataDocId = "@id";
-
-        public const string MetadataEtagId = "@etag";
 
         public const string TemporaryTransformerPrefix = "Temp/";
 
@@ -175,13 +204,9 @@ namespace Raven.Abstractions.Data
         public const int ChangeHistoryLength = 50;
 
         //Spatial
-        public const string DefaultSpatialFieldName = "__spatial";
 
-        public const string SpatialShapeFieldName = "__spatialShape";
 
         public const double DefaultSpatialDistanceErrorPct = 0.025d;
-
-        public const string DistanceFieldName = "__distance";
 
         /// <summary>
         /// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:
@@ -200,7 +225,7 @@ namespace Raven.Abstractions.Data
         /// if no encoding information in headers of incoming request, this encoding is assumed
         /// </summary>
         public const string DefaultRequestEncoding = "UTF-8";
-        
+
         public const string MetadataEtagField = "ETag";
 
         public const string TempUploadsDirectoryName = "RavenTempUploads";
@@ -233,7 +258,7 @@ namespace Raven.Abstractions.Data
             public const string UrlPrefix = "databases";
             public const string DbResourceMarker = ResourceMarkerPrefix + "database";
         }
-        
+
         //File System
         public static class FileSystem
         {
@@ -275,7 +300,7 @@ namespace Raven.Abstractions.Data
 
 
         public class Replication
-        {       
+        {
             public class PropertyNames
             {
                 public const string LastSentEtag = "LastSentEtag";
@@ -288,7 +313,7 @@ namespace Raven.Abstractions.Data
             public const string DocumentReplicationConfiguration = "Raven/DocumentReplication/Configuration";
 
             //among others stuff, this will return node's change vector
-            public const string DocumentReplicationStatus = "Raven/DocumentReplication/Status"; 
+            public const string DocumentReplicationStatus = "Raven/DocumentReplication/Status";
         }
 
         public class SqlReplication
@@ -347,7 +372,7 @@ namespace Raven.Abstractions.Data
                 public const string DatabaseMappingDocumentKey = "Raven/Monitoring/Snmp/Databases";
 
                 public const string DatabaseMappingDocumentPrefix = "Raven/Monitoring/Snmp/Databases/";
-            } 
+            }
         }
 
         public const string RequestFailedExceptionMarker = "ExceptionRequestFailed";
@@ -358,4 +383,5 @@ namespace Raven.Abstractions.Data
 
             public const string RavenExpirationDate = "Raven-Expiration-Date";
         }
-    }}
+    }
+}

@@ -13,9 +13,9 @@ namespace SlowTests.MailingList
     public class ItemsBySetIdIndexTests : RavenTestBase
     {
         [Fact(Skip = "Missing feature: CreateField")]
-        public async Task CanQuery()
+        public void CanQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ItemsBySetIdIndex().Execute(store);
                 using (var session = store.OpenSession())

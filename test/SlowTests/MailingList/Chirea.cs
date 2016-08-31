@@ -40,9 +40,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanCreateIndexWithArrayOfNestedObjects()
+        public void CanCreateIndexWithArrayOfNestedObjects()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ContainsIndex().Execute(store);
             }

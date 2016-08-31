@@ -13,7 +13,7 @@ namespace SlowTests.Core.Commands
         [Fact]
         public async Task CanPutUpdateAndDeleteTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const string usersSelectNames = "users/selectName";
 

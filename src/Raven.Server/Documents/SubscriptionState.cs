@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
         {
             try
             {
-                if (await _connectionInUse.WaitAsync(timeToWait) == false)
+                if (await _connectionInUse.WaitAsync(TimeSpan.FromMilliseconds(timeToWait)) == false)
                 {
                     switch (incomingConnection.Strategy)
                     {

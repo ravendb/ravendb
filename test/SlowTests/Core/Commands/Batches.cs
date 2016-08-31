@@ -17,7 +17,7 @@ namespace SlowTests.Core.Commands
         [Fact]
         public async Task CanDoBatchOperations()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
