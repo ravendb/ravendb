@@ -829,6 +829,117 @@
                         </div>
                     </div>
             </section>
+
+            <h2>Toggles</h2>
+            <div class="panel">
+                <div class="panel-body">
+                    <form role="form">
+                        <div class="row">
+                            <div class="col-md-4">
+
+                                <h3>
+                                    Basic
+                                </h3>
+                                <hr />
+                                <p>
+                                    Supports bootstrap brand colors: <code>.toggle-primary</code>, <code>.toggle-info</code> etc.
+                                </p>
+                                <div class="toggle">
+                                    <input id="toggle1" class="styled" type="checkbox">
+                                    <label for="toggle1">
+                                        Default
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-primary">
+                                    <input id="toggle2" class="styled" type="checkbox" checked>
+                                    <label for="toggle2">
+                                        Primary
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-success">
+                                    <input id="toggle3" class="styled" type="checkbox">
+                                    <label for="toggle3">
+                                        Success
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-info">
+                                    <input id="toggle4" class="styled" type="checkbox">
+                                    <label for="toggle4">
+                                        Info
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-warning">
+                                    <input id="toggle5" type="checkbox" class="styled" checked>
+                                    <label for="toggle5">
+                                        Warning
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-danger">
+                                    <input id="toggle6" type="checkbox" class="styled" checked>
+                                    <label for="toggle6">
+                                        Check me out
+                                    </label>
+                                </div>
+                                <p>Checkboxes without label text</p>
+                                <div class="toggle">
+                                    <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
+                                    <label></label>
+                                </div>
+                                <div class="toggle toggle-primary">
+                                    <input type="checkbox" class="styled styled-primary" id="singletoggle2" value="option2" checked aria-label="Single toggle Two">
+                                    <label></label>
+                                </div>
+                                <p>Checkboxes with indeterminate state</p>
+                                <div class="toggle toggle-primary">
+                                    <input id="indeterminatetoggle" class="styled" type="checkbox" onclick="changeState(this)">
+                                    <label></label>
+                                </div>
+                                <p>Inline togglees</p>
+                                <div class="toggle toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle1" value="option1">
+                                    <label for="inlinetoggle1"> Inline One </label>
+                                </div>
+                                <div class="toggle toggle-success toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle2" value="option1" checked>
+                                    <label for="inlinetoggle2"> Inline Two </label>
+                                </div>
+                                <div class="toggle toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle3" value="option1">
+                                    <label for="inlinetoggle3"> Inline Three </label>
+                                </div>
+                            </div>
+                           
+                            <div class="col-md-4">
+                                <h3>
+                                    Disabled
+                                </h3>
+                                <hr />
+                                <p>
+                                    Disabled state also supported.
+                                </p>
+                                <div class="toggle">
+                                    <input class="styled" id="toggle9" type="checkbox" disabled>
+                                    <label for="toggle9">
+                                        Can't check this
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-success">
+                                    <input class="styled styled" id="toggle10" type="checkbox" disabled checked>
+                                    <label for="toggle10">
+                                        This too
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-warning toggle-circle">
+                                    <input class="styled" id="toggle11" type="checkbox" disabled checked>
+                                    <label for="toggle11">
+                                        And this
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
             <h2>Checkboxes</h2>
             <div class="panel">
                 <div class="panel-body">
@@ -957,7 +1068,12 @@
                             </div>
                         </div>
                     </form>
-                    <h2>Radios</h2>
+                </div>
+            </div>
+            <h2>Radios</h2>
+            <div class="panel">
+                <div class="panel-body">
+                   
                     <form role="form">
                         <div class="row">
                             <div class="col-md-4">
