@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 return matchResults.OrderByDescending(x => x.NumberOfMappedFields).First();
             }
 
-            return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
+            return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
         }
 
         private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, IndexDefinitionBase definition, List<Explanation> explanations = null)
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     sortField.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
                     sortField.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
                 {
-                    sortField = SortFieldHelper.CustomField(sortField).Name;
+                    sortField = SortFieldHelper.ExtractName(sortField);
                 }
 
                 if (sortField.EndsWith("_Range"))

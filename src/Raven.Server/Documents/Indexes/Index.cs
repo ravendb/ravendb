@@ -920,7 +920,7 @@ namespace Raven.Server.Documents.Indexes
 
                     if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
                     {
-                        f = SortFieldHelper.CustomField(f).Name;
+                        f = SortFieldHelper.ExtractName(f);
                         if (string.IsNullOrEmpty(f))
                             throw new ArgumentException("Alpha numeric sorting requires a field name");
                     }

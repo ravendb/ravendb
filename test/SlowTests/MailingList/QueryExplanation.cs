@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
 
         private static void CreateData(IDocumentSession session)
         {
-            var rand = new Random(int.Parse(DateTime.UtcNow.ToString("MMddHHmmss")));
+            var rand = new System.Random(int.Parse(DateTime.UtcNow.ToString("MMddHHmmss")));
             var multiplier = rand.Next(4, 6);
             var lastValue = (int)(rand.NextDouble() * Math.Pow(10, multiplier));
             var highRange = lastValue / 20;

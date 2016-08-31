@@ -3,30 +3,30 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class RacielRod : RavenTest
+    public class RacielRod : RavenTestBase
     {
-        public class Activity
+        private class Activity
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public new class Timer
+        private class Timer
         {
             public string Id { get; set; }
             public User User { get; set; }
@@ -38,8 +38,8 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Timer_Test()
         {
-            using(var Store = NewDocumentStore())
-            using (var session = Store.OpenSession())
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenSession())
             {
                 //insert timers
                 session.Store(new Timer
@@ -74,7 +74,7 @@ namespace Raven.Tests.MailingList
 
                 var runningActivities = session.Query<Timer>()
                     .Where(t => t.End == null && t.User.Id == "users/1")
-                    .Select(t => t.Activity.Id )
+                    .Select(t => t.Activity.Id)
                     .Customize(t => t.WaitForNonStaleResults())
                     .ToArray();
 
@@ -83,6 +83,4 @@ namespace Raven.Tests.MailingList
             }
         }
     }
-
-
 }
