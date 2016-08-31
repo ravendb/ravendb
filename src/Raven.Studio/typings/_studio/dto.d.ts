@@ -5,6 +5,11 @@ interface queryResultDto {
     Includes: any[];
 }
 
+interface connectedDocument {
+    id: string;
+    href: string;
+}
+
 interface canActivateResultDto {
     redirect?: string;
     can?: boolean;   

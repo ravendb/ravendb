@@ -485,6 +485,10 @@ class documents extends viewModelBase {
         router.navigate(appUrl.forNewDoc(this.activeDatabase()));
     }
 
+    newDocumentInCollection() {
+        router.navigate(appUrl.forNewDoc(this.activeDatabase(), this.currentCollection().name));
+    }
+
     refresh() {
         this.getDocumentsGrid().refreshCollectionData();
         var selectedCollection = this.selectedCollection();

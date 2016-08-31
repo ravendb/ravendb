@@ -46,6 +46,9 @@
                 <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newDocument" title="Create new document (Alt+N)">
                     <i class="fa fa-plus"></i> New document
                 </button>
+                <button type="button" class="btn btn-primary" data-bind="click: newDocumentInCollection" title="Create new document (Alt+N)">
+                    <i class="fa fa-plus"></i> New document in current collection
+                </button>
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-default" data-bind="click: refresh, disable: showLoadingIndicator() || isInitialized() == false" title="Refresh from server">
