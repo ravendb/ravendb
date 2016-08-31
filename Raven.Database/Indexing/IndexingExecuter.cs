@@ -430,7 +430,8 @@ namespace Raven.Database.Indexing
             if (indexingGroup.JsonDocs != null && indexingGroup.JsonDocs.Count > 0)
             {
                 indexingGroup.PrefetchingBehavior.CleanupDocuments(indexingGroup.LastIndexedEtag);
-                indexingGroup.PrefetchingBehavior.UpdateAutoThrottler(indexingGroup.JsonDocs, elapsedTimeSpan);
+                var oomeErrorsCount = indexingGroup.Indexes.Select(x => x.Index).Sum(x => x.OutOfMemoryErrorsCount);
+                indexingGroup.PrefetchingBehavior.UpdateAutoThrottler(indexingGroup.JsonDocs, elapsedTimeSpan, oomeErrorsCount > 0);
                 indexingGroup.PrefetchingBehavior.BatchProcessingComplete();
                 context.ReportIndexingBatchCompleted(indexingGroup.BatchInfo);
             }
@@ -561,7 +562,7 @@ namespace Raven.Database.Indexing
                         var indexes = indexingGroup.Indexes.Select(x => x.IndexId).ToList();
                         var currentlyIndexingString = string.Join(", ", currentlyProcessedIndexes.Keys);
                         var indexesString = string.Join(", ", indexes);
-                        var message = $"Unexpected exception happened during execution of indexing... " +
+                        var message = "Unexpected exception happened during execution of indexing... " +
                                       $"This is not supposed to happen. Reason: {e}. " +
                                       $"Currently indexing: {currentlyIndexingString}, " +
                                       $"indexing group that failed: {indexesString}";
@@ -790,13 +791,12 @@ namespace Raven.Database.Indexing
             }
             catch (Exception e)
             {
-                wasOperationCanceled = true;
-
                 Exception conflictException;
                 if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
                 {
                     Log.Info($"Write conflict encountered for index {batchForIndex.Index.PublicName}. " +
-                             $"Will retry on next indexing batch. Details: {conflictException.Message}");
+                             $"Will retry on the next indexing batch. Details: {conflictException.Message}");
+                    wasOperationCanceled = true;
                     return null;
                 }
 
@@ -806,18 +806,22 @@ namespace Raven.Database.Indexing
                     FailedItemsToProcessCount = batchForIndex.Batch.Ids.Count
                 }))
                 {
+                    wasOperationCanceled = true;
                     return null;
                 }
 
                 if (IsOperationCanceledException(e))
                 {
+                    wasOperationCanceled = true;
                     return null;
                 }
 
-                Log.WarnException($"Failed to index documents for index: {batchForIndex.Index.PublicName}", e);
-                var invalidSpatialShapeException = e as InvalidSpatialShapException;
-                var invalidDocId = invalidSpatialShapeException?.InvalidDocumentId;
-                context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, invalidDocId, e);
+                var docsCount = batchForIndex.Batch.Docs.Count;
+                var message = $"Failed to index {docsCount} document{(docsCount > 1 ? "s" : string.Empty)} " +
+                              $"for index: {batchForIndex.Index.PublicName} (id: {batchForIndex.Index.IndexId}). " +
+                              "Skipping this batch (it won't be indexed)";
+
+                batchForIndex.Index.AddIndexingError(e, message);
             }
             finally
             {

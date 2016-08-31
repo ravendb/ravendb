@@ -249,12 +249,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
             RavenJObject dataAsJson;
             var docSize = GetDocumentFromStorage(key, metadata, existingEtag, out dataAsJson);
 
-            var serializedSizeOnDisk = metadataSize + docSize;
-            cacher.SetCachedDocument(key, existingEtag, dataAsJson, metadata, serializedSizeOnDisk);
-
             return new JsonDocument
             {
-                SerializedSizeOnDisk = serializedSizeOnDisk,
+                SerializedSizeOnDisk = metadataSize + docSize,
                 Key = key,
                 DataAsJson = dataAsJson,
                 NonAuthoritativeInformation = false,
@@ -451,8 +448,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-                var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
-                var metadata = metadataBuffer.ToJObject();
+
+                RavenJObject metadata;
+                GetMetadataFromStorage(out metadata);
 
                 Func<JsonDocument> getDocument = () => DocumentByKey(key);
                 if (filterDocument(key, metadata, getDocument) == false)
@@ -503,27 +501,29 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
                                                      Encoding.Unicode);
-               
-                var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-                var size = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
-                stat.TotalSize += size;
+
+                RavenJObject metadata;
+                var metadateSize = GetMetadataFromStorage(out metadata);
+                var docSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
+                var totalSize = docSize + metadateSize;
+                stat.TotalSize += totalSize;
+
                 if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                 {
-                    stat.System.Update(size, key);
+                    stat.System.Update(totalSize, key);
                 }
-
 
                 var entityName = metadata.Value<string>(Constants.RavenEntityName);
                 if (string.IsNullOrEmpty(entityName))
                 {
-                    stat.NoCollection.Update(size, key);
+                    stat.NoCollection.Update(totalSize, key);
                 }
                 else
                 {
-                    stat.IncrementCollection(entityName, size, key);
+                    stat.IncrementCollection(entityName, totalSize, key);
                 }
 
-                if (metadata.ContainsKey("Raven-Delete-Marker"))
+                if (metadata.ContainsKey(Constants.RavenDeleteMarker))
                     stat.Tombstones++;
 
                 processedDocuments++;
@@ -888,7 +888,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
             var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
 
-            metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+            int _;
+            metadata = ReadDocumentMetadata(key, existingEtag, out _);
             deletedETag = existingEtag;
 
             Api.JetDelete(session, Documents);

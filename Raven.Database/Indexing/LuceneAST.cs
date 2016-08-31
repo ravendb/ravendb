@@ -286,8 +286,13 @@ This edge-case has a very slim chance of happening, but still we should not igno
             }
             if (Type == TermType.PrefixTerm)
             {
-
-                return new PrefixQuery(new Term(configuration.FieldName, terms.Count == 0 ? string.Empty : terms.First().Substring(0, terms.First().Length-1))) { Boost = boost };
+                var actualTerm = string.Empty;
+                if (terms.Count != 0)
+                {
+                    var first = terms.First();
+                    actualTerm = first[first.Length - 1] == '*' ? first.Substring(0, first.Length - 1) : first;
+                }
+                return new PrefixQuery(new Term(configuration.FieldName,actualTerm)) { Boost = boost };
             }
             if (terms.Count == 0) return new BooleanQuery();
 

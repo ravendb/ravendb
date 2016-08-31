@@ -260,7 +260,10 @@ class periodicExportSetup {
         this.awsSecretKey(dbSettingsDto["SecuredSettings"]["Raven/AWSSecretKey"]);
         this.azureStorageAccount(dbSettingsDto["Settings"]["Raven/AzureStorageAccount"]);
         this.azureStorageKey(dbSettingsDto["SecuredSettings"]["Raven/AzureStorageKey"]);
+        this.checkDecryptionFailure();
+    }
 
+    checkDecryptionFailure() {
         if (periodicExportSetup.decryptFailedValue === this.awsSecretKey()) {
             this.awsSecretKey("");
             this.awsSecretKeyDecryptionFailed(true);
@@ -269,6 +272,20 @@ class periodicExportSetup {
             this.azureStorageKey("");
             this.azureStorageKeyDecryptionFailed(true);
         }
+    }
+
+    exportSettingsToDto(): any {
+        var result = {};
+        if (this.additionalAwsInfoRequired()) {
+            result["Raven/AWSAccessKey"] = this.awsAccessKey();
+            result["Raven/AWSSecretKey"] = this.awsSecretKey();
+        }
+        if (this.additionalAzureInfoRequired()) {
+            result["Raven/AzureStorageAccount"] = this.azureStorageAccount();
+            result["Raven/AzureStorageKey"] = this.azureStorageKey();
+        }
+
+        return result;
     }
 
     toDatabaseSettingsDto(): documentDto {

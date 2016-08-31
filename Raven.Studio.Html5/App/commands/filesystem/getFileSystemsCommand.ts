@@ -11,7 +11,8 @@ class getFileSystemsCommand extends commandBase {
         var url = "/fs";
 
         var resultsSelector = (fileSystems: fileSystemDto[]) => 
-            fileSystems.map((fs: fileSystemDto) => new filesystem(fs.Name, fs.IsAdminCurrentTenant, fs.Disabled, fs.IsLoaded, fs.Bundles));
+            fileSystems.map((fs: fileSystemDto) => new filesystem(fs.Name,
+                fs.IsAdminCurrentTenant, fs.Disabled, fs.IsLoaded, fs.Bundles, fs.Stats));
         return this.query(url, args, null, resultsSelector);
     }
 }

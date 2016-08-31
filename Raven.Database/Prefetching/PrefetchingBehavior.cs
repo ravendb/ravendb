@@ -1513,7 +1513,8 @@ namespace Raven.Database.Prefetching
             });
         }
 
-        public void UpdateAutoThrottler(List<JsonDocument> jsonDocs, TimeSpan indexingDuration)
+        public void UpdateAutoThrottler(List<JsonDocument> jsonDocs, 
+            TimeSpan indexingDuration, bool skipIncreasingBatchSize = false)
         {
             int currentBatchLength = autoTuner.NumberOfItemsToProcessInSingleBatch;
             int futureLen = futureIndexBatches.Values.Sum(x =>
@@ -1538,7 +1539,7 @@ namespace Raven.Database.Prefetching
             autoTuner.AutoThrottleBatchSize(
                 jsonDocs.Count + futureLen,
                 futureSize + jsonDocs.Sum(x => (long)x.SerializedSizeOnDisk),
-                indexingDuration);
+                indexingDuration, skipIncreasingBatchSize);
         }
 
         public void OutOfMemoryExceptionHappened()

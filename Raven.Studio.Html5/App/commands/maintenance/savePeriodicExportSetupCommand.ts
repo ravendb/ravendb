@@ -4,8 +4,11 @@ import periodicExportSetup = require("models/database/documents/periodicExportSe
 
 class savePeriodicExportSetupCommand extends commandBase {
 
-    constructor(private setupToPersist: periodicExportSetup, private db: database, private globalConfig = false) {
+    constructor(private setupToPersist: periodicExportSetup, private db: database, private globalConfig: boolean, private saveAsNonAdmin: boolean = false) {
         super();
+        if (globalConfig && saveAsNonAdmin) {
+            throw new Error("Global config for periodic export can only be saved by administators");
+        }
     }
 
     execute(): JQueryPromise<any> {
@@ -16,15 +19,21 @@ class savePeriodicExportSetupCommand extends commandBase {
     }
 
     private saveAccountInformation(): JQueryPromise<any> {
-        var jQueryOptions: JQueryAjaxSettings = {};
-        if (this.setupToPersist.getEtag()) {
-            jQueryOptions.headers = {
-                'If-None-Match': this.setupToPersist.getEtag()
+        if (this.saveAsNonAdmin) {
+            var settings = JSON.stringify(this.setupToPersist.exportSettingsToDto());
+
+            return this.put("/configuration/periodicExportSettings", settings, this.db, { dataType: undefined });
+        } else {
+            var jQueryOptions: JQueryAjaxSettings = {};
+            if (this.setupToPersist.getEtag()) {
+                jQueryOptions.headers = {
+                    'If-None-Match': this.setupToPersist.getEtag()
+                }
             }
+            var url = this.globalConfig ? "/configuration/global/settings" : "/admin/databases/" + this.db.name;
+            var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
+            return this.put(url, putArgs, null, jQueryOptions);
         }
-        var url = this.globalConfig? "/configuration/global/settings" : "/admin/databases/" + this.db.name;
-        var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
-        return this.put(url, putArgs, null, jQueryOptions);
     }
 
     private saveSetup(): JQueryPromise<any> {

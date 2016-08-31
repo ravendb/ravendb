@@ -78,7 +78,7 @@ namespace Raven.Database.Extensions
                                 continue;
                             }
 
-                            Logger.WarnException($"Couldn't save alerts document due to " +
+                            Logger.WarnException("Couldn't save alerts document due to " +
                                                  $"{self.TransactionalStorage.FriendlyName} out of memory exception", e);
                             return;
                         }

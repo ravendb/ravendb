@@ -138,6 +138,10 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="NewIndexOptimizationIssue.cs" />
+    <Compile Include="RavenDB-4393.cs" />
+    <Compile Include="RavenDB-4446.cs" />
+    <Compile Include="RavenDB-4852.cs" />
     <Compile Include="RavenDB-4977.cs" />
     <Compile Include="RavenDB-4817.cs" />
     <Compile Include="RavenDB-4917.cs" />
@@ -146,6 +150,7 @@
     <Compile Include="RavenDB-4802.cs" />
     <Compile Include="RavenDB-4705.cs" />
     <Compile Include="RavenDB-4904.cs" />
+    <Compile Include="RavenDB-5151.cs" />
     <Compile Include="RavenDB_4645.cs" />
     <Compile Include="RavenDB_4918.cs" />
     <Compile Include="RavenDb_4706.cs" />
@@ -158,7 +163,6 @@
     <Compile Include="RavenDB-3973.cs" />
     <Compile Include="RavenDB-3979.cs" />
     <Compile Include="RavenDB-3987.cs" />
-    <Compile Include="RavenDB-4165.cs" />
     <Compile Include="RavenDB_4025.cs" />
     <Compile Include="RavenDB_3620.cs" />
     <Compile Include="RavenDB_3899.cs" />
@@ -513,7 +517,6 @@
     <Compile Include="Prefetcher\RavenDB_3581.cs" />
     <Compile Include="RavenDB_3605.cs" />
     <Compile Include="RavenDB_3612.cs" />
-    <Compile Include="RavenDB_3628.cs" />
     <Compile Include="RavenDB_3629.cs" />
     <Compile Include="RavenDB_3639.cs" />
     <Compile Include="RavenDB_3659.cs" />

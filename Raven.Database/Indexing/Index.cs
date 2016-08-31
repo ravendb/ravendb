@@ -63,6 +63,10 @@ namespace Raven.Database.Indexing
         private const long OutOfMemoryErrorsLimit = 10;
         private long indexingOutOfMemoryErrors;
         private long reducingOutOfMemoryErrors;
+        public long OutOfMemoryErrorsCount => Interlocked.Read(ref indexingOutOfMemoryErrors) + Interlocked.Read(ref reducingOutOfMemoryErrors);
+
+        private const long ErrorsLimit = 20;
+        private long errors;
 
         private readonly List<Document> currentlyIndexDocuments = new List<Document>();
         protected Directory directory;
@@ -598,9 +602,21 @@ namespace Raven.Database.Indexing
                             //since this exception can happen during normal code-flow
                             throw;
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
-                            //errors are handled in upper level 
+                            Exception _;
+                            if (TransactionalStorageHelper.IsOutOfMemoryException(e) ||
+                                TransactionalStorageHelper.IsWriteConflict(e, out _))
+                            {
+                                //we are handling this
+                                throw;
+                            }
+
+                            var invalidSpatialShapeException = e as InvalidSpatialShapException;
+                            var invalidDocId = invalidSpatialShapeException?.InvalidDocumentId;
+                            if (invalidDocId != null)
+                                AddIndexingError(e, "Invalid Spatial Exception", invalidDocId);
+
                             throw;
                         }
 
@@ -2010,6 +2026,28 @@ namespace Raven.Database.Indexing
             return false;
         }
 
+        public void AddIndexingError(Exception e, string message, string documentId = null)
+        {
+            if (disposed)
+                return;
+
+            logIndexing.WarnException(message, e);
+            context.AddError(IndexId, PublicName, null, e, message);
+
+            if (Interlocked.Increment(ref errors) < ErrorsLimit)
+                return;
+
+            if ((Priority & IndexingPriority.Error) == IndexingPriority.Error ||
+                (Priority & IndexingPriority.Disabled) == IndexingPriority.Disabled)
+                return;
+
+            var title = $"Index '{PublicName}' marked as disabled due to exceeding the error limit {(ErrorsLimit)}";
+            var errorMessage = $"Index '{PublicName}' exceeded the error limit. " +
+                               "The index priority was set to disabled.";
+
+            AddIndexError(e, errorMessage, title, IndexingPriority.Disabled, IndexChangeTypes.IndexDemotedToDisabled);
+        }
+
         public void TryDisable(Exception e, long outOfMemoryErrorCount, int failedToProcessCount)
         {
             if (disposed)
@@ -2025,7 +2063,7 @@ namespace Raven.Database.Indexing
             var title = $"Index '{PublicName}' marked as disabled due to out of memory exception";
             var errorMessage = $"Index '{PublicName}' got out of memory exception " +
                                $"(failed to process {failedToProcessCount} entries). " +
-                               $"The index priority was set to disabled.";
+                               "The index priority was set to disabled.";
 
             AddIndexError(e, errorMessage, title, IndexingPriority.Disabled, IndexChangeTypes.IndexDemotedToDisabled);
         }

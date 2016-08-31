@@ -82,7 +82,7 @@ namespace Raven.Database.Indexing
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void AutoThrottleBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
+        public void AutoThrottleBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration, bool skipIncreasingBatchSize = false)
         {
             try
             {
@@ -90,6 +90,10 @@ namespace Raven.Database.Indexing
                     return;
                 if (ConsiderDecreasingBatchSize(amountOfItemsToProcess, processingDuration))
                     return;
+
+                if (skipIncreasingBatchSize)
+                    return;
+
                 if (ConsiderIncreasingBatchSize(amountOfItemsToProcess, size, processingDuration))
                 {
                     lastIncrease = SystemTime.UtcNow;

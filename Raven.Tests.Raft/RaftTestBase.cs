@@ -245,7 +245,7 @@ namespace Raven.Tests.Raft
             {
                 var topology = server.Options.ClusterManager.Value.Engine.CurrentTopology;
                 return topology.AllVotingNodes.Count() == numberOfNodes;
-            }, TimeSpan.FromSeconds(15)),$"Node didn't become unstale in time, {server}"));
+            }, TimeSpan.FromSeconds(5*numberOfNodes)), $"Node didn't become unstale in time, {server}"));
         }
 
         protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true, Dictionary<string, string> databaseSettings = null)

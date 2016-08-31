@@ -94,11 +94,14 @@ namespace Raven.Database.Actions
             string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
             string skipAfter = null)
         {
-            var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart,
-                doc => { if (doc != null) list.Add(doc.ToJson()); }, transformer, transformerParameters, skipAfter);
+            using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+            {
+                var list = new RavenJArray();
+                GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart,
+                    doc => { if (doc != null) list.Add(doc.ToJson()); }, transformer, transformerParameters, skipAfter);
 
-            return list;
+                return list;
+            }  
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
@@ -433,74 +436,75 @@ namespace Raven.Database.Actions
         {
             Etag lastDocumentReadEtag = null;
 
-            TransactionalStorage.Batch(actions =>
-            {
-                AbstractTransformer storedTransformer = null;
-                if (transformer != null)
+            using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+                TransactionalStorage.Batch(actions =>
                 {
-                    storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
-                    if (storedTransformer == null)
-                        throw new InvalidOperationException("No transformer with the name: " + transformer);
-                }
-
-                var returnedDocs = false;
-                while (true)
-                {
-                    var documents = etag == null
-                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
-
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
-                    var docCount = 0;
-                    var docCountOnLastAdd = 0;
-                    foreach (var doc in documents)
+                    AbstractTransformer storedTransformer = null;
+                    if (transformer != null)
                     {
-                        docCount++;
-
-                        token.ThrowIfCancellationRequested();
-
-                        if (docCount - docCountOnLastAdd > 1000)
-                        {
-                            addDocument(null); // heartbeat
-                        }
-
-                        if (etag != null)
-                            etag = doc.Etag;
-
-                        JsonDocument.EnsureIdInMetadata(doc);
-
-                        var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-
-                        document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
-                        if (document == null)
-                            continue;
-
-                        returnedDocs = true;
-                        Database.WorkContext.UpdateFoundWork();
-
-                        document = TransformDocumentIfNeeded(document, storedTransformer, documentRetriever);
-
-                        var canContinue = addDocument(document);
-                        if (!canContinue)
-                            break;
-
-                        lastDocumentReadEtag = etag;
-
-                        docCountOnLastAdd = docCount;
+                        storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
+                        if (storedTransformer == null)
+                            throw new InvalidOperationException("No transformer with the name: " + transformer);
                     }
 
-                    if (returnedDocs || docCount == 0)
-                        break;
+                    var returnedDocs = false;
+                    while (true)
+                    {
+                        var documents = etag == null
+                            ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
+                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
 
-                    // No document was found that matches the requested criteria
-                    // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
-                    if (lastDocumentReadEtag != null)
-                        etag = lastDocumentReadEtag;
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
+                        var docCount = 0;
+                        var docCountOnLastAdd = 0;
+                        foreach (var doc in documents)
+                        {
+                            docCount++;
 
-                    start += docCount;
-                }
-            });
+                            token.ThrowIfCancellationRequested();
+
+                            if (docCount - docCountOnLastAdd > 1000)
+                            {
+                                addDocument(null); // heartbeat
+                            }
+
+                            if (etag != null)
+                                etag = doc.Etag;
+
+                            JsonDocument.EnsureIdInMetadata(doc);
+
+                            var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                            var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
+
+                            document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                            if (document == null)
+                                continue;
+
+                            returnedDocs = true;
+                            Database.WorkContext.UpdateFoundWork();
+
+                            document = TransformDocumentIfNeeded(document, storedTransformer, documentRetriever);
+
+                            var canContinue = addDocument(document);
+                            if (!canContinue)
+                                break;
+
+                            lastDocumentReadEtag = etag;
+
+                            docCountOnLastAdd = docCount;
+                        }
+
+                        if (returnedDocs || docCount == 0)
+                            break;
+
+                        // No document was found that matches the requested criteria
+                        // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
+                        if (lastDocumentReadEtag != null)
+                            etag = lastDocumentReadEtag;
+
+                        start += docCount;
+                    }
+                });
 
             return lastDocumentReadEtag;
         }

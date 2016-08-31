@@ -126,6 +126,7 @@
     <Compile Include="Issues\RavenDB_2143.cs" />
     <Compile Include="Issues\RavenDB_2660 .cs" />
     <Compile Include="Issues\RavenDB_2812.cs" />
+    <Compile Include="Issues\RavenDB_3628.cs" />
     <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="MailingList\FailingBulkInsertTest.cs" />
     <Compile Include="MailingList\Jalchr.cs" />

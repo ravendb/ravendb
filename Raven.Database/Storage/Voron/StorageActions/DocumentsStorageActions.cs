@@ -889,7 +889,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
             using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch.Value))
             {
-                if (!iterator.Seek(Slice.BeforeAllKeys))
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
                 {
                     stat.TimeToGenerate = sp.Elapsed;
                     return stat;
@@ -903,30 +903,38 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         progress($"Scanned {$"{processedDocuments:#,#;;0}"} documents");
                     }
 
-                    
                     var key = GetKeyFromCurrent(iterator);
-                    var doc = DocumentByKey(key);
+                    var normalizedKey = CreateKey(key);
+                    var sliceKey = (Slice)normalizedKey;
+
+                    var documentReadResult = tableStorage.Documents.Read(Snapshot, sliceKey, writeBatch.Value);
+                    var docSize = documentReadResult.Reader.Length;
+                    int metadataSize;
+                    var metadata = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize);
+                    var totalSize = docSize + metadataSize;
+
                     if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                     {
-                        stat.System.Update(doc.SerializedSizeOnDisk, doc.Key);
+                        stat.System.Update(totalSize, key);
                     }
 
-                    var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+                    var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
                     if (string.IsNullOrEmpty(entityName))
                     {
-                        stat.NoCollection.Update(doc.SerializedSizeOnDisk, doc.Key);
+                        stat.NoCollection.Update(totalSize, key);
                     }
                     else
                     {
-                        stat.IncrementCollection(entityName, doc.SerializedSizeOnDisk, doc.Key);
+                        stat.IncrementCollection(entityName, totalSize, key);
                     }
 
-                    if (doc.Metadata.ContainsKey(Constants.RavenDeleteMarker))
+                    if (metadata.Metadata.ContainsKey(Constants.RavenDeleteMarker))
                         stat.Tombstones++;
 
                     processedDocuments++;
                 }
                 while (iterator.MoveNext());
+
                 stat.TimeToGenerate = sp.Elapsed;
                 return stat;
             }

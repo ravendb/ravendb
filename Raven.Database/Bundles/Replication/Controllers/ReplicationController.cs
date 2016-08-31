@@ -759,6 +759,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 sourceReplicationInformation.ServerInstanceId = serverInstanceId;
                 sourceReplicationInformation.Source = src;
                 sourceReplicationInformation.LastModified = SystemTime.UtcNow;
+                sourceReplicationInformation.SourceCollections = collections;
 
                 var etag = document == null ? Etag.Empty : document.Etag;
                 var metadata = document == null ? new RavenJObject() : document.Metadata;

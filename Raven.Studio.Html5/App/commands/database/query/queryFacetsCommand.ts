@@ -70,7 +70,7 @@ class queryFacetsCommand extends commandBase {
 
                     if (!!curFieldVal) {
                         if (typeof curFieldVal === "number") {
-                            var fixedVal = curFieldVal.toFixed(2);
+                            var fixedVal: any = curFieldVal.toFixed(2);
                             if (fixedVal != curFieldVal) {
                                 curFieldVal = fixedVal;
                             }

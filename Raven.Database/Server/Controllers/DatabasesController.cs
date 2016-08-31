@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage Databases(bool getAdditionalData = false)
         {
             return Resources<DatabaseData>(Constants.Database.Prefix, GetDatabasesData, getAdditionalData);
-                }
+        }
 
         private List<DatabaseData> GetDatabasesData(IEnumerable<RavenJToken> databases)
         {
@@ -38,6 +38,25 @@ namespace Raven.Database.Server.Controllers
                     }
 
                     var dbName = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty);
+                    var isDatabaseLoaded = DatabasesLandlord.IsDatabaseLoaded(dbName);
+                    DocumentDatabase.ReducedDatabaseStatistics stats = null;
+                    if (isDatabaseLoaded)
+                    {
+                        try
+                        {
+                            var db = DatabasesLandlord.GetResourceInternal(dbName).Result;
+                            if (db != null)
+                            {
+                                stats = db.ReducedStatistics;
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            //the database is shutting down or locked
+                            //we can ignore this
+                        }
+                    }
+
                     return new DatabaseData
                     {
                         Name = dbName,
@@ -47,7 +66,8 @@ namespace Raven.Database.Server.Controllers
                         ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.Cluster.NonClusterDatabaseMarker),
                         Bundles = bundles,
                         IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
-                        IsLoaded = DatabasesLandlord.IsDatabaseLoaded(dbName)
+                        IsLoaded = isDatabaseLoaded,
+                        Stats = stats
                     };
                 }).ToList();
         }
@@ -57,6 +77,7 @@ namespace Raven.Database.Server.Controllers
             public bool IndexingDisabled { get; set; }
             public bool RejectClientsEnabled { get; set; }
             public bool ClusterWide { get; set; }
+            public DocumentDatabase.ReducedDatabaseStatistics Stats { get; set; }
         }
 
         /// <summary>

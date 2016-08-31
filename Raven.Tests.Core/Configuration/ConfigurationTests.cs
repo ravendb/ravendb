@@ -295,6 +295,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.IndexStoragePath);
             configurationComparer.Assert(expected => expected.DefaultStorageTypeName.Value, actual => actual.DefaultStorageTypeName);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CompiledIndexCacheDirectory.Value.ToFullPath(null)), actual => actual.CompiledIndexCacheDirectory);
+            configurationComparer.Assert(expected => expected.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value, actual => actual.Studio.AllowNonAdminUsersToSetupPeriodicExport);
             configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
             configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
             configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
@@ -320,6 +321,9 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
 
             configurationComparer.Assert(expected => expected.CacheDocumentsInMemory.Value, actual => actual.CacheDocumentsInMemory);
+            configurationComparer.Assert(expected => expected.MinThreadPoolWorkerThreads.Value, actual => actual.MinThreadPoolWorkerThreads);
+            configurationComparer.Assert(expected => expected.MinThreadPoolCompletionThreads.Value, actual => actual.MinThreadPoolCompletionThreads);
+
 
             configurationComparer.Assert(expected => expected.Cluster.HeartbeatTimeout.Value, actual => actual.Cluster.HeartbeatTimeout);
             configurationComparer.Assert(expected => expected.Cluster.ElectionTimeout.Value, actual => actual.Cluster.ElectionTimeout);
@@ -335,6 +339,9 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
             configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
             configurationComparer.Ignore(x => x.TransactionMode);
+
+            
+            
 
             Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
             Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);

@@ -43,8 +43,8 @@ namespace Raven.Database.Plugins
         ///  document (if it exists) or null.
         ///  Any call to the provided <seealso cref="DocumentDatabase" /> instance will be done under the
         ///  same transaction as the PUT operation.
-        ///  </remarks><param name="key">The document key</param><param name="jsonReplicationDocument">The new document about to be put into Raven</param><param name="metadata">The new document metadata</param><param name="transactionInformation">The current transaction, if it exists</param>
-        public virtual void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
+        ///  </remarks><param name="key">The document key</param><param name="document">The new document about to be put into Raven</param><param name="metadata">The new document metadata</param><param name="transactionInformation">The current transaction, if it exists</param>
+        public virtual void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             
         }

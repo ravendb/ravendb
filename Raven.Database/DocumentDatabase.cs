@@ -1146,22 +1146,24 @@ namespace Raven.Database
 
         private void StopMappingThreadPool()
         {
-            if (MappingThreadPool != null)
-            {
-                MappingThreadPool.DrainThePendingTasks();
-                MappingThreadPool.Dispose();
-                MappingThreadPool = null;
-            }
+            var mappingThreadPool = MappingThreadPool;
+            if (mappingThreadPool == null)
+                return;
+
+            mappingThreadPool.DrainThePendingTasks();
+            mappingThreadPool.Dispose();
+            MappingThreadPool = null;
         }
 
         private void StopReducingThreadPool()
         {
-            if (ReducingThreadPool != null)
-            {
-                ReducingThreadPool.DrainThePendingTasks();
-                ReducingThreadPool.Dispose();
-                ReducingThreadPool = null;
-            }
+            var reducingThreadPool = ReducingThreadPool;
+            if (reducingThreadPool == null)
+                return;
+
+            reducingThreadPool.DrainThePendingTasks();
+            reducingThreadPool.Dispose();
+            ReducingThreadPool = null;
         }
 
         public void StopBackgroundWorkers()

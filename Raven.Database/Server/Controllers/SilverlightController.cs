@@ -17,18 +17,15 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/silverlight/ensureStartup")]
         public HttpResponseMessage SilverlightEnsureStartup()
         {
-            Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
-            {
-                var skipCreatingStudioIndexes = Database.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
-                if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false &&
+            var skipCreatingStudioIndexes = Database.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
+            var okResponseMessage = GetMessageWithObject(new { ok = true });
+
+            if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false &&
                     "true".Equals(skipCreatingStudioIndexes, StringComparison.OrdinalIgnoreCase))
-                    return true;
+                    return okResponseMessage;
 
-                new CreateSilverlightIndexes().SilverlightWasRequested(Database);
-                return true;
-            });
-
-            return GetMessageWithObject(new { ok = true });
+            new CreateSilverlightIndexes().SilverlightWasRequested(Database);
+            return okResponseMessage;
         }
 
         [HttpGet][RavenRoute("silverlight/{*id}")]

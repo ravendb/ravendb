@@ -8,16 +8,6 @@
                 </button>
             </div>
             <div class="panel-body">
-
-                <div class="form-group">
-                    <div class="col-sm-10 col-sm-offset-2">
-                        <div class="checkbox">
-                            <input type="checkbox" id="globalSkipIndexReplicatonForAll" class="styled" data-bind="checked: skipIndexReplicationForAll">
-                            <label for="globalSkipIndexReplicatonForAll">Skip index replication for all destinations</label>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="form-group">
                     <label class="col-sm-2 control-label">ETL destinations</label>
                     <div class="col-sm-10">
@@ -173,25 +163,6 @@
                                                 Advanced Options
                                             </a>
                                             <div data-bind="visible: false">
-
-                                                <div class="form-group" style="margin-left: 10px">
-                                                    <button data-bind="click:function(event,data){ $parents[1].sendReplicateCommand($data,$parents[1]); }" type="submit" class="btn btn-primary" title="Replicate to this destination">
-                                                        <i class="fa fa-share-square-o"></i>
-                                                    </button>
-                                                    <span style="margin-left: 5px;">
-                                                        Force replicate all indexes and transformers
-                                                    </span>
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <div class="col-sm-9 col-sm-offset-2">
-                                                        <div class="checkbox">
-                                                            <input type="checkbox" class="styled" data-bind="checked: skipIndexReplication, enable: canEdit, attr: { id: 'skipIndexReplicaton_' + $index() } ">
-                                                            <label data-bind="attr: { for: 'skipIndexReplicaton_' + $index() }">Skip Index Replication</label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
                                                 <div class="form-group">
                                                     <label class="col-sm-2 control-label">Transitive Replication</label>
                                                     <div class="col-sm-9">
