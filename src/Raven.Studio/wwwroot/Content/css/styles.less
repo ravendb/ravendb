@@ -925,6 +925,10 @@ hr {
         }
     }
 
+    li.active a {
+        background-color: @brand-primary;
+    }
+
     .arrow-right > a {
         &:after {
             position: absolute;
@@ -1075,12 +1079,14 @@ hr {
 
             & > ul {
                 & > li > a, & > h3 {
-                    opacity: 0;
+                    /*opacity: 0;*/
+                    visibility: hidden;
                 }
 
                 & > li {
                     &:before {
-                        opacity: 0;
+                        visibility: hidden;
+                        /*opacity: 0;*/
                     }
                 }
             }
@@ -1094,7 +1100,8 @@ hr {
             }
 
             & > ul > li > a, & > h2, & > .back {
-                opacity: 0;
+                visibility: hidden;
+                /*opacity: 0;*/
             }
         }
     }

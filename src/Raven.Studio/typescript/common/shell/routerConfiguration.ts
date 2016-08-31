@@ -1,5 +1,4 @@
-﻿
-import appUrl = require("common/appUrl");
+﻿import appUrl = require("common/appUrl");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
@@ -14,53 +13,57 @@ import getQueryMenuItem = require("common/shell/menu/items/query");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
-export = generateMenuItems;
+export = getRouterConfiguration();
 
-function generateMenuItems(resource: resource) {
-    if (!resource) {
-        return generateNoActiveResourceMenuItems();
-    } else if (resource.isDatabase()) {
-        return generateActiveDatabaseMenuItems();
-    } else {
-        throw new Error(`Menu items for resource of type ${ resource.fullTypeName } are not implemented.`);
+function getRouterConfiguration(): Array<DurandalRouteConfiguration> {
+    return generateAllMenuItems()
+        .map(getMenuItemDurandalRoutes)
+        .reduce((result, next) => result.concat(next), [])
+        .reduce((result: any[], next: any) => {
+            let nextJson = JSON.stringify(next);
+            if (!result.some(x => JSON.stringify(x) === nextJson)) {
+                result.push(next);
+            }
+
+            return result;
+        }, []) as Array<DurandalRouteConfiguration>;
+}
+
+
+function convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration {
+    return {
+        route: leaf.route,
+        title: leaf.title,
+        moduleId: leaf.moduleId,
+        nav: leaf.nav,
+        dynamicHash: leaf.dynamicHash
+    };
+}
+
+
+function getMenuItemDurandalRoutes(item: menuItem): Array<DurandalRouteConfiguration> {
+    if (item.type === 'intermediate') {
+        var intermediateItem = item as intermediateMenuItem;
+        return intermediateItem.children
+            .map(child => getMenuItemDurandalRoutes(child))
+            .reduce((result, next) => result.concat(next), []);
+    } else if (item.type === 'leaf') {
+        return [convertToDurandalRoute(item as leafMenuItem)];
     }
-}
 
-function generateNoActiveResourceMenuItems() {
-    let appUrls = appUrl.forCurrentDatabase();
-    return [
-        new separatorMenuItem('Manage'),
-        getTasksMenuItem(appUrls),
-        getSettingsMenuItem(appUrls),
-        getStatsMenuItem(appUrls),
-        new separatorMenuItem('Server'),
-        getResourcesMenuItem(appUrls),
-        getManageServerMenuItem(),
-        new leafMenuItem({
-            route: '',
-            moduleId: '',
-            title: 'About',
-            tooltip: "About",
-            nav: true,
-            css: 'fa fa-question-mark',
-            dynamicHash: ko.computed(() => 'TODO')
-        })
-    ];
-    
+    return [];
 }
 
 
-function generateActiveDatabaseMenuItems() {
+function generateAllMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         getQueryMenuItem(appUrls),
-        new separatorMenuItem('Manage'),
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
-        new separatorMenuItem('Server'),
         getResourcesMenuItem(appUrls),
         getManageServerMenuItem(),
         new leafMenuItem({

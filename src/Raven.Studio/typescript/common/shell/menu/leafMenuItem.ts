@@ -1,4 +1,6 @@
-﻿class leafMenuItem implements menuItem {
+﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+
+class leafMenuItem implements menuItem {
     title: string;
     tooltip: string;
     nav: boolean;
@@ -8,6 +10,7 @@
     dynamicHash: dynamicHashType;
     css: string;
     path: KnockoutComputed<string>;
+    parent: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
     enabled: KnockoutObservable<boolean>;
     type: menuItemType = "leaf";
 
@@ -20,7 +23,7 @@
         hash?: string,
         dynamicHash?: dynamicHashType,
         css?: string,
-        enabled?: KnockoutObservable<boolean>
+        enabled?: KnockoutObservable<boolean>;
     }) {
         this.title = title;
         this.route = route;
