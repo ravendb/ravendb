@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
@@ -10,81 +9,46 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Json.Linq;
 using Sparrow;
-using Sparrow.Collections;
-using Raven.Abstractions.Extensions;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 
 namespace Raven.Server.TrafficWatch
 {
-    public class TrafficWatchManager // TODO ADIADI :: different file and better class name
-    {
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficWatchManager));
-
-        // TODO ADIADI : do also CuncurrentDisctionary<tenant name, connection> and allow to traffic watch by tennat
-        private static ConcurrentSet<TrafficWatchConnection> _serverHttpTrace = new ConcurrentSet<TrafficWatchConnection>();
-        public static void AddConnection(TrafficWatchConnection connection)
-        {
-            _serverHttpTrace.Add(connection);
-            Logger.Info($"TrafficWatch connection with Id={connection.Id} was opened");
-        }
-
-        public static void Disconnect(TrafficWatchConnection connection)
-        {
-            if (_serverHttpTrace.TryRemove(connection) != true)
-            {
-                Logger.Error($"Couldn't remove connection of TrafficWatch with Id={connection.Id}");
-                return;
-            }
-            Logger.Info($"TrafficWatch connection with Id={connection.Id} was closed");
-        }
-
-        public static void DispatchMessage(TrafficWatchNotification trafficWatchData) // TODO ADIADI : distinquish between serverHttpTrace and tennat specific
-        {
-            foreach (var connection in _serverHttpTrace)
-            {
-                connection.EnqueMsg(trafficWatchData);
-            }
-        }
-    }
-
-
     public class TrafficWatchConnection
     {
         private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficWatchConnection));
+        readonly JsonContextPool _jsonContextPool = new JsonContextPool();
 
-        private WebSocket _websocket;
+        private readonly WebSocket _websocket;
         public string Id { get; }
+        public string TenantSpecific { get; set; }
+
         private readonly AsyncManualResetEvent _manualResetEvent;
-        private CancellationTokenSource _cancellationTokenSource;
+        private readonly CancellationTokenSource _cancellationTokenSource;
 
         private readonly byte[] _heartbeatMessage = Encoding.UTF8.GetBytes("{'Type': 'Heartbeat','Time': '");
-        private byte[] _heartbeatMessageBuffer;
+        private readonly byte[] _heartbeatMessageBuffer;
 
-        public long CoolDownWithDataLossInMiliseconds { get; set; } // TODO ADIADI :: from where we call this ?
-        private long _lastMessageSentTick = 0;
-        private TrafficWatchNotification _lastMessageEnqueuedAndNotSent = null;
         private readonly ConcurrentQueue<TrafficWatchNotification> _msgs = new ConcurrentQueue<TrafficWatchNotification>();
 
 
-        public TrafficWatchConnection(WebSocket webSocket, string id, CancellationToken ctk)
+        public TrafficWatchConnection(WebSocket webSocket, string id, CancellationToken ctk, string resourceName)
         {
             _websocket = webSocket;
-            _manualResetEvent = new AsyncManualResetEvent(ctk);//, disconnectBecauseOfGcToken); // TODO ADIADI : gc close or others.. 
+            _manualResetEvent = new AsyncManualResetEvent(ctk);
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ctk);
             _heartbeatMessageBuffer = new byte[_heartbeatMessage.Length + 32]; // add some sapce to dynamically add Time value
-            Buffer.BlockCopy(_heartbeatMessageBuffer, 0, _heartbeatMessage, 0, _heartbeatMessage.Length);
+            Buffer.BlockCopy(_heartbeatMessage, 0, _heartbeatMessageBuffer, 0,  _heartbeatMessage.Length);
             Id = id;
+            TenantSpecific = resourceName;
         }
-
 
         public async Task StartSendingNotifications()
         {
             try
             {
-                CreateWaitForClientCloseTask();
-
                 while (_cancellationTokenSource.IsCancellationRequested == false)
                 {
                     var result = await _manualResetEvent.WaitAsync(TimeSpan.FromMilliseconds(5000)).ConfigureAwait(false);
@@ -93,22 +57,12 @@ namespace Raven.Server.TrafficWatch
 
                     if (result == false)
                     {
-                        // TODO ADIADI : do this on unmanaged or byte by byte: and in different func 
-                        var utcNow = Encoding.UTF8.GetBytes(SystemTime.UtcNow.ToString(CultureInfo.InvariantCulture) + "'}");
+                        var utcNow = Encoding.UTF8.GetBytes(SystemTime.UtcNow + "'}");
                         Debug.Assert(utcNow.Length < 32); // utcNow should not exceed 32 (or else _heartbeatMessageBuffer should be increased)
-                        Buffer.BlockCopy(_heartbeatMessageBuffer, _heartbeatMessage.Length, utcNow, 0, utcNow.Length);
+                        Buffer.BlockCopy(utcNow, 0, _heartbeatMessageBuffer, _heartbeatMessage.Length, utcNow.Length);
                         Array.Clear(_heartbeatMessageBuffer, _heartbeatMessage.Length + utcNow.Length, _heartbeatMessageBuffer.Length - (_heartbeatMessage.Length + utcNow.Length));
 
                         await SendMessage(_heartbeatMessageBuffer).ConfigureAwait(false);
-
-                        if (_lastMessageEnqueuedAndNotSent != null)
-                        {
-                            await SendMessage(toByteArraySegment(_lastMessageEnqueuedAndNotSent)).ConfigureAwait(false);
-                            _lastMessageEnqueuedAndNotSent = null;
-                            _lastMessageSentTick = Environment.TickCount;
-                        }
-
-                        continue;
                     }
 
                     _manualResetEvent.Reset();
@@ -119,15 +73,7 @@ namespace Raven.Server.TrafficWatch
                         if (_cancellationTokenSource.IsCancellationRequested)
                             break;
 
-                        if (CoolDownWithDataLossInMiliseconds > 0 && Environment.TickCount - _lastMessageSentTick < CoolDownWithDataLossInMiliseconds)
-                        {
-                            _lastMessageEnqueuedAndNotSent = message;
-                            continue;
-                        }
-
-                        await SendMessage(toByteArraySegment(message)).ConfigureAwait(false);
-                        _lastMessageEnqueuedAndNotSent = null;
-                        _lastMessageSentTick = Environment.TickCount;
+                        await SendMessage(ToByteArraySegment(message)).ConfigureAwait(false);
                     }
                 }
             }
@@ -138,68 +84,22 @@ namespace Raven.Server.TrafficWatch
             }
             finally
             {
-                TrafficWatchManager.Disconnect(this); // TODO ADIADI : from a first look - it doen't required here.  check..
+                TrafficWatchManager.Disconnect(this);
+                try
+                {
+                    await
+                        _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORNAL_CLOSE", _cancellationTokenSource?.Token ?? CancellationToken.None);
+                }
+                catch
+                {
+                    // ignore
+                }
             }
         }
 
-        private void CreateWaitForClientCloseTask()
+        private ArraySegment<byte> ToByteArraySegment(TrafficWatchNotification notification)
         {
-            new Task(async () =>
-            {
-                var buffer = new ArraySegment<byte>(new byte[1024]);
-
-                while (true)
-                {
-                    try
-                    {
-                        bool cancelled = false;
-                        WebSocketReceiveResult receiveResult = null;
-                        try
-                        {
-                            receiveResult = await _websocket.ReceiveAsync(buffer, _cancellationTokenSource.Token).ConfigureAwait(false);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            cancelled = true;
-                        }
-                        if (cancelled)
-                        {
-                            try
-                            {
-                                await _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed for GC release", CancellationToken.None).ConfigureAwait(false);
-                                _manualResetEvent.Set();
-                            }
-                            catch (Exception e)
-                            {
-                                Logger.WarnException("Error when closing connection web socket transport", e);
-                            }
-                            return;
-                        }
-
-                        if (receiveResult.MessageType == WebSocketMessageType.Close)
-                        {
-                            if (receiveResult.CloseStatus == WebSocketCloseStatus.NormalClosure && receiveResult.CloseStatusDescription == "CLOSE_NORMAL") // TODO ADIADI :: is it?
-                            {
-                                await _websocket.CloseAsync(receiveResult.CloseStatus.Value, receiveResult.CloseStatusDescription, _cancellationTokenSource.Token).ConfigureAwait(false);
-                                _manualResetEvent.Set();
-                            }
-
-                            //At this point the WebSocket is in a 'CloseReceived' state, so there is no need to continue waiting for messages
-                            break;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.WarnException("Error when receiving message from web socket transport", e);
-                        return;
-                    }
-                }
-            }).Start();
-        }
-
-        private ArraySegment<byte> toByteArraySegment(TrafficWatchNotification notification)
-        {
-            var ravenJObject = new RavenJObject
+            var json = new DynamicJsonValue
             {
                 ["TimeStamp"] = notification.TimeStamp,
                 ["RequestId"] = notification.RequestId,
@@ -211,14 +111,21 @@ namespace Raven.Server.TrafficWatch
                 ["TenantName"] = notification.TenantName,
                 ["CustomInfo"] = notification.CustomInfo,
                 ["InnerRequestsCount"] = notification.InnerRequestsCount,
-                ["QueryTimings"] = notification.QueryTimings
+                //["QueryTimings"] = notification.QueryTimings // TODO :: implement this
             };
 
             var stream = new MemoryStream();
-            ravenJObject.WriteTo(stream);
-            ArraySegment<byte> bytes;
-            stream.TryGetBuffer(out bytes);
-            return bytes;
+            JsonOperationContext context;
+            using (_jsonContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                context.Write(writer, json);
+                writer.Flush();
+
+                ArraySegment<byte> bytes;
+                stream.TryGetBuffer(out bytes);
+                return bytes;
+            }
         }
 
         private async Task SendMessage(byte[] message)

@@ -5,16 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
-using Raven.Json.Linq;
-using Raven.Server.Documents;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -112,20 +107,24 @@ namespace Raven.Server.TrafficWatch
 
                             using (var reader = builder.CreateReader())
                             {
-                                // TODO ADIADI :: from class WebSeocketRequest, ParseWebSocketRequestAsync :: replace to Token + Resource Name + (User ?? / apikey) + Uri? + string Id? + ActiveResource
                                 string token;
                                 if (reader.TryGet("Token", out token) == false)
                                     throw new ArgumentNullException(nameof(token), "Command argument is mandatory");
-                                if (reader.TryGet("id", out id) == false)
+                                if (reader.TryGet("Id", out id) == false)
                                     throw new ArgumentNullException(nameof(id), "Command argument is mandatory");
+                                
+                                // TODO (TrafficWatch) : Validate Token, (Uri?, ActiveSource?, User/ApiKey?).  
 
-                                // TODO ADIADI :: Validate Request.. if validated - continue.
+                                string resourceName;
+                                if (reader.TryGet("ResourceName", out resourceName) == false ||
+                                    resourceName.Equals("N/A"))
+                                {
+                                    resourceName = null;
+                                }
 
-                                // should have here token, id, active tenat, resource name. .
-
-                                connection = new TrafficWatchConnection(webSocket, id, ServerStore.ServerShutdown);
+                                connection = new TrafficWatchConnection(webSocket, id, ServerStore.ServerShutdown, resourceName);
                                 TrafficWatchManager.AddConnection(connection);
-                                var sendTask = connection.StartSendingNotifications();
+                                await connection.StartSendingNotifications();
                             }
                         }
                     }
