@@ -27,7 +27,7 @@ namespace Raven.Client.Shard
 
         protected BaseShardedDocumentSession(string databaseName, ShardedDocumentStore documentStore, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id,
             ShardStrategy shardStrategy, IDictionary<string, TDatabaseCommands> shardDbCommands)
-            : base(databaseName, documentStore, requestExecuter, listeners, id)
+            : base(databaseName, documentStore, listeners, id)
         {
             this.shardStrategy = shardStrategy;
             this.shardDbCommands = shardDbCommands;
@@ -125,18 +125,18 @@ namespace Raven.Client.Shard
             {
                 var shardsToOperateOn = GetShardsToOperateOn(new ShardRequestData
                 {
-                    Keys = { cmd.Key }
+                    Keys = { cmd.Id }
                 }).Select(x => x.Item1).ToList();
 
                 if (shardsToOperateOn.Count == 0)
                 {
-                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Id +
                                                         " because it matched no shards");
                 }
 
                 if (shardsToOperateOn.Count > 1)
                 {
-                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Id +
                                                         " because it matched multiple shards");
 
                 }

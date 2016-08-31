@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Key of a document.
         /// </summary>
-        public virtual string Key { get; set; }
+        public virtual string Id { get; set; }
 
         /// <summary>
         /// Returns operation method. In this case PUT.
@@ -49,7 +49,7 @@ namespace Raven.Abstractions.Commands
         {
             var ret = new RavenJObject
             {
-                {"Key", Key},
+                {"Key", Id},
                 {"Method", Method},
                 {"Document", Document},
                 {"AdditionalData", AdditionalData}

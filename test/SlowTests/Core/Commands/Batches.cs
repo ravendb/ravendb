@@ -31,11 +31,11 @@ namespace SlowTests.Core.Commands
                     new PutCommandData
                     {
                         Document = new RavenJObject {{"Name", "James"}},
-                        Key = "users/3"
+                        Id = "users/3"
                     },
                     new PatchCommandData
                     {
-                        Key = "users/1",
+                        Id = "users/1",
                         Patch = new PatchRequest
                         {
                             Script = "this.Name = 'Nhoj';"
@@ -43,7 +43,7 @@ namespace SlowTests.Core.Commands
                     },
                     new DeleteCommandData()
                     {
-                        Key = "users/2"
+                        Id = "users/2"
                     },
                 });
 

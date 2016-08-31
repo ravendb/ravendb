@@ -468,19 +468,19 @@ namespace SlowTests.Core.Session
                             Document =
                                 RavenJObject.FromObject(new Company {Name = "company 1"}),
                             Etag = null,
-                            Key = "company1"
+                            Id = "company1"
                         },
                         new PutCommandData
                         {
                             Document =
                                 RavenJObject.FromObject(new Company {Name = "company 2"}),
                             Etag = null,
-                            Key = "company2"
+                            Id = "company2"
                         }
                     };
 
                     session.Advanced.Defer(commands);
-                    session.Advanced.Defer(new DeleteCommandData { Key = "company1" });
+                    session.Advanced.Defer(new DeleteCommandData { Id = "company1" });
 
                     session.SaveChanges();
 
