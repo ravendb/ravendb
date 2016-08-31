@@ -342,15 +342,12 @@ class appUrl {
     /**
     * Gets the URL for edit document.
     * @param id The ID of the document to edit, or null to edit a new document.
-    * @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
-    * @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
     * @param database The database to use in the URL. If null, the current database will be used.
     */
-    static forEditDoc(id: string, collectionName: string, docIndexInCollection: number, db: database): string {
+    static forEditDoc(id: string, db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
         var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
-        var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
-        return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
+        return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
     }
 
     static forEditItem(itemId: string, rs: resource, itemIndex: number, collectionName?: string): string {
@@ -378,9 +375,13 @@ class appUrl {
         return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
     }
 
-    static forNewDoc(db: database): string {
+    static forNewDoc(db: database, collection: string = null): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
-        return "#databases/edit?" + databaseUrlPart;
+        var url = "#databases/edit?" + databaseUrlPart;
+        if (collection) {
+            url += "&new=" + encodeURIComponent(collection);
+        }
+        return url;
     }
 
 
