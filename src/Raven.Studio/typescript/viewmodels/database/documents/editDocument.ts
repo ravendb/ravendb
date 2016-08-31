@@ -6,11 +6,9 @@ import database = require("models/resources/database");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import collection = require("models/database/documents/collection");
 import querySort = require("models/database/query/querySort");
-import recentDocumentsCtr = require("models/database/documents/recentDocuments");
 
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
@@ -31,6 +29,7 @@ import copyToClipboard = require("common/copyToClipboard");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
 
 class editDocument extends viewModelBase {
 
@@ -40,14 +39,13 @@ class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
     documentText = ko.observable("");
-    metadata = ko.pureComputed<documentMetadata>(() => this.document() ? this.document().__metadata : null);
+    metadata: KnockoutComputed<documentMetadata>;
 
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
     userSpecifiedId = ko.observable("");
     userSpecifiedIdCustomValidityError: KnockoutComputed<string>;
-    loadedDocumentName = ko.observable<string>("");
     docEditor: AceAjax.Editor;
     entityName = ko.observable<string>("");
 
@@ -55,7 +53,6 @@ class editDocument extends viewModelBase {
     $docEditor: JQuery;
 
     isConflictDocument = ko.observable<boolean>(false);
-    isDocumentStarred = ko.observable<boolean>(false);
     isInDocMode = ko.observable<boolean>(true);
     isNewLineFriendlyMode = ko.observable<boolean>(false);
     autoCollapseMode = ko.observable<boolean>(false);
@@ -67,25 +64,17 @@ class editDocument extends viewModelBase {
     changeNotification: changeSubscription;
     databaseForEditedDoc: database;
 
-    docMode = {
-        docsList: ko.observable<pagedList>()
-    };
-
     queryMode = {
         queryIndex: ko.observable<string>(),
         queryResultList: ko.observable<pagedList>(),
         currentQueriedItemIndex: undefined as number    
     };
-    
-    recentDocuments = new recentDocumentsCtr();
-    topRecentDocuments = ko.pureComputed(() => this.recentDocuments.getTopRecentDocuments(this.activeDatabase(), this.userSpecifiedId()));
-    relatedDocumentHrefs = ko.observableArray<{ id: string; href: string }>();
+
+    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId));
     
     isSaveEnabled: KnockoutComputed<boolean>;
     documentSize: KnockoutComputed<string>;
-    docTitle: KnockoutComputed<string>;
     editedDocId: KnockoutComputed<string>;
-    
     
     constructor() {
         super();
@@ -98,8 +87,6 @@ class editDocument extends viewModelBase {
 
         if (args && args.id) {
             return this.activateById(args.id);
-        } else if (args && args.item && args.list) {
-            return $.Deferred().resolve({ can: true });
         } else if (args && args.index) {
             return this.activateByIndex(args.index, args.query, args.sorts, args.item);
         } else {
@@ -107,14 +94,13 @@ class editDocument extends viewModelBase {
         }
     }
 
-    activate(navigationArgs: any) {
+    activate(navigationArgs: { list: string, database:string, item: string, id: string, new: string }) {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
 
-        this.loadedDocumentName(this.userSpecifiedId());
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction);
 
-        this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty() || !!this.loadedDocumentName());
+        this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty());
 
         // Find the database and collection we're supposed to load.
         // Used for paging through items.
@@ -123,23 +109,7 @@ class editDocument extends viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
         }
 
-        //TODO: bind with with right panel collection
-        if (navigationArgs && navigationArgs.list && navigationArgs.item) {
-            var itemIndex = parseInt(navigationArgs.item, 10);
-            if (!isNaN(itemIndex)) {
-                var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
-                var fetcher = (skip: number, take: number) => newCollection.fetchDocuments(skip, take);
-                var list = new pagedList(fetcher);
-                list.collectionName = navigationArgs.list;
-                list.currentItemIndex(itemIndex);
-                list.getNthItem(0); // Force us to get the total items count.
-                this.docMode.docsList(list);
-            }
-        }
-
         if (navigationArgs && navigationArgs.id) {
-            this.recentDocuments.appendRecentDocument(this.databaseForEditedDoc, navigationArgs.id);
-
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id)); 
         } else {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
@@ -213,7 +183,6 @@ class editDocument extends viewModelBase {
         list.getNthItem(item)
             .done((doc: document) => {
                 this.document(doc);
-                this.loadedDocumentName("");
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
@@ -233,20 +202,31 @@ class editDocument extends viewModelBase {
             return documentId.contains("\\") ? "Document name cannot contain '\\'" : "";
         });
 
-        this.isConflictDocument = ko.computed(() => {
-            var metadata = this.metadata();
-            return metadata && ("Raven-Replication-Conflict" in metadata) && !metadata.id.contains("/conflicts/");
-        });
-
         this.document.subscribe(doc => {
             if (doc) {
                 if (this.isConflictDocument()) {
                     this.resolveConflicts();
                 } else {
-                    var docText = this.stringify(doc.toDto(true));
+
+                    const docDto = doc.toDto(true);
+                    const metaDto = docDto["@metadata"];
+                    if (metaDto) {
+                        this.metaPropsToRestoreOnSave.length = 0;
+
+                        documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
+                    }
+
+                    var docText = this.stringify(docDto);
                     this.documentText(docText);
                 }
             }
+        });
+
+        this.metadata = ko.pureComputed<documentMetadata>(() => this.document() ? this.document().__metadata : null);
+
+        this.isConflictDocument = ko.computed(() => {
+            var metadata = this.metadata();
+            return metadata && ("Raven-Replication-Conflict" in metadata) && !metadata.id.contains("/conflicts/");
         });
 
         this.documentSize = ko.pureComputed(() => {
@@ -258,32 +238,17 @@ class editDocument extends viewModelBase {
             }
         });
 
-        this.metadata.subscribe((meta: documentMetadata) => this.metadataChanged(meta));
+        this.metadata.subscribe((meta: documentMetadata) => {
+            if (meta.id) {
+                this.userSpecifiedId(meta.id);
+            }
+
+            this.entityName(document.getEntityNameFromId(meta.id));
+        });
         this.editedDocId = ko.pureComputed(() => this.metadata() ? this.metadata().id : "");
         this.editedDocId.subscribe((docId: string) =>
             ko.postbox.publish("SetRawJSONUrl", docId ? appUrl.forDocumentRawData(this.activeDatabase(), docId) : "")
         );
-
-        this.docTitle = ko.pureComputed<string>(() => {
-            if (this.isInDocMode()) {
-                if (this.isCreatingNewDocument()) {
-                    return "New Document";
-                } else {
-                    var editedDocId = this.editedDocId();
-
-                    if (editedDocId) {
-                        var lastIndexInEditedDocId = editedDocId.lastIndexOf("/") + 1;
-                        if (lastIndexInEditedDocId > 0) {
-                            editedDocId = editedDocId.slice(lastIndexInEditedDocId);
-                        }
-                    }
-
-                    return editedDocId;
-                }
-            } else {
-                return "Projection";
-            }
-        });
     }
 
     enableCustomNameProvider() {
@@ -386,24 +351,27 @@ class editDocument extends viewModelBase {
     }
 
     foldAll() {
-        var AceRange = require("ace/range").Range;
+        const AceRange = require("ace/range").Range;
         this.docEditor.getSession().foldAll();
-        var folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
+        const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
         folds.map(f => this.docEditor.getSession().expandFold(f));
     }
 
     saveAsNew() {
-        var userId = this.userSpecifiedId();
-        var slashPosition = userId.indexOf("/", 0);
+        var docId = this.userSpecifiedId();
+        var slashPosition = docId.indexOf("/", 0);
         if (slashPosition !== -1) {
-            this.userSpecifiedId(userId.substr(0, slashPosition + 1));
+            docId = docId.substr(0, slashPosition + 1);
         }
-        this.saveDocument();
+        this.saveInternal(docId);
     }
 
     saveDocument() {
+        this.saveInternal(this.userSpecifiedId());
+    }
+
+    private saveInternal(documentId: string) {
         this.isInDocMode(true);
-        var currentDocumentId = this.userSpecifiedId();
 
         let message = "";
         var updatedDto: any;
@@ -435,7 +403,7 @@ class editDocument extends viewModelBase {
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
         // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
         if (this.isCreatingNewDocument()) {
-            this.attachReservedMetaProperties(currentDocumentId, meta);
+            this.attachReservedMetaProperties(documentId, meta);
         } else {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
@@ -444,6 +412,8 @@ class editDocument extends viewModelBase {
                     meta[p.name] = p.value;
                 }
             });
+            // force document id to support save as new
+            meta['@id'] = documentId;
         }
 
         // skip some not necessary meta in headers
@@ -453,12 +423,8 @@ class editDocument extends viewModelBase {
             delete meta[skippedHeader];
         }
 
-        if (this.docMode.docsList()) {
-            this.docMode.docsList().invalidateCache();
-        }
-
         var newDoc = new document(updatedDto);
-        var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, this.activeDatabase());
+        var saveCommand = new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
         this.isSaving(true);
         saveCommand
             .execute()
@@ -466,23 +432,9 @@ class editDocument extends viewModelBase {
     }
 
     private onDocumentSaved(saveResult: bulkDocumentDto[]) {
-        var isCreatingNewDocument = this.isCreatingNewDocument();
         var savedDocumentDto: bulkDocumentDto = saveResult[0];
         var currentSelection = this.docEditor.getSelectionRange();
         this.loadDocument(savedDocumentDto.Key)
-            .done(() => {
-                if (isCreatingNewDocument === false) {
-                    return;
-                }
-
-                if (!!this.loadedDocumentName()) {
-                    this.changeNotification.off();
-                    this.removeNotification(this.changeNotification);
-                }
-
-                //TODO: this.changeNotification = this.createDocumentChangeNotification(savedDocumentDto.Key);
-                this.addNotification(this.changeNotification);
-            })
             .always(() => {
                 this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
 
@@ -493,22 +445,6 @@ class editDocument extends viewModelBase {
         this.updateUrl(savedDocumentDto.Key);
 
         this.dirtyFlag().reset(); //Resync Changes
-
-        // add the new document to the paged list
-        var list: pagedList = this.docMode.docsList();
-        if (!!list) {
-            if (this.isCreatingNewDocument()) {
-                var newTotalResultCount = list.totalResultCount() + 1;
-
-                list.totalResultCount(newTotalResultCount);
-                list.currentItemIndex(newTotalResultCount - 1);
-
-            } else {
-                list.currentItemIndex(list.totalResultCount() - 1);
-            }
-
-            this.updateUrl(this.userSpecifiedId());
-        }
 
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
@@ -532,11 +468,8 @@ class editDocument extends viewModelBase {
             .execute()
             .done((doc: document) => {
                 this.document(doc);
-                this.loadedDocumentName(this.userSpecifiedId());
                 this.dirtyFlag().reset();
 
-                this.loadRelatedDocumentsList(doc);
-                this.recentDocuments.appendRecentDocument(this.databaseForEditedDoc, id);
                 if (this.autoCollapseMode()) {
                     this.foldAll();
                 }
@@ -556,7 +489,6 @@ class editDocument extends viewModelBase {
                 this.loadDocument(docId);
             } else {
                 this.queryMode.queryResultList().getNthItem(this.queryMode.currentQueriedItemIndex).done((doc) => this.document(doc));
-                this.loadedDocumentName("");
             }
 
             this.displayDocumentChangeNotification(false);
@@ -567,32 +499,9 @@ class editDocument extends viewModelBase {
         var doc = this.document();
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
-            viewModel.deletionTask.done(() => this.onDocumentDeleted());
+            viewModel.deletionTask.done(() => this.connectedDocuments.onDocumentDeleted());
             app.showDialog(viewModel, editDocument.editDocSelector);
         } 
-    }
-
-    private onDocumentDeleted() {
-        this.dirtyFlag().reset(); //Resync Changes
-
-        var list = this.docMode.docsList();
-        if (!!list) {
-            this.docMode.docsList().invalidateCache();
-
-            var newTotalResultCount = list.totalResultCount() - 1;
-            list.totalResultCount(newTotalResultCount);
-
-            var nextIndex = list.currentItemIndex();
-            if (nextIndex >= newTotalResultCount) {
-                nextIndex = 0;
-            }
-
-            if (newTotalResultCount > 0) {
-                this.pageToItem(nextIndex, newTotalResultCount);
-            } else {
-                router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
-            }
-        }
     }
 
     formatDocument() {
@@ -606,87 +515,21 @@ class editDocument extends viewModelBase {
         }
     }
 
-    pageToItem(index: number, newTotalResultCount?: number) {
-        var canContinue = this.canContinueIfNotDirty("Unsaved Data", "You have unsaved data. Are you sure you want to continue?");
-        canContinue.done(() => {
-            var list = this.docMode.docsList();
-            if (list) {
-                list.getNthItem(index)
-                    .done((doc: document) => {
-                        if (this.isInDocMode()) {
-                            var docId = doc.getId();
-                            this.loadDocument(docId).done(() => {
-                                this.changeNotification.off();
-                                this.removeNotification(this.changeNotification);
-
-                                //TODO: this.changeNotification = this.createDocumentChangeNotification(docId);
-                                this.addNotification(this.changeNotification);
-                            });
-                            list.currentItemIndex(index);
-                            this.updateUrl(docId);
-                        } else {
-                            this.document(doc);
-                            this.loadedDocumentName("");
-                            this.dirtyFlag().reset(); //Resync Changes
-                        }
-
-                        this.displayDocumentChangeNotification(false);
-
-                        if (!!newTotalResultCount) {
-                            list.totalResultCount(newTotalResultCount);
-                        }
-                    });
-            }
-        });
-    }
-
     navigateToCollection(collectionName: string) {
-        var collectionUrl = appUrl.forDocuments(collectionName, this.activeDatabase());
+        const collectionUrl = appUrl.forDocuments(collectionName, this.activeDatabase());
         router.navigate(collectionUrl);
     }
 
     updateUrl(docId: string) {
-        var docsList = this.docMode.docsList();
-        var collectionName = docsList ? docsList.collectionName : null;
-        var currentItemIndex = docsList ? docsList.currentItemIndex() : null;
-        var editDocUrl = appUrl.forEditDoc(docId, collectionName, currentItemIndex, this.activeDatabase());
+        const editDocUrl = appUrl.forEditDoc(docId, this.activeDatabase());
         router.navigate(editDocUrl, false);
-    }
-
-    metadataChanged(meta: documentMetadata) {
-        if (meta) {
-            this.metaPropsToRestoreOnSave.length = 0;
-            var metaDto = this.metadata().toDto();
-
-            documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
-
-            if (meta.id != undefined) {
-                this.userSpecifiedId(meta.id);
-            }
-
-            this.entityName(document.getEntityNameFromId(meta.id));
-        }
-    }
-
-    loadRelatedDocumentsList(document: documentBase) {
-        let relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(document);
-        let docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
-        let response = docIDsVerifyCommand.execute();
-        response.done((verifiedIDs: Array<string>) => {
-            this.relatedDocumentHrefs(verifiedIDs.map((verified: string) => {
-                return {
-                    id: verified.toString(),
-                    href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
-                };
-            }));
-        });
     }
 
     resolveConflicts() {
         var task = new resolveMergeCommand(this.activeDatabase(), this.editedDocId()).execute();
         task.done((response: mergeResult) => {
             this.documentText(response.Document);
-            //TODO:this.metadataText(response.Metadata);
+            //TODO: handle metadata
         });
     }
 

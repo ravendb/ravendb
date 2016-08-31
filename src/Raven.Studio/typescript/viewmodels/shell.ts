@@ -814,7 +814,7 @@ class shell extends viewModelBase {
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
-        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
+        var editDocUrl = appUrl.forEditDoc(docId, this.activeDatabase());
         this.navigate(editDocUrl);
     }
 

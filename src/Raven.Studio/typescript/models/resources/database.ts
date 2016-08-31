@@ -13,6 +13,7 @@ class database extends resource {
     recentQueriesLocalStorageName: string;
     recentPatchesLocalStorageName: string;
     mergedIndexLocalStoragePrefix: string;
+    starredDocumentsLocalStorageName: string;
     static type = "database";
     iconName: KnockoutComputed<string>;
 
@@ -41,6 +42,7 @@ class database extends resource {
         this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + name;
         this.recentPatchesLocalStorageName = "ravenDB-recentPatches." + name;
         this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + name;
+        this.starredDocumentsLocalStorageName = "ravenDB-starredDocuments." + name;
     }
 
     activate() {

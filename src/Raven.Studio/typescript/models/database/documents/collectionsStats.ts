@@ -16,6 +16,11 @@ class collectionsStats  {
             this.collections.push(new collection(key, ownerDatabase, statsDto.Collections[key]));
         }
     }
+
+    getCollectionCount(collectionName: string): number {
+        const matchedCollection = this.collections.first(x => x.name === collectionName);
+        return matchedCollection ? matchedCollection.documentCount() : 0;
+    }
    
 }
 
