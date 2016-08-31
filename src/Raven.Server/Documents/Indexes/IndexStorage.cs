@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes
             _index = index;
             _contextPool = contextPool;
             DocumentDatabase = database;
-            _logger = LoggerSetup.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
         }
 
         public void Initialize(StorageEnvironment environment)

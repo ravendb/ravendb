@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration)
         {
-            _logger = LoggerSetup.Instance.GetLogger(database.Name, GetType().FullName);
+            _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             _database = database;
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             WaitForChanges = new AsyncManualResetEvent(_cancellationTokenSource.Token);

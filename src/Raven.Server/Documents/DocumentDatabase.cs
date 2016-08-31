@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
         {
             Name = name;
             Configuration = configuration;
-            _logger = LoggerSetup.Instance.GetLogger<DocumentDatabase>(Name);
+            _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
@@ -233,13 +233,13 @@ namespace Raven.Server.Documents
                 DocumentTombstoneCleaner = null;
             });
 
-			exceptionAggregator.Execute(() =>
-			{
-				DocumentReplicationLoader?.Dispose();
-				DocumentReplicationLoader = null;
-			});
+            exceptionAggregator.Execute(() =>
+            {
+                DocumentReplicationLoader?.Dispose();
+                DocumentReplicationLoader = null;
+            });
 
-			exceptionAggregator.Execute(() =>
+            exceptionAggregator.Execute(() =>
             {
                 SqlReplicationLoader?.Dispose();
                 SqlReplicationLoader = null;

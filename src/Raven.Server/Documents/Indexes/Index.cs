@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
-            _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             lock (_locker)
             {
                 if (_initialized)
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Indexes
                     _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-                    _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
+                    _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 

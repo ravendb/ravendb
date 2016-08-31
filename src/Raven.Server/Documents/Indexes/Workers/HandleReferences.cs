@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _configuration = configuration;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
-            _logger = LoggerSetup.Instance
+            _logger = LoggingSource.Instance
                 .GetLogger<HandleReferences>(_indexStorage.DocumentDatabase.Name);
         }
 

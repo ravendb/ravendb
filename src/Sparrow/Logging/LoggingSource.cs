@@ -1,21 +1,18 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Runtime.CompilerServices;
+using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Sparrow.Collections;
 
 namespace Sparrow.Logging
 {
-    /// <summary>
-    ///     **This code was written under the influence**, and should be reviewed as such.
-    ///     It is intended to be high performance logging framework, but it should be reviewed
-    ///     for missing log entries, etc.
-    /// </summary>
-    public class LoggerSetup
+    public class LoggingSource
     {
         [ThreadStatic] private static string _currentThreadId;
 
@@ -35,9 +32,37 @@ namespace Sparrow.Logging
         public bool IsInfoEnabled;
         public bool IsOperationsEnabled;
 
-        public static LoggerSetup Instance = new LoggerSetup(Path.GetTempPath(), LogMode.None);
+        public static LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
-        private LoggerSetup(string path, LogMode logMode = LogMode.Information, TimeSpan retentionTime = default(TimeSpan))
+
+        private static byte[] _headerRow =
+            Encoding.UTF8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");
+        
+        private readonly ConcurrentDictionary<WebSocket, TaskCompletionSource<object>> _listeners = new ConcurrentDictionary<WebSocket, TaskCompletionSource<object>>();
+        private LogMode _logMode;
+        private LogMode _oldLogMode;
+
+        public async Task Register(WebSocket source)
+        {
+            await source.SendAsync(new ArraySegment<byte>(_headerRow), WebSocketMessageType.Text, true,
+                CancellationToken.None);
+            
+            var taskCompletionSource = new TaskCompletionSource<object>();
+            lock (this)
+            {
+                if (_listeners.Count == 0)
+                {
+                    _oldLogMode = _logMode;
+                    SetupLogMode(LogMode.Information, _path);
+                }
+                if (_listeners.TryAdd(source, taskCompletionSource) == false)
+                    throw new InvalidOperationException("Socket was already added?");
+            }
+            await taskCompletionSource.Task;
+        }
+
+
+        private LoggingSource(string path, LogMode logMode = LogMode.Information, TimeSpan retentionTime = default(TimeSpan))
         {
             _path = path;
             if (retentionTime == default(TimeSpan))
@@ -53,6 +78,9 @@ namespace Sparrow.Logging
         {
             lock (this)
             {
+                if (_logMode == logMode)
+                    return;
+                _logMode = logMode;
                 IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
                 IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
 
@@ -114,7 +142,9 @@ namespace Sparrow.Logging
                     continue;
                 // TODO: If avialable file size on the disk is too small, emit a warning, and return a Null Stream, instead
                 // TODO: We don't want to have the debug log kill us
-                return new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32*1024, false);
+                var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32*1024, false);
+                fileStream.Write(_headerRow, 0, _headerRow.Length);
+                return fileStream;
             }
         }
 
@@ -199,6 +229,7 @@ namespace Sparrow.Logging
                     writer.Write("Operations");
                     break;
             }
+
             writer.Write(", ");
             writer.Write(entry.Source);
             writer.Write(", ");
@@ -212,7 +243,7 @@ namespace Sparrow.Logging
             }
             writer.WriteLine();
             writer.Flush();
-		}
+        }
 
         public Logger GetLogger<T>(string source)
         {
@@ -269,6 +300,8 @@ namespace Sparrow.Logging
                                     ArraySegment<byte> bytes;
                                     item.TryGetBuffer(out bytes);
                                     currentFile.Write(bytes.Array, bytes.Offset, bytes.Count);
+                                    if (_listeners.Count != 0)
+                                        WriteToListeningWebSockets(bytes);
                                     sizeWritten += bytes.Count;
                                     item.SetLength(0);
                                     threadState.Free.Enqueue(item);
@@ -291,6 +324,35 @@ namespace Sparrow.Logging
                 var msg = $"FATAL ERROR trying to log!{Environment.NewLine}{e}";
                 Console.WriteLine(msg);
                 //TODO: Log to event viewer in Windows and sys trace in Linux?
+            }
+        }
+
+        private void WriteToListeningWebSockets(ArraySegment<byte> bytes)
+        {
+            foreach (var socket in _listeners.Keys)
+            {
+                try
+                {
+                    socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+                }
+                catch (Exception)
+                {
+                    TaskCompletionSource<object> value;
+                    if (_listeners.TryRemove(socket, out value))
+                    {
+                        Task.Run(() => value.TrySetResult(null));
+                    }
+                    if (_listeners.Count == 0)
+                    {
+                        lock (this)
+                        {
+                            if (_listeners.Count == 0)
+                            {
+                                SetupLogMode(_oldLogMode, _path);
+                            }
+                        }
+                    }
+                }
             }
         }
 

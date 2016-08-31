@@ -130,7 +130,7 @@ namespace Raven.Server.Documents
         {
             _documentDatabase = documentDatabase;
             _name = _documentDatabase.Name;
-            _logger = LoggerSetup.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
         }
 
         public StorageEnvironment Environment { get; private set; }

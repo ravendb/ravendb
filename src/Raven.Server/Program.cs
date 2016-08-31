@@ -12,7 +12,7 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
-            LoggerSetup.Instance.SetupLogMode(LogMode.Operations, "Logs");
+            LoggingSource.Instance.SetupLogMode(LogMode.Operations, "Logs");
 
             WelcomeMessage.Print();
 
@@ -28,7 +28,7 @@ namespace Raven.Server
                 try
                 {
                     server.Initialize();
-                    _logger = LoggerSetup.Instance.GetLogger<Program>("Raven/Server");
+                    _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
                     Console.WriteLine($"Listening to: {string.Join(", ", configuration.Core.ServerUrl)}");
                     Console.WriteLine("Server started, listening to requests...");
 

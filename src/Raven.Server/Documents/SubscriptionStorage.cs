@@ -15,7 +15,6 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -56,7 +55,7 @@ namespace Raven.Server.Documents
             var databaseName = db.Name;
             _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling("Subscriptions", databaseName);
             
-            _logger = LoggerSetup.Instance.GetLogger<SubscriptionStorage>(databaseName);
+            _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
@@ -342,13 +341,9 @@ namespace Raven.Server.Documents
             config["LastMessageSentAt"] = connection.Stats.LastMessageSentAt;
             config["LastAckReceivedAt"] = connection.Stats.LastAckReceivedAt;
 
-            connection.Stats.DocsRate.SetMinimalHumaneMeterData("Docs",config);
-            connection.Stats.BytesRate.SetMinimalHumaneMeterData("Bytes", config);
-            connection.Stats.AckRate.SetMinimalHumaneMeterData("Acks", config);
-
-            connection.Stats.DocsRate.SetMinimalMeterData("Docs", config);
-            connection.Stats.BytesRate.SetMinimalMeterData("Bytes", config);
-            connection.Stats.AckRate.SetMinimalMeterData("Acks", config);
+            config["DocsRate"] = connection.Stats.DocsRate.CreateMeterData();
+            config["BytesRate"] = connection.Stats.BytesRate.CreateMeterData();
+            config["AckRate"] = connection.Stats.AckRate.CreateMeterData();
         }
 
         public void GetRunningSusbscriptions(BlittableJsonTextWriter writer,

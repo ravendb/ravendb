@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _name = name;
             _converter = converter;
-            _logger = LoggerSetup.Instance.GetLogger<IndexWriteOperation>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<IndexWriteOperation>(documentDatabase.Name);
             try
             {
                 _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields);

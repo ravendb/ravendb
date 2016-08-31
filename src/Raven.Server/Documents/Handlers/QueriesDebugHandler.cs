@@ -7,7 +7,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class QueriesAdminHandler : DatabaseRequestHandler
+    public class QueriesDebugHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/debug/queries/kill", "GET")]
         public Task KillQuery()
