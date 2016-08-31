@@ -214,7 +214,14 @@ namespace Raven.Client.FileSystem
         /// <param name="pageSize">The maximum number of file headers that will be retrieved</param>
         /// <returns>A task that represents the asynchronous operation</returns>
         Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
-
+        /// <summary>
+        /// Stream the query results to the client
+        /// </summary>
+        /// <param name="query">The Lucene query</param>
+        /// <param name="sortFields">The fields to sort by</param>
+        /// <param name="start">The number of files that should be skipped</param>
+        /// <param name="pageSize">The maximum number of file headers that will be retrieved</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
         Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(string query, string[] sortFields = null, int start = 0, int pageSize = int.MaxValue);
         IDisposable ForceReadFromMaster();
     }
