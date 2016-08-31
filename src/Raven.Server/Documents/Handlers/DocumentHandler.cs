@@ -347,7 +347,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName("Key");
-                        writer.WriteString(cmd.PutResult.Key);
+                        writer.WriteString(cmd.Key);
                         writer.WriteComma();
                         writer.WritePropertyName("Error");
                         writer.WriteString(cmd.ConcurrencyException.Message);
