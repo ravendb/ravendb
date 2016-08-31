@@ -141,7 +141,7 @@ namespace Raven.Client.Documents
             }
 
             BlittableJsonReaderObject metadata;
-            json.TryGet(Constants.Metadata, out metadata);
+            json.TryGet(Constants.Metadata.Key, out metadata);
 
             metadata.Modifications[Constants.Headers.RavenClrType] = documentStore.Conventions.GetClrTypeName(entityType);
         }

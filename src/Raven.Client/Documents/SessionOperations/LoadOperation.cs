@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.SessionOperations
     public class LoadOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<LoadOperation>("Raven.Client");
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.Client");
 
         private string[] _ids;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
@@ -125,10 +125,10 @@ namespace Raven.Client.Documents.SessionOperations
                     }
 
                     BlittableJsonReaderObject metadata;
-                    if (document.TryGet(Constants.Metadata, out metadata) == false)
+                    if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
                         throw new InvalidOperationException("Document must have a metadata");
                     string id;
-                    if (metadata.TryGet(Constants.MetadataDocId, out id) == false)
+                    if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                         throw new InvalidOperationException("Document must have an id");
                     _session.DocumentsById[id] = document;
                 }
@@ -144,10 +144,10 @@ namespace Raven.Client.Documents.SessionOperations
                 }
 
                 BlittableJsonReaderObject metadata;
-                if (document.TryGet(Constants.Metadata, out metadata) == false)
+                if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
                     throw new InvalidOperationException("Document must have a metadata");
                 string id;
-                if (metadata.TryGet(Constants.MetadataDocId, out id) == false)
+                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                     throw new InvalidOperationException("Document must have an id");
                 _session.DocumentsById[id] = document;
             }

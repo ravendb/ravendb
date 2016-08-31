@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.SessionOperations
     public class BatchOperation
     {
         private readonly Document.InMemoryDocumentSessionOperations _session;
-        private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<LoadOperation>("Raven.Client");
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.Client");
 
         public Document.InMemoryDocumentSessionOperations.SaveChangesData Data;
 
