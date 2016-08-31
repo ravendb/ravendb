@@ -11,6 +11,7 @@ namespace Raven.Server.Web.Studo
 {
     public class StudioTasksHandler : RequestHandler
     {
+        //TODO: split to specific handler
         [RavenAction("/databases/*/studio-tasks/config", "GET")]
         public Task Config()
         {
@@ -19,6 +20,7 @@ namespace Raven.Server.Web.Studo
             return Task.CompletedTask;
         }
 
+        //TODO: split to specific handler
         [RavenAction("/studio-tasks/server-configs", "GET")]
         public Task Get()
         {
@@ -26,6 +28,7 @@ namespace Raven.Server.Web.Studo
             return HttpContext.Response.WriteAsync("{\"IsGlobalAdmin\":true,\"CanReadWriteSettings\":true,\"CanReadSettings\":true,\"CanExposeConfigOverTheWire\":true}");
         }
 
+        //TODO: handle this in js ?
         [RavenAction("/studio-tasks/new-encryption-key", "GET")]
         public async Task GetNewEncryption()
         {
@@ -39,6 +42,7 @@ namespace Raven.Server.Web.Studo
             await HttpContext.Response.WriteAsync($"\"{result}\"", Encoding.UTF8);
         }
 
+        //TODO: handle this in js ?
         [RavenAction("/studio-tasks/is-base-64-key", "POST")]
         public Task IsBase64Key()
         {
