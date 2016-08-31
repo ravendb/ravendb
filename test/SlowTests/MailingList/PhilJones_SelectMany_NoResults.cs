@@ -3,20 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class PhilJones_SelectMany_NoResults : RavenTest
+    public class PhilJones_SelectMany_NoResults : RavenTestBase
     {
-        public class Service
+        private class Service
         {
             public class EmailAddress
             {
@@ -30,7 +29,7 @@ namespace Raven.Tests.MailingList
             public List<EmailAddress> EmailAddresses { get; set; }
         }
 
-        public class Services_QueryIndex : AbstractIndexCreationTask<Service, Services_QueryIndex.ReduceResult>
+        private class Services_QueryIndex : AbstractIndexCreationTask<Service, Services_QueryIndex.ReduceResult>
         {
             public class ReduceResult : Service
             {
@@ -42,8 +41,8 @@ namespace Raven.Tests.MailingList
                 Map = suppliers => from supplier in suppliers
                                    select new
                                    {
-                                    supplier.Name,
-                                    Query = new object[]
+                                       supplier.Name,
+                                       Query = new object[]
                                     {
                                         supplier.Name,
                                         supplier.EmailAddresses.Select(x => x.Email)
@@ -58,7 +57,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void SelectManyIndexReturnsResults()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Services_QueryIndex().Execute(store);
 

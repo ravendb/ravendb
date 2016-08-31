@@ -3,23 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using FastTests;
 using Raven.Client;
-using Raven.Tests.Common;
-
 using Xunit;
-using Raven.Client.Linq;
-using System.Linq;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class PhilJones_Search : RavenTest
+    public class PhilJones_Search : RavenTestBase
     {
+        private class User
+        {
+            public string FirstName { get; set; }
+        }
+
         [Fact]
         public void CanChangeParsingOfSearchQueries()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Equal(@"FirstName:(\*Ore\?n\*)", session.Query<User>()
                         .Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.EscapeAll)
@@ -40,6 +43,5 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-         
     }
 }

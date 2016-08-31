@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
@@ -64,6 +65,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     return null;
 
+                doc.Key = _context.GetLazyString(id);
                 return GetProjectionFromDocument(doc, score, _fieldsToFetch, _context);
             }
 
@@ -130,6 +132,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         public static Document GetProjectionFromDocument(Document doc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context)
         {
+            // key here must be lowercased because it must 'match' Lucene storage behavior in which we are storing keys lowercased
+            Debug.Assert(doc.Key.Equals(doc.Key.ToLower()));
+
             var result = new DynamicJsonValue();
 
             if (fieldsToFetch.IsDistinct == false)

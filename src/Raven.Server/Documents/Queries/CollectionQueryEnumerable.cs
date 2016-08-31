@@ -166,9 +166,14 @@ namespace Raven.Server.Documents.Queries
 
                     _innerCount++;
 
-                    var doc = _fieldsToFetch.IsProjection
-                                ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
-                                : _inner.Current;
+                    Document doc;
+                    if (_fieldsToFetch.IsProjection)
+                    {
+                        _inner.Current.Key = _context.GetLazyString(_inner.Current.Key.ToLower());
+                        doc = MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context);
+                    }
+                    else
+                        doc = _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
                     {
@@ -210,9 +215,14 @@ namespace Raven.Server.Documents.Queries
                     {
                         count++;
 
-                        var doc = _fieldsToFetch.IsProjection
-                                ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
-                                : document;
+                        Document doc;
+                        if (_fieldsToFetch.IsProjection)
+                        {
+                            document.Key = _context.GetLazyString(document.Key.ToLower());
+                            doc = MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context);
+                        }
+                        else
+                            doc = _inner.Current;
 
                         if (doc.Data.Count <= 0)
                             continue;

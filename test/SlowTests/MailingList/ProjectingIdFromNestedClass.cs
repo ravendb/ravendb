@@ -3,21 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Diagnostics;
+
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ProjectingIdFromNestedClass : RavenTest
+    public class ProjectingIdFromNestedClass : RavenTestBase
     {
-
-        public class Document
+        private class Document
         {
             public string Id
             {
@@ -26,7 +23,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Documents_TestIndex : AbstractIndexCreationTask<Document>
+        private class Documents_TestIndex : AbstractIndexCreationTask<Document>
         {
             public class Result
             {
@@ -48,11 +45,11 @@ namespace Raven.Tests.MailingList
                 StoreAllFields(FieldStorage.Yes);
             }
         }
- 
+
         [Fact]
         public void TestSelectFields()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new Documents_TestIndex());
 
@@ -70,7 +67,7 @@ namespace Raven.Tests.MailingList
                                        .SelectFields<Documents_TestIndex.Result>()
                                        .ToList();
 
-                    Assert.True(query.All(d => !String.IsNullOrEmpty(d.Id)));
+                    Assert.True(query.All(d => !string.IsNullOrEmpty(d.Id)));
                 }
             }
         }
