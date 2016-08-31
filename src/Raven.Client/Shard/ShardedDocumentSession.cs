@@ -73,7 +73,7 @@ namespace Raven.Client.Shard
             IDatabaseCommands value;
             if (shardDbCommands.TryGetValue(shardId, out value) == false)
                 throw new InvalidOperationException("Could not find shard: " + shardId);
-            return Conventions.GenerateDocumentKey(databaseName, value, entity);
+            return Conventions.GenerateDocumentKey(DatabaseName, value, entity);
         }
 
         protected override Task<string> GenerateKeyAsync(object entity)

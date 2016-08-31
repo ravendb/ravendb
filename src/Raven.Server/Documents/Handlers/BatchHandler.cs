@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Handlers
         private struct CommandData
         {
             public string Method;
+            // TODO: Change to ID
             public string Key;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;

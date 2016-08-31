@@ -6,17 +6,17 @@ using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.Client.Document.SessionOperations
+namespace Raven.Client.Documents.SessionOperations
 {
-    public class NewLoadOperation
+    public class LoadOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<NewLoadOperation>("Raven.Client");
+        private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<LoadOperation>("Raven.Client");
 
         private string[] _ids;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
 
-        public NewLoadOperation(InMemoryDocumentSessionOperations session)
+        public LoadOperation(InMemoryDocumentSessionOperations session)
         {
             _session = session;
         }
@@ -78,7 +78,7 @@ namespace Raven.Client.Document.SessionOperations
             var entity = _session.ConvertToEntity(typeof(T), id, document);
             try
             {
-                _session.EntitiesMetadata.Add(entity, new InMemoryDocumentSessionOperations.EntityMetadata
+                _session.DocumentsAndMetadata.Add(entity, new InMemoryDocumentSessionOperations.DocumentMetadata
                 {
                     Id = id,
                 });

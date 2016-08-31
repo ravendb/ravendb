@@ -749,7 +749,7 @@ namespace Raven.Client.Shard
             IAsyncDatabaseCommands value;
             if (shardDbCommands.TryGetValue(shardId, out value) == false)
                 throw new InvalidOperationException("Could not find shard: " + shardId);
-            return Conventions.GenerateDocumentKeyAsync(databaseName, value, entity);
+            return Conventions.GenerateDocumentKeyAsync(DatabaseName, value, entity);
         }
 
         public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default (CancellationToken))

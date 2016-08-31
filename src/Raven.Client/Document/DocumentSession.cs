@@ -20,9 +20,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Http;
-using Sparrow.Json;
 
 namespace Raven.Client.Document
 {
@@ -57,8 +54,11 @@ namespace Raven.Client.Document
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore, DocumentSessionListeners listeners, Guid id, IDatabaseCommands databaseCommands, RequestExecuter requestExecuter)
-            : base(dbName, documentStore, requestExecuter, listeners, id)
+        public DocumentSession(string dbName, DocumentStore documentStore,
+                               DocumentSessionListeners listeners,
+                               Guid id,
+                               IDatabaseCommands databaseCommands)
+            : base(dbName, documentStore, listeners, id)
         {
             DatabaseCommands = databaseCommands;
         }
@@ -253,17 +253,35 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public T Load<T>(string id)
         {
-            var loadOeration = new NewLoadOperation(this);
-            loadOeration.ById(id);
+            if (id == null)
+                throw new ArgumentNullException("id", "The document id cannot be null");
+            if (IsDeleted(id))
+                return default(T);
+            object existingEntity;
 
-            var command = loadOeration.CreateRequest();
-            if (command != null)
+            if (EntitiesById.TryGetValue(id, out existingEntity))
             {
-                RequestExecuter.Execute(command, Context);
-                loadOeration.SetResult(command.Result);
+                return (T)existingEntity;
+            }
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
             }
 
-            return loadOeration.GetDocument<T>();
+            IncrementRequestCount();
+            var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, id);
+            bool retry;
+            do
+            {
+                loadOperation.LogOperation();
+                using (loadOperation.EnterLoadContext())
+                {
+                    retry = loadOperation.SetResult(DatabaseCommands.Get(id));
+                }
+            } while (retry);
+            return loadOperation.Complete<T>().FirstOrDefault();
         }
 
         /// <summary>
@@ -272,17 +290,7 @@ namespace Raven.Client.Document
         /// <param name="ids">The ids.</param>
         public T[] Load<T>(IEnumerable<string> ids)
         {
-            var loadOeration = new NewLoadOperation(this);
-            loadOeration.ByIds(ids);
-
-            var command = loadOeration.CreateRequest();
-            if (command != null)
-            {
-                RequestExecuter.Execute(command, Context);
-                loadOeration.SetResult(command.Result);
-            }
-
-            return loadOeration.GetDocuments<T>();
+            return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
         }
 
         /// <summary>
@@ -485,7 +493,7 @@ namespace Raven.Client.Document
 
         protected override string GenerateKey(object entity)
         {
-            return Conventions.GenerateDocumentKey(databaseName, DatabaseCommands, entity);
+            return Conventions.GenerateDocumentKey(dbName, DatabaseCommands, entity);
         }
 
         protected override Task<string> GenerateKeyAsync(object entity)

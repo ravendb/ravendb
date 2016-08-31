@@ -23,7 +23,6 @@ using System.Diagnostics;
 using System.Dynamic;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
-using Raven.Client.Http;
 
 namespace Raven.Client.Document.Async
 {
@@ -37,8 +36,11 @@ namespace Raven.Client.Document.Async
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore, IAsyncDatabaseCommands asyncDatabaseCommands, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id)
-            : base(dbName, documentStore, requestExecuter, listeners, id)
+        public AsyncDocumentSession(string dbName, DocumentStore documentStore,
+                                    IAsyncDatabaseCommands asyncDatabaseCommands,
+                                    DocumentSessionListeners listeners,
+                                    Guid id)
+            : base(dbName, documentStore, listeners, id)
         {
             AsyncDatabaseCommands = asyncDatabaseCommands;
             GenerateDocumentKeysOnStore = false;
@@ -241,12 +243,12 @@ namespace Raven.Client.Document.Async
             var lazyValue = new Lazy<Task<T>>(() =>
                 ExecuteAllPendingLazyOperationsAsync(token)
                 .ContinueWith(t =>
-            {
-                if (t.Exception != null)
-                    throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
+                {
+                    if (t.Exception != null)
+                        throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
 
-                return GetOperationResult<T>(operation.Result);
-            }, token));
+                    return GetOperationResult<T>(operation.Result);
+                }, token));
 
             if (onEval != null)
                 onEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
@@ -710,32 +712,44 @@ namespace Raven.Client.Document.Async
         /// <returns></returns>
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default(CancellationToken))
         {
-            var loadOeration = new NewLoadOperation(this);
-            loadOeration.ById(id);
-
-            var command = loadOeration.CreateRequest();
-            if (command != null)
+            if (id == null)
+                throw new ArgumentNullException("id", "The document id cannot be null");
+            object entity;
+            if (EntitiesById.TryGetValue(id, out entity))
             {
-                await RequestExecuter.ExecuteAsync(command, Context);
-                loadOeration.SetResult(command.Result);
+                return (T)entity;
             }
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
+            }
+            if (IsDeleted(id))
+                return default(T);
 
-            return loadOeration.GetDocument<T>();
+            IncrementRequestCount();
+            var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
+            return await CompleteLoadAsync<T>(id, loadOperation, token).ConfigureAwait(false);
         }
 
-        public async Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default(CancellationToken))
+        private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default(CancellationToken))
         {
-            var loadOeration = new NewLoadOperation(this);
-            loadOeration.ByIds(ids);
-
-            var command = loadOeration.CreateRequest();
-            if (command != null)
+            loadOperation.LogOperation();
+            using (loadOperation.EnterLoadContext())
             {
-                await RequestExecuter.ExecuteAsync(command, Context);
-                loadOeration.SetResult(command.Result);
-            }
+                var result = await AsyncDatabaseCommands.GetAsync(id, token: token).ConfigureAwait(false);
 
-            return loadOeration.GetDocuments<T>();
+                if (loadOperation.SetResult(result) == false)
+                    return loadOperation.Complete<T>().FirstOrDefault();
+
+                return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token).ConfigureAwait(false);
+            }
+        }
+
+        public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default(CancellationToken))
+        {
+            return LoadAsyncInternal<T>(ids.ToArray(), token);
         }
 
         public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default(CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
@@ -982,7 +996,7 @@ namespace Raven.Client.Document.Async
 
         protected override Task<string> GenerateKeyAsync(object entity)
         {
-            return Conventions.GenerateDocumentKeyAsync(databaseName, AsyncDatabaseCommands, entity);
+            return Conventions.GenerateDocumentKeyAsync(DatabaseName, AsyncDatabaseCommands, entity);
         }
 
         public async Task RefreshAsync<T>(T entity, CancellationToken token = default(CancellationToken))

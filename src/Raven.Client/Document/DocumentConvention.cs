@@ -29,6 +29,7 @@ using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Sparrow.Json;
 
@@ -788,7 +789,7 @@ namespace Raven.Client.Document
             {
                 var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
                 identityProperty = propertyInfo ?? identityProperty;
-    }
+            }
 
             idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
             {
@@ -826,6 +827,38 @@ namespace Raven.Client.Document
                 {
                     return jsonSerializer.Deserialize(reader, type);
                 }
+            }
+        }
+
+        public BlittableJsonReaderObject JsonSerialize(object entity, JsonOperationContext context)
+        {
+            var jsonSerializer = CreateSerializer();
+            jsonSerializer.BeforeClosingObject += (o, writer) =>
+            {
+                var ravenJTokenWriter = (RavenJTokenWriter)writer;
+                ravenJTokenWriter.AssociateCurrentOBjectWith(o);
+
+                Dictionary<string, JToken> value;
+              /*  if (MissingDictionary.TryGetValue(o, out value) == false)
+                    return;*/
+
+               /* foreach (var item in value)
+                {
+                    writer.WritePropertyName(item.Key);
+                    if (item.Value == null)
+                        writer.WriteNull();
+                    else
+                        writer.WriteValue(item.Value);
+                }*/
+            };
+
+            /*TODO: Use a 4KB memory stream which we be allocated once per session */
+            using (var ms = new MemoryStream())
+            using (var streamWriter = new StreamWriter(new MemoryStream()))
+            {
+                jsonSerializer.Serialize(streamWriter, entity);
+
+                return context.ReadForMemory(ms, "convention.Serialize");
             }
         }
     }
