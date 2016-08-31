@@ -3,17 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
 
+using System;
+using System.Collections.Generic;
+using FastTests;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class QueryIn : RavenTest
+    public class QueryIn : RavenTestBase
     {
         [Fact]
         public void ShouldWork()
@@ -21,7 +22,7 @@ namespace Raven.Tests.MailingList
             var idents = new[] { 1, 2, 3, 4, 5, 6, 7 };
             var index = 0;
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 for (var i = 0; i < 64; i++)
                 {
@@ -38,11 +39,16 @@ namespace Raven.Tests.MailingList
 
                 store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
                 {
-                    Map = @"docs.MyEntities.Select(entity => new {
+                    Maps = {
+                        @"docs.MyEntities.Select(entity => new {
                                     Text = entity.Text,
                                     ImageId = entity.ImageId
-                                })",
-                    Indexes = { { "Text", FieldIndexing.Analyzed } }
+                                })"
+                    },
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        { "Text", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
+                    }
                 });
 
                 WaitForUserToContinueTheTest(store);
@@ -52,7 +58,7 @@ namespace Raven.Tests.MailingList
                     Assert.NotEmpty(session
                                         .Query<MyEntity>("TestIndex")
                                         .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
-                                        .Where(x => x.ImageId.In(new[] {67, 66, 78, 99, 700, 6})));
+                                        .Where(x => x.ImageId.In(new[] { 67, 66, 78, 99, 700, 6 })));
                     Assert.NotEmpty(session
                                             .Query<MyEntity>("TestIndex")
                                             .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
@@ -61,7 +67,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class MyEntity
+        private class MyEntity
         {
             public string Id { get; set; }
             public int ImageId { get; set; }

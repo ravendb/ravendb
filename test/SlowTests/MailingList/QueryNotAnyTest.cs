@@ -1,29 +1,22 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Linq;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class QueryNotAny : RavenTest
+    public class QueryNotAny : RavenTestBase
     {
         [Fact]
         public void Query_NotAny_WithEnumComparison()
         {
-            using (GetNewServer())
-            using (var documentStore = new DocumentStore()
+            using (var store = GetDocumentStore())
             {
-                Url = "http://localhost:8079",
-                Conventions = { DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites }
-            }.Initialize())
-            {
-                new Users_ByRoles().Execute(documentStore);
-                using (var session = documentStore.OpenSession())
+                new Users_ByRoles().Execute(store);
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Id = 1, Roles = new List<Role> { new Role { Type = UserType.Contract }, new Role { Type = UserType.Developer } } });
                     session.Store(new User { Id = 2, Roles = new List<Role> { new Role { Type = UserType.Permanent }, new Role { Type = UserType.Developer } } });
@@ -45,7 +38,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Users_ByRoles : AbstractIndexCreationTask<User, Users_ByRoles.Result>
+        private class Users_ByRoles : AbstractIndexCreationTask<User, Users_ByRoles.Result>
         {
             public class Result
             {
@@ -62,18 +55,19 @@ namespace Raven.Tests.MailingList
                       };
             }
         }
-        public class User
+
+        private class User
         {
             public int Id { get; set; }
             public List<Role> Roles { get; set; }
         }
 
-        public class Role
+        private class Role
         {
             public UserType Type { get; set; }
         }
 
-        public enum UserType
+        private enum UserType
         {
             Manager,
             Permanent,

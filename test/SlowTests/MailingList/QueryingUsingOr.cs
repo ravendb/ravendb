@@ -3,19 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client.Document;
+using FastTests;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class QueryingUsingOr : RavenTest
+    public class QueryingUsingOr : RavenTestBase
     {
-        class Foo
+        private class Foo
         {
             public Guid Id { get; private set; }
             public DateTime? ExpirationTime { get; set; }
@@ -26,13 +25,12 @@ namespace Raven.Tests.MailingList
                 ExpirationTime = null;
             }
         }
-         
+
         [Fact]
         public void ShouldWork()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
-                documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
                 documentStore.Initialize();
 
                 using (var session = documentStore.OpenSession())
@@ -42,14 +40,16 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-             
+
                 using (var session = documentStore.OpenSession())
                 {
-                    var bar = session.Query<Foo>().Where(foo => foo.ExpirationTime == null || foo.ExpirationTime > DateTime.Now).ToList();
-                    WaitForUserToContinueTheTest(documentStore);
+                    var bar = session.Query<Foo>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(foo => foo.ExpirationTime == null || foo.ExpirationTime > DateTime.Now)
+                        .ToList();
+
                     Assert.Equal(2, bar.Count);
                 }
-
             }
         }
     }

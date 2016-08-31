@@ -1,34 +1,33 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
-using Raven.Tests.Common;
-
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class QueryingOnValueWithMultipleMinusAnalyzed : RavenTest
+    public class QueryingOnValueWithMultipleMinusAnalyzed : RavenTestBase
     {
         [Fact]
         public void CanPerformQueryWithDashesInTerm()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var indexDefinition = new IndexDefinitionBuilder<Product>()
                 {
                     Map = products => from product in products
-                                        select new
-                                        {
-                                            Query = new object[]
-                                            {
+                                      select new
+                                      {
+                                          Query = new object[]
+                                          {
                                                 product.ItemNumber,
                                                 product.ItemDescription,
 
-                                            },
-                                            product.ProductId
+                                          },
+                                          product.ProductId
 
-                                        },
+                                      },
                     Indexes =
                     {
                         {x => x.Query, FieldIndexing.Analyzed}
@@ -82,7 +81,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Product
+        private class Product
         {
             public string ProductId { get; set; }
 
@@ -94,5 +93,4 @@ namespace Raven.Tests.MailingList
 
         }
     }
-
 }

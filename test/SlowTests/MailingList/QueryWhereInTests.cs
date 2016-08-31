@@ -1,22 +1,22 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class QueryWhereInTests : RavenTestBase
     {
-        public class Document
+        private class Document
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class Document_Index : AbstractIndexCreationTask<Document>
+        private class Document_Index : AbstractIndexCreationTask<Document>
         {
             public Document_Index()
             {
@@ -72,7 +72,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_Only_AfterLast()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -84,7 +84,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_Hit1_Then_AfterLast()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -96,7 +96,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_Miss2_Then_AfterLast()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -108,7 +108,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_Hit3_Then_AfterLast()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -120,7 +120,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_Miss4_Then_AfterLast()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -132,7 +132,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_Hit5_Then_AfterLast()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -146,7 +146,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_AfterLast_Then_Hit1()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -158,7 +158,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_AfterLast_Then_Miss2()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -171,7 +171,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_AfterLast_Then_Hit3()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -184,7 +184,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_AfterLast_Then_Miss4()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -196,7 +196,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_AfterLast_Then_Hit5()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -208,7 +208,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void WhereIn_Miss2_Then_Miss4()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 SetupData(store);
                 AssertMatches(store,

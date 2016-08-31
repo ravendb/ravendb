@@ -3,25 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class QueryingOn_A_Prefix : RavenTestBase
     {
-        public class SampleData
+        private class SampleData
         {
             public string Name { get; set; }
         }
 
-        public class SampleData_Index : AbstractIndexCreationTask<SampleData>
+        private class SampleData_Index : AbstractIndexCreationTask<SampleData>
         {
             public SampleData_Index()
             {
@@ -37,7 +36,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanIndexAndQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SampleData_Index().Execute(store);
 
