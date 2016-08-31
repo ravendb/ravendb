@@ -15,6 +15,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -341,9 +342,13 @@ namespace Raven.Server.Documents
             config["LastMessageSentAt"] = connection.Stats.LastMessageSentAt;
             config["LastAckReceivedAt"] = connection.Stats.LastAckReceivedAt;
 
-            config["DocsRate"] = connection.Stats.DocsRate.CreateMeterData();
-            config["BytesRate"] = connection.Stats.BytesRate.CreateMeterData();
-            config["AckRate"] = connection.Stats.AckRate.CreateMeterData();
+            connection.Stats.DocsRate.SetMinimalHumaneMeterData("Docs",config);
+            connection.Stats.BytesRate.SetMinimalHumaneMeterData("Bytes", config);
+            connection.Stats.AckRate.SetMinimalHumaneMeterData("Acks", config);
+
+            connection.Stats.DocsRate.SetMinimalMeterData("Docs", config);
+            connection.Stats.BytesRate.SetMinimalMeterData("Bytes", config);
+            connection.Stats.AckRate.SetMinimalMeterData("Acks", config);
         }
 
         public void GetRunningSusbscriptions(BlittableJsonTextWriter writer,
