@@ -143,10 +143,6 @@ interface Function {
     memoize(thisArg: any): Function;
 }
 
-interface Window {
-    EventSource: EventSource;
-}
-
 interface Date {
     getUTCDateFormatted(): string;
     getUTCMonthFormatted(): string;
@@ -168,15 +164,6 @@ declare var Spinner: {
         color: any; opacity: number; rotate: number; direction: number; speed: number; trail: number; fps: number; zIndex: number;
         className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string;
     }): Spinner;
-}
-
-declare class EventSource {
-    constructor(string: string);
-    close(): void;
-    onerror: (event: any) => void;
-    onmessage: (event: any) => void;
-    onopen: (event: any) => void;
-    readyState: number;
 }
 
 interface Array<T> {
@@ -218,7 +205,7 @@ interface Storage {
 
 interface DurandalRouteConfiguration {
     tooltip?: string;
-    dynamicHash?: KnockoutComputed<string>;
+    dynamicHash?: KnockoutObservable<string> | (() => string);
 }
 
 declare module AceAjax {

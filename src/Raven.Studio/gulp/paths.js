@@ -6,7 +6,10 @@ var paths = {
     handlersToParse: [
         '../Raven.Server/**/*Handler.cs'
     ],
-    handlersConstantsTargetDir: './typescript/',
+    configurationFilesToParse:[
+        '../Raven.Server/Config/Categories/**/*Configuration.cs'
+    ],
+    constantsTargetDir: './typescript/',
     typingsConfig: './typings.json',
     tsSource: './typescript/**/*.ts',
     typings: './typings/**/*.d.ts',
@@ -22,6 +25,7 @@ var paths = {
 
     lessSource: [
         './wwwroot/Content/css/styles.less',
+        './wwwroot/Content/css/legacy_styles.less',
         './wwwroot/Content/css/bootstrap/bootstrap.less'],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',

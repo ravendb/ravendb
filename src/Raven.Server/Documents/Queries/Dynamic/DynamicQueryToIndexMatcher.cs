@@ -149,9 +149,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var sortField = sortInfo.Field;
 
-                if (sortField.StartsWith(Constants.AlphaNumericFieldName) ||
-                    sortField.StartsWith(Constants.RandomFieldName) ||
-                    sortField.StartsWith(Constants.CustomSortFieldName))
+                if (sortField.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName) ||
+                    sortField.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
+                    sortField.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
                 {
                     sortField = SortFieldHelper.CustomField(sortField).Name;
                 }

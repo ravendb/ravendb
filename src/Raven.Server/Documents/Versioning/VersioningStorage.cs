@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Versioning
         {
             _versioningConfiguration = versioningConfiguration;
 
-            _logger = LoggerSetup.Instance.GetLogger<VersioningStorage>(database.Name);
+            _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
             // The documents schema is as follows
             // 5 fields (lowered key, recored separator, etag, lazy string key, document)
             // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata, out metadata))
+            if (document.TryGet(Constants.Metadata.Key, out metadata))
             {
                 bool disableVersioning;
                 if (metadata.TryGet(Constants.Versioning.RavenDisableVersioning, out disableVersioning))

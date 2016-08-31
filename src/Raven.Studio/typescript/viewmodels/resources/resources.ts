@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 import alert = require("models/database/debug/alert");
 import resource = require("models/resources/resource");
@@ -49,7 +50,7 @@ class resources extends viewModelBase {
     optionsClicked = ko.observable<boolean>(false);
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
-    isGlobalAdmin = shell.isGlobalAdmin;
+    isGlobalAdmin = accessHelper.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
     developerLicense = ko.computed(() => !license.licenseStatus() || !license.licenseStatus().IsCommercial);
     showCreateCluster = ko.computed(() => !shell.clusterMode());
@@ -61,7 +62,6 @@ class resources extends viewModelBase {
     counterStorageType = counterStorage.type;
     timeSeriesType = timeSeries.type;
     visibleResource = ko.observable("");
-    has40Features = ko.computed(() => shell.has40Features());
     visibleOptions: { value:string, name: string }[];
     databasesSummary: KnockoutComputed<string>;
     fileSystemsSummary: KnockoutComputed<string>;
@@ -73,16 +73,13 @@ class resources extends viewModelBase {
         this.visibleOptions = [
             { value: "", name: "Show all" },
             { value: database.type, name: "Show databases" },
-            { value: fileSystem.type, name: "Show file systems" }
+            { value: fileSystem.type, name: "Show file systems" },
+            { value: counterStorage.type, name: "Show counter storages" },
+            { value: timeSeries.type, name: "Show time series" }
         ];
-        if (this.has40Features()) {
-            this.visibleOptions.pushAll([
-                { value: counterStorage.type, name: "Show counter storages" },
-                { value: timeSeries.type, name: "Show time series" }
-            ]);
-        }
 
-        this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
+        this.canNavigateToAdminSettings = ko.computed(() =>
+            accessHelper.isGlobalAdmin() || accessHelper.canReadWriteSettings() || accessHelper.canReadSettings());
 
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;

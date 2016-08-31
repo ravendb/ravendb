@@ -8,7 +8,7 @@ class killRunningTaskCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/operation/kill";
+        var url = "/operation/kill";//TODO: use endpoints
         var args = {
             id: this.taskId
         }

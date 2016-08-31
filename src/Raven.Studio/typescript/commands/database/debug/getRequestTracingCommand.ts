@@ -8,7 +8,7 @@ class getRequestTracingCommand extends commandBase {
     }
 
     execute(): JQueryPromise<requestTracingDto[]> {
-        var url = "/debug/request-tracing";
+        var url = "/debug/request-tracing";//TODO: use endpoints
         return this.query<requestTracingDto[]>(url, null, this.db);
     }
 }

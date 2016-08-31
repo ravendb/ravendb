@@ -338,7 +338,7 @@ namespace Sparrow.Json.Parsing
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
-                    continue;
+                    return;
                 }
                 if (current is double)
                 {

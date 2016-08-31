@@ -1,12 +1,12 @@
 ﻿using System.Linq;
-using Raven.Client.Document;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.Utils
 {
     public class TestHelper
     {
-        public static void AssertNoIndexErrors(DocumentStore store, string databaseName = null)
+        public static void AssertNoIndexErrors(IDocumentStore store, string databaseName = null)
         {
             var commands = string.IsNullOrEmpty(databaseName)
                 ? store.DatabaseCommands

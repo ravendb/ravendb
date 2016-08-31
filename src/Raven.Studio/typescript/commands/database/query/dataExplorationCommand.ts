@@ -29,14 +29,14 @@ class dataExplorationCommand extends commandBase {
     }
 
     getUrl() {
-        return "/streams/exploration/" + this.urlEncodeArgs(this.request);
+        return "/streams/exploration/" + this.urlEncodeArgs(this.request);//TODO: use endpoints
     }
 
     getCsvUrl() {
         var requestWithCsvDownload: any = this.request;
         requestWithCsvDownload.download = "true";
         requestWithCsvDownload.format = "excel";
-        return appUrl.forResourceQuery(this.db) + "/streams/exploration/" + this.urlEncodeArgs(requestWithCsvDownload);
+        return appUrl.forResourceQuery(this.db) + "/streams/exploration/" + this.urlEncodeArgs(requestWithCsvDownload);//TODO: use endpoints
     }
 }
 

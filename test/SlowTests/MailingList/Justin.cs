@@ -77,7 +77,6 @@ namespace SlowTests.MailingList
             // Arrange.
             using (var documentStore = GetDocumentStore())
             {
-                Console.WriteLine("Document Store initialized - running in memory.");
 
                 Assert.Throws<IndexCompilationException>(() => new Users_NameAndPassportSearching_WithError().Execute(documentStore));
 
@@ -91,13 +90,11 @@ namespace SlowTests.MailingList
                     }
                     documentSession.SaveChanges();
                 }
-                Console.WriteLine("Seed data stored.");
 
                 // Act.
 
                 // Lets check if there are any errors.
                 TestHelper.AssertNoIndexErrors(documentStore);
-                Console.WriteLine("No Document Store errors.");
 
                 using (var documentSession = documentStore.OpenSession())
                 {
@@ -107,11 +104,6 @@ namespace SlowTests.MailingList
                         .ToList();
 
                     Assert.Equal(usersCount, allData.Count);
-
-                    foreach (var user in allData)
-                    {
-                        Console.WriteLine("User: {0}; Passport: {1}", user.Name, user.PassportNumber);
-                    }
                 }
 
                 // Assert.

@@ -1,15 +1,15 @@
 <div id="documents-pane" class="documents-page no-outline row" tabindex="0" data-bind="enableResize: true">
     <!-- ko if: alerts().length > 0 -->
-        <!-- ko foreach: alerts -->
+    <!-- ko foreach: alerts -->
     <div class="alert alert-dismissable" role="alert" data-bind="css: { 'alert-warning': alertLevel === 'Warning', 'alert-danger': alertLevel === 'Error' }">
         <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
         <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
     </div>
-        <!-- /ko -->
+    <!-- /ko -->
     <!-- /ko -->
 
     <div id="documents-page-container" class="col-md-2 col-resizable-target">
-        
+
         <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
             <li class="all-docs-collection" data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
                 <a href="javascript:void(0)">
@@ -45,6 +45,9 @@
             <div class="btn-group">
                 <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newDocument" title="Create new document (Alt+N)">
                     <i class="fa fa-plus"></i> New document
+                </button>
+                <button type="button" class="btn btn-primary" data-bind="click: newDocumentInCollection" title="Create new document (Alt+N)">
+                    <i class="fa fa-plus"></i> New document in current collection
                 </button>
             </div>
             <div class="btn-group">
@@ -91,33 +94,32 @@
                 </button>
             </div>
             <div class="btn-group">
-                <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled"><i class="fa fa-spinner fa-spin fa-2x"></i>
+                <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled">
+                    <i class="fa fa-spinner fa-spin fa-2x"></i>
+                </div>
             </div>
-        </div>
         </div>
         <div class="documents-select" data-bind="with: selectedCollection, visible: !isSystemDocumentsCollection() && hasAnyDocumentsSelected() && !hasAllDocumentsSelected() && isAnyDocumentsAutoSelected()">
             <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedDocumentIndices().length.toLocaleString()"></strong> <span data-bind="text: $root.selectedDocumentsText"></span>.
             <span class="select-link" data-bind="click: $root.selectAll.bind($root)">
-                Select all <strong data-bind="text: documentCount().toLocaleString()"></strong> documents in <span data-bind="text: name"></span>
-            </span>
+                    Select all <strong data-bind="text: documentCount().toLocaleString()"></strong> documents in <span data-bind="text: name"></span>
+                </span>
         </div>
         <div class="documents-select" data-bind="with: selectedCollection, visible: !isSystemDocumentsCollection() && hasAllDocumentsSelected() && isAllDocumentsAutoSelected()">
             You have selected <strong data-bind="text: $root.selectedDocumentIndices().length.toLocaleString()"></strong> <span data-bind="text: $root.selectedDocumentsText"></span> in
             <span data-bind="text: name"></span>.
             <span class="select-link" data-bind="click: $root.selectNone.bind($root)">
-                Clear selection
-            </span>
+                    Clear selection
+                </span>
         </div>
 
         <div class="documents-select" data-bind="with: selectedCollection, visible: showCollectionChanged">
             <!-- ko if: isAllDocuments -->
-                Documents count was modified,
+            Documents count was modified,
             <!-- /ko -->
-
             <!-- ko ifnot: isAllDocuments -->
-                '<span data-bind="text: name"></span>' collection count was modified,
+            '<span data-bind="text: name"></span>' collection count was modified,
             <!-- /ko -->
-            
             press <span class="select-link" data-bind="click: $root.refresh.bind($root)">here</span> to refresh.
         </div>
 

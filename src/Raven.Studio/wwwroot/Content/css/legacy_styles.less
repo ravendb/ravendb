@@ -1,0 +1,143 @@
+﻿@selectionColor: #ffc;
+
+.ko-grid {
+    &:focus {
+        outline: 0;
+    }
+
+    .ko-grid-column-container-clip {
+        overflow: hidden;
+    }
+
+    .ko-grid-column-container {
+        white-space: nowrap;
+        overflow: hidden;
+        height: 37px;
+
+        .ko-grid-column-header {
+            float: left;
+            display: inline-block;
+            font-weight: bold;
+            padding: 8px;
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+
+            &:hover {
+                .ko-grid-column-handle {
+                    display: block; /* Display the grid size bars only when we mouse over the columns */
+                }
+            }
+
+            .ko-grid-column-handle {
+                display: none;
+                width: 4px;
+                height: 20px;
+                float: right;
+                cursor: col-resize;
+                position: relative;
+                z-index: 1;
+                background-color: hsl(0, 0%, 80%);
+                box-shadow: hsl(0, 0%, 60%) 0px 0px 5px inset;
+            }
+        }
+    }
+
+    .ko-grid-viewport-container {
+        position: relative;
+        overflow-y: auto;
+    }
+
+    .ko-grid-viewport {
+    }
+
+    .ko-grid-row {
+        position: absolute;
+        border-top: 1px solid rgb(221, 221, 221);
+        -moz-box-sizing: border-box;
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        overflow: hidden;
+        white-space: nowrap;
+
+        &.checked {
+            box-shadow: 5px 0 0 0  #ff7f66 inset, -5px 0 0 0  #ff7f66 inset;
+            background-color: @selectionColor;
+        }
+    }
+
+    .ko-grid-cell {
+        float: left;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        display: inline-block;
+        padding: 8px;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        font-weight: normal;
+    }
+}
+
+
+#documents-page-container {
+    border-right: solid 3px rgba(0, 0,0, .73);
+    padding-right: 0;
+
+    ul {
+        overflow: auto;
+        max-height: 100%;
+        padding-right: 15px;
+    }
+}
+
+.document-collections {
+
+    li {
+        outline: none;
+        padding-left: 15px;
+    }
+
+    li.all-docs-collection {
+        padding-left: 0;
+    }
+
+    .collection-color-strip {
+        margin-right: 5px;
+    }
+
+    .collection-text {
+        overflow: hidden;
+        white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        max-width: 80%;
+    }
+
+    .collection-name {
+        overflow: hidden;
+        white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        max-width: 90%;
+    }
+}
+
+
+.studio-alerts {
+    position: fixed;
+    top: 60px;
+    left: 40%;
+    z-index: 2000;
+    width: 400px;
+}
+
+.messageBox {
+    background-color: black;
+}

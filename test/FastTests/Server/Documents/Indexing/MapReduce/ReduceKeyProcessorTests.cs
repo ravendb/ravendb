@@ -1,6 +1,7 @@
 ﻿using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -12,7 +13,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         [Fact]
         public void Can_handle_values_of_different_types()
         {
-            using (var bufferPool = new UnmanagedBuffersPool("ReduceKeyProcessorTests"))
+            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("ReduceKeyProcessorTests"))
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var sut = new ReduceKeyProcessor(10, bufferPool);

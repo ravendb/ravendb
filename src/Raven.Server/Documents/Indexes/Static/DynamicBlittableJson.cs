@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Server.Utils;
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private bool TryGetByName(string name, out object result)
         {
-            if (name == Constants.DocumentIdFieldName || name == "Id")
+            if (name == Constants.Indexing.Fields.DocumentIdFieldName || name == "Id")
             {
                 if (_key == null)
                 {
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var getResult = BlittableJson.TryGetMember(name, out result);
 
-            if (getResult == false && (name == Constants.MetadataDocId || name == Constants.MetadataEtagId))
+            if (getResult == false && (name == Constants.Metadata.Id || name == Constants.Metadata.Etag))
             {
                 result = BlittableJson.Modifications[name];
                 getResult = result != null;
@@ -123,15 +124,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerable<object> Select(Func<object, object> func)
         {
-            var list = new List<object>();
-            foreach (var property in BlittableJson.GetPropertyNames())
-            {
-                var value = this[property];
-                var result = func(new KeyValuePair<string, object>(property, value));
-                list.Add(TypeConverter.DynamicConvert(result));
-            }
+            return new DynamicArray(Enumerable.Select(this, func));
+        }
 
-            return new DynamicArray(list);
+        public IEnumerable<object> OrderBy(Func<object, object> func)
+        {
+            return new DynamicArray(Enumerable.OrderBy(this, func));
         }
 
         public override string ToString()

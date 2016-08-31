@@ -8,9 +8,9 @@ class startReducingCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-      this.reportInfo("Enabling reduction...");
+        this.reportInfo("Enabling reduction...");
 
-        var url = '/admin/startReducing';
+        var url = '/admin/startReducing';//TODO: use endpoints
         var createTask = this.post(url, null, this.db);
         createTask.done(() => this.reportSuccess("Reduction was enabled"));
         createTask.fail((response: JQueryXHR) => this.reportError("Failed to enable reduction", response.responseText, response.statusText));

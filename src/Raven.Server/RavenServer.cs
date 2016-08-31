@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.Json;
@@ -21,6 +22,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -35,7 +37,7 @@ namespace Raven.Server
 
         public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
         public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
-
+        
         public Timer Timer;
 
         public readonly ServerStore ServerStore;
@@ -55,8 +57,8 @@ namespace Raven.Server
             ServerStore = new ServerStore(Configuration);
             Metrics = new MetricsCountersManager();
             Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-            _logger = LoggerSetup.Instance.GetLogger<RavenServer>("Raven/Server");
-            _tcpLogger = LoggerSetup.Instance.GetLogger<RavenServer>("<TcpServer>");
+            _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
+            _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
 
         public async Task<int> GetTcpServerPortAsync()
@@ -218,6 +220,8 @@ namespace Raven.Server
             }
         }
 
+        
+        
         private void ListenToNewTcpConnection(TcpListener listener)
         {
             Task.Run(async () =>
@@ -241,14 +245,14 @@ namespace Raven.Server
                     return;
                 }
                 ListenToNewTcpConnection(listener);
-                TcpConnectionParams tcp = null;
+                TcpConnectionOptions tcp = null;
                 try
                 {
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
                     var stream = tcpClient.GetStream();
-                    tcp = new TcpConnectionParams
+                    tcp = new TcpConnectionOptions()
                     {
                         Stream = stream,
                         TcpClient = tcpClient,
@@ -261,12 +265,14 @@ namespace Raven.Server
                     tcp.DisposeOnConnectionClose.Add(
                         _tcpContextPool.AllocateOperationContext(out tcp.Context)
                         );
+
+
                     tcp.MultiDocumentParser = tcp.Context.ParseMultiFrom(stream);
 
                     try
                     {
                         var header = JsonDeserializationClient.TcpConnectionHeaderMessage(await tcp.MultiDocumentParser.ParseToMemoryAsync());
-
+                        tcp.Operation = header.Operation;
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)
                             throw new InvalidOperationException("There is no database named " + header.DatabaseName);
@@ -276,6 +282,8 @@ namespace Raven.Server
                                 $"Timeout when loading database {header.DatabaseName}, try again later");
 
                         tcp.DocumentDatabase = await databaseLoadingTask;
+                        tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
+
                         switch (header.Operation)
                         {
                             case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:

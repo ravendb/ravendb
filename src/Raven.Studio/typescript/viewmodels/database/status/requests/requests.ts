@@ -1,7 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import status = require("viewmodels/database/status/status");
-import shell = require('viewmodels/shell');
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class requests extends viewModelBase {
     router: DurandalRouter;
@@ -13,7 +13,7 @@ class requests extends viewModelBase {
         this.router = status.statusRouter.createChildRouter()
             .map([
                 { route: 'databases/status/requests', moduleId: 'viewmodels/database/status/requests/requestsCount', title: 'Requests count', tooltip: "Displays requests counts over time", nav: true, hash: appUrl.forCurrentDatabase().requestsCount },
-                { route: 'databases/status/requests/tracing', moduleId: 'viewmodels/database/status/requests/requestTracing', title: 'Request tracing', tooltip: "Displays recent requests with their status and execution times", nav: shell.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().requestsTracing },
+                { route: 'databases/status/requests/tracing', moduleId: 'viewmodels/database/status/requests/requestTracing', title: 'Request tracing', tooltip: "Displays recent requests with their status and execution times", nav: accessHelper.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().requestsTracing },
             ])
             .buildNavigationModel();
        

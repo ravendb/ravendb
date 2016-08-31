@@ -9,11 +9,13 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -40,7 +42,7 @@ namespace Raven.Server.Documents
         {
             Name = name;
             Configuration = configuration;
-            _logger = LoggerSetup.Instance.GetLogger<DocumentDatabase>(Name);
+            _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
@@ -91,6 +93,8 @@ namespace Raven.Server.Documents
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
+
+        public ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
         public void Initialize()
         {
@@ -229,13 +233,13 @@ namespace Raven.Server.Documents
                 DocumentTombstoneCleaner = null;
             });
 
-			exceptionAggregator.Execute(() =>
-			{
-				DocumentReplicationLoader?.Dispose();
-				DocumentReplicationLoader = null;
-			});
+            exceptionAggregator.Execute(() =>
+            {
+                DocumentReplicationLoader?.Dispose();
+                DocumentReplicationLoader = null;
+            });
 
-			exceptionAggregator.Execute(() =>
+            exceptionAggregator.Execute(() =>
             {
                 SqlReplicationLoader?.Dispose();
                 SqlReplicationLoader = null;

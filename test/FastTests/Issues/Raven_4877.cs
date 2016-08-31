@@ -1,33 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using FastTests;
-using Raven.Client;
+﻿using System.Linq;
 using Raven.Client.Indexes;
-using Raven.Client.Indexing;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.SlowTests.Issues
+namespace FastTests.Issues
 {
     public class RavenDB_4877 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public string[] Pets { get; set; }
         }
 
-        public class Users_ByNameAndPets : AbstractIndexCreationTask<User>
+        private class Users_ByNameAndPets : AbstractIndexCreationTask<User>
         {
             public Users_ByNameAndPets()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name,
-                        user.Pets
-                    };
+                               select new
+                               {
+                                   user.Name,
+                                   user.Pets
+                               };
             }
         }
 
@@ -44,7 +39,7 @@ namespace Raven.SlowTests.Issues
             var store = GetDocumentStore();
 
             new Users_ByNameAndPets().Execute(store);
-            
+
             using (var session = store.OpenSession())
             {
                 session.Store(sadUser);

@@ -1,10 +1,5 @@
-﻿using System;
-using System.Globalization;
-using System.IO;
-using System.Runtime.InteropServices;
-using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -22,11 +17,11 @@ namespace Raven.Server.Documents.Queries.Results
             _fieldsToFetch = fieldsToFetch;
         }
 
-        public unsafe Document Get(Lucene.Net.Documents.Document input)
+        public unsafe Document Get(Lucene.Net.Documents.Document input, float score)
         {
             // TODO [ppekrol] handle IsDistinct, no Id then
 
-            var reduceValue = input.GetField(Constants.ReduceValueFieldName).GetBinaryValue();
+            var reduceValue = input.GetField(Constants.Indexing.Fields.ReduceValueFieldName).GetBinaryValue();
 
             var result = new BlittableJsonReaderObject((byte*)_indexContext.PinObjectAndGetAddress(reduceValue),
                 reduceValue.Length, _indexContext);

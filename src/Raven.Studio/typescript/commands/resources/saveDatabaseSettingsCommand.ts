@@ -23,7 +23,7 @@ class saveDatabaseSettingsCommand extends commandBase {
         };
 
         var args = JSON.stringify(this.document.toDto());
-        var url = "/admin/databases/" + this.db.name;
+        var url = "/admin/databases/" + this.db.name;//TODO: use endpoints
         var saveTask = this.put(url, args, null, jQueryOptions);
 
         saveTask.done(() => this.reportSuccess("Database Settings of '" + this.db.name + "' were successfully saved!"));

@@ -16,7 +16,7 @@ class getSqlReplicationsCommand extends commandBase {
             pageSize: 256
         };
 
-        return this.query("/docs", args, this.db, (dtos: sqlReplicationDto[]) => dtos.map(dto => new sqlReplication(dto)));
+        return this.query("/docs", args, this.db, (dtos: sqlReplicationDto[]) => dtos.map(dto => new sqlReplication(dto)));//TODO: use endpoints
     }
 }
 

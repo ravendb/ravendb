@@ -27,7 +27,7 @@ class getCollectionsCountCommand extends commandBase {
             }
         });
 
-        this.post("/multi_get?parallel=yes", JSON.stringify(requests), this.ownerDb, null, 0)
+        this.post("/multi_get?parallel=yes", JSON.stringify(requests), this.ownerDb, null, 0)//TODO: use endpoints
             .done((result) => {
                 for (var i = 0; i < this.collections.length; i++) {
                     this.collections[i].documentCount(result[i].Result.TotalResults);

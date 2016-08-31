@@ -189,7 +189,7 @@ namespace Raven.Client.Document
                     continue;
                 foreach (var include in currentQueryResults.Includes.Concat(currentQueryResults.Results))
                 {
-                    var includeMetadata = include.Value<RavenJObject>(Constants.Metadata);
+                    var includeMetadata = include.Value<RavenJObject>(Constants.Metadata.Key);
                     if (includeMetadata == null)
                         continue;
                     var id = includeMetadata.Value<string>("@id");

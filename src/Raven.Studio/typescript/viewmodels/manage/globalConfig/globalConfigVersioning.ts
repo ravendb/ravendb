@@ -16,13 +16,12 @@ class globalConfigVersioning extends viewModelBase {
     versionings = ko.observableArray<versioningEntry>();
     toRemove: versioningEntry[];
     isSaveEnabled: KnockoutComputed<boolean>;
-    settingsAccess = new settingsAccessAuthorizer();
 
     canActivate(args: any): any {
         super.canActivate(args);
 
         var deferred = $.Deferred();
-        if (this.settingsAccess.isForbidden()) {
+        if (settingsAccessAuthorizer.isForbidden()) {
             deferred.resolve({ can: true });
         } else {
             this.fetchVersioningEntries(null)

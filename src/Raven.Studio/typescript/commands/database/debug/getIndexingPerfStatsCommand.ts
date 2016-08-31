@@ -8,7 +8,7 @@ class getIndexingPerfStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        var url = "/debug/indexing-perf-stats-with-timings";
+        var url = "/debug/indexing-perf-stats-with-timings";//TODO: use endpoints
         return this.query<any>(url, null, this.db);
     }
 }

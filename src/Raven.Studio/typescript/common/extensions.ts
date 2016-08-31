@@ -322,7 +322,7 @@ class extensions {
         }
 
         String.prototype.startsWith = String.prototype.startsWith || function (str:string) {
-            return this.indexOf(str) == 0;
+            return this.indexOf(str) === 0;
         };
 
         String.prototype.contains = String.prototype.contains || function (str: string) {

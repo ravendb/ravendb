@@ -407,7 +407,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance()
         {
-            OrderBy(Constants.DistanceFieldName);
+            OrderBy(Constants.Indexing.Fields.DistanceFieldName);
             return this;
         }
 
@@ -416,7 +416,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
+            OrderBy(string.Format("{0};{1};{2}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
             return this;
         }
 
@@ -425,7 +425,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng, string sortedFieldName)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
             return this;
         }
 
@@ -438,7 +438,7 @@ namespace Raven.Client.Document
         /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is.</param>
         IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent);
+            GenerateQueryWithinRadiusOf(Constants.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent);
             return this;
         }
 
@@ -458,7 +458,7 @@ namespace Raven.Client.Document
         /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is</param>
         IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
+            GenerateQueryWithinRadiusOf(Constants.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
             return this;
         }
 
@@ -813,7 +813,7 @@ namespace Raven.Client.Document
         /// </summary>
         public void AlphaNumericOrdering(string fieldName, bool descending)
         {
-            AddOrder(Constants.AlphaNumericFieldName + ";" + fieldName, descending);
+            AddOrder(Constants.Indexing.Fields.AlphaNumericFieldName + ";" + fieldName, descending);
         }
 
         /// <summary>
@@ -821,7 +821,7 @@ namespace Raven.Client.Document
         /// </summary>
         public void RandomOrdering()
         {
-            AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
+            AddOrder(Constants.Indexing.Fields.RandomFieldName + ";" + Guid.NewGuid(), false);
         }
 
         /// <summary>
@@ -830,12 +830,12 @@ namespace Raven.Client.Document
         /// </summary>
         public void RandomOrdering(string seed)
         {
-            AddOrder(Constants.RandomFieldName + ";" + seed, false);
+            AddOrder(Constants.Indexing.Fields.RandomFieldName + ";" + seed, false);
         }
 
         public void CustomSortUsing(string typeName, bool descending)
         {
-            AddOrder(Constants.CustomSortFieldName + ";" + typeName, descending);
+            AddOrder(Constants.Indexing.Fields.CustomSortFieldName + ";" + typeName, descending);
         }
 
         public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
@@ -1246,7 +1246,7 @@ If you really want to do in memory filtering on the data returned from the query
                 if (identityProperty != null && identityProperty.Name == whereParams.FieldName)
                 {
                     whereParams.FieldTypeForIdentifier = rootType;
-                    return whereParams.FieldName = Constants.DocumentIdFieldName;
+                    return whereParams.FieldName = Constants.Indexing.Fields.DocumentIdFieldName;
                 }
             }
 
@@ -1435,7 +1435,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
             fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
 
-            if (fieldName == Constants.DocumentIdFieldName)
+            if (fieldName == Constants.Indexing.Fields.DocumentIdFieldName)
                 return fieldName;
 
             var val = (start ?? end);
@@ -2002,7 +2002,7 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
             }
-            if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
+            if (whereParams.FieldName == Constants.Indexing.Fields.DocumentIdFieldName && whereParams.Value is string == false)
             {
                 return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value,
                     originalType ?? whereParams.FieldTypeForIdentifier ?? typeof(T), false);
@@ -2102,7 +2102,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (whereParams.Value is DateTimeOffset)
                 return ((DateTimeOffset)whereParams.Value).UtcDateTime.GetDefaultRavenFormat(true);
 
-            if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
+            if (whereParams.FieldName == Constants.Indexing.Fields.DocumentIdFieldName && whereParams.Value is string == false)
             {
                 return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
             }

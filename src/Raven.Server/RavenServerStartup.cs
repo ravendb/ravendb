@@ -1,21 +1,29 @@
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml;
 using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Raven.Abstractions.Data;
+using NLog.Config;
 using Raven.Client.Exceptions;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server.Routing;
-using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using LogManager = NLog.LogManager;
 
 namespace Raven.Server
 {
     public class RavenServerStartup
     {
+        private RequestRouter _router;
+        private RavenServer _server;
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
@@ -28,91 +36,75 @@ namespace Raven.Server
                 ReceiveBufferSize = 4096,
             });
 
-            var router = app.ApplicationServices.GetService<RequestRouter>();
-            var server = app.ApplicationServices.GetService<RavenServer>();
-            app.Run(async context =>
+            _router = app.ApplicationServices.GetService<RequestRouter>();
+            _server = app.ApplicationServices.GetService<RavenServer>();
+            app.Run(RequestHandler);
+        }
+
+        private async Task RequestHandler(HttpContext context)
+        {
+            try
             {
-                try
+                context.Response.StatusCode = 200;
+                await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+            }
+            catch (Exception e)
+            {
+                if (context.RequestAborted.IsCancellationRequested)
+                    return;
+
+                //TODO: special handling for argument exception (400 bad request)
+                //TODO: database not found (503)
+                //TODO: operaton cancelled (timeout)
+                //TODO: Invalid data exception 422
+
+
+                //TODO: Proper json output, not like this
+                var response = context.Response;
+
+                if (response.HasStarted == false && response.StatusCode < 400)
+                    response.StatusCode = 500;
+
+                JsonOperationContext ctx;
+                using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
-                    var sp = Stopwatch.StartNew();
-                    var tenant = await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
-
-                    // TODO (TrafficWatch): Implement needed fields:
-                    RavenJObject todo = null; // Implement
-
-                    var twn = new TrafficWatchNotification
+                    // this should be changed to BlittableJson
+                    var djv = new DynamicJsonValue
                     {
-                        TimeStamp = DateTime.UtcNow,
-                        RequestId = 0, // Implement
-                        HttpMethod = context.Request.Method ?? "N/A", // N/A ?
-                        ElapsedMilliseconds = sp.ElapsedMilliseconds,
-                        ResponseStatusCode = context.Response.StatusCode,
-                        RequestUri = "uri", // Implement
-                        AbsoluteUri = "uri", // Implement
-                        TenantName = tenant ?? "N/A",
-                        CustomInfo = "custom info", // Implement
-                        InnerRequestsCount = 0, // Implement
-                        QueryTimings = todo ?? new RavenJObject(), // Implement
+                        ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",
+                        ["Type"] = e.GetType().FullName,
+                        ["Message"] = e.Message
                     };
 
-                    TrafficWatchManager.DispatchMessage(twn);
-                }
-                catch (Exception e)
-                {
-                    if (context.RequestAborted.IsCancellationRequested)
-                        return;
+                    string errorString;
 
-                    //TODO: special handling for argument exception (400 bad request)
-                    //TODO: database not found (503)
-                    //TODO: operaton cancelled (timeout)
-                    //TODO: Invalid data exception 422
-
-
-                    //TODO: Proper json output, not like this
-                    var response = context.Response;
-
-                    if (response.HasStarted == false)
-                        response.StatusCode = 500;
-
-                    JsonOperationContext ctx;
-                    using (server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
+                    try
                     {
-                        // this should be changed to BlittableJson
-                        var djv = new DynamicJsonValue
-                        {
-                            ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",
-                            ["Type"] = e.GetType().FullName,
-                            ["Message"] = e.Message
-                        };
+                        errorString = e.ToAsyncString();
+                    }
+                    catch (Exception)
+                    {
+                        errorString = e.ToString();
+                    }
 
-                        string errorString;
+                    djv["Error"] = errorString;
 
-                        try
-                        {
-                            errorString = e.ToAsyncString();
-                        }
-                        catch (Exception)
-                        {
-                            errorString = e.ToString();
-                        }
+                    var indexCompilationException = e as IndexCompilationException;
+                    if (indexCompilationException != null)
+                    {
+                        djv[nameof(IndexCompilationException.IndexDefinitionProperty)] =
+                            indexCompilationException.IndexDefinitionProperty;
+                        djv[nameof(IndexCompilationException.ProblematicText)] =
+                            indexCompilationException.ProblematicText;
+                    }
 
-                        djv["Error"] = errorString;
-
-                        var indexCompilationException = e as IndexCompilationException;
-                        if (indexCompilationException != null)
-                        {
-                            djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
-                            djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
-                        }
-
-                        using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
-                        {
-                            var json = ctx.ReadObject(djv, "exception");
-                            writer.WriteObject(json);
-                        }
+                    using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
+                    {
+                        var json = ctx.ReadObject(djv, "exception");
+                        writer.WriteObject(json);
                     }
                 }
-            });
+            }
         }
     }
 }

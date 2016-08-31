@@ -14,7 +14,7 @@ class getClusterTopologyCommand extends commandBase {
 
     execute(): JQueryPromise<topology> {
         var task = $.Deferred<topology>();
-        this.query("/cluster/topology", null, this.ownerDb, x => new topology(x))
+        this.query("/cluster/topology", null, this.ownerDb, x => new topology(x))//TODO: use endpoints
             .done((result: topology) => {
                 task.resolve(result);
             })

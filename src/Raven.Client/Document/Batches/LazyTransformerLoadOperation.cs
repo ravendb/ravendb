@@ -42,7 +42,7 @@ namespace Raven.Client.Document.Batches
 
             return new GetRequest
             {
-                Url = "/docs/",
+                Url = "/docs",
                 Query = query
             };
         }

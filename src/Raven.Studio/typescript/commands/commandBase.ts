@@ -9,6 +9,8 @@ import oauthContext = require("common/oauthContext");
 import forge = require("forge");
 import router = require("plugins/router");
 
+
+
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
 
@@ -18,6 +20,8 @@ class commandBase {
     static alertTimeout = 0;
     static loadingCounter = 0;
     static biggestTimeToAlert = 0;
+
+    private oauthHandler = new oauthHandler();
 
     execute<T>(): JQueryPromise<T> {
         throw new Error("Execute must be overridden.");
@@ -52,7 +56,7 @@ class commandBase {
         }
     }
     
-    head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
+    protected head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
         var ajax = this.ajax(relativeUrl, args, "HEAD", resource);
         if (resultsSelector) {
             var task = $.Deferred();
@@ -63,8 +67,7 @@ class commandBase {
                     var headersArray = xhr.getAllResponseHeaders().trim().split(/\r?\n/);
                     for (var n = 0; n < headersArray.length; n++) {
                         var keyValue = headersArray[n].split(": ");
-                        if (keyValue.length == 2) {
-                            //keyValue[1] = keyValue[1].replaceAll("\"", "");
+                        if (keyValue.length === 2) {
                             (<any>headersObject)[keyValue[0]] = keyValue[1];
                         }
                     }
@@ -81,30 +84,30 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "PUT", resource, options, timeToAlert);
     }
 
-    reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    protected reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
 
     /*
      * Performs a DELETE rest call.
     */
-    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 
-    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "POST", resource, options, timeToAlert);
     }
 
-    patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    protected patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "PATCH", resource, options);
     }
 
-    evalJs(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    protected evalJs(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "EVAL", resource, options);
     }
 
@@ -153,7 +156,7 @@ class commandBase {
         }
 
         var isBiggestTimeToAlertUpdated = timeToAlert > commandBase.biggestTimeToAlert;
-        if ((commandBase.loadingCounter == 0 && timeToAlert > 0) || isBiggestTimeToAlertUpdated) {
+        if ((commandBase.loadingCounter === 0 && timeToAlert > 0) || isBiggestTimeToAlertUpdated) {
             commandBase.biggestTimeToAlert = timeToAlert;
             clearTimeout(commandBase.splashTimerHandle);
             commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert, isBiggestTimeToAlertUpdated); 
@@ -180,7 +183,7 @@ class commandBase {
 
         $.ajax(defaultOptions).always(() => {
             --commandBase.loadingCounter;
-            if (commandBase.loadingCounter == 0) {
+            if (commandBase.loadingCounter === 0) {
                 clearTimeout(commandBase.splashTimerHandle);
                 clearTimeout(commandBase.alertTimeout);
                 commandBase.alertTimeout = 0;
@@ -193,11 +196,11 @@ class commandBase {
             if (dbBeingUpdated) {
                 ajaxTask.reject(request, status, error);
                 var currentDb = appUrl.getDatabase();
-                if (currentDb != null && currentDb.name == dbBeingUpdated) {
+                if (currentDb != null && currentDb.name === dbBeingUpdated) {
                     router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
                 }
-            } else if (request.status == ResponseCodes.PreconditionFailed && oauthContext.apiKey()) {
-                this.handleOAuth(ajaxTask, request, originalArguments);
+            } else if (request.status === ResponseCodes.PreconditionFailed && oauthContext.apiKey()) {
+                this.oauthHandler.handleOAuth(ajaxTask, request, () => this.retryOriginalRequest(ajaxTask, originalArguments));
             } else {
                 ajaxTask.reject(request, status, error);
             }
@@ -206,106 +209,12 @@ class commandBase {
         return ajaxTask.promise();
     }
 
-    handleOAuth(task: JQueryDeferred<any>, request: JQueryXHR, originalArguments: IArguments) {
-        var oauthSource = request.getResponseHeader('OAuth-Source');
-
-        // issue request to oauth source endpoint to get RSA exponent and modulus
-        $.ajax({
-            type: 'POST',
-            url: oauthSource,
-            headers: {
-                grant_type: 'client_credentials'
-            }
-        }).fail((request, status, error) => {
-                if (request.status != ResponseCodes.PreconditionFailed) {
-                    task.reject(request, status, error);
-                } else {
-                    var wwwAuth:string = request.getResponseHeader('WWW-Authenticate');
-                    var tokens = wwwAuth.split(',');
-                    var authRequest:any = {};
-                    tokens.forEach(token => {
-                        var eqPos = token.indexOf("=");
-                        var kv = [token.substring(0, eqPos), token.substring(eqPos + 1)];
-                        var m = kv[0].match(/[a-zA-Z]+$/g);
-                        if (m) {
-                            authRequest[m[0]] = kv[1];
-                        } else {
-                            authRequest[kv[0]] = kv[1];
-                        }
-                    });
-
-                    // form oauth request
-
-                    var data = this.objectToString({
-                        exponent: authRequest.exponent,
-                        modulus: authRequest.modulus,
-                        data: this.encryptAsymmetric(authRequest.exponent, authRequest.modulus, this.objectToString({
-                            "api key name": oauthContext.apiKeyName(),
-                            "challenge": authRequest.challenge,
-                            "response": this.prepareResponse(authRequest.challenge)
-                        }))
-                    });
-
-                    $.ajax({
-                        type: 'POST',
-                        url: oauthSource,
-                        data: data,
-                        headers: {
-                            grant_type: 'client_credentials'
-                        }
-                    }).done((results, status, xhr) => {
-                        var resultsAsString = JSON.stringify(results, null, 0);
-                        oauthContext.authHeader("Bearer " + resultsAsString.replace(/(\r\n|\n|\r)/gm,""));
-                        this.retryOriginalRequest(task, originalArguments);
-                    }).fail((request, status, error) => {
-                        task.reject(request, status, error);
-                    });
-                }
-            });
-    }
-
-    retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {
+    private retryOriginalRequest(task: JQueryDeferred<any>, orignalArguments: IArguments) {
         this.ajax.apply(this, orignalArguments).done((results: any, status: any, xhr: any) => {
             task.resolve(results, status, xhr);
         }).fail((request: any, status: any, error: any) => {
-                task.reject(request, status, error);
+            task.reject(request, status, error);
         });
-    }
-
-    prepareResponse(challenge: string) {
-        var input = challenge + ";" + oauthContext.apiKeySecret();
-        var md = forge.md.sha1.create();
-        md.update(input);
-        return forge.util.encode64(md.digest().getBytes());
-    }
-
-    objectToString(input: any) {
-        return $.map(input, (value, key) => key + "=" + value).join(',');
-    }
-
-    base64ToBigInt(input: any) {
-        input = forge.util.decode64(input);
-        var hex = forge.util.bytesToHex(input);
-        return new forge.jsbn.BigInteger(hex, 16);
-    }
-
-    encryptAsymmetric(exponent: any, modulus: any, data: any) {
-        var e = this.base64ToBigInt(exponent);
-        var n = this.base64ToBigInt(modulus);
-        var rsa = forge.pki.rsa;
-        var publicKey = rsa.setPublicKey(n, e);
-
-        var key = forge.random.getBytesSync(32);
-        var iv = forge.random.getBytesSync(16);
-
-        var keyAndIvEncrypted = publicKey.encrypt(key + iv, 'RSA-OAEP');
-
-        var cipher = forge.cipher.createCipher('AES-CBC', key);
-        cipher.start({ iv: iv });
-        cipher.update(forge.util.createBuffer(data));
-        cipher.finish();
-        var encrypted = cipher.output;
-        return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
     }
 
     private static showSpin(timeToAlert: number, isBiggestTimeToAlertUpdated: boolean) {
@@ -347,4 +256,102 @@ class commandBase {
     }
 }
 
+
+class oauthHandler {
+    handleOAuth(task: JQueryDeferred<any>, request: JQueryXHR, retry: Function) {
+        var oauthSource = request.getResponseHeader('OAuth-Source');
+
+        // issue request to oauth source endpoint to get RSA exponent and modulus
+        $.ajax({
+            type: 'POST',
+            url: oauthSource,
+            headers: {
+                grant_type: 'client_credentials'
+            }
+        }).fail((request, status, error) => {
+            if (request.status !== ResponseCodes.PreconditionFailed) {
+                task.reject(request, status, error);
+            } else {
+                var wwwAuth: string = request.getResponseHeader('WWW-Authenticate');
+                var tokens = wwwAuth.split(',');
+                var authRequest: any = {};
+                tokens.forEach(token => {
+                    var eqPos = token.indexOf("=");
+                    var kv = [token.substring(0, eqPos), token.substring(eqPos + 1)];
+                    var m = kv[0].match(/[a-zA-Z]+$/g);
+                    if (m) {
+                        authRequest[m[0]] = kv[1];
+                    } else {
+                        authRequest[kv[0]] = kv[1];
+                    }
+                });
+
+                // form oauth request
+
+                var data = this.objectToString({
+                    exponent: authRequest.exponent,
+                    modulus: authRequest.modulus,
+                    data: this.encryptAsymmetric(authRequest.exponent, authRequest.modulus, this.objectToString({
+                        "api key name": oauthContext.apiKeyName(),
+                        "challenge": authRequest.challenge,
+                        "response": this.prepareResponse(authRequest.challenge)
+                    }))
+                });
+
+                $.ajax({
+                    type: 'POST',
+                    url: oauthSource,
+                    data: data,
+                    headers: {
+                        grant_type: 'client_credentials'
+                    }
+                }).done(results => {
+                    var resultsAsString = JSON.stringify(results, null, 0);
+                    oauthContext.authHeader("Bearer " + resultsAsString.replace(/(\r\n|\n|\r)/gm, ""));
+                    retry();
+                }).fail((request, status, error) => {
+                    task.reject(request, status, error);
+                });
+            }
+        });
+    }
+
+    objectToString(input: any) {
+        return $.map(input, (value, key) => key + "=" + value).join(',');
+    }
+
+    prepareResponse(challenge: string) {
+        var input = challenge + ";" + oauthContext.apiKeySecret();
+        var md = forge.md.sha1.create();
+        md.update(input);
+        return forge.util.encode64(md.digest().getBytes());
+    }
+
+    encryptAsymmetric(exponent: any, modulus: any, data: any) {
+        var e = this.base64ToBigInt(exponent);
+        var n = this.base64ToBigInt(modulus);
+        var rsa = forge.pki.rsa;
+        var publicKey = rsa.setPublicKey(n, e);
+
+        var key = forge.random.getBytesSync(32);
+        var iv = forge.random.getBytesSync(16);
+
+        var keyAndIvEncrypted = publicKey.encrypt(key + iv, 'RSA-OAEP');
+
+        var cipher = forge.cipher.createCipher('AES-CBC', key);
+        cipher.start({ iv: iv });
+        cipher.update(forge.util.createBuffer(data));
+        cipher.finish();
+        var encrypted = cipher.output;
+        return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
+    }
+
+    base64ToBigInt(input: any) {
+        input = forge.util.decode64(input);
+        var hex = forge.util.bytesToHex(input);
+        return new forge.jsbn.BigInteger(hex, 16);
+    }
+}
+
 export = commandBase;
+

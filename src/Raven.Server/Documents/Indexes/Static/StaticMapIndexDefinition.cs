@@ -25,21 +25,18 @@ namespace Raven.Server.Documents.Indexes.Static
         private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
         {
             IndexFieldOptions allFields;
-            definition.Fields.TryGetValue(Constants.AllFields, out allFields);
+            definition.Fields.TryGetValue(Constants.Indexing.Fields.AllFields, out allFields);
 
             var result = definition.Fields
-                .Where(x => x.Key != Constants.AllFields)
+                .Where(x => x.Key != Constants.Indexing.Fields.AllFields)
                 .Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
 
-            if (definition.Fields.Count < outputFields.Length)
+            foreach (var outputField in outputFields)
             {
-                foreach (var outputField in outputFields)
-                {
-                    if (definition.Fields.ContainsKey(outputField))
-                        continue;
+                if (definition.Fields.ContainsKey(outputField))
+                    continue;
 
-                    result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields));
-                }
+                result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields));
             }
 
             return result.ToArray();

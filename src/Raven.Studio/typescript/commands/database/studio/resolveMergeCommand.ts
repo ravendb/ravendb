@@ -8,11 +8,11 @@ class resolveMergeCommand extends commandBase {
     }
 
     execute(): JQueryPromise<mergeResult> {
-      var url = "/studio-tasks/resolveMerge";
-      var args = {
-        documentId: this.documentId
-      };
-      return this.query<mergeResult>(url, args, this.db);
+        var url = "/studio-tasks/resolveMerge";//TODO: use endpoints
+        var args = {
+            documentId: this.documentId
+        };
+        return this.query<mergeResult>(url, args, this.db);
     }
 
 }

@@ -74,32 +74,6 @@ namespace FastTests.Blittable
             public string str { get; set; }
         }
 
-        private byte[] GetBlittableWithExtraSpace()
-        {
-            return new byte[190]
-            {
-                0x0c, 0x46, 0x69, 0x72, 0x73, 0x74, 0x4e, 0x61, 0x6d, 0x65,
-                0x20, 0x23, 0x30, 0x00, 0x0b, 0x4c, 0x61, 0x73, 0x74, 0x4e,
-                0x61, 0x6d, 0x65, 0x20, 0x23, 0x30, 0x00, 0x00, 0x05, 0x55,
-                0x73, 0x65, 0x72, 0x73, 0x00, 0x1d, 0x54, 0x72, 0x79, 0x6f,
-                0x75, 0x74, 0x73, 0x2e, 0x50, 0x72, 0x6f, 0x67, 0x72, 0x61,
-                0x6d, 0x2b, 0x55, 0x73, 0x65, 0x72, 0x2c, 0x20, 0x54, 0x72,
-                0x79, 0x6f, 0x75, 0x74, 0x73, 0x00, 0x07, 0x75, 0x73, 0x65,
-                0x72, 0x73, 0x2f, 0x30, 0x00, 0x03, 0x09, 0x06, 0x05, 0x28,
-                0x05, 0x05, 0x2f, 0x04, 0x05, 0x04, 0x0a, 0x03, 0x51, 0x55,
-                0x00, 0x05, 0x47, 0x01, 0x05, 0x3a, 0x02, 0x08, 0x09, 0x46,
-                0x69, 0x72, 0x73, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x00, 0x08,
-                0x4c, 0x61, 0x73, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x00, 0x04,
-                0x54, 0x61, 0x67, 0x73, 0x00, 0x09, 0x40, 0x6d, 0x65, 0x74,
-                0x61, 0x64, 0x61, 0x74, 0x61, 0x00, 0x11, 0x52, 0x61, 0x76,
-                0x65, 0x6e, 0x2d, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x2d,
-                0x4e, 0x61, 0x6d, 0x65, 0x00, 0x0e, 0x52, 0x61, 0x76, 0x65,
-                0x6e, 0x2d, 0x43, 0x6c, 0x72, 0x2d, 0x54, 0x79, 0x70, 0x65,
-                0x00, 0x03, 0x40, 0x69, 0x64, 0x00, 0x10, 0x4e, 0x43, 0x39,
-                0x33, 0x28, 0x15, 0x05, 0x55, 0x01, 0xb0, 0x51, 0x00, 0x00
-            };
-        }
-
         private static Company InitCompany()
         {
             var city = new City
@@ -587,7 +561,74 @@ namespace FastTests.Blittable
                     var buffer = Encoding.UTF8.GetBytes(objString);
                     parser.SetBuffer(buffer, buffer.Length);
                     var writer = new BlittableJsonDocumentBuilder(ctx,
-                        BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings,
+                        BlittableJsonDocumentBuilder.UsageMode.None,
+                        "test", parser, state);
+                    writer.ReadObject();
+                    var x = writer.Read();
+                    writer.FinalizeDocument();
+                    var reader = writer.CreateReader();
+
+                    reader.BlittableValidation();
+                }
+            }
+        }
+
+        public string createRandomEscString(int length)
+        {
+            Random random = new Random();
+            char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
+            return new string(Enumerable.Repeat(EscapeChars, length)
+              .Select(s => s[random.Next(s.Length)]).ToArray());
+         }
+
+        [Fact]
+        public void Valid_String_With_260_EscChar()
+        {
+            using ( var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
+                {
+                    var temp = new Str
+                    {
+                        str = createRandomEscString(260)
+                    };
+                    var obj = RavenJObject.FromObject(temp);
+                    var objString = obj.ToString(Formatting.None);
+                    var buffer = Encoding.UTF8.GetBytes(objString);
+                    parser.SetBuffer(buffer, buffer.Length);
+                    var writer = new BlittableJsonDocumentBuilder(ctx,
+                        BlittableJsonDocumentBuilder.UsageMode.None,
+                        "test", parser, state);
+                    writer.ReadObject();
+                    var x = writer.Read();
+                    writer.FinalizeDocument();
+                    var reader = writer.CreateReader();
+
+                    reader.BlittableValidation();
+                }
+            }
+        }
+
+        [Fact]
+        public void Valid_String_With_66K_EscChar()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
+                {
+                    var temp = new Str
+                    {
+                        str = createRandomEscString(66 * 1024)
+                    };
+
+                    var obj = RavenJObject.FromObject(temp);
+                    var objString = obj.ToString(Formatting.None);
+                    var buffer = Encoding.UTF8.GetBytes(objString);
+                    parser.SetBuffer(buffer, buffer.Length);
+                    var writer = new BlittableJsonDocumentBuilder(ctx,
+                        BlittableJsonDocumentBuilder.UsageMode.None,
                         "test", parser, state);
                     writer.ReadObject();
                     var x = writer.Read();

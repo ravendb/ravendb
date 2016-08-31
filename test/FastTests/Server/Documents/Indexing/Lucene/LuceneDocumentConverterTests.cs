@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.NullValue, result.GetField("Name").StringValue);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -75,7 +75,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.EmptyString, result.GetField("Name").StringValue);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.NotNull(result.GetField("Name"));
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -124,7 +124,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             var result1 = _sut.ConvertToCachedDocument(doc1.Key, doc1);
 
             Assert.Equal("Arek", result1.GetField("Name").ReaderValue.ReadToEnd());
-            Assert.Equal("users/1", result1.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result1.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
 
             var doc2 = create_doc(new DynamicJsonValue
             {
@@ -134,7 +134,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             var result2 = _sut.ConvertToCachedDocument(doc2.Key, doc2);
 
             Assert.Equal("Pawel", result2.GetField("Name").ReaderValue.ReadToEnd());
-            Assert.Equal("users/2", result2.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/2", result2.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
 
             Assert.Same(result1, result2);
         }
@@ -178,7 +178,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.NotNull(ageNumeric);
             Assert.Equal(25L, ageNumeric.NumericValue);
 
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -206,7 +206,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal("NYC", result.GetField("Address_City").ReaderValue.ReadToEnd());
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -247,7 +247,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal("true", result.GetField("Friends_Name_IsArray").StringValue);
 
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -305,7 +305,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal("true", result.GetField("Companies_Products_Name_IsArray").StringValue);
 
-            Assert.Equal("companies/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("companies/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -346,7 +346,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal("true", result.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
             Assert.Equal(@"{""City"":""San Francisco""}", result.GetField("ResidenceAddress").ReaderValue.ReadToEnd());
             Assert.Equal("true", result.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
 
             doc = create_doc(new DynamicJsonValue
             {
@@ -367,7 +367,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal("true", result.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
             Assert.Equal(@"{""City"":""Washington""}", result.GetField("ResidenceAddress").ReaderValue.ReadToEnd());
             Assert.Equal("true", result.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-            Assert.Equal("users/2", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/2", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
 
@@ -398,7 +398,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal("Dave", result.GetFields("Friends")[0].ReaderValue.ReadToEnd());
             Assert.Equal("James", result.GetFields("Friends")[1].ReaderValue.ReadToEnd());
             Assert.Equal("true", result.GetField("Friends" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         [Fact]
@@ -436,7 +436,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal(@"{""City"":""NYC""}", result.GetFields("Addresses")[1].ReaderValue.ReadToEnd());
             Assert.Equal("true", result.GetField("Addresses" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
             Assert.Equal("true", result.GetField("Addresses" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue);
-            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
 
         public Document create_doc(DynamicJsonValue document, string id)

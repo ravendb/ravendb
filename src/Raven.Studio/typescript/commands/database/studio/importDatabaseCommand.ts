@@ -20,7 +20,7 @@ class importDatabaseCommand extends commandBase {
             transformScript: this.transformScript || ""
         }
 
-        var url = "/studio-tasks/import" + this.urlEncodeArgs(args);
+        var url = "/studio-tasks/import" + this.urlEncodeArgs(args);//TODO: use endpoints
         var ajaxOptions: JQueryAjaxSettings = {
             processData: false, // Prevents JQuery from automatically transforming the data into a query string. http://api.jquery.com/jQuery.ajax/
             contentType: false

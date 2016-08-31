@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Location"] = "Poland",
-                                [Constants.Metadata] = new DynamicJsonValue
+                                [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
                                     [Constants.Headers.RavenEntityName] = "Users"
                                 }
@@ -59,7 +59,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
                             {
                                 ["Location"] = "Poland",
-                                [Constants.Metadata] = new DynamicJsonValue
+                                [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
                                     [Constants.Headers.RavenEntityName] = "Users"
                                 }
@@ -149,7 +149,7 @@ select new
                                         ["Price"] = 10.7
                                     }
                                 },
-                                [Constants.Metadata] = new DynamicJsonValue
+                                [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
                                     [Constants.Headers.RavenEntityName] = "Orders"
                                 }
@@ -168,7 +168,7 @@ select new
                                         ["Price"] = 10.5
                                     }
                                 },
-                                [Constants.Metadata] = new DynamicJsonValue
+                                [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
                                     [Constants.Headers.RavenEntityName] = "Orders"
                                 }
@@ -257,7 +257,7 @@ select new
                         using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                         {
                             ["Location"] = "Poland",
-                            [Constants.Metadata] = new DynamicJsonValue
+                            [Constants.Metadata.Key] = new DynamicJsonValue
                             {
                                 [Constants.Headers.RavenEntityName] = "Users"
                             }

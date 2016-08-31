@@ -10,7 +10,7 @@ class stopReducingCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Disabling reduction... (will wait for current reduction batch to complete)");
 
-        var url = '/admin/stopReducing';
+        var url = '/admin/stopReducing';//TODO: use endpoints
         var createTask = this.post(url, null, this.db);
         createTask.done(() => this.reportSuccess("Reduction was disabled"));
         createTask.fail((response: JQueryXHR) => this.reportError("Failed to disable reduction", response.responseText, response.statusText));

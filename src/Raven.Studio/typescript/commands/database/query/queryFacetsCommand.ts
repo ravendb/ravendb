@@ -19,7 +19,7 @@ class queryFacetsCommand extends commandBase {
     public argsUrl: string;
 
     execute(): JQueryPromise<pagedResultSet<any>> {
-        var url = "/facets/" + this.indexName + this.argsUrl;
+        var url = "/facets/" + this.indexName + this.argsUrl;//TODO: use endpoints
 
         // Querying facets returns a facetResultSetDto. We need to massage that
         // data into something that can be displayed in the grid: the pagedResultSet.

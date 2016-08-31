@@ -48,7 +48,7 @@ namespace Raven.Server.ServerWide
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
-            _logger = LoggerSetup.Instance.GetLogger<ServerStore>("ServerStore");
+            _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
             DatabasesLandlord = new DatabasesLandlord(this);
 
             // We use the follow format for the items data

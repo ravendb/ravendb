@@ -649,15 +649,15 @@ namespace Raven.Client.Document
                 while (enumerator.MoveNext())
                 {
                     var ravenJObject = enumerator.Current;
-                    var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
+                    var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata.Key);
                     query.InvokeAfterStreamExecuted(ref ravenJObject);
                     string key = null;
                     long? etag = null;
                     if (meta != null)
                     {
                         key = meta.Value<string>("@id") ??
-                              meta.Value<string>(Constants.DocumentIdFieldName) ??
-                              ravenJObject.Value<string>(Constants.DocumentIdFieldName);
+                              meta.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName) ??
+                              ravenJObject.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName);
 
                         var value = meta.Value<string>("@etag");
                         if (value != null)

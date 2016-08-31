@@ -23,10 +23,10 @@ namespace Raven.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
-        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
 
         private readonly DocumentStore _store;
-        private readonly JsonContextPool _contextPoll;
+        private readonly JsonContextPool _contextPool;
 
         public class AggresiveCacheOptions
         {
@@ -65,7 +65,7 @@ namespace Raven.Client.Http
             var handler = new HttpClientHandler();
             _httpClient = new HttpClient(handler);
 
-            _contextPoll = new JsonContextPool();
+            _contextPool = new JsonContextPool();
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -81,7 +81,7 @@ namespace Raven.Client.Http
         private async Task UpdateTopology()
         {
             JsonOperationContext context;
-            using (_contextPoll.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out context))
             {
                 var node = _topology.LeaderNode;
 
@@ -470,7 +470,7 @@ namespace Raven.Client.Http
         private void UpdateCurrentTokenCallback(object _)
         {
             JsonOperationContext context;
-            using (_contextPoll.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out context))
             {
                 var topology = _topology;
 
@@ -571,7 +571,7 @@ namespace Raven.Client.Http
         {
             _cache.Dispose();
             _authenticator.Dispose();
-            _contextPoll.Dispose();
+            _contextPool.Dispose();
         }
     }
 }

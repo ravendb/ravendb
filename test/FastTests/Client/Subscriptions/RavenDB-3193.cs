@@ -54,7 +54,7 @@ namespace FastTests.Client.Subscriptions
                     foreach (var jsonDocument in docs)
                     {
                         var collection =
-                            jsonDocument[Constants.Metadata].Value<string>(Constants.Headers.RavenEntityName);
+                            jsonDocument[Constants.Metadata.Key].Value<string>(Constants.Headers.RavenEntityName);
                         Assert.True(collection == "Users");
                     }
                 }

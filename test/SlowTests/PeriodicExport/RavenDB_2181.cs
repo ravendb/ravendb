@@ -17,7 +17,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.PeriodicExport
 {
-    public class RavenDB_2181
+    public class RavenDB_2181 : NoDisposalNeeded
     {
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";

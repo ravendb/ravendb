@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -11,6 +12,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Exceptions;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Handlers
@@ -104,10 +106,16 @@ namespace Raven.Server.Documents.Handlers
                     ParsedCommands = parsedCommands,
                     Reply = new DynamicJsonArray()
                 };
-
-                await Database.TxMerger.Enqueue(mergedCmd);
-
-                HttpContext.Response.StatusCode = 201;
+                try
+                {
+                    await Database.TxMerger.Enqueue(mergedCmd);
+                }
+                catch (ConcurrencyException)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    throw;
+                }
+                HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
                     readBatchCommandContext.Write(writer, mergedCmd.Reply);
@@ -134,7 +142,7 @@ namespace Raven.Server.Documents.Handlers
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
                             BlittableJsonReaderObject metadata;
-                            cmd.Document.TryGet(Constants.Metadata, out metadata);
+                            cmd.Document.TryGet(Constants.Metadata.Key, out metadata);
 
                             Reply.Add(new DynamicJsonValue
                             {

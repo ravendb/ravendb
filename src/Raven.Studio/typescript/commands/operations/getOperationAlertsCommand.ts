@@ -9,7 +9,7 @@ class getOperationAlertsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<alert[]> {
-        var url = "/operation/alerts";
+        var url = "/operation/alerts";//TODO: use endpoints
         
         return this.query<alert[]>(url, null, this.db, (result: alertDto[]) => result.map(a => new alert(a)));
     }

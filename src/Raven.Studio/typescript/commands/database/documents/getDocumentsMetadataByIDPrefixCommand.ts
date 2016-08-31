@@ -8,7 +8,7 @@ class getDocumentsMetadataByIDPrefixCommand extends commandBase {
     }
 
     execute(): JQueryPromise<documentMetadataDto[]> {
-        var url = '/docs';
+        var url = '/docs';//TODO: use endpoints
         var args = {
             'startsWith': this.prefix,
             'exclude': <string> null,

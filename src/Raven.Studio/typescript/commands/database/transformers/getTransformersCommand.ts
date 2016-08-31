@@ -11,7 +11,7 @@ class getTransformersCommand extends commandBase {
             start: this.skip,
             pageSize: this.take
         };
-        var url = "/transformers" + this.urlEncodeArgs(args);
+        var url = "/transformers" + this.urlEncodeArgs(args);//TODO: use endpoints
         return this.query(url, null, this.db);
     }
 }

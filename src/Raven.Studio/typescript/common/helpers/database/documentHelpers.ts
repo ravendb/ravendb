@@ -13,7 +13,7 @@ class documentHelpers {
             documentNodesFlattenedList.push(doc[curField]);
         });
 
-        for (var documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
+        for (let documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
             var curField = documentNodesFlattenedList[documentNodesCursor];
             if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
 
@@ -22,7 +22,7 @@ class documentHelpers {
                 }
             }
             else if (typeof curField == "object" && !!curField) {
-                for (var curInnerField in curField) {
+                for (let curInnerField in curField) {
                     documentNodesFlattenedList.push(curField[curInnerField]);
                 }
             }
@@ -135,7 +135,7 @@ class documentHelpers {
         return text;
     }
 
-    static findSchema(documents: Array<any>): any {
+    static findSchema(documents: Array<document>): document {
         try {
             documents.forEach(doc => {
                 JSON.stringify(doc);
@@ -144,7 +144,17 @@ class documentHelpers {
             throw new Error("Cannot find schema for not serializable objects");
         }
 
-        return documentHelpers.findSchemaForObject(documents);
+        const docDto = documentHelpers.findSchemaForObject(documents.map(x => x.toDto(false)));
+
+        const metadatas = documents.map(x => x.__metadata);
+        const ravenEntityName = documentHelpers.findCommonValue(metadatas, "ravenEntityName");
+        const ravenClrType = documentHelpers.findCommonValue(metadatas, "ravenClrType");
+
+        docDto["@metadata"] = {
+            "Raven-Entity-Name": ravenEntityName,
+            "Raven-Clr-Type": ravenClrType
+        }
+        return new document(docDto);
     }
 
     private static findSchemaForObject(objects: Array<any>): any {
@@ -163,6 +173,18 @@ class documentHelpers {
         return result;
     }
 
+    private static findCommonValue(elements: Array<any>, property: string): any {
+        const extractedValues = elements.map(doc => doc[property]);
+        const [firstValue, ...restValues] = extractedValues;
+
+        for (let i = 0; i < restValues.length; i++) {
+            if (firstValue !== restValues[i]) {
+                return undefined;
+            }
+        }
+        return firstValue;
+    }
+
     private static findSchemaDefaultValue(documents: Array<any>, property: string): any {
         for (let i = 0; i < documents.length; i++) {
             if (!(property in documents[i])) {
@@ -172,10 +194,11 @@ class documentHelpers {
 
         const extractedValues = documents.map(doc => doc[property]);
         const extractedTypes = extractedValues.map(v => typeof (v));
-        const [firstType, ...restTypes] = extractedTypes;
+        let [firstType, ...restTypes] = extractedTypes;
         for (let i = 0; i < restTypes.length; i++) {
             if (firstType !== restTypes[i]) {
-                continue;
+                firstType = "undefined";
+                break;
             }
         }
 

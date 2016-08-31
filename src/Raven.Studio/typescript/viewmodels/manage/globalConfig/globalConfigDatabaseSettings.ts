@@ -23,7 +23,7 @@ class globalConfigDatabaseSettings extends viewModelBase {
         super.canActivate(args);
 
         var deferred = $.Deferred();
-        if (this.settingsAccess.isForbidden()) {
+        if (settingsAccessAuthorizer.isForbidden()) {
             deferred.resolve({ can: true });
         } else {
             this.fetchClusterConfiguration(null)

@@ -317,7 +317,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 Assert.Equal(2, results.Results.Count);
                 Assert.True(results.Results.All(x => x.Keys.Count == 2));
                 Assert.True(results.Results.All(x => x.ContainsKey("City")));
-                Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata)));
+                Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata.Key)));
                 Assert.True(results.Results.Any(x => x.Value<string>("City") == "Torun"));
                 Assert.True(results.Results.Any(x => x.Value<string>("City") == "Hadera"));
             }

@@ -229,6 +229,10 @@ namespace Raven.Server.Utils
                 }
             }
 
+            var lsv = value as LazyStringValue;
+            if (lsv != null)
+                value = (string) lsv;
+
             try
             {
                 return (T)System.Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);

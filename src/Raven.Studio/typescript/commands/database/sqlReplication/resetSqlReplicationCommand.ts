@@ -8,7 +8,7 @@ class resetSqlReplicationCommand extends commandBase {
 
     execute() {
         var args = { sqlReplicationName: this.sqlReplicationName };
-        var url = "/studio-tasks/reset-sql-replication" + super.urlEncodeArgs(args);
+        var url = "/studio-tasks/reset-sql-replication" + super.urlEncodeArgs(args);//TODO: use endpoints
         return this.post(url, null, this.db)
             .fail(() => this.reportError("SQL replication '" + this.sqlReplicationName + "' failed to reset!"));
     }

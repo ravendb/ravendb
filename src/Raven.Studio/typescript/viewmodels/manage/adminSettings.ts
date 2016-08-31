@@ -2,7 +2,7 @@ import durandalRouter = require("plugins/router");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
+import accessHelper = require("viewmodels/shell/accessHelper");
 import license = require("models/auth/license");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
@@ -42,10 +42,11 @@ class adminSettings extends viewModelBase {
     }
 
     init() {
-        this.isSystemDatabaseForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
+        this.isSystemDatabaseForbidden(
+            (accessHelper.isGlobalAdmin() || accessHelper.canReadWriteSettings() || accessHelper.canReadSettings()) === false);
 
-        var canReadOrWrite = this.settingsAccess.canReadOrWrite();
-        var isGlobalAdmin = shell.isGlobalAdmin();
+        var canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite();
+        var isGlobalAdmin = accessHelper.isGlobalAdmin();
 
         var apiKeyRoute = { route: ['', 'apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys(), enabled: canReadOrWrite };
         var clusterRoute = { route: 'cluster', moduleId: "viewmodels/manage/cluster", title: "Cluster", nav: true, hash: appUrl.forCluster(), enabled: canReadOrWrite };

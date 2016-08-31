@@ -8,7 +8,7 @@ class getUserInfoCommand extends commandBase {
     }
 
     execute(): JQueryPromise<userInfoDto> {
-        var url = "/debug/user-info";
+        var url = "/debug/user-info";//TODO: use endpoints
         return this.query<userInfoDto>(url, null, this.db);
     }
 }

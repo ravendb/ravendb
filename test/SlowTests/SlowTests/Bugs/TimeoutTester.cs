@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
@@ -122,42 +123,41 @@ namespace SlowTests.SlowTests.Bugs
                     Assert.NotNull(answerInfo);
                     answerId = answerInfo.Id;
                 }
-                List<Task> tasks = new List<Task>();
-                object locker = new object();
-                for (int k = 0; k < 100; k++)
+                var thread = Task.Factory.StartNew(() =>
                 {
-                    var thread = Task.Factory.StartNew(() =>
+                    for (int k = 0; k < 100; k++)
                     {
-                        lock (locker)
-                        {
-                            using (var session = store.OpenSession())
-                            {
-                                for (int i = 0; i < 100; i++)
-                                {
-                                    var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-                                        .OrderBy(x => x.Content)
-                                        .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
-                                        .Skip(0).Take(1)
-                                        .FirstOrDefault();
+                        ExecuteQuery(store, answerId, k);
+                    }
+                });
 
-                                    Assert.NotNull(answerInfo);
-                                }
-                            }
-                            using (var session = store.OpenSession())
-                            {
-                                var answer = session.Load<Answer>(answerId);
-                                Assert.NotNull(answer);
+                thread.Wait();
+            }
+        }
 
-                                answer.Content += k.ToString();
-                                session.Store(answer);
-                                session.SaveChanges();
-                            }
-                        }
-                    });
-                    tasks.Add(thread);
+        private static void ExecuteQuery(DocumentStore store, string answerId, int k)
+        {
+            using (var session = store.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+                        .OrderBy(x => x.Content)
+                        .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
+                        .Skip(0).Take(1)
+                        .FirstOrDefault();
+
+                    Assert.NotNull(answerInfo);
                 }
+            }
+            using (var session = store.OpenSession())
+            {
+                var answer = session.Load<Answer>(answerId);
+                Assert.NotNull(answer);
 
-                Task.WaitAll(tasks.ToArray());
+                answer.Content += k.ToString();
+                session.Store(answer);
+                session.SaveChanges();
             }
         }
 

@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import shell = require('viewmodels/shell');
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class status extends viewModelBase {
 
@@ -36,7 +37,7 @@ class status extends viewModelBase {
                 { route: 'databases/status/visualizer', moduleId: 'viewmodels/database/status/visualizer', title: 'Map/Reduce Visualizer', nav: true, hash: appUrl.forCurrentDatabase().visualizer },
                 { route: 'databases/status/debug*details', moduleId: 'viewmodels/database/status/debug/statusDebug', title: 'Debug', nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
                 { route: 'databases/status/storage*details', moduleId: 'viewmodels/database/status/storage/statusStorage', title: 'Storage', nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
-                { route: 'databases/status/infoPackage', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: shell.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().infoPackage }
+                { route: 'databases/status/infoPackage', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: accessHelper.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().infoPackage }
             ])
             .buildNavigationModel();
 

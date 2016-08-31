@@ -9,7 +9,7 @@ class resolveAllConflictsCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         var promise = $.Deferred();
-        var url = '/replication/forceConflictResolution';
+        var url = '/replication/forceConflictResolution';//TODO: use endpoints
 
         this.query(url, null, this.db)
             .fail((response: JQueryXHR) => {

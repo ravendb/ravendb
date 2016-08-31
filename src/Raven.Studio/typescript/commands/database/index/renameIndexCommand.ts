@@ -24,7 +24,7 @@ class renameIndexCommand extends commandBase {
         var urlArgs = {
             newName: this.newIndexName
         };
-        var url = "/indexes-rename/" + this.existingIndexName + this.urlEncodeArgs(urlArgs);
+        var url = "/indexes-rename/" + this.existingIndexName + this.urlEncodeArgs(urlArgs);//TODO: use endpoints
         return this.post(url, null, this.db, { dataType: undefined });
     }
 }

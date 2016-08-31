@@ -278,7 +278,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata] = new DynamicJsonValue
+                                [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
                                     [Constants.Headers.RavenEntityName] = "Users"
                                 }
@@ -290,7 +290,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             using (var doc = CreateDocument(context, "key/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata] = new DynamicJsonValue
+                                [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
                                     [Constants.Headers.RavenEntityName] = "Users"
                                 }
@@ -336,7 +336,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             using (var doc = CreateDocument(context, "key/3", new DynamicJsonValue
                             {
                                 ["Name"] = "William",
-                                [Constants.Metadata] = new DynamicJsonValue
+                                [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
                                     [Constants.Headers.RavenEntityName] = "Users"
                                 }

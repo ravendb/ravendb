@@ -22,7 +22,7 @@ class getDocumentsPreviewCommand extends commandBase {
             var items = collection.results;
             return new pagedResultSet(items, collection.totalResults);
         };
-        var url = "/doc-preview";
+        var url = "/doc-preview";//TODO: use endpoints
         return this.query(url, args, this.database, resultsSelector);
     }*/
 }

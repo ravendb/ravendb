@@ -20,7 +20,7 @@ class adminLogsConfigureCommand extends commandBase {
             id: this.eventsId
         };
 
-        var url = "/admin/logs/configure" + this.urlEncodeArgs(args);
+        var url = "/admin/logs/configure" + this.urlEncodeArgs(args);//TODO: use endpoints
         return this.query<any>(url, null, this.ownerDb);
     }
 }
