@@ -486,15 +486,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public List<IndexDefinitionBase> GetIndexDefinitionsForCollection(string collection, IndexType type)
-        {
-            return _indexes
-                .GetForCollection(collection)
-                .Where(x => x.Type == type)
-                .Select(x => x.Definition)
-                .ToList();
-        }
-
         public IEnumerable<Index> GetIndexesForCollection(string collection)
         {
             return _indexes.GetForCollection(collection);

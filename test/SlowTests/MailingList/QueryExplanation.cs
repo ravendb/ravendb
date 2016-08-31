@@ -3,47 +3,46 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class QueryExplanation : RavenTestBase
     {
         [Fact]
         public void AutoIndexWhenStaticExists()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     CreateData(session);
                     new PerformanceItemsByMonthNumSortByMonthNum().Execute(store);
 
-
                     RavenQueryStatistics stats;
                     session.Query<PerformanceItem>()
                            .Statistics(out stats)
-                           .OrderBy(f => f.MonthNum).ToList();
-                    
+                           .OrderBy(f => f.MonthNum)
+                           .ToList();
+
                     Assert.Equal("PerformanceItems/ByMonthNumSortByMonthNum", stats.IndexName);
-                    
+
                 }
             }
 
         }
 
-        private void CreateData(IDocumentSession session)
+        private static void CreateData(IDocumentSession session)
         {
-            var rand = new System.Random(int.Parse(DateTime.UtcNow.ToString("MMddHHmmss")));
+            var rand = new Random(int.Parse(DateTime.UtcNow.ToString("MMddHHmmss")));
             var multiplier = rand.Next(4, 6);
             var lastValue = (int)(rand.NextDouble() * Math.Pow(10, multiplier));
             var highRange = lastValue / 20;
@@ -126,9 +125,7 @@ namespace Raven.Tests.MailingList
             session.SaveChanges();
         }
 
-
-
-        public class PerformanceItemsByMonthNumSortByMonthNum : AbstractIndexCreationTask<PerformanceItem>
+        private class PerformanceItemsByMonthNumSortByMonthNum : AbstractIndexCreationTask<PerformanceItem>
         {
             public override string IndexName
             {
@@ -140,11 +137,11 @@ namespace Raven.Tests.MailingList
                 Map = docs => from doc in docs
                               select new { MonthNum = doc.MonthNum };
 
-                Sort(x => x.MonthNum, SortOptions.Int);
+                Sort(x => x.MonthNum, SortOptions.NumericDefault);
             }
         }
 
-        public class PerformanceItem
+        private class PerformanceItem
         {
             public int MonthNum { get; set; }
             public string Month { get; set; }

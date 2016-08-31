@@ -8,6 +8,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries.Sorting;
 
 namespace Raven.Server.Documents.Queries.Dynamic
@@ -58,13 +59,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
-            var definitions = _indexStore.GetIndexDefinitionsForCollection(query.ForCollection,
-                query.IsMapReduce ? IndexType.AutoMapReduce : IndexType.AutoMap); // let us work with auto indexes only for now
+            var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
+                .Where(x => query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap())
+                .Select(x => x.Definition)
+                .ToList();
 
             if (definitions.Count == 0)
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
 
-            var results = definitions.Select(definition => ConsiderUsageOfAutoIndex(query, definition, explanations))
+            var results = definitions.Select(definition => ConsiderUsageOfIndex(query, definition, explanations))
             .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
                     .GroupBy(x => x.MatchType)
                     .ToDictionary(x => x.Key, x => x.ToArray());
@@ -96,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, IndexDefinitionBase definition, List<Explanation> explanations = null)
+        private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, IndexDefinitionBase definition, List<Explanation> explanations = null)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;
@@ -159,27 +162,47 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (sortField.EndsWith("_Range"))
                     sortField = sortField.Substring(0, sortField.Length - "_Range".Length);
 
-                IndexField autoIndexField;
+                IndexField indexField = null;
                 // if the field is not in the output, then we can't sort on it. 
                 if (definition.ContainsField(sortField) == false)
                 {
-                    // for map-reduce queries try to get field from group by fields as well
-                    if (query.IsMapReduce == false || ((AutoMapReduceIndexDefinition)definition).GroupByFields
-                                                        .TryGetValue(sortField, out autoIndexField) == false)
+                    if (query.IsMapReduce == false)
                     {
                         explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortField}' which we need to sort on"));
                         currentBestState = DynamicQueryMatchType.Partial;
                         continue;
                     }
+
+                    // for map-reduce queries try to get field from group by fields as well
+                    var autoMapReduceIndexDefinition = definition as AutoMapReduceIndexDefinition;
+                    if (autoMapReduceIndexDefinition != null)
+                    {
+                        if (autoMapReduceIndexDefinition.GroupByFields.TryGetValue(sortField, out indexField) == false)
+                        {
+                            explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortField}' which we need to sort on"));
+                            currentBestState = DynamicQueryMatchType.Partial;
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        var mapReduceIndexDefinition = definition as MapReduceIndexDefinition;
+                        if (mapReduceIndexDefinition != null)
+                        {
+                            throw new NotImplementedException("TODO arek");
+                        }
+                    }
                 }
                 else
                 {
-                    autoIndexField = definition.GetField(sortField);
+                    indexField = definition.GetField(sortField);
                 }
 
-                if (sortInfo.FieldType != autoIndexField.SortOption)
+                Debug.Assert(indexField != null);
+
+                if (sortInfo.FieldType != indexField.SortOption)
                 {
-                    if (autoIndexField.SortOption == null)
+                    if (indexField.SortOption == null)
                     {
                         switch (sortInfo.FieldType) // if field is not sorted, we check if we asked for the default sorting
                         {
@@ -190,7 +213,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
 
                     explanations?.Add(new Explanation(indexName,
-                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortField}' ({autoIndexField.SortOption})"));
+                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortField}' ({indexField.SortOption})"));
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }
