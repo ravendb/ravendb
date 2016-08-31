@@ -131,6 +131,7 @@ namespace Raven.Traffic
                         ["Id"] = id,
                         ["ResourceName"] = resourceName
                         // TODO (TrafficWatch) : config.Timeout .. 
+                        // TODO (TrafficWatch) : When to end watching and flush and close the process ?
                     };
 
                     var stream = new MemoryStream();
