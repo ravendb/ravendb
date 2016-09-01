@@ -27,10 +27,7 @@
   },
 
   "frameworks": {
-    "netstandard1.6": {},
-    "netcoreapp1.0": {
-      "imports": "dnxcore50"
-    }
+    "netstandard1.6": {}
   },
 
   "version": "4.0.0-*"

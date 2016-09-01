@@ -18,13 +18,15 @@
     },
     "embed": {
       "include": [
-        "Documents/Patch/*.js"
+        "Documents/Patch/*.js",
+        "Web/Studio/EmbeddedData/*.ravendbdump",
+        "Web/Studio/EmbeddedData/*.cs"
       ]
     }
   },
 
   "configurations": {
-    "Release": {      
+    "Release": {
       "buildOptions": {
         "optimize": true
       }

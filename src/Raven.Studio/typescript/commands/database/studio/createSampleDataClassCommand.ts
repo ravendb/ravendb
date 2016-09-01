@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class createSampleDataClassCommand extends commandBase {
     constructor(private db: database) {
@@ -7,7 +8,7 @@ class createSampleDataClassCommand extends commandBase {
     }
 
     execute(): JQueryPromise<string> {
-        return this.query<string>("/studio-tasks/createSampleDataClass", null, this.db);//TODO: use endpoints
+        return this.query<string>(endpoints.databases.sampleData.studioSampleDataClasses, null, this.db, null, { dataType: 'text' });
      }
 }
 
