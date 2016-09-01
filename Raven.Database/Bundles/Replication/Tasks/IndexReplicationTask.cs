@@ -406,31 +406,9 @@ namespace Raven.Database.Bundles.Replication.Tasks
             switch (notification.Type)
             {
                 case IndexChangeTypes.IndexAdded:
-                    if (notification.Version.HasValue == false)
-                        return;
-
                     //if created index with the same name as deleted one, we should prevent its deletion replication
-                    Database.TransactionalStorage.Batch(
-                        accessor =>
-                        {
-                            var li = accessor.Lists.Read(Constants.RavenReplicationIndexesTombstones, indexName);
-                            if (li == null)
-                                return;
-
-                            int version;
-                            var versionStr = li.Data.Value<string>("IndexVersion");
-                            if (int.TryParse(versionStr, out version))
-                            {
-                                if (version < notification.Version.Value)
-                                {
-                                    accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexName);
-                                }
-                            }
-                            else
-                            {
-                                Log.Error("Failed to parse index version of index {0}", indexName);
-                            }					        
-                        });
+                    Database.TransactionalStorage.Batch(accessor => 
+                        accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexName));
                     break;
                 case IndexChangeTypes.IndexRemoved:
                     var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
