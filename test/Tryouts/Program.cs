@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Voron.Storage;
 using SlowTests.Core.Indexing;
 using SlowTests.SlowTests.Bugs;
 
@@ -9,14 +10,19 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Parallel.For(0, 1000, i =>
+            using (var x = new PageHandling())
             {
-                using (var x = new Fanout())
-                {
-                    x.ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded();
-                }
-                Console.WriteLine(i);
-            });
+                x.AllocateOverflowPages();
+            }
+
+            //Parallel.For(0, 1000, i =>
+            //{
+            //    using (var x = new Fanout())
+            //    {
+            //        x.ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded();
+            //    }
+            //    Console.WriteLine(i);
+            //});
         }
     }
 }

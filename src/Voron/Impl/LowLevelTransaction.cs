@@ -249,8 +249,9 @@ namespace Voron.Impl
             Page newPage;
             if ( currentPage.IsOverflow )
             {
-                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num);
-                pageSize = currentPage.OverflowSize;
+                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage);
+                pageSize = Environment.Options.PageSize*
+                           _dataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
             }
             else
             {
