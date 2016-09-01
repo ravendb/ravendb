@@ -20,6 +20,8 @@ namespace Raven.Server.Web.System
         private static readonly Dictionary<string, string> MimeMapping = new Dictionary<string, string>()
         {
             { "css", "text/css"},
+            { "png", "image/png" },
+            { "svg", "image/svg+xml" },
             { "js", "application/javascript" },
             { "json", "application/javascript" }
         };
