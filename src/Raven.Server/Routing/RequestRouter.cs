@@ -37,14 +37,14 @@ namespace Raven.Server.Routing
             return tryMatch.Value;
         }
 
-        public async Task HandlePath(HttpContext context, string method, string path)
+        public async Task<string> HandlePath(HttpContext context, string method, string path)
         {
             var tryMatch = _trie.TryMatch(method, path);
             if (tryMatch.Value == null)
             {
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsync($"There is no handler for path: {method} {path}{context.Request.QueryString}");
-                return;
+                return null;
             }
 
             var reqCtx = new RequestHandlerContext
@@ -63,14 +63,14 @@ namespace Raven.Server.Routing
             {
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsync("There is no handler for {context.Request.Method} {context.Request.Path}");
-                return;
+                return null;
             }
 
             if (tryMatch.Value.NoAuthorizationRequired == false)
             {
                 var authResult = await TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database);
                 if (authResult == false)
-                    return;
+                    return reqCtx.Database?.ResourceName;
             }
 
             if (reqCtx.Database != null)
@@ -84,6 +84,8 @@ namespace Raven.Server.Routing
             }
 
             Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
+
+            return reqCtx.Database?.ResourceName;
         }
 
         private async Task<bool> TryAuthorize(HttpContext context, RavenConfiguration configuration,
