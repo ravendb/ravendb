@@ -521,7 +521,6 @@
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
     <Compile Include="Util\Streams\Substream.cs" />
-    <Compile Include="Util\RavenTextFieldParser.cs" />
     <Compile Include="Util\MalformedLineException.cs" />
     <Compile Include="Threading\ThreadLocal.cs" />
     <Compile Include="Util\UndisposableStream.cs" />
