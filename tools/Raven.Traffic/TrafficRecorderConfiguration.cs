@@ -115,7 +115,18 @@ namespace Raven.Traffic
                 config = null;
                 return TrafficArgsProcessStatus.NoArguments;
             }
-            // new Url(args[1]); // TODO :: verify args[1] as valid url
+
+            try
+            {
+                // ReSharper disable once ObjectCreationAsStatement
+                new Uri(args[1]);
+            }
+            catch (UriFormatException)
+            {
+                Console.WriteLine("ERROR : Server's url provided isn't in valid format");
+                throw;
+            }
+
             config = new TrafficToolConfiguration();
 
             switch (args[0])
