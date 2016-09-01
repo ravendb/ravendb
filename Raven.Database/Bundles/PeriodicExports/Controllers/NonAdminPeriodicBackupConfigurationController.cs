@@ -32,7 +32,7 @@ namespace Raven.Database.Bundles.PeriodicExports.Controllers
                 return GetEmptyMessage(HttpStatusCode.NotFound);
 
             if (Database.Configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport == false)
-                return GetMessageWithString("You can get periodic export settings using this endpoint only if AllowNonAdminUsersToSetupPeriodicExport config is enabled", HttpStatusCode.Unauthorized);
+                return GetMessageWithString("You can get periodic export settings using this endpoint only if AllowNonAdminUsersToSetupPeriodicExport config is enabled", HttpStatusCode.Forbidden);
 
             var docKey = Constants.Database.Prefix + DatabaseName;
             var databaseDocument = DatabasesLandlord.SystemDatabase.Documents.Get(docKey, null);
