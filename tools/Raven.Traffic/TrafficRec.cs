@@ -122,6 +122,14 @@ namespace Raven.Traffic
                 await client.ConnectAsync(uri, CancellationToken.None)
                     .ConfigureAwait(false);
 
+
+                // record traffic no more then 7 days
+                var day = 24*60*60;
+                var timeout = (int)config.Timeout.TotalMilliseconds/1000;
+                timeout = Math.Min(timeout, 7*day);
+                if (timeout <= 0)
+                    timeout = 7*day;
+
                 try
                 {
                     string resourceName = config.ResourceName ?? "N/A";
@@ -129,9 +137,8 @@ namespace Raven.Traffic
                     {
                         ["Token"] = "TODO token", // TODO (TrafficWatch): Token..
                         ["Id"] = id,
-                        ["ResourceName"] = resourceName
-                        // TODO (TrafficWatch) : config.Timeout .. 
-                        // TODO (TrafficWatch) : When to end watching and flush and close the process ?
+                        ["ResourceName"] = resourceName,
+                        ["Timeout"] = timeout
                     };
 
                     var stream = new MemoryStream();
@@ -201,8 +208,8 @@ namespace Raven.Traffic
                                     notification.InnerRequestsCount = GetIntFromJson(reader, "InnerRequestsCount");
                                     // notification.QueryTimings = GetRavenJObjectFromJson(reader, "QueryTimings"); // TODO (TrafficWatch) : Handle this both server and client sides
 
-
-                                    Console.Write("\rRequest #{0} Stored...\t\t ", ++requestsCounter);
+                                    if (config.PrintOutput)
+                                        Console.Write("\rRequest #{0} Stored...\t\t ", ++requestsCounter);
 
                                     var jobj = RavenJObject.FromObject(notification);
                                     jobj.WriteTo(jsonWriter);

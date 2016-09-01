@@ -32,9 +32,9 @@ namespace Raven.Server.TrafficWatch
         private readonly byte[] _heartbeatMessageBuffer;
 
         private readonly ConcurrentQueue<TrafficWatchNotification> _msgs = new ConcurrentQueue<TrafficWatchNotification>();
+        private int _timeout;
 
-
-        public TrafficWatchConnection(WebSocket webSocket, string id, CancellationToken ctk, string resourceName)
+        public TrafficWatchConnection(WebSocket webSocket, string id, CancellationToken ctk, string resourceName, int timeout)
         {
             _websocket = webSocket;
             _manualResetEvent = new AsyncManualResetEvent(ctk);
@@ -43,12 +43,14 @@ namespace Raven.Server.TrafficWatch
             Buffer.BlockCopy(_heartbeatMessage, 0, _heartbeatMessageBuffer, 0,  _heartbeatMessage.Length);
             Id = id;
             TenantSpecific = resourceName;
+            _timeout = timeout;
         }
 
         public async Task StartSendingNotifications()
         {
             try
             {
+                var sp = Stopwatch.StartNew();
                 while (_cancellationTokenSource.IsCancellationRequested == false)
                 {
                     var result = await _manualResetEvent.WaitAsync(TimeSpan.FromMilliseconds(5000)).ConfigureAwait(false);
@@ -75,6 +77,9 @@ namespace Raven.Server.TrafficWatch
 
                         await SendMessage(ToByteArraySegment(message)).ConfigureAwait(false);
                     }
+
+                    if (_timeout > 0 && sp.ElapsedMilliseconds/1000 > _timeout)
+                        break;
                 }
             }
             catch (Exception e)

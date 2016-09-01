@@ -109,10 +109,13 @@ namespace Raven.Server.TrafficWatch
                             {
                                 string token;
                                 if (reader.TryGet("Token", out token) == false)
-                                    throw new ArgumentNullException(nameof(token), "Command argument is mandatory");
+                                    throw new ArgumentNullException(nameof(token), "Token argument is mandatory");
                                 if (reader.TryGet("Id", out id) == false)
-                                    throw new ArgumentNullException(nameof(id), "Command argument is mandatory");
-                                
+                                    throw new ArgumentNullException(nameof(id), "Id argument is mandatory");
+                                int timeout;
+                                if (reader.TryGet("Timeout", out timeout) == false)
+                                    throw new ArgumentNullException(nameof(id), "Timeout argument is mandatory");
+
                                 // TODO (TrafficWatch) : Validate Token, (Uri?, ActiveSource?, User/ApiKey?).  
 
                                 string resourceName;
@@ -122,7 +125,7 @@ namespace Raven.Server.TrafficWatch
                                     resourceName = null;
                                 }
 
-                                connection = new TrafficWatchConnection(webSocket, id, ServerStore.ServerShutdown, resourceName);
+                                connection = new TrafficWatchConnection(webSocket, id, ServerStore.ServerShutdown, resourceName, timeout);
                                 TrafficWatchManager.AddConnection(connection);
                                 await connection.StartSendingNotifications();
                             }
