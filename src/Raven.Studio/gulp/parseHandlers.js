@@ -1,3 +1,5 @@
+'use strict';
+
 var through = require('through2');
 var path = require('path');
 var Set = require('es6-set');
@@ -30,9 +32,12 @@ function findHandlerAnnotations(file, ravenActions) {
     var contents = file.contents.toString();
     var handlerName = findHandlerName(file.path);
     var actions = extractRavenActions(contents);
+
     if (ravenActions.has(handlerName)) {
-        throw new Error("Handler name clush:" + handlerName);
+        let currentActions = ravenActions.get(handlerName);
+        actions = new Set([...actions, ...currentActions]);
     }
+
     ravenActions.set(handlerName, actions);
     return null;
 }
