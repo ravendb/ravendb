@@ -6,13 +6,12 @@ import document = require("models/document");
 import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
-import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 import getPeriodicExportSettingsForNonAdmin = require("commands/getPeriodicExportSettingsForNonAdmin");
 
 type canEditSettingsDetails = { canEdit: boolean, canViaOverride: boolean };
 
 class periodicExport extends viewModelBase {
-    backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
+    backupSetup = ko.observable<periodicExportSetup>();
     isSaveEnabled: KnockoutComputed<boolean>;
     backupStatusDirtyFlag = new ko.DirtyFlag([]);
     backupConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -21,7 +20,7 @@ class periodicExport extends viewModelBase {
 
     constructor() {
         super();
-        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() == false));
+        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() === false));
     }
 
     attached() {
@@ -96,18 +95,19 @@ class periodicExport extends viewModelBase {
         if (db.isAdminCurrentTenant()) {
             return $.Deferred<canEditSettingsDetails>().resolve({ canEdit: true, canViaOverride: false });
         } else {
-            // non-admin user - give him another chance by checking configuration option
+            // non-admin user - give him another chance by checking dedicated endpoint
             var configTask = $.Deferred<canEditSettingsDetails>();
 
-            new getStatusDebugConfigCommand(db).execute()
-                .done(config => {
-                    if (config && config.Studio && config.Studio.AllowNonAdminUsersToSetupPeriodicExport) {
-                        configTask.resolve({ canEdit: true, canViaOverride: true });
-                    } else {
+            new getPeriodicExportSettingsForNonAdmin(db)
+                .execute()
+                .done(() => configTask.resolve({ canEdit: true, canViaOverride: true }))
+                .fail((response: JQueryXHR) => {
+                    if (response.status === 401) {
                         configTask.resolve({ canEdit: false, canViaOverride: false });
+                    } else {
+                        configTask.reject();
                     }
-                })
-                .fail(() => configTask.reject());
+                });
 
             return configTask;
         }
