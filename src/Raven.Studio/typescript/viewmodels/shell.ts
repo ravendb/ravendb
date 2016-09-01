@@ -254,6 +254,8 @@ class shell extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        $("#body").removeClass('loading-active');
+
         this.initializeShellComponents();
     }
 
