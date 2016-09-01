@@ -6,6 +6,7 @@ namespace Voron.Impl.Scratch
         public readonly long PositionInScratchBuffer;
         public readonly long Size;
         public readonly int NumberOfPages;
+        public Page PreviousVersion;
 
         public PageFromScratchBuffer( int scratchFileNumber, long positionInScratchBuffer, long size, int numberOfPages )
         {
