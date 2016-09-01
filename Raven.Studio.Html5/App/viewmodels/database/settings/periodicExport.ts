@@ -8,7 +8,6 @@ import appUrl = require("common/appUrl");
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
 import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
 import deleteLocalPeriodicExportSetupCommand = require("commands/database/globalConfig/deleteLocalPeriodicExportSetupCommand");
-import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
 
@@ -93,18 +92,19 @@ class periodicExport extends viewModelBase {
         if (db.isAdminCurrentTenant()) {
             return $.Deferred<canEditSettingsDetails>().resolve({ canEdit: true, canViaOverride: false });
         } else {
-            // non-admin user - give him another chance by checking configuration option
+            // non-admin user - give him another chance by checking configuration endpoint
             var configTask = $.Deferred<canEditSettingsDetails>();
 
-            new getStatusDebugConfigCommand(db).execute()
-                .done(config => {
-                    if (config && config.Studio && config.Studio.AllowNonAdminUsersToSetupPeriodicExport) {
-                        configTask.resolve({ canEdit: true, canViaOverride: true });
-                    } else {
+            new getConfigurationSettingsCommand(db, [/* just checking permissions */])
+                .execute()
+                .done(() => configTask.resolve({ canEdit: true, canViaOverride: true }))
+                .fail((response: JQueryXHR) => {
+                    if (response.status === 403) {
                         configTask.resolve({ canEdit: false, canViaOverride: false });
+                    } else {
+                        configTask.reject();
                     }
-                })
-                .fail(() => configTask.reject());
+                });
 
             return configTask;
         }
