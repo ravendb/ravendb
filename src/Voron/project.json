@@ -20,6 +20,12 @@
       "buildOptions": {
         "optimize": true
       }
+    },
+    "Validate": {
+      "buildOptions": {
+        "optimize": true,
+        "define": [ "VALIDATE", "VALIDATE_PAGES" ]
+      }
     }
   },
 
