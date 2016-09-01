@@ -102,7 +102,7 @@ class periodicExport extends viewModelBase {
                 .execute()
                 .done(() => configTask.resolve({ canEdit: true, canViaOverride: true }))
                 .fail((response: JQueryXHR) => {
-                    if (response.status === 401) {
+                    if (response.status === 403) {
                         configTask.resolve({ canEdit: false, canViaOverride: false });
                     } else {
                         configTask.reject();
