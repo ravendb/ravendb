@@ -54,13 +54,11 @@ namespace Raven.Server
                 context.Response.StatusCode = 200;
                 var sp = Stopwatch.StartNew();
                 var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+                sp.Stop();
 
-                if (TrafficWatchManager.IsRegisteredClients())
+                if (TrafficWatchManager.HasRegisteredClients)
                 {
                     var requestId = Interlocked.Increment(ref _requestId);
-
-                    // TODO (TrafficWatch): Implement needed fields:
-                    RavenJObject todo = null; // Implement
 
                     var twn = new TrafficWatchNotification
                     {
@@ -72,9 +70,9 @@ namespace Raven.Server
                         RequestUri = context.Request.GetEncodedUrl(),
                         AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
                         TenantName = tenant ?? "N/A",
-                        CustomInfo = "", // Implement
-                        InnerRequestsCount = 0, // Implement
-                        QueryTimings = todo ?? new RavenJObject(), // Implement
+                        CustomInfo = "", // TODO: Implement
+                        InnerRequestsCount = 0, // TODO: Implement
+                        QueryTimings = null, // TODO: Implement
                     };
 
                     TrafficWatchManager.DispatchMessage(twn);

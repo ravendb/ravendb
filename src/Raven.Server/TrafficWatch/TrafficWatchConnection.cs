@@ -22,35 +22,29 @@ namespace Raven.Server.TrafficWatch
         readonly JsonContextPool _jsonContextPool = new JsonContextPool();
 
         private readonly WebSocket _websocket;
-        public string Id { get; }
         public string TenantSpecific { get; set; }
+        public bool IsAlive => _cancellationTokenSource.IsCancellationRequested == false;
 
+        private static readonly byte[] HeartbeatMessage = {(byte) '\r', (byte) '\n'};
         private readonly AsyncManualResetEvent _manualResetEvent;
         private readonly CancellationTokenSource _cancellationTokenSource;
 
-        private readonly byte[] _heartbeatMessage = Encoding.UTF8.GetBytes("{'Type': 'Heartbeat','Time': '");
-        private readonly byte[] _heartbeatMessageBuffer;
 
         private readonly ConcurrentQueue<TrafficWatchNotification> _msgs = new ConcurrentQueue<TrafficWatchNotification>();
-        private int _timeout;
+        private readonly MemoryStream _bufferStream = new MemoryStream();
 
-        public TrafficWatchConnection(WebSocket webSocket, string id, CancellationToken ctk, string resourceName, int timeout)
+        public TrafficWatchConnection(WebSocket webSocket, CancellationToken ctk, string resourceName)
         {
             _websocket = webSocket;
             _manualResetEvent = new AsyncManualResetEvent(ctk);
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ctk);
-            _heartbeatMessageBuffer = new byte[_heartbeatMessage.Length + 32]; // add some sapce to dynamically add Time value
-            Buffer.BlockCopy(_heartbeatMessage, 0, _heartbeatMessageBuffer, 0,  _heartbeatMessage.Length);
-            Id = id;
             TenantSpecific = resourceName;
-            _timeout = timeout;
         }
 
         public async Task StartSendingNotifications()
         {
             try
             {
-                var sp = Stopwatch.StartNew();
                 while (_cancellationTokenSource.IsCancellationRequested == false)
                 {
                     var result = await _manualResetEvent.WaitAsync(TimeSpan.FromMilliseconds(5000)).ConfigureAwait(false);
@@ -59,12 +53,8 @@ namespace Raven.Server.TrafficWatch
 
                     if (result == false)
                     {
-                        var utcNow = Encoding.UTF8.GetBytes(SystemTime.UtcNow + "'}");
-                        Debug.Assert(utcNow.Length < 32); // utcNow should not exceed 32 (or else _heartbeatMessageBuffer should be increased)
-                        Buffer.BlockCopy(utcNow, 0, _heartbeatMessageBuffer, _heartbeatMessage.Length, utcNow.Length);
-                        Array.Clear(_heartbeatMessageBuffer, _heartbeatMessage.Length + utcNow.Length, _heartbeatMessageBuffer.Length - (_heartbeatMessage.Length + utcNow.Length));
-
-                        await SendMessage(_heartbeatMessageBuffer).ConfigureAwait(false);
+                        await SendMessage(HeartbeatMessage).ConfigureAwait(false);
+                        continue;
                     }
 
                     _manualResetEvent.Reset();
@@ -77,23 +67,19 @@ namespace Raven.Server.TrafficWatch
 
                         await SendMessage(ToByteArraySegment(message)).ConfigureAwait(false);
                     }
-
-                    if (_timeout > 0 && sp.ElapsedMilliseconds/1000 > _timeout)
-                        break;
                 }
             }
             catch (Exception e)
             {
                 Logger.Info("Error when handling web socket connection", e);
-                _cancellationTokenSource?.Cancel();
+                _cancellationTokenSource.Cancel();
             }
             finally
             {
                 TrafficWatchManager.Disconnect(this);
                 try
                 {
-                    await
-                        _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORNAL_CLOSE", _cancellationTokenSource?.Token ?? CancellationToken.None);
+                    await _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORNAL_CLOSE", _cancellationTokenSource?.Token ?? CancellationToken.None);
                 }
                 catch
                 {
@@ -119,16 +105,16 @@ namespace Raven.Server.TrafficWatch
                 //["QueryTimings"] = notification.QueryTimings // TODO :: implement this
             };
 
-            var stream = new MemoryStream();
+            _bufferStream.SetLength(0);
             JsonOperationContext context;
             using (_jsonContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, stream))
+            using (var writer = new BlittableJsonTextWriter(context, _bufferStream))
             {
                 context.Write(writer, json);
                 writer.Flush();
 
                 ArraySegment<byte> bytes;
-                stream.TryGetBuffer(out bytes);
+                _bufferStream.TryGetBuffer(out bytes);
                 return bytes;
             }
         }

@@ -30,7 +30,15 @@ namespace Raven.Server.TrafficWatch
                 {
                     try
                     {
-                        await HandleConnection(webSocket, context);
+                        var resourceName = GetStringQueryString("resourceName", required: false);
+                        var connection = new TrafficWatchConnection(webSocket, ServerStore.ServerShutdown,
+                            "db/" + resourceName);
+                        TrafficWatchManager.AddConnection(connection);
+                        await connection.StartSendingNotifications();
+                    }
+                    catch (IOException)
+                    {
+                        // nothing to do - connection closed
                     }
                     catch (Exception ex)
                     {
@@ -61,82 +69,6 @@ namespace Raven.Server.TrafficWatch
                         }
                     }
                 }
-            }
-        }
-
-        private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
-        {
-            var debugTag = "traffic-watch/websocket";
-            string id = "N/A";
-            TrafficWatchConnection connection = null;
-            try
-            {
-                var buffer = context.GetManagedBuffer();
-                var segments = new[]
-                {
-                    new ArraySegment<byte>(buffer, 0, buffer.Length/2),
-                    new ArraySegment<byte>(buffer, buffer.Length/2, buffer.Length/2)
-                };
-                int index = 0;
-                var receiveAsync = webSocket.ReceiveAsync(segments[index], ServerStore.ServerShutdown);
-                var jsonParserState = new JsonParserState();
-                using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
-                {
-                    var result = await receiveAsync;
-                    parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
-                    index++;
-                    receiveAsync = webSocket.ReceiveAsync(segments[index], ServerStore.ServerShutdown);
-
-                    while (true)
-                    {
-                        using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
-                        {
-                            builder.ReadObject();
-
-                            while (builder.Read() == false)
-                            {
-                                result = await receiveAsync;
-
-                                parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
-                                if (++index >= segments.Length)
-                                    index = 0;
-                                receiveAsync = webSocket.ReceiveAsync(segments[index], ServerStore.ServerShutdown);
-                            }
-
-                            builder.FinalizeDocument();
-
-                            using (var reader = builder.CreateReader())
-                            {
-                                if (reader.TryGet("Id", out id) == false)
-                                    throw new ArgumentNullException(nameof(id), "Id argument is mandatory");
-                                int timeout;
-                                if (reader.TryGet("Timeout", out timeout) == false)
-                                    throw new ArgumentNullException(nameof(id), "Timeout argument is mandatory");
-
-                                // TODO (TrafficWatch) : Validate Token, (Uri?, ActiveSource?, User/ApiKey?).  
-
-                                string resourceName;
-                                if (reader.TryGet("ResourceName", out resourceName) == false ||
-                                    resourceName.Equals("N/A"))
-                                {
-                                    resourceName = null;
-                                }
-
-                                connection = new TrafficWatchConnection(webSocket, id, ServerStore.ServerShutdown, resourceName, timeout);
-                                TrafficWatchManager.AddConnection(connection);
-                                await connection.StartSendingNotifications();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (IOException ex)
-            {
-                /* Client was disconnected, write to log */
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Client was disconnected during TrafficWatch session Id={id}", ex);
-                if (connection != null)
-                    TrafficWatchManager.Disconnect(connection);
             }
         }
     }
