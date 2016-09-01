@@ -107,9 +107,6 @@ namespace Raven.Server.TrafficWatch
 
                             using (var reader = builder.CreateReader())
                             {
-                                string token;
-                                if (reader.TryGet("Token", out token) == false)
-                                    throw new ArgumentNullException(nameof(token), "Token argument is mandatory");
                                 if (reader.TryGet("Id", out id) == false)
                                     throw new ArgumentNullException(nameof(id), "Id argument is mandatory");
                                 int timeout;

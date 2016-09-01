@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client;
+using Raven.Client.OAuth;
 using Raven.Client.Platform;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -135,7 +136,6 @@ namespace Raven.Traffic
                     string resourceName = config.ResourceName ?? "N/A";
                     var connectMessage = new DynamicJsonValue
                     {
-                        ["Token"] = "TODO token", // TODO (TrafficWatch): Token..
                         ["Id"] = id,
                         ["ResourceName"] = resourceName,
                         ["Timeout"] = timeout
