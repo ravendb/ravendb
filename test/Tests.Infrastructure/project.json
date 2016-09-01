@@ -1,8 +1,13 @@
-﻿{
+{
   "version": "1.0.0-*",
 
   "configurations": {
     "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    },
+    "Validate": {
       "buildOptions": {
         "optimize": true
       }

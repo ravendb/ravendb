@@ -18,6 +18,11 @@
       "buildOptions": {
         "optimize": true
       }
+    },
+    "Validate": {
+      "buildOptions": {
+        "optimize": true
+      }
     }
   },
 
