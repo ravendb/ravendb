@@ -2,11 +2,14 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NLog.Config;
@@ -26,6 +29,7 @@ namespace Raven.Server
     {
         private RequestRouter _router;
         private RavenServer _server;
+        private int _requestId;
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
@@ -53,20 +57,22 @@ namespace Raven.Server
 
                 if (TrafficWatchManager.IsRegisteredClients())
                 {
+                    var requestId = Interlocked.Increment(ref _requestId);
+
                     // TODO (TrafficWatch): Implement needed fields:
                     RavenJObject todo = null; // Implement
 
                     var twn = new TrafficWatchNotification
                     {
                         TimeStamp = DateTime.UtcNow,
-                        RequestId = 0, // Implement
+                        RequestId = requestId, // counted only for traffic watch
                         HttpMethod = context.Request.Method ?? "N/A", // N/A ?
                         ElapsedMilliseconds = sp.ElapsedMilliseconds,
                         ResponseStatusCode = context.Response.StatusCode,
-                        RequestUri = "uri", // Implement
-                        AbsoluteUri = "uri", // Implement
+                        RequestUri = context.Request.GetEncodedUrl(),
+                        AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
                         TenantName = tenant ?? "N/A",
-                        CustomInfo = "custom info", // Implement
+                        CustomInfo = "", // Implement
                         InnerRequestsCount = 0, // Implement
                         QueryTimings = todo ?? new RavenJObject(), // Implement
                     };
