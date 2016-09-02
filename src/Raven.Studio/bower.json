@@ -41,8 +41,5 @@
     "requirejs": "^2.1.22",
     "knockout": ">= 2.0",
     "lodash": "^4.11.1"
-  },
-  "devDependencies": {
-    "ace": "^1.2.5"
   }
 }
