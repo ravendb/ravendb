@@ -3,16 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Embedded;
+using FastTests;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class RavenDynamicTests
     {
@@ -28,17 +28,17 @@ namespace Raven.Tests.MailingList
             }
         };
 
-        public class WhenUsingIdCopy : RavenTest
+        public class WhenUsingIdCopy : RavenTestBase
         {
-            private readonly EmbeddableDocumentStore store;
+            private readonly DocumentStore _store;
 
             public WhenUsingIdCopy()
             {
-                store = NewDocumentStore();
+                _store = GetDocumentStore();
 
-                new Person_IdCopy_Index().Execute(store);
+                new Person_IdCopy_Index().Execute(_store);
 
-                using (var session = store.OpenSession())
+                using (var session = _store.OpenSession())
                 {
                     session.Store(Sally);
                     session.Store(new Person { Name = "bob", UserId = Guid.NewGuid() });
@@ -50,14 +50,14 @@ namespace Raven.Tests.MailingList
 
             public override void Dispose()
             {
-                store.Dispose();
+                _store.Dispose();
                 base.Dispose();
             }
 
-            [Fact]
+            [Fact(Skip = "Missing feature: CreateField")]
             public void It_should_be_stored_in_index()
             {
-                using (var session = store.OpenSession())
+                using (var session = _store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
@@ -73,10 +73,10 @@ namespace Raven.Tests.MailingList
             }
 
 
-            [Fact]
+            [Fact(Skip = "Missing feature: CreateField")]
             public void It_should_be_stored_be_able_to_be_searched()
             {
-                using (var session = store.OpenSession())
+                using (var session = _store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
@@ -91,7 +91,7 @@ namespace Raven.Tests.MailingList
                 }
             }
 
-            public class Person_IdCopy_Index : AbstractIndexCreationTask<Person>
+            private class Person_IdCopy_Index : AbstractIndexCreationTask<Person>
             {
                 public Person_IdCopy_Index()
                 {
@@ -107,17 +107,17 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class When_using_Id : RavenTest
+        public class When_using_Id : RavenTestBase
         {
-            private readonly EmbeddableDocumentStore store;
+            private readonly DocumentStore _store;
 
             public When_using_Id()
             {
-                store = NewDocumentStore();
+                _store = GetDocumentStore();
 
-                new Person_Id_Index().Execute(store);
+                new Person_Id_Index().Execute(_store);
 
-                using (var session = store.OpenSession())
+                using (var session = _store.OpenSession())
                 {
                     session.Store(Sally);
                     session.Store(new Person { Name = "bob", UserId = Guid.NewGuid() });
@@ -129,14 +129,14 @@ namespace Raven.Tests.MailingList
 
             public override void Dispose()
             {
-                store.Dispose();
+                _store.Dispose();
                 base.Dispose();
             }
 
-            [Fact]
+            [Fact(Skip = "Missing feature: CreateField")]
             public void It_should_be_stored_in_index()
             {
-                using (var session = store.OpenSession())
+                using (var session = _store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
@@ -152,10 +152,10 @@ namespace Raven.Tests.MailingList
             }
 
 
-            [Fact]
+            [Fact(Skip = "Missing feature: CreateField")]
             public void It_should_be_stored_be_able_to_be_searched()
             {
-                using (var session = store.OpenSession())
+                using (var session = _store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
@@ -170,7 +170,7 @@ namespace Raven.Tests.MailingList
                 }
             }
 
-            public class Person_Id_Index : AbstractIndexCreationTask<Person>
+            private class Person_Id_Index : AbstractIndexCreationTask<Person>
             {
                 public Person_Id_Index()
                 {
@@ -186,14 +186,14 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class PersonIndexItem
+        private class PersonIndexItem
         {
             public string Id { get; set; }
             public string UserId { get; set; }
             public string Family_Dad_Id { get; set; }
         }
 
-        public class Person
+        private class Person
         {
             public Person()
             {

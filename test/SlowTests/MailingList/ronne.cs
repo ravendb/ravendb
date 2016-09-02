@@ -1,19 +1,18 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Ronne : RavenTest
+    public class Ronne : RavenTestBase
     {
-        public class Index : AbstractMultiMapIndexCreationTask
+        private class Index : AbstractMultiMapIndexCreationTask
         {
             public Index()
             {
                 AddMap<Sermon>(items => from x in items
-                                        select new 
+                                        select new
                                         {
                                             Content = new string[] { x.Description, x.Series, x.Speaker, x.Title }.Union(x.Tags)
                                         });
@@ -23,17 +22,18 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanCreateIndexWithUnion()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Index().Execute(store);
             }
         }
 
-
-        public class Sermon
+        private class Sermon
         {
+#pragma warning disable 649
             public string Description, Series, Speaker, Title;
             public string[] Tags;
+#pragma warning restore 649
         }
     }
 

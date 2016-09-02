@@ -1,18 +1,16 @@
 using System.Linq;
-using Raven.Client.Embedded;
+using FastTests;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class RenamedProperty : RavenTest
+    public class RenamedProperty : RavenTestBase
     {
         [Fact]
         public void OrderByWithAttributeShouldStillWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const int count = 1000;
 
@@ -46,7 +44,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class MyClass
+        private class MyClass
         {
             [JsonProperty("whoops")]
             public long ThisWontWork { get; set; }

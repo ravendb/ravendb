@@ -3,17 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class RavenCountTest : RavenTest
+    public class RavenCountTest : RavenTestBase
     {
-        public class TestDocument
+        private class TestDocument
         {
             public string Id
             {
@@ -37,7 +36,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void TestCount()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -62,6 +61,6 @@ namespace Raven.Tests.MailingList
                 }
                 // ReSharper restore ReplaceWithSingleCallToCount
             }
-        } 
+        }
     }
 }

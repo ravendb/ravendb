@@ -1,15 +1,13 @@
-using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Rudolph : RavenTest
+    public class Rudolph : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public string Email { get; set; }
@@ -17,12 +15,12 @@ namespace Raven.Tests.MailingList
             public Login[] Logins { get; set; }
         }
 
-        public class Login
+        private class Login
         {
             public string OpenIdIdentifier { get; set; }
         }
 
-        public class Identifier
+        private class Identifier
         {
             protected bool Equals(Identifier other)
             {
@@ -34,7 +32,7 @@ namespace Raven.Tests.MailingList
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 if (obj.GetType() != this.GetType()) return false;
-                return Equals((Identifier) obj);
+                return Equals((Identifier)obj);
             }
 
             public override int GetHashCode()
@@ -51,7 +49,7 @@ namespace Raven.Tests.MailingList
 
             public static implicit operator Identifier(string identifier)
             {
-                return new Identifier {str = identifier};
+                return new Identifier { str = identifier };
             }
 
             public static bool operator ==(Identifier id1, Identifier id2)
@@ -69,9 +67,9 @@ namespace Raven.Tests.MailingList
         public void CanUseImplicitIdentifier()
         {
             Identifier identifier = "http://openid";
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     var user = new User()
                     {
@@ -83,9 +81,9 @@ namespace Raven.Tests.MailingList
                     s.SaveChanges();
 
                 }
-                using(var s = store.OpenSession())
+                using (var s = store.OpenSession())
                 {
-                    var query = from u in s.Query<User>().Customize(x=>x.WaitForNonStaleResults())
+                    var query = from u in s.Query<User>().Customize(x => x.WaitForNonStaleResults())
                                 where u.Logins.Any(x => x.OpenIdIdentifier == identifier)
                                 select u;
 

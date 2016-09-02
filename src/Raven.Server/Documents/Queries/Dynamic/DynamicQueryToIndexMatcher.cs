@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
 
             var results = definitions.Select(definition => ConsiderUsageOfIndex(query, definition, explanations))
-            .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
+                    .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
                     .GroupBy(x => x.MatchType)
                     .ToDictionary(x => x.Key, x => x.ToArray());
 

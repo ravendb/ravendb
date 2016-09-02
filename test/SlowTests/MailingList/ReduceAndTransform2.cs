@@ -3,16 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ReduceAndTransform2 : RavenTest
+    public class ReduceAndTransform2 : RavenTestBase
     {
         private class Personnel
         {
@@ -27,7 +27,7 @@ namespace Raven.Tests.MailingList
             public string RoleId { get; set; }
         }
 
-        public class PersonnelAll
+        private class PersonnelAll
                : AbstractMultiMapIndexCreationTask<PersonnelAll.Mapping>
         {
             public class Mapping
@@ -61,16 +61,16 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from result in results
                                     group result by result.Id
                                         into g
-                                        select new Mapping
-                                        {
-                                            Id = g.Select(a => a.Id).FirstOrDefault(a => a != null),
-                                            LastName = g.Select(a => a.LastName).FirstOrDefault(a => a != null),
-                                            Roles = g.SelectMany(a => a.Roles)
-                                        };
+                                    select new Mapping
+                                    {
+                                        Id = g.Select(a => a.Id).FirstOrDefault(a => a != null),
+                                        LastName = g.Select(a => a.LastName).FirstOrDefault(a => a != null),
+                                        Roles = g.SelectMany(a => a.Roles)
+                                    };
             }
         }
 
-        public class PersonnelTransformer
+        private class PersonnelTransformer
             : AbstractTransformerCreationTask<PersonnelAll.Mapping>
         {
             public class Result
@@ -93,10 +93,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void WillTransform()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var persons = new[] { "Ayende", "Rahien", "Oren", "Enei", "Alias" };
                 var roles = new[] { "Administrator", "Programmer", "Support", "Guest", "Someone" };

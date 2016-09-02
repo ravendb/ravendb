@@ -1,21 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Raven.Imports.Newtonsoft.Json;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Rob : RavenTest
+    public class Rob : RavenTestBase
     {
 
         [Fact]
         public void CanUseIndex()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Article_Index().Execute(store);
 
@@ -34,7 +32,7 @@ namespace Raven.Tests.MailingList
 
         }
 
-        public class Article
+        private class Article
         {
             public string Id { get; set; }
             public string CampaignId { get; set; }
@@ -58,7 +56,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Post
+        private class Post
         {
             public string Id { get; set; }
             public string CampaignId { get; set; }
@@ -82,7 +80,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Scene
+        private class Scene
         {
             public string Id { get; set; }
             public string CampaignId { get; set; }
@@ -105,7 +103,8 @@ namespace Raven.Tests.MailingList
                 VisibleTo = new List<string>();
             }
         }
-        public class CampaignIndexEntry
+
+        private class CampaignIndexEntry
         {
             public string CampaignId { get; set; }
             public string TagSlug { get; set; }
@@ -113,7 +112,7 @@ namespace Raven.Tests.MailingList
             public IEnumerable<string> VisibleTo { get; set; }
         }
 
-        public class Article_Index : AbstractMultiMapIndexCreationTask<CampaignIndexEntry>
+        private class Article_Index : AbstractMultiMapIndexCreationTask<CampaignIndexEntry>
         {
             public Article_Index()
             {
@@ -153,13 +152,13 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from result in results
                                     group result by new { result.CampaignId, result.TagSlug }
                                         into g
-                                        select new
-                                        {
-                                            g.Key.CampaignId,
-                                            g.Key.TagSlug,
-                                            Count = g.Sum(x => x.Count),
-                                            VisibleTo = g.SelectMany(x => x.VisibleTo).Distinct()
-                                        };
+                                    select new
+                                    {
+                                        g.Key.CampaignId,
+                                        g.Key.TagSlug,
+                                        Count = g.Sum(x => x.Count),
+                                        VisibleTo = g.SelectMany(x => x.VisibleTo).Distinct()
+                                    };
             }
         }
     }

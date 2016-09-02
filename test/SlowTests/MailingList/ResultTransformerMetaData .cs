@@ -3,18 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ResultTransformerMetaData : RavenTest
+    public class ResultTransformerMetaData : RavenTestBase
     {
         /// <summary>
         /// The only thing i could not recreate here is the fact that the versioning bundle is active.
@@ -23,7 +23,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CreateDataAndQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
                 store.RegisterListener(new AuditListener(() => "DataImporter"));
@@ -60,7 +60,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class CustomerListingTransformer : AbstractTransformerCreationTask<Customer>
+        private class CustomerListingTransformer : AbstractTransformerCreationTask<Customer>
         {
             public CustomerListingTransformer()
             {
@@ -79,7 +79,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Customer : AuditableEntity
+        private class Customer : AuditableEntity
         {
             public string Id { get; set; }
 
@@ -96,14 +96,14 @@ namespace Raven.Tests.MailingList
         /// <summary>
         /// Specifies the type of a customer
         /// </summary>
-        public enum CustomerType
+        private enum CustomerType
         {
             Prospect,
             Customer,
             Partner
         }
 
-        public class CustomerListingModel
+        private class CustomerListingModel
         {
             public string Id { get; set; }
             public long InternalId { get; set; }
@@ -115,12 +115,12 @@ namespace Raven.Tests.MailingList
             public string ChangedBy { get; set; }
         }
 
-        public class AuditableEntity
+        private class AuditableEntity
         {
 
         }
 
-        public class AuditListener : IDocumentStoreListener
+        private class AuditListener : IDocumentStoreListener
         {
             private Func<string> authenticator;
 

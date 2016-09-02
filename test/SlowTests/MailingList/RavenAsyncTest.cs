@@ -1,17 +1,15 @@
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class AsyncTest : RavenTest
+    public class AsyncTest : RavenTestBase
     {
-        public class Dummy
+        private class Dummy
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -20,8 +18,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void SyncQuery()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
                 var results = session.Query<Dummy>().ToList();
@@ -34,8 +31,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public async Task AsyncQuery()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            using (var store = GetDocumentStore())
             using (var session = store.OpenAsyncSession())
             {
                 var results = await session.Query<Dummy>().ToListAsync();
@@ -48,12 +44,11 @@ namespace Raven.Tests.MailingList
         [Fact]
         public async Task AsyncQuery_WithWhereClause()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Dummy {Name = "oren"});
+                    await session.StoreAsync(new Dummy { Name = "oren" });
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())
@@ -71,8 +66,7 @@ namespace Raven.Tests.MailingList
         public async Task AsyncLoadNonExistant()
         {
             // load a non-existant entity
-            using (GetNewServer())
-            using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            using (var store = GetDocumentStore())
             using (var session = store.OpenAsyncSession())
             {
                 var loaded = await session.LoadAsync<Dummy>("dummies/-1337");
@@ -83,8 +77,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public async Task AsyncLoad()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {

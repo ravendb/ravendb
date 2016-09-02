@@ -1,31 +1,18 @@
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
-
 using System;
 using System.Linq;
-
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class RavenCannotQueryAgainstFloatProperty : RavenTestBase
     {
-        protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
-        {
-        }
-
         [Fact]
         public void CanQueryAgainstFloatProperties()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new OperationDoc_Index().Execute(store);
 
@@ -59,7 +46,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryAgainstFloatProperties2()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new OperationDoc_Index().Execute(store);
 
@@ -90,7 +77,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class OperationDoc
+        private class OperationDoc
         {
             public string Id { get; set; }
             public DateTime Timestamp { get; set; }
@@ -98,7 +85,7 @@ namespace Raven.Tests.MailingList
             public float Quantity { get; set; }
         }
 
-        public class OperationDoc_Index : AbstractIndexCreationTask<OperationDoc>
+        private class OperationDoc_Index : AbstractIndexCreationTask<OperationDoc>
         {
             public OperationDoc_Index()
             {
@@ -107,7 +94,8 @@ namespace Raven.Tests.MailingList
                              {
                                  op.Quantity
                              };
-                Sort(x=>x.Quantity, SortOptions.Float);
+
+                Sort(x => x.Quantity, SortOptions.NumericDouble);
             }
         }
     }

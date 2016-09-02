@@ -1,19 +1,18 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
-using Xunit;
 using Raven.Client;
+using Raven.Client.Indexes;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class RavenDbBugs : RavenTest
+    public class RavenDbBugs : RavenTestBase
     {
         [Fact]
         public void CanUseEnumInMultiMapTransform()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TestIndex().Execute(store);
 
@@ -36,28 +35,29 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        class Cat
+        private class Cat
         {
             public string Name { get; set; }
         }
 
-        class Duck
+        private class Duck
         {
             public string Name { get; set; }
         }
-        class Animal
+        private class Animal
         {
             public string Alias { get; set; }
             public string Name { get; set; }
             public AnimalClass Type { get; set; }
         }
 
-        enum AnimalClass
+        private enum AnimalClass
         {
             Has4Legs,
             Has2Legs
         }
-        class TestIndex : AbstractMultiMapIndexCreationTask<Animal>
+
+        private class TestIndex : AbstractMultiMapIndexCreationTask<Animal>
         {
             public TestIndex()
             {
@@ -77,8 +77,8 @@ namespace Raven.Tests.MailingList
                                       });
 
 
-                Store(x=>x.Alias, FieldStorage.Yes);
-                Store(x=>x.Type, FieldStorage.Yes);
+                Store(x => x.Alias, FieldStorage.Yes);
+                Store(x => x.Type, FieldStorage.Yes);
             }
         }
 

@@ -1,12 +1,9 @@
 using System.Linq;
-
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     /// <summary>
     /// Demonstrates that "Id" can't be used in the where clause of a map/reduce query.
@@ -18,25 +15,25 @@ namespace Raven.Tests.MailingList
     /// </summary>
     public class RavenDB_859 : RavenTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public Bar[] Bars { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class OuterResult
+        private class OuterResult
         {
             public string Id { get; set; }
             public int Count { get; set; }
         }
 
-        public class TestIndex : AbstractIndexCreationTask<Foo, TestIndex.Result>
+        private class TestIndex : AbstractIndexCreationTask<Foo, TestIndex.Result>
         {
             public class Result
             {
@@ -57,18 +54,18 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from result in results
                                     group result by result.Id
                                         into g
-                                        select new
-                                        {
-                                            Id = g.Key,
-                                            Count = g.Sum(x => x.Count)
-                                        };
+                                    select new
+                                    {
+                                        Id = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
             }
         }
 
         [Fact]
         public void NestedType()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new TestIndex());
 
@@ -107,7 +104,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void OuterType()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new TestIndex());
 

@@ -1,22 +1,20 @@
-using Raven.Tests.Common;
-
-using Xunit;
-using System.Linq;
-using Raven.Client.Indexes;
 using System;
-using System.Reflection;
+using System.Linq;
+using FastTests;
 using Raven.Client;
+using Raven.Client.Indexes;
+using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class RavenProjectionGuid : RavenTest
+    public class RavenProjectionGuid : RavenTestBase
     {
         [Fact]
         public void TestProjectedGuid()
         {
             Guid accountId = Guid.NewGuid();
 
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new CustomerOrderProjection().Execute(documentStore);
                 new CustomerOrderProjectionTeansformer().Execute(documentStore);
@@ -46,8 +44,7 @@ namespace Raven.Tests.MailingList
 
         }
 
-
-        public class CustomerOrder
+        private class CustomerOrder
         {
             public Guid Id { get; set; }
             public Guid AccountId { get; set; }
@@ -55,14 +52,14 @@ namespace Raven.Tests.MailingList
             public string OrderDetails { get; set; }
         }
 
-        public class AccountListItem
+        private class AccountListItem
         {
             public string Id { get; set; }
             public Guid AccountId { get; set; }
             public string Status { get; set; }
         }
 
-        public class CustomerOrderProjection : AbstractIndexCreationTask<CustomerOrder>
+        private class CustomerOrderProjection : AbstractIndexCreationTask<CustomerOrder>
         {
             public CustomerOrderProjection()
             {
@@ -76,7 +73,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class CustomerOrderProjectionTeansformer : AbstractTransformerCreationTask<CustomerOrder>
+        private class CustomerOrderProjectionTeansformer : AbstractTransformerCreationTask<CustomerOrder>
         {
             public CustomerOrderProjectionTeansformer()
             {
