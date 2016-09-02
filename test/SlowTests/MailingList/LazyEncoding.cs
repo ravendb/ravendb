@@ -3,38 +3,38 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class LazyEncoding : RavenTest
+    public class LazyEncoding : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public bool Admin { get; set; }
         }
 
-        public class UserIndex : AbstractIndexCreationTask<User>
+        private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
             {
                 Map = users =>
                     from u in users
-                    select new {u.Name, u.Admin};
+                    select new { u.Name, u.Admin };
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void ShouldNotMatterForFacets()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserIndex().Execute(store);
                 using (var session = store.OpenSession())

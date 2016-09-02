@@ -3,24 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class JustFacetSearch : RavenTest
+    public class JustFacetSearch : RavenTestBase
     {
-        public class Article
+        private class Article
         {
             public int Id { get; set; }
             public string Title { get; set; }
@@ -30,14 +29,14 @@ namespace Raven.Tests.MailingList
             public string[] Sections { get; set; }
         }
 
-        public class Section
+        private class Section
         {
             public int Id { get; set; }
             public string Name { get; set; }
             public string Slug { get; set; }
         }
 
-        public class Advice_Search : AbstractIndexCreationTask<Article, Advice_Search.Result>
+        private class Advice_Search : AbstractIndexCreationTask<Article, Advice_Search.Result>
         {
             public class Result
             {
@@ -66,14 +65,14 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SectionFacet
+        private class SectionFacet
         {
             public int Id { get; set; }
             public string Name { get; set; }
             public int Count { get; set; }
         }
 
-        public class FacetSearcher
+        private class FacetSearcher
         {
             readonly IDocumentStore _store;
 
@@ -130,9 +129,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-
-
-        void setupFacets(IDocumentSession session)
+        private void setupFacets(IDocumentSession session)
         {
             session.Store(new FacetSetup
             {
@@ -141,7 +138,7 @@ namespace Raven.Tests.MailingList
             });
         }
 
-        void generateData(IDocumentSession session)
+        private void generateData(IDocumentSession session)
         {
             var sections = new[]
             {
@@ -158,10 +155,10 @@ namespace Raven.Tests.MailingList
             foreach (var article in articles) session.Store(article);
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void JustReturnFacets()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Advice_Search().Execute(store);
                 store.RegisterListener(new NoStaleQueriesListener());
@@ -172,10 +169,8 @@ namespace Raven.Tests.MailingList
                     generateData(session);
                     session.SaveChanges();
                 }
-                while (store.SystemDatabase.Statistics.StaleIndexes.Length > 0)
-                {
-                    Thread.Sleep(100);
-                }
+
+                WaitForIndexing(store);
 
                 var facets = searcher.FacetSearch("how to");
                 Assert.Equal(2, facets.Count);
@@ -184,7 +179,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class NoStaleQueriesListener : IDocumentQueryListener
+        private class NoStaleQueriesListener : IDocumentQueryListener
         {
             public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
             {

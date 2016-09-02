@@ -1,20 +1,18 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Maxime2 : RavenTest
+    public class Maxime2 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
         {
-            using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new SpatialIndex());
 
@@ -61,7 +59,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SpatialIndex : AbstractIndexCreationTask<SpatialEntity>
+        private class SpatialIndex : AbstractIndexCreationTask<SpatialEntity>
         {
             public SpatialIndex()
             {
@@ -80,7 +78,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SpatialEntity
+        private class SpatialEntity
         {
             public SpatialEntity() { }
 

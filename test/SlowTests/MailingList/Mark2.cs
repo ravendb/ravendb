@@ -1,25 +1,26 @@
+using FastTests;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Mark2 : RavenTest
+    public class Mark2 : RavenTestBase
     {
         [Fact]
         public void ShouldNotGetErrors()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = @"from brief in docs.TestCases
+                    Maps = { @"from brief in docs.TestCases
  select new {
  _tWarnings_AccessoryWarnings_Value = brief.Warnings.AccessoryWarnings.Select(y=>y.Value)
  }"
+}
                 });
 
                 store.DatabaseCommands.Put("TestCases/TST00001", null,
@@ -38,7 +39,7 @@ namespace Raven.Tests.MailingList
    ]
  }
 }"),
-                                           new RavenJObject {{Constants.RavenEntityName, "TestCases"}});
+                                           new RavenJObject { { Constants.Headers.RavenEntityName, "TestCases" } });
 
                 store.DatabaseCommands.Put("TestCases/TST00002", null,
                                            RavenJObject.Parse(
@@ -47,11 +48,11 @@ namespace Raven.Tests.MailingList
    ""AccessoryWarnings"": []
  }
 }"),
-                                           new RavenJObject { { Constants.RavenEntityName, "TestCases" } });
+                                           new RavenJObject { { Constants.Headers.RavenEntityName, "TestCases" } });
 
                 WaitForIndexing(store);
 
-                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                TestHelper.AssertNoIndexErrors(store);
             }
         }
     }

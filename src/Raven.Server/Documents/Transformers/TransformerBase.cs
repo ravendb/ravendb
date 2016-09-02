@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Transformers
                     {
                         items.Add(LoadDocument(enumerator.Current, collectionName));
                     }
-                    return new DynamicJsonArray(items);
+                    return new DynamicArray(items);
                 }
             }
 

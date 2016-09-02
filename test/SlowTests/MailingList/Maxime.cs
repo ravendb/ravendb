@@ -1,24 +1,20 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Raven.Client.Linq.Indexing;
-using Raven.Database.Indexing;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Maxime : RavenTest
+    public class Maxime : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void WithingRadiusOf_Should_Not_Break_Relevance()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
                 new PlacesByTermsAndLocation().Execute(store);
@@ -71,10 +67,10 @@ namespace Raven.Tests.MailingList
         }
 
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void Can_just_set_to_sort_by_relevance_without_filtering()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
                 new PlacesByTermsAndLocation().Execute(store);
@@ -106,7 +102,7 @@ namespace Raven.Tests.MailingList
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
-                    .RelatesToShape(Constants.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
+                    .RelatesToShape(Constants.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
                     .Where("(Name:(" + terms + ") OR Terms:(" + terms + "))")
                     .Take(10)
                     .ToList();
@@ -116,7 +112,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Place
+        private class Place
         {
             public Place(string name)
             {
@@ -131,7 +127,7 @@ namespace Raven.Tests.MailingList
             public double Longitude { get; set; }
         }
 
-        public class PlacesByTermsAndLocation : AbstractIndexCreationTask<Place, PlacesByTermsAndLocation.PlaceQuery>
+        private class PlacesByTermsAndLocation : AbstractIndexCreationTask<Place, PlacesByTermsAndLocation.PlaceQuery>
         {
             public class PlaceQuery
             {
@@ -158,6 +154,6 @@ namespace Raven.Tests.MailingList
                 Index(p => p.Terms, FieldIndexing.Analyzed);
 
             }
-        } 
+        }
     }
 }

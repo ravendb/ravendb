@@ -3,35 +3,32 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class LazyAggregationEmbedded : RavenTest
+    public class LazyAggregationEmbedded : RavenTestBase
 
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Dynamic Aggregation")]
         public void Test()
-
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.Conventions.DefaultQueryingConsistency = ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite;
-
                 using (var session = store.OpenSession())
 
                 {
-                    session.Store(new Task {AssigneeId = "users/1", Id = "tasks/1"});
+                    session.Store(new Task { AssigneeId = "users/1", Id = "tasks/1" });
 
-                    session.Store(new Task {AssigneeId = "users/1", Id = "tasks/2"});
+                    session.Store(new Task { AssigneeId = "users/1", Id = "tasks/2" });
 
 
-                    session.Store(new Task {AssigneeId = "users/2", Id = "tasks/3"});
+                    session.Store(new Task { AssigneeId = "users/2", Id = "tasks/3" });
 
 
                     session.SaveChanges();
@@ -44,12 +41,9 @@ namespace Raven.Tests.MailingList
                         .AggregateBy(t => t.AssigneeId, "AssigneeId")
                         .CountOn(t => t.Id);
 
-
                     var lazyOperation = query.ToListLazy(); // blows up here
 
-
                     var facetValue = lazyOperation.Value;
-
 
                     var userStatistics = facetValue.Results["AssigneeId"].Values.ToDictionary(v => v.Range, v => v.Count.GetValueOrDefault());
 
@@ -60,17 +54,17 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class TaskIndex : AbstractIndexCreationTask<Task>
+        private class TaskIndex : AbstractIndexCreationTask<Task>
         {
             public TaskIndex()
             {
                 Map = tasks =>
                     from task in tasks
-                    select new {task.AssigneeId};
+                    select new { task.AssigneeId };
             }
         }
 
-        public class Task
+        private class Task
 
         {
             public string Id { get; set; }

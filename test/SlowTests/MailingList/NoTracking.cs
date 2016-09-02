@@ -3,25 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class NoTracking : RavenTest
+    public class NoTracking : RavenTestBase
     {
         private static readonly Guid One = Guid.Parse("00000000-0000-0000-0000-000000000001");
         private static readonly Guid Two = Guid.Parse("00000000-0000-0000-0000-000000000002");
 
-        private IDocumentStore DocumentStore { get; set; }
+        private IDocumentStore DocumentStore { get; }
 
         public NoTracking()
         {
-            DocumentStore = NewDocumentStore();
+            DocumentStore = GetDocumentStore();
 
             using (var session = DocumentStore.OpenSession())
             {
@@ -98,8 +99,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-
-        public class A
+        private class A
         {
             public Guid Id { get; set; }
             public ISet<Guid> Bs { get; set; }
@@ -110,7 +110,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class B
+        private class B
         {
             public Guid Id { get; set; }
         }

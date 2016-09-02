@@ -1,31 +1,27 @@
 using System.Linq;
-
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Analyzers;
-using Raven.Tests.Helpers;
-
+using SlowTests.Utils.Analyzers;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class LuceneQueryHighlightTest : RavenTestBase
     {
-        const string question = "What words rhyme with concurrency and asymptotic?";
+        private const string Q = "What words rhyme with concurrency and asymptotic?";
 
-        [Theory,
-        InlineData(question, "con cur", "con cu"),
-        InlineData(question, "con ency", "con cy"),
-        InlineData(question, "curr ency", "curr enc"),
-        InlineData(question, "wo rds", "wor ds"),
-        InlineData(question, "asymp totic", "asymp tot"),
-        InlineData(question, "asymp totic", "asymp tic")]
+        [Theory(Skip = "Missing feature: Highlighting")]
+        [InlineData(Q, "con cur", "con cu")]
+        [InlineData(Q, "con ency", "con cy")]
+        [InlineData(Q, "curr ency", "curr enc")]
+        [InlineData(Q, "wo rds", "wor ds")]
+        [InlineData(Q, "asymp totic", "asymp tot")]
+        [InlineData(Q, "asymp totic", "asymp tic")]
         public void ShouldReturnResultsWithHighlightsAndThrowException(string question, string goodSearchTerm, string badSearchTerm)
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new QuestionIndex().Execute(store);
 
@@ -61,12 +57,12 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        class Question
+        private class Question
         {
             public string QuestionText { get; set; }
         }
 
-        class QuestionIndex : AbstractIndexCreationTask<Question>
+        private class QuestionIndex : AbstractIndexCreationTask<Question>
         {
             public QuestionIndex()
             {
