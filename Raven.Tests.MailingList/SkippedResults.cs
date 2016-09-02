@@ -12,6 +12,7 @@ namespace Raven.Tests.MailingList
 {
     public class SkippedResults : RavenTest
     {
+        [Fact]
         public void Can_page_when_using_nested_property_index()
         {
             using (var store = NewDocumentStore())
@@ -31,7 +32,7 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = (from p in session.Query<Provider, NestedPropertyIndex1>()
-                                  .Customize(x=>x.WaitForNonStaleResults())
+                                  .Customize(x => x.WaitForNonStaleResults())
                                   where p.Zip == "97520"
                                   select p).ToArray();
                     Assert.Equal(10, result.Count());
@@ -67,7 +68,7 @@ namespace Raven.Tests.MailingList
                         pageNumber++;
 
                         skippedResults += statistics.SkippedResults;
-                        recordsToSkip = pageSize*pageNumber + skippedResults;
+                        recordsToSkip = pageSize * pageNumber + skippedResults;
 
                         // I found this in the Raven.Tests.MailingList.Vlad.WillOnlyGetPost2Once() method
                         //recordsToSkip = pageSize * pageNumber + statistics.SkippedResults;
