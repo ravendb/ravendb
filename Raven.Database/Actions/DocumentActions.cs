@@ -421,18 +421,20 @@ namespace Raven.Database.Actions
             return info;
         }
 
-        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag, CancellationToken token)
+        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag,
+            CancellationToken token, long? maxSize = null, TimeSpan? timeout = null)
         {
             var list = new RavenJArray();
             GetDocuments(start, pageSize, etag, token, doc =>
             {
                 if (doc != null) list.Add(doc.ToJson());
                 return true;
-            });
+            }, maxSize: maxSize, timeout: timeout);
             return list;
         }
 
-        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument, 
+            string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, long? maxSize = null, TimeSpan? timeout = null)
         {
             Etag lastDocumentReadEtag = null;
 
@@ -452,7 +454,7 @@ namespace Raven.Database.Actions
                     {
                         var documents = etag == null
                             ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
+                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout);
 
                         var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
                         var docCount = 0;
