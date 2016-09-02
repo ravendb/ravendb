@@ -1,29 +1,25 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Replication;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace UnitTestProject1
+namespace SlowTests.MailingList
 {
-
     public class TransformerTest : RavenTestBase
     {
-        public class Company
+        private class Company
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string Region { get; set; }
         }
 
-        public class SampleCompanyTransformer : AbstractTransformerCreationTask<Company>
+        private class SampleCompanyTransformer : AbstractTransformerCreationTask<Company>
         {
             public SampleCompanyTransformer()
             {
@@ -36,20 +32,15 @@ namespace UnitTestProject1
             }
         }
 
-
-       
         [Fact]
         public async Task TestLoadWithTransfomer()
         {
-            using (var s1 = GetNewServer(port: 8077))
-            using (var s2 = GetNewServer(port: 8078))
-            using (var shard1 = new DocumentStore { Url = s1.Configuration.ServerUrl}.Initialize())
-            using (var shard2 = new DocumentStore { Url = s2.Configuration.ServerUrl }.Initialize())
+            using (var shard1 = GetDocumentStore())
+            using (var shard2 = GetDocumentStore())
             {
-
                 // Ensure transformer on both shards as ShardedDocumentStore does not take care of it
-                this.EnsureTransformers(shard1);
-                this.EnsureTransformers(shard2);
+                new SampleCompanyTransformer().Execute(shard1);
+                new SampleCompanyTransformer().Execute(shard2);
 
                 // Init strategy
                 var shards = new Dictionary<string, IDocumentStore>();
@@ -69,7 +60,7 @@ namespace UnitTestProject1
                 var companyShard0 = new Company { Id = "w3qsl3lj4huc", Name = "Company1", Region = "EU" };
                 var companyShard1 = new Company { Id = "9gaq9wnzcrzu", Name = "Company2", Region = "US" };
 
-                    string[] validIds;
+                string[] validIds;
                 using (var session = store.OpenAsyncSession())
                 {
                     // Note: No proper async / await here. Just for testing
@@ -92,18 +83,6 @@ namespace UnitTestProject1
                     Assert.NotEmpty(results);
                 }
 
-            }
-        }
-
-        private void EnsureTransformers(IDocumentStore singleShardStore)
-        {
-            var catalog = new System.ComponentModel.Composition.Hosting.AssemblyCatalog(typeof(TransformerTest).Assembly);
-            var container = new System.ComponentModel.Composition.Hosting.CompositionContainer(catalog);
-            container.ComposeParts();
-
-            foreach (var task in container.GetExportedValues<AbstractTransformerCreationTask>())
-            {
-                task.Execute(singleShardStore);
             }
         }
     }

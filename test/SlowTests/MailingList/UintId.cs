@@ -3,20 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Converters;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class UintId : RavenTest
+    public class UintId : RavenTestBase
     {
-        public class UInt32Converter : ITypeConverter
+        private class UInt32Converter : ITypeConverter
         {
             public bool CanConvertFrom(Type sourceType)
             {
@@ -35,7 +35,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public uint Id { get; set; }
             private List<uint> _related;
@@ -45,16 +45,15 @@ namespace Raven.Tests.MailingList
                 set { _related = value; }
             }
         }
-        public class Bar
+        private class Bar
         {
             public uint Id { get; set; }
         }
 
-
         [Fact]
         public void ShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.IdentityTypeConvertors.Add(new UInt32Converter());
                 using (var session = store.OpenSession())
@@ -69,7 +68,7 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var foo = session.Query<Foo>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
                     var bar = session.Query<Bar>().ToList();
                     //This line blows up

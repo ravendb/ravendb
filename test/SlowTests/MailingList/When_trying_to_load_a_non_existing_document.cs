@@ -1,15 +1,12 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class When_trying_to_load_a_non_existing_document : RavenTestBase
     {
@@ -18,7 +15,7 @@ namespace Raven.Tests.MailingList
         {
             var id = new Guid("803C807A-ADD5-49F2-A00A-E5891B343CF7");
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new StudentViewModelTransformer().Execute(store);
 
@@ -60,18 +57,18 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Student
+        private class Student
         {
             public Guid Id { get; set; }
             public string Email { get; set; }
         }
 
-        public class StudentViewModel
+        private class StudentViewModel
         {
             public Guid StudentId { get; set; }
         }
 
-        public class StudentViewModelTransformer : AbstractTransformerCreationTask<Student>
+        private class StudentViewModelTransformer : AbstractTransformerCreationTask<Student>
         {
             public StudentViewModelTransformer()
             {

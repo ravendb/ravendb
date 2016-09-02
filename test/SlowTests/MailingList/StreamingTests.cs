@@ -1,31 +1,30 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class StreamingTests : RavenTest
+    public class StreamingTests : RavenTestBase
     {
-        public class UserFull
+        private class UserFull
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
         }
 
-        public class UserLightweight
+        private class UserLightweight
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: query streaming")]
         public void CanStreamUsingLuceneSelectFields()
         {
             int count = 0;
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserIndex().Execute(store);
 
@@ -33,7 +32,7 @@ namespace Raven.Tests.MailingList
                 {
                     for (var i = 0; i < 10; i++)
                     {
-                        session.Store(new UserFull {Name = "Name " + i, Description = "Description " + i});
+                        session.Store(new UserFull { Name = "Name " + i, Description = "Description " + i });
                     }
                     session.SaveChanges();
                 }
@@ -57,11 +56,11 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: query streaming")]
         public void CanGetUsingLuceneSelectFields()
         {
             int count = 0;
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserIndex().Execute(store);
 
@@ -93,7 +92,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        class UserIndex : AbstractIndexCreationTask<UserFull>
+        private class UserIndex : AbstractIndexCreationTask<UserFull>
         {
             public UserIndex()
             {

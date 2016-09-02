@@ -3,24 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
+using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Samina3 : RavenTest
+    public class Samina3 : RavenTestBase
     {
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void Querying_a_sub_collection_in_an_index()
         {
             DateTime startDate1 = DateTime.Now;
@@ -28,8 +28,7 @@ namespace Raven.Tests.MailingList
             DateTime startDate2 = DateTime.Now.AddDays(15);
             DateTime endDate2 = DateTime.Now.AddDays(20);
 
-            using (GetNewServer())
-            using (var store = new DocumentStore() { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -65,7 +64,7 @@ namespace Raven.Tests.MailingList
 
                     var result = query.ToList();
 
-                    var facetResults = store.DatabaseCommands.GetFacets("PropertiesSearchIndex", new IndexQuery {Query = query.ToString()}, "facets/PropertySearchingFacets");
+                    var facetResults = store.DatabaseCommands.GetFacets("PropertiesSearchIndex", new IndexQuery { Query = query.ToString() }, "facets/PropertySearchingFacets");
                     var facetedCount = facetResults.Results["Feature"];
 
 
@@ -75,7 +74,7 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-        public class SearchingViewModel
+        private class SearchingViewModel
         {
 
             public Guid Id { get; set; }
@@ -90,13 +89,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class BookingRequest
+        private class BookingRequest
         {
             public DateTime StartDay { get; set; }
             public DateTime EndDay { get; set; }
         }
 
-        public class PropertiesSearchIndex : AbstractIndexCreationTask<SearchingViewModel>
+        private class PropertiesSearchIndex : AbstractIndexCreationTask<SearchingViewModel>
         {
             public PropertiesSearchIndex()
             {

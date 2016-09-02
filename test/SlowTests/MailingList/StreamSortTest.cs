@@ -1,20 +1,18 @@
 using System.Diagnostics;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class StreamSortTest : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: query streaming")]
         public void Streaming_Results_Should_Sort_Properly()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new FooIndex());
 
@@ -58,20 +56,20 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public int Num { get; set; }
         }
 
-        public class FooIndex : AbstractIndexCreationTask<Foo>
+        private class FooIndex : AbstractIndexCreationTask<Foo>
         {
             public FooIndex()
             {
                 Map = foos => from foo in foos
                               select new { foo.Num };
 
-                Sort(x => x.Num, SortOptions.Int);
+                Sort(x => x.Num, SortOptions.NumericDefault);
             }
         }
     }

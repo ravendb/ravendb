@@ -3,21 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Raven.Client;
-using Raven.Client.Embedded;
-using Raven.Tests.Common;
 
+using FastTests;
+using Raven.Client;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class StreamingHalfWay : RavenTest
+    public class StreamingHalfWay : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: query streaming")]
         public void ShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateSomeData(store);
                 using (var session = store.OpenSession())
@@ -27,13 +25,14 @@ namespace Raven.Tests.MailingList
                         enumerator.MoveNext(); // should allow to dispose & move on
                     }
                 }
-            }   
+            }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
         }
+
         private static void CreateSomeData(IDocumentStore store)
         {
             for (int k = 0; k < 10; k++)

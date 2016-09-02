@@ -1,22 +1,36 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
+using System.Linq;
+using FastTests;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ScriptedPatchBug : RavenTest
+    public class ScriptedPatchBug : RavenTestBase
     {
-        [Fact]
+        private class Index1 : AbstractIndexCreationTask<Compound>
+        {
+            public Index1()
+            {
+                Map = compounds => from c in compounds
+                                   select new
+                                   {
+                                       c.Value
+                                   };
+            }
+        }
+
+        [Fact(Skip = "Missing feature: Tasks (operations) and their results")]
         public void Test()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.Initialize();
                 store.JsonRequestFactory.RequestTimeout = TimeSpan.FromHours(1);
-                new RavenDocumentsByEntityName().Execute(store);
+
+                new Index1().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -31,22 +45,22 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-                var script = @"if (this.ReferenceNumber == 'a'){ this.ReferenceNumber = 'Aa'; }";
+                WaitForIndexing(store);
+
+                const string script = @"if (this.ReferenceNumber == 'a'){ this.ReferenceNumber = 'Aa'; }";
 
                 var operation = store.DatabaseCommands.UpdateByIndex(
-                    "Raven/DocumentsByEntityName",
-                    new IndexQuery { Query = "Tag:Compounds" },
-                    new ScriptedPatchRequest { Script = script },
-                    new BulkOperationOptions { AllowStale = false, StaleTimeout = TimeSpan.MaxValue, RetrieveDetails = true });
+                    new Index1().IndexName,
+                    new IndexQuery { Query = string.Empty },
+                    new PatchRequest { Script = script },
+                    new QueryOperationOptions { AllowStale = false, StaleTimeout = TimeSpan.MaxValue, RetrieveDetails = true });
 
                 var patchResult = operation.WaitForCompletion();
                 Assert.False(patchResult.ToString().Contains("Patched"));
             }
         }
 
-
-
-        public class Compound
+        private class Compound
         {
             public Compound()
             {

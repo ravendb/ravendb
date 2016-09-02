@@ -3,15 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
 
+using System;
+using FastTests;
+using Raven.Abstractions.Data;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Sean : RavenTest
+    public class Sean : RavenTestBase
     {
         private class Thread
         {

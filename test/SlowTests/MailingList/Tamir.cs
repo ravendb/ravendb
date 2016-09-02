@@ -3,27 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
+using Raven.Client.Indexing;
 using Raven.Client.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Tamir : RavenTest
+    public class Tamir : RavenTestBase
     {
-        public class Developer
+        private class Developer
         {
             public string Name { get; set; }
             public IDE PreferredIDE { get; set; }
         }
 
-        public class IDE
+        private class IDE
         {
             public string Name { get; set; }
         }
@@ -31,11 +31,11 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void InOnObjects()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("DevByIDE", new IndexDefinition
                 {
-                    Map = @"from dev in docs.developers select new { dev.PreferredIDE, dev.PreferredIDE.Name }"
+                    Maps = { @"from dev in docs.Developers select new { dev.PreferredIDE, dev.PreferredIDE.Name }" }
                 });
 
                 using (var session = store.OpenSession())
@@ -60,6 +60,8 @@ namespace Raven.Tests.MailingList
 
                 }
 
+                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
                     var bestIDEsEver = new[] { new IDE { Name = "VisualStudio" }, new IDE { Name = "IntelliJ" } };
@@ -82,6 +84,5 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-
     }
 }

@@ -3,30 +3,32 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
+using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
-using System.Linq;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class ShardedFacets : RavenTestBase
     {
-        [Fact]
+        protected override void ModifyStore(DocumentStore store)
+        {
+            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+        }
+
+        [Fact(Skip = "Missing feature: Facets")]
         public void FacetTest()
         {
-            using (GetNewServer(8079, dataDirectory:"Data1"))
-            using (GetNewServer(8078, dataDirectory: "Data2"))
-            using (var ds1 = CreateDocumentStore(8079))
-            using (var ds2 = CreateDocumentStore(8078))
+            using (var ds1 = GetDocumentStore())
+            using (var ds2 = GetDocumentStore())
             {
                 var sharded = new ShardedDocumentStore(
                     new ShardStrategy(
@@ -55,7 +57,7 @@ namespace Raven.Tests.MailingList
 
                     new Tags_ByName().Execute(sharded);
 
-                    
+
                     WaitForIndexing(ds1);
                     WaitForIndexing(ds2);
 
@@ -67,29 +69,17 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        private static IDocumentStore CreateDocumentStore(int port)
-        {
-            return new DocumentStore
-            {
-                Url = string.Format("http://localhost:{0}/", port),
-                Conventions =
-                {
-                    FailoverBehavior = FailoverBehavior.FailImmediately
-                }
-            };
-        }
-
-        public class Tags_ByName : AbstractIndexCreationTask<Tag>
+        private class Tags_ByName : AbstractIndexCreationTask<Tag>
         {
             public Tags_ByName()
             {
                 Map = tags =>
                       from tag in tags
-                      select new {tag.Name};
+                      select new { tag.Name };
             }
         }
 
-        public class Tag
+        private class Tag
         {
             public string Name { get; set; }
         }
