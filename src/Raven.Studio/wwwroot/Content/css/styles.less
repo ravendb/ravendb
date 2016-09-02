@@ -456,7 +456,7 @@ hr {
     height: 51px;
     border-bottom: 1px solid @gray-darker;
 
-    @media (min-width:@screen-sm) {
+    @media (min-width:@screen-md) {
         padding: 15px 0;
         height: @navbar-height;
     }
@@ -470,7 +470,7 @@ hr {
         -o-transition: width @menu-transition-ease;
         transition: width @menu-transition-ease;
 
-        @media (min-width:@screen-sm) {
+        @media (min-width:@screen-md) {
             float: none;
             border-bottom: 1px solid @gray-darker;
             border-right: 1px solid @gray-darker;
@@ -499,14 +499,18 @@ hr {
             transition: opacity @menu-transition-ease;
             width: 130px;
 
-            @media (min-width:@screen-sm) {
+            @media (min-width:@screen-md) {
                 width: 230px;
             }
         }
     }
 
     .navbar-right {
-        float: right;
+        @media (max-width:@screen-sm-max) {
+            display:block;
+            margin:0 -15px;
+            text-align:right;
+        }
 
         li {
             display: inline-block;
@@ -515,6 +519,10 @@ hr {
         [class^="icon-"], [class*=" icon-"] {
             font-size: 16px;
         }
+        @media (min-width:@screen-md) {
+            float: right;
+        }
+        
 
         @media (min-width:@screen-xs) {
             [class^="icon-"], [class*=" icon-"] {
@@ -526,7 +534,7 @@ hr {
     .menu-collapse-button {
         display: none;
 
-        @media (min-width:@screen-sm) {
+        @media (min-width:@screen-md) {
             display: block;
             display: none; //HIDDEN WHILE IN DEVELOPMENT
             position: absolute;
@@ -718,7 +726,7 @@ hr {
         }
 
         .search-container {
-            @media (min-width:@screen-sm) {
+            @media (min-width:@screen-md) {
                 -webkit-transition: right @menu-transition-ease;
                 -moz-transition: right @menu-transition-ease;
                 -ms-transition: right @menu-transition-ease;
@@ -741,7 +749,7 @@ hr {
         .database-list {
         }
 
-        @media (min-width: @screen-sm) {
+        @media (min-width: @screen-md) {
             clear: none;
             background-color: transparent;
             margin: 5px 120px 5px @menu-width;
@@ -821,7 +829,7 @@ hr {
     -o-transition: left @menu-transition-ease;
     transition: left @menu-transition-ease;
 
-    @media (min-width:@screen-sm) {
+    @media (min-width:@screen-md) {
         top: @navbar-height;
         left: @menu-width;
         right: 5px;
@@ -833,11 +841,15 @@ hr {
         margin-top: @grid-gutter-width / 2;
         margin-bottom: @grid-gutter-width / 2;
 
-        @media(min-width:@screen-sm) {
+        @media(min-width:@screen-md) {
             margin-top: @grid-gutter-width;
             margin-bottom: @grid-gutter-width;
         }
     }
+}
+
+#menu-toggle {
+    color:@brand-primary;
 }
 
 #main-menu {
@@ -853,11 +865,11 @@ hr {
     -o-transition: width @menu-transition-ease, transform @menu-transition-ease;
     transition: width @menu-transition-ease, transform @menu-transition-ease;
 
-    @media (min-width:@screen-sm) {
+    @media (min-width:@screen-md) {
         top: @navbar-height;
     }
 
-    @media (max-width:@screen-xs-max) {
+    @media (max-width:@screen-sm-max) {
         -moz-transform: translateX(-100%);
         -webkit-transform: translateX(-100%);
         -o-transform: translateX(-100%);
@@ -1116,7 +1128,7 @@ hr {
     }
 }
 
-@media (min-width:@screen-sm) {
+@media (min-width:@screen-md) {
     .menu-collapse {
         #main-menu {
             width: @menu-width-collapsed / 3;
@@ -1228,6 +1240,12 @@ hr {
     }
 }
 
+.border {
+    margin: @grid-gutter-width/2 0;
+    padding:@grid-gutter-width/2;
+    border:1px solid @gray;
+}
+
 
 
 /* MENU ICONS */
@@ -1332,7 +1350,7 @@ hr {
 
 .panel {
     .form-control {
-        background-color:@gray-dark;
+        //background-color:@gray-dark;
     }
 }
 

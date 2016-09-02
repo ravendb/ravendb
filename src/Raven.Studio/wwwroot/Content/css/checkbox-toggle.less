@@ -7,8 +7,8 @@
 @check-icon: @fa-var-check;
 
 .checkbox input[type="checkbox"]:focus + label::before, .checkbox input[type="radio"]:focus + label::before, .toggle input[type="checkbox"]:focus + label::before {
-    outline: none !important;
-    box-shadow: 0 0 1px 1px lighten(@brand-primary, 10%) !important;
+   // outline: none !important;
+   // box-shadow: 0 0 1px 1px lighten(@brand-primary, 10%) !important;
 }
 
 .radio-inline + .radio-inline, .checkbox-inline + .checkbox-inline {
@@ -81,6 +81,14 @@
 
 
 .toggle {
+
+    &:hover {
+        label:after {
+            background-color:@gray-light;
+            transform: scale(1);
+        }
+    }
+
     label {
         display: inline-block;
         vertical-align: middle;
@@ -96,27 +104,30 @@
             content: '';
             position: absolute;
             width: 32px;
-            height: 19px;
+            height: 8px;
             left: 0;
-            top: 3px;
+            top: 9px;
             margin-left: -35px;
-            background-color: transparent;
-            border: 1.5px solid;
+            background-color: @gray;            
             border-radius: 100px;
+            cursor:pointer;
             .transition(~"border 0.15s ease-in-out, color 0.15s ease-in-out, background-color 0.15s ease-in-out");
         }
 
         &:after {
             position: absolute;
-            top: 6px;
-            left: -32px;
+            cursor:pointer;
+            top: 3px;
+            left: -37px;
             content: '';
             display: block;
-            width: 13px;
-            height: 13px;
+            width: 20px;
+            height: 20px;
             border-radius: 10px;
-            background-color: fadeout(@gray-lighter,50%);
-            .transition(~"left 0.15s ease-in-out, color 0.15s ease-in-out");
+            background-color: @gray;
+            box-shadow: 0 1px 5px @gray-base;
+            transform: scale(.8);
+            .transition(~"left 0.15s ease-in-out, color 0.15s ease-in-out, transform 0.15s ease-in-out");
         }
     }
 
@@ -128,29 +139,35 @@
         height: 19px;
         position: relative;
         top: 5px;
+        cursor:pointer;
 
         &:focus + label::before {
         }
 
         &:checked + label::before {
-            background-color: fadeout(@gray-lighter,70%);
+            background-color: @brand-success;
+            //box-shadow: 0 0 0 2px @gray-darker inset;
         }
 
         &:checked + label::after {
             left: -19px;
             background-color: @gray-lighter;
+            //box-shadow: 0 0 0 1px @gray-darker;
         }
 
         &:disabled + label {
-            opacity: 0.65;
+            opacity: 0.45;
+            cursor:not-allowed;
 
             &::before {
                 background-color: @input-bg-disabled;
                 cursor: not-allowed;
+                opacity:.5;
             }
 
             &::after {
-                background-color: @gray-darker;
+                background-color: @gray-dark;
+                box-shadow: 0 0 0 2px @gray inset;
             }
         }
     }

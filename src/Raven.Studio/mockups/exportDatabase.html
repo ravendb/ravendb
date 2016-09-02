@@ -43,17 +43,19 @@
 </head>
 <body>
     <nav class="navbar navbar-inverse navbar-fixed-top">
+
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">RavenDB</a>
-                <a class="menu-collapse-button icon-menu-collapse" title="collapse menu"></a>
+
+                <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
             </div>
             <div id="navbar">
                 <ul class="nav navbar-nav navbar-right">
+
+                    <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
                     <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
                     <li><a href="#" class="icon-help"></a></li>
-                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-                    <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
+                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
                 </ul>
                 <div class="inputs-container hidden-xs">
                     <div class="search-container active">
@@ -348,68 +350,225 @@
 
     <div class="container-fluid content-container">
         <div class="content-container-margin">
-            <h2>Export Database</h2>
+            <h1>Export Database</h1>
             <div class="panel">
                 <div class="panel-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="lead pull-left">Export your database to a .ravendbdump file.</p>
+                    <p>Export your database to a .ravendbdump file.</p>
+                    <div class="form-inline">
+                        <div class="form-group">
+                            <div class="input-group">
+                                <div class="input-group-addon">filename</div>
+                                <input class="form-control" value="mockup.ravendump" />
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-inline">
-                                <div class="form-group">
-                                    <div class="input-group">
-                                        <div class="input-group-addon">filename</div>
-                                        <input class="form-control" value="mockup.ravendump" />
+                    </div>
+                    <br />
+                    <div class="row">
+                        <div class="col-lg-12">
+
+                            <div class="row">
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle1" type="checkbox">
+                                        <label for="toggle1">
+                                            Include Documents
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle2" type="checkbox">
+                                        <label for="toggle2">
+                                            Include Indexes
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle3" type="checkbox">
+                                        <label for="toggle3">
+                                            Include Attachments
+                                        </label>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary"><span class="icon-export"></span> Export Database</button>
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle4" type="checkbox">
+                                        <label for="toggle4">
+                                            Include Transformers
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle5" type="checkbox">
+                                        <label for="toggle5">
+                                            Remove Analyzers
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
+
                         </div>
+
                     </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="panel">
-                        <div class="panel-body">
-                            <div class="toggle">
-                                <input id="toggle1" type="checkbox">
-                                <label for="toggle1">
-                                    Include Documents
-                                </label>
+                    <br />
+
+
+                    <div class="collapse" id="collapseExample">
+                        <form role="form">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="form-group">
+                                        <label class="control-label">Batch size</label>
+                                        <div class="">
+                                            <input class="form-control" type="number" min="0" data-bind="value: batchSize">
+                                        </div>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="expiredDocuments" type="checkbox">
+                                        <label for="expiredDocuments">
+                                            Include Expired documents
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="Collections" type="checkbox">
+                                        <label for="Collections">
+                                            Export all collections
+                                        </label>
+                                    </div>
+                                    <div class="border">
+                                        <strong>Choose collections:</strong>
+                                        <div class="row">
+                                            <div class="col-sm-6">
+                                                <div class="toggle toggle-info">
+                                                    <input id="Collection1" class="styled" type="checkbox" checked>
+                                                    <label for="Collection1">
+                                                        ApplicationUsers
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="toggle toggle-info">
+                                                    <input id="Collection2" class="styled" type="checkbox">
+                                                    <label for="Collection2">
+                                                        ApplicationUsers
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="toggle toggle-info">
+                                                    <input id="Collection3" class="styled" type="checkbox">
+                                                    <label for="Collection3">
+                                                        ApplicationUsers
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="toggle toggle-info">
+                                                    <input id="Collection4" class="styled" type="checkbox">
+                                                    <label for="Collection4">
+                                                        ApplicationUsers
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="toggle toggle-info">
+                                                    <input id="Collection5" class="styled" type="checkbox">
+                                                    <label for="Collection5">
+                                                        ApplicationUsers
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="toggle toggle-info">
+                                                    <input id="Collection6" class="styled" type="checkbox" checked>
+                                                    <label for="Collection6">
+                                                        ApplicationUsers
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+
+                                    <div class="form-group">
+                                        <label class="col-sm-3 control-label">
+                                            <span>Filters</span>
+                                            <span class="help-block">
+                                                <a class="text-muted" title="External link: RavenDB filters documentation" target="_blank" href="#">
+                                                    <span class="icon-help"></span> Help
+                                                </a>
+                                            </span>
+                                        </label>
+                                        <div class="col-sm-9">
+                                            <div class="btn-group">
+                                                <table class="table table-striped" style="max-width: 500px;" data-bind="visible: filters().length">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 40%;">Path</th>
+                                                            <th style="width: 45%;">Value</th>
+                                                            <th style="width: 10%">Should Match</th>
+                                                            <th>&nbsp;</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody data-bind="foreach: filters">
+                                                        <tr>
+                                                            <td><input class="form-control" type="text" data-bind="value: path"></td>
+                                                            <td><input class="form-control" type="text" data-bind="value: value"></td>
+                                                            <td>
+                                                                <div class="btn-group">
+                                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                                        <span data-bind="visible: shouldMatch">Should match</span>
+                                                                        <span data-bind="visible: !shouldMatch()" style="display: none;">Should <strong>not</strong> match</span>                                                    <span class="caret"></span>
+                                                                    </button>
+                                                                    <ul class="dropdown-menu" role="menu">
+                                                                        <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, true)">Should match</a></li>
+                                                                        <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, false)">Should <strong>not</strong> match</a></li>
+                                                                    </ul>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <button type="button" class="close" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">
+                                                                    <i class="fa fa-times"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <button class="btn btn-default" data-bind="click: addFilter">
+                                                    <span class="icon-plus"></span> Add filter
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="form-group">
+                                        <label id="transformScriptHelp" class="control-label" data-original-title="" title="">
+                                            Transform script&nbsp; <span class="icon-info"></span>
+                                        </label>
+                                        <div>
+                                            <pre style="height: 200px; font-size: 16px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }" class="ace_editor ui-resizable ace-xcode">
+<textarea class="ace_text-input" wrap="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="opacity: 0; height: 19px; width: 8.79688px; left: 46px; top: 0px;"></textarea>
+</pre>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+
+                                        <label class="control-label">Command</label>
+                                        <div>
+                                            <pre></pre>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="toggle">
-                                <input id="toggle1" type="checkbox">
-                                <label for="toggle1">
-                                    Include Indexes
-                                </label>
-                            </div>
-                            <div class="toggle">
-                                <input id="toggle1" type="checkbox">
-                                <label for="toggle1">
-                                    Include Attachments
-                                </label>
-                            </div>
-                            <div class="toggle">
-                                <input id="toggle1" type="checkbox">
-                                <label for="toggle1">
-                                    Include Transformers
-                                </label>
-                            </div>
-                            <div class="toggle">
-                                <input id="toggle1" type="checkbox">
-                                <label for="toggle1">
-                                    Remove Analyzers
-                                </label>
-                            </div>
-                        </div>
+                        </form>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="panel">
-                        <div class="panel-body"></div>
-                    </div>
+                    <hr />
+
+
+                    <button class="btn btn-info" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                        Advanced
+                    </button>
+                    <button class="btn btn-success"><span class="icon-export"></span> Export Database</button>
+
                 </div>
             </div>
         </div>

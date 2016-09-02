@@ -43,18 +43,20 @@
 </head>
 <body>
     <nav class="navbar navbar-inverse navbar-fixed-top">
+
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">RavenDB</a>
-                <a class="menu-collapse-button icon-menu-collapse" title="collapse menu"></a>
+                
+                <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
             </div>
             <div id="navbar">
                 <ul class="nav navbar-nav navbar-right">
-                    <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
-                    <li><a href="#" class="icon-help"></a></li>
-                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-                    <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
-                </ul>
+                    
+                        <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
+                        <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
+                        <li><a href="#" class="icon-help"></a></li>
+                        <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+</ul>
                 <div class="inputs-container hidden-xs">
                     <div class="search-container active">
                         <input type="search" class="form-control omnisearch" placeholder="search" />
