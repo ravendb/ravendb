@@ -76,25 +76,29 @@ namespace Raven.Abstractions.Streaming
             foreach (var property in properties)
             {
                 var token = result.SelectToken(property);
-                if (token != null)
+                if (token == null)
                 {
-                    switch (token.Type)
-                    {
-                        case JTokenType.Null:
-                            break;
+                    csvWriter.WriteField(null);
+                    continue;
+                }
 
-                        case JTokenType.Array:
-                        case JTokenType.Object:
-                            csvWriter.WriteField(token.ToString(Formatting.None));
-                            break;
+                switch (token.Type)
+                {
+                    case JTokenType.Null:
+                        csvWriter.WriteField(null);
+                        break;
 
-                        default:
-                            csvWriter.WriteField(token.Value<string>());
-                            break;
-                    }
+                    case JTokenType.Array:
+                    case JTokenType.Object:
+                        csvWriter.WriteField(token.ToString(Formatting.None));
+                        break;
+
+                    default:
+                        csvWriter.WriteField(token.Value<string>());
+                        break;
                 }
             }
-
+        
             csvWriter.NextRecord();
         }
 

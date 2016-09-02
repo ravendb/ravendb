@@ -669,7 +669,7 @@ for(var customFunction in customFunctions) {{
                             }
                             else
                             {
-                                document[column] = SetValueInDocument(value);
+                                SetValueInDocumentForColumn(document, column, value);
                             }
                         }
 
@@ -695,6 +695,31 @@ for(var customFunction in customFunctions) {{
             }
 
             return GetEmptyMessage();
+        }
+
+        private static void SetValueInDocumentForColumn(RavenJObject document, string column, string value)
+        {
+            RavenJObject targetObject = document;
+            string targetProperty = column;
+
+            if (targetProperty.Contains('.'))
+            {
+                var innerProps = column.Split('.');
+                for (int i = 0; i < innerProps.Length - 1; i++)
+                {
+                    RavenJToken innerObject;
+                    targetProperty = innerProps[i];
+
+                    if (targetObject.TryGetValue(targetProperty, out innerObject) == false)
+                        targetObject[targetProperty] = innerObject = new RavenJObject();
+
+                    targetObject = (RavenJObject)innerObject;
+                }
+
+                targetProperty = innerProps[innerProps.Length - 1];
+            }
+
+            targetObject[targetProperty] = ParseToken(value);
         }
 
         [HttpGet]
@@ -837,7 +862,7 @@ for(var customFunction in customFunctions) {{
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
-        private static RavenJToken SetValueInDocument(string value)
+        private static RavenJToken ParseToken(string value)
         {
             if (string.IsNullOrEmpty(value))
                 return value;
