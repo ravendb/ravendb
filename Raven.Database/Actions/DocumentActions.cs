@@ -440,7 +440,6 @@ namespace Raven.Database.Actions
         {
             Etag lastDocumentReadEtag = null;
 
-            int docCount = 0;
             using (DocumentCacher.SkipSetDocumentsInDocumentCache())
                 TransactionalStorage.Batch(actions =>
                 {
@@ -452,7 +451,7 @@ namespace Raven.Database.Actions
                             : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout);
 
                         var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
-                        
+                        var docCount = 0;
                         foreach (var doc in documents)
                         {
                             docCount++;

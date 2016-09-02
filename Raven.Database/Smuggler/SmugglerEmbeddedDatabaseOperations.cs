@@ -191,6 +191,7 @@ namespace Raven.Database.Smuggler
                     return new CompletedTask();
             }
 
+            sp.Stop();
             var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
             bulkInsertBatch = new List<JsonDocument>();
             database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = Options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid(), CancellationToken.None);
