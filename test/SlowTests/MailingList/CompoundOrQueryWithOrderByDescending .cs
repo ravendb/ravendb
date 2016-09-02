@@ -3,28 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class CompoundOrQueryWithOrderByDescending : RavenTest
+    public class CompoundOrQueryWithOrderByDescending : RavenTestBase
     {
         [Fact]
         public void ThreeOrClauses_works()
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
-                var itemList = new List<Item> {new Item("A")};
+                var itemList = new List<Item> { new Item("A") };
 
                 using (IDocumentSession s = store.OpenSession())
                 {
@@ -49,12 +48,12 @@ namespace Raven.Tests.MailingList
                 using (IDocumentSession s = store.OpenSession())
                 {
                     MyDoc[] res = s.Query<MyDoc>()
-                                   .Where(x => x.Foo == "monkey" && (
-                                                                        x.ItemListOne.Any(i => i.MyProp == "A") ||
-                                                                        x.ItemListTwo.Any(i => i.MyProp == "A") ||
-                                                                        x.ItemListThree.Any(i => i.MyProp == "A")))
-                                   .OrderByDescending(x => x.CreatedDate)
-                                   .ToArray();
+                        .Where(x => x.Foo == "monkey" && (
+                                        x.ItemListOne.Any(i => i.MyProp == "A") ||
+                                        x.ItemListTwo.Any(i => i.MyProp == "A") ||
+                                        x.ItemListThree.Any(i => i.MyProp == "A")))
+                        .OrderByDescending(x => x.CreatedDate)
+                        .ToArray();
 
                     Assert.True(res.Count() == 2);
                 }
@@ -65,11 +64,11 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void FourOrClauses_fails()
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
-                var itemList = new List<Item> {new Item("A")};
+                var itemList = new List<Item> { new Item("A") };
 
                 using (IDocumentSession s = store.OpenSession())
                 {
@@ -94,15 +93,14 @@ namespace Raven.Tests.MailingList
                 using (IDocumentSession s = store.OpenSession())
                 {
                     MyDoc[] res = s.Query<MyDoc>()
-                                   .Where(x => x.Foo == "monkey" && (
-                                                                        x.ItemListOne.Any(i => i.MyProp == "A") ||
-                                                                        x.ItemListTwo.Any(i => i.MyProp == "A") ||
-                                                                        x.ItemListThree.Any(i => i.MyProp == "A") ||
-                                                                        x.ItemListFour.Any(i => i.MyProp == "A")))
+                        .Where(x => x.Foo == "monkey" && (
+                                        x.ItemListOne.Any(i => i.MyProp == "A") ||
+                                        x.ItemListTwo.Any(i => i.MyProp == "A") ||
+                                        x.ItemListThree.Any(i => i.MyProp == "A") ||
+                                        x.ItemListFour.Any(i => i.MyProp == "A")))
                         //Additional Or clause
-                                   .OrderByDescending(x => x.CreatedDate)
-                                   .ToArray();
-
+                        .OrderByDescending(x => x.CreatedDate)
+                        .ToArray();
 
                     Assert.True(res.Count() == 2);
                 }
@@ -110,7 +108,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        public class Item
+        private class Item
         {
             public Item(string propvalue)
             {
@@ -120,7 +118,7 @@ namespace Raven.Tests.MailingList
             public string MyProp { get; set; }
         }
 
-        public class MyDoc
+        private class MyDoc
         {
             public MyDoc()
             {

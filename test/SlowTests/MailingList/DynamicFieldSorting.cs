@@ -3,40 +3,35 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
+using Raven.Server.Config;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class DynamicIndexSort3Specs : RavenTest
+    public class DynamicIndexSort3Specs : RavenTestBase
     {
-
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
-        {
-            configuration.Modify(x => x.Indexing.MaxSimpleIndexOutputsPerDocument, 100);
-        }
-        public class DataSet
+        private class DataSet
         {
             public string Id { get; set; }
             public List<Item> Items { get; set; }
         }
 
-        public class Item
+        private class Item
         {
             public string Id { get; set; }
             public NumericAttribute[] NumericAttributes { get; set; }
             public string SongId { get; set; }
         }
 
-        public class NumericAttribute
+        private class NumericAttribute
         {
             protected NumericAttribute() { }
             public NumericAttribute(string name, double value)
@@ -48,7 +43,7 @@ namespace Raven.Tests.MailingList
             public double Value { get; set; }
         }
 
-        public class WithDynamicIndex :
+        private class WithDynamicIndex :
             AbstractIndexCreationTask<DataSet, WithDynamicIndex.ProjectionItem>
         {
             public class ProjectionItem
@@ -83,10 +78,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void CanSortDynamically()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
             {
                 new WithDynamicIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -122,13 +117,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void CanSortDynamically_Desc()
         {
-            using (var Store = NewDocumentStore())
+            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
             {
-                new WithDynamicIndex().Execute(Store);
-                using (var session = Store.OpenSession())
+                new WithDynamicIndex().Execute(store);
+                using (var session = store.OpenSession())
                 {
                     session.Store(new DataSet
                     {
@@ -146,7 +141,7 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-                using (var s = Store.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
                         .WaitForNonStaleResults()
@@ -158,7 +153,5 @@ namespace Raven.Tests.MailingList
                 }
             }
         }
-
     }
-
 }

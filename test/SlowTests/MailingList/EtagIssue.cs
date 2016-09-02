@@ -1,46 +1,47 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Reflection;
+using FastTests;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Client.Listeners;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class EtagIssue : RavenTest
+    public class EtagIssue : RavenTestBase
     {
         #region Domain
 
-        public enum CredentialsStatus
+        private enum CredentialsStatus
         {
             Inactive,
             Active
         }
 
-        public enum PublishStatus
+        private enum PublishStatus
         {
             Unpublished,
             Published
         }
 
-        public enum RelationStatus
+        private enum RelationStatus
         {
             Active,
             Inactive
         }
 
-        public class Credentials
+        private class Credentials
         {
             public CredentialsStatus Status { get; set; }
         }
 
-        public sealed class HasManager : Relation
+        private sealed class HasManager : Relation
         {
             internal HasManager(UserProfile user)
                 : base(user)
@@ -52,13 +53,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class InnovationProfile : Profile
+        private class InnovationProfile : Profile
         {
             public OrganizationProfile Owner { get; set; }
             public PublishStatus Status { get; set; }
         }
 
-        public sealed class ManagerOf : Relation
+        private sealed class ManagerOf : Relation
         {
             internal ManagerOf(OrganizationProfile organization)
                 : base(organization)
@@ -70,11 +71,11 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class OrganizationProfile : Profile
+        private class OrganizationProfile : Profile
         {
         }
 
-        public class Profile
+        private class Profile
         {
             public Profile()
             {
@@ -89,7 +90,7 @@ namespace Raven.Tests.MailingList
             public List<Relation> Relations { get; set; }
         }
 
-        public abstract class Relation
+        private abstract class Relation
         {
             protected Relation(
                 Profile to,
@@ -114,7 +115,7 @@ namespace Raven.Tests.MailingList
             protected internal string ActivationToken { get; set; }
         }
 
-        public class UserManagedItem
+        private class UserManagedItem
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -126,7 +127,7 @@ namespace Raven.Tests.MailingList
             public RelationStatus RelationStatus { get; set; }
         }
 
-        public class UserProfile : Profile
+        private class UserProfile : Profile
         {
         }
 
@@ -134,7 +135,7 @@ namespace Raven.Tests.MailingList
 
         #region Index
 
-        public class UserProfileIndex : AbstractMultiMapIndexCreationTask<UserProfileIndex.Result>
+        private class UserProfileIndex : AbstractMultiMapIndexCreationTask<UserProfileIndex.Result>
         {
             public UserProfileIndex()
             {
@@ -211,7 +212,7 @@ namespace Raven.Tests.MailingList
                 Store(r => r.ManagedItems, FieldStorage.Yes);
             }
 
-            internal class ReduceResult : Result
+            public class ReduceResult : Result
             {
                 public IEnumerable<RelationStatus> ManagedItems_RelationStatus { get; set; }
             }
@@ -229,13 +230,13 @@ namespace Raven.Tests.MailingList
 
         #endregion
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void ScriptedPatchShouldNotResultInConcurrencyExceptionForNewlyInsertedDocument()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserProfileIndex().Execute(store);
-                store.RegisterListener(new Holt.NonStaleQueryListener());
+                store.RegisterListener(new NonStaleQueryListener());
 
                 OrganizationProfile[] organizations =
                 {
@@ -243,8 +244,8 @@ namespace Raven.Tests.MailingList
                     new OrganizationProfile {Id = "organizations/2", Name = "University of Stanford"}
                 };
 
-                var orgAdmin1 = new UserProfile {Id = "users/1"};
-                var orgAdmin2 = new UserProfile {Id = "users/2"};
+                var orgAdmin1 = new UserProfile { Id = "users/1" };
+                var orgAdmin2 = new UserProfile { Id = "users/2" };
 
                 var orgAdmins = new[]
                 {
@@ -253,21 +254,21 @@ namespace Raven.Tests.MailingList
                 };
 
                 Store(store, organizations);
-                Store(store, new[] {orgAdmin1, orgAdmin2});
+                Store(store, new[] { orgAdmin1, orgAdmin2 });
 
                 WaitForIndexing(store);
 
-                IEnumerable<ScriptedPatchCommandData> patches = orgAdmins.SelectMany(orgAdmin =>
+                IEnumerable<PatchCommandData> patches = orgAdmins.SelectMany(orgAdmin =>
                     Establish(orgAdmin.User, new ManagerOf(orgAdmin.Org),
                         orgAdmin.Org, new HasManager(orgAdmin.User)));
 
-                BatchResult[] results = ((IDocumentStore) store).DatabaseCommands.Batch(patches.ToArray());
+                BatchResult[] results = ((IDocumentStore)store).DatabaseCommands.Batch(patches.ToArray());
                 if (results.Any(r => r.PatchResult.Value != PatchResult.Patched))
                     throw new InvalidOperationException("Some patches failed");
             }
         }
 
-        public IEnumerable<ScriptedPatchCommandData> Establish(UserProfile user, ManagerOf managerOf,
+        private IEnumerable<PatchCommandData> Establish(UserProfile user, ManagerOf managerOf,
             OrganizationProfile organization, HasManager hasManager)
         {
             const string patchScript = "var _this = this;" +
@@ -275,10 +276,10 @@ namespace Raven.Tests.MailingList
                                        "   (thisArg || _this).Relations.push(_.extend({ '$type': clrType }, relation));" +
                                        "}" + "addRelation(relationClrType, relation);";
 
-            yield return new ScriptedPatchCommandData
+            yield return new PatchCommandData
             {
                 Key = user.Id,
-                Patch = new ScriptedPatchRequest
+                Patch = new PatchRequest
                 {
                     Script = patchScript,
                     Values = new Dictionary<string, object>
@@ -289,10 +290,10 @@ namespace Raven.Tests.MailingList
                 }
             };
 
-            yield return new ScriptedPatchCommandData
+            yield return new PatchCommandData
             {
                 Key = organization.Id,
-                Patch = new ScriptedPatchRequest
+                Patch = new PatchRequest
                 {
                     Script = patchScript,
                     Values = new Dictionary<string, object>
@@ -304,9 +305,9 @@ namespace Raven.Tests.MailingList
             };
         }
 
-        public static string ClrType(Type t)
+        private static string ClrType(Type t)
         {
-            return string.Concat(t.FullName, ", ", t.Assembly.GetName().Name);
+            return string.Concat(t.FullName, ", ", t.GetTypeInfo().Assembly.GetName().Name);
         }
 
         private void Store(IDocumentStore store, params object[] objs)
@@ -318,6 +319,14 @@ namespace Raven.Tests.MailingList
                 foreach (object obj in objs)
                     session.Store(obj);
                 session.SaveChanges();
+            }
+        }
+
+        private class NonStaleQueryListener : IDocumentQueryListener
+        {
+            public void BeforeQueryExecuted(IDocumentQueryCustomization customization)
+            {
+                customization.WaitForNonStaleResults();
             }
         }
     }

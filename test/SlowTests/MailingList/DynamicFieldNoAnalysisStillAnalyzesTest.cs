@@ -1,27 +1,24 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
 // ReSharper disable MemberCanBePrivate.Local
 // ReSharper disable InconsistentNaming
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenTestBase
     {
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets & CreateField")]
         public void ToFacets_UsingDynamicFieldsWithoutAnalysis_ReturnsFacetValuesInOriginalCasing()
         {
-            using (var _store = NewDocumentStore())
+            using (var _store = GetDocumentStore())
             using (var _session = _store.OpenSession())
             {
                 new ItemsWithDynamicFieldsIndex().Execute(_store);
@@ -93,12 +90,12 @@ namespace Raven.Tests.MailingList
             {
                 Map = items => from item in items
                                select new
-                                      {
-                                          _ = item.Properties.Select(property => CreateField("prop_" + property.HeaderId,
-                                                                                             property.Values,
-                                                                                             true,
-                                                                                             false)),
-                                      };
+                               {
+                                   _ = item.Properties.Select(property => CreateField("prop_" + property.HeaderId,
+                                                                                      property.Values,
+                                                                                      true,
+                                                                                      false)),
+                               };
             }
         }
     }

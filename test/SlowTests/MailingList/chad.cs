@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Chad : RavenTest
+    public class Chad : RavenTestBase
     {
-        public class Location
+        private class Location
         {
             public string Address { get; set; }
             public string City { get; set; }
@@ -24,7 +23,7 @@ namespace Raven.Tests.MailingList
             public string PostalCode { get; set; }
         }
 
-        public class PlaceCategory
+        private class PlaceCategory
         {
             public List<PlaceCategory> PlaceCategories { get; set; } // this holds sub-categories
             public string Name { get; set; }
@@ -33,7 +32,7 @@ namespace Raven.Tests.MailingList
             public bool IsPrimary { get; set; }
         }
 
-        public class Place
+        private class Place
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -41,7 +40,7 @@ namespace Raven.Tests.MailingList
             public List<PlaceCategory> Categories { get; set; }
         }
 
-        public class Place_ByLocationAndCategoryId : AbstractIndexCreationTask<Place>
+        private class Place_ByLocationAndCategoryId : AbstractIndexCreationTask<Place>
         {
             public Place_ByLocationAndCategoryId()
             {
@@ -50,15 +49,15 @@ namespace Raven.Tests.MailingList
                                     new
                                     {
                                         Categories_Id = p.Categories.Select(x => x.Id),
-                                        _ = SpatialIndex.Generate(p.Location.Lat, p.Location.Lng)
+                                        _ = SpatialGenerate(p.Location.Lat, p.Location.Lng)
                                     };
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void CanQuerySpatialData()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 new Place_ByLocationAndCategoryId().Execute(store);
 
@@ -88,7 +87,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public void CreateData(IDocumentSession session)
+        private void CreateData(IDocumentSession session)
         {
             PlaceCategory cat = new PlaceCategory()
             {

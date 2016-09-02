@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Raven.Tests.Helpers;
+using SlowTests.Utils;
 using Xunit;
 
-namespace RavenDB_FailingTests.RavenTests
+namespace SlowTests.MailingList
 {
     public class CanTransformWithDynamicFields : RavenTestBase
     {
@@ -16,7 +16,7 @@ namespace RavenDB_FailingTests.RavenTests
 
         public CanTransformWithDynamicFields()
         {
-            _store = NewRemoteDocumentStore(fiddler:true);
+            _store = GetDocumentStore();
 
             // SetUp
             using (var session = _store.OpenSession())
@@ -126,16 +126,16 @@ namespace RavenDB_FailingTests.RavenTests
                     from result in results
                     group result by result.Id
                         into g
-                        select new Result
-                        {
-                            Id = g.Key,
-                            SupportedLanguages = g.First(x => x.SupportedLanguages != null).SupportedLanguages,
-                            Title = g.SelectMany(x => x.Title)
-                                .ToDictionary(x => x.Key, pair => pair.Value),
-                            _ = g.Where(x => x.Title != null)
-                                .SelectMany(x => x.Title)
-                                .Select(x => CreateField("Title_" + x.Key, x.Value, true, true))
-                        };
+                    select new Result
+                    {
+                        Id = g.Key,
+                        SupportedLanguages = g.First(x => x.SupportedLanguages != null).SupportedLanguages,
+                        Title = g.SelectMany(x => x.Title)
+                            .ToDictionary(x => x.Key, pair => pair.Value),
+                        _ = g.Where(x => x.Title != null)
+                            .SelectMany(x => x.Title)
+                            .Select(x => CreateField("Title_" + x.Key, x.Value, true, true))
+                    };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -165,14 +165,13 @@ namespace RavenDB_FailingTests.RavenTests
             public string Title { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void WillMapPropertiesOnMapIndexes()
         {
             new TranslatedEntities_Map().Execute(_store);
             new GlobalizationTransformer().Execute(_store);
 
             WaitForIndexing(_store);
-            WaitForUserToContinueTheTest(_store);
             using (var session = _store.OpenSession())
             {
                 var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_Map>()
@@ -186,11 +185,11 @@ namespace RavenDB_FailingTests.RavenTests
                 Assert.Equal(1, results.Count);
                 Assert.Equal("entity/1", results.First().Id);
                 Assert.Equal("Ole mundo", results.First().Title);
-                Assert.Empty(_store.DatabaseCommands.GetStatistics().Errors);
+                TestHelper.AssertNoIndexErrors(_store);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void WillMapPropertiesOnMapReduceIndexes()
         {
             new TranslatedEntities_MapReduce().Execute(_store);
@@ -211,7 +210,7 @@ namespace RavenDB_FailingTests.RavenTests
                 Assert.Equal(1, results.Count);
                 Assert.Equal("entity/1", results.First().Id);
                 Assert.Equal("Ole mundo", results.First().Title);
-                Assert.Empty(_store.DatabaseCommands.GetStatistics().Errors);
+                TestHelper.AssertNoIndexErrors(_store);
             }
         }
 

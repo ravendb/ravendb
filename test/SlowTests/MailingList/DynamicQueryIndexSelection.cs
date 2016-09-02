@@ -1,21 +1,20 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
+using FastTests;
 using Raven.Client;
+using Raven.Client.Indexing;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class DynamicQueryIndexSelection : RavenTest
+    public class DynamicQueryIndexSelection : RavenTestBase
     {
         [Fact]
         public void DynamicQueryWillChooseStaticIndex()
         {
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
                 // With the proper fix in RavenQueryProviderProcessor<T>.GetMember(Expression expression), this should produce member paths like
@@ -71,8 +70,9 @@ namespace Raven.Tests.MailingList
 
                     store.DatabaseCommands.PutIndex("Foos/TestDynamicQueries", new IndexDefinition()
                     {
-                        Map =
-                                                                                @"from doc in docs.Foos
+                        Maps =
+                        {
+                            @"from doc in docs.Foos
                                 from docBarSomeOtherDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeOtherDictionary).DefaultIfEmpty()
                                 from docBarSomeDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeDictionary).DefaultIfEmpty()
                                 select new
@@ -83,6 +83,7 @@ namespace Raven.Tests.MailingList
                                     Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key,
                                     Bar = doc.Bar
                                 }"
+                        }
                     }, true);
 
                     RavenQueryStatistics stats;
@@ -114,7 +115,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        public class Foo
+        private class Foo
         {
 
             public string SomeProperty { get; set; }
@@ -123,7 +124,7 @@ namespace Raven.Tests.MailingList
 
         }
 
-        public class Bar
+        private class Bar
         {
 
             public Dictionary<string, string> SomeDictionary { get; set; }

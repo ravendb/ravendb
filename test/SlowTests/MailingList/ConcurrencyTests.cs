@@ -1,26 +1,22 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-
 using Xunit;
-using Xunit.Extensions;
-using Raven.Tests.Common;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ConcurrencyTests : RavenTest
+    public class ConcurrencyTests : RavenTestBase
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanSaveReferencingAndReferencedDocumentsInOneGo(string storage)
+        [Fact]
+        public void CanSaveReferencingAndReferencedDocumentsInOneGo()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage)) 
+            using (var store = GetDocumentStore())
             {
                 new Sections().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new SectionData{Id = "sections/1", Referencing = null});
+                    session.Store(new SectionData { Id = "sections/1", Referencing = null });
                     session.Store(new SectionData { Id = "sections/2", Referencing = "sections/1" });
                     session.SaveChanges();
                 }
@@ -41,14 +37,14 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SectionData
+        private class SectionData
         {
             public string Id { get; set; }
             public string Referencing { get; set; }
             public int Count { get; set; }
         }
 
-        public class Sections : AbstractIndexCreationTask<SectionData>
+        private class Sections : AbstractIndexCreationTask<SectionData>
         {
             public Sections()
             {

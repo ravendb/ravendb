@@ -1,25 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class IdComesBackLowerCase : RavenTest
+    public class IdComesBackLowerCase : RavenTestBase
     {
-        private readonly IDocumentStore store;
+        private readonly IDocumentStore _store;
+
+        protected override void ModifyStore(DocumentStore store)
+        {
+            store.RegisterListener(new NoStaleQueriesListener());
+        }
 
         public IdComesBackLowerCase()
         {
-            store = NewDocumentStore(configureStore: documentStore => documentStore.RegisterListener(new NoStaleQueriesListener()));
+            _store = GetDocumentStore();
 
-            new Product_AvailableForSale3().Execute(store);
+            new Product_AvailableForSale3().Execute(_store);
 
             var product1 = new Product("MyName1", "MyBrand1");
             product1.Id = "Products/100";
@@ -29,7 +34,7 @@ namespace Raven.Tests.MailingList
 
             var facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { Name = "Brand" } } };
 
-            using (var docSession = store.OpenSession())
+            using (var docSession = _store.OpenSession())
             {
                 foreach (var productDoc in docSession.Query<Product>())
                 {
@@ -43,17 +48,17 @@ namespace Raven.Tests.MailingList
                 docSession.SaveChanges();
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var check = session.Query<Product>().ToList();
-                Assert.Equal(check.Count,2);
+                Assert.Equal(check.Count, 2);
             }
         }
 
         [Fact]
         public void ShouldReturnMatchingProductWithGivenIdWhenSelectingAllFields()
         {
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
                     .SelectFields<Product>()
@@ -67,7 +72,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void ShouldReturnMatchingProductWithGivenId()
         {
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
                     .UsingDefaultField("Any")
@@ -77,7 +82,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Product
+        private class Product
         {
             public Product(string name, string brand)
             {
@@ -90,7 +95,7 @@ namespace Raven.Tests.MailingList
             public string Brand { get; set; }
         }
 
-        public class Product_AvailableForSale3 : AbstractIndexCreationTask<Product>
+        private class Product_AvailableForSale3 : AbstractIndexCreationTask<Product>
         {
             public Product_AvailableForSale3()
             {
@@ -108,7 +113,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class NoStaleQueriesListener : IDocumentQueryListener
+        private class NoStaleQueriesListener : IDocumentQueryListener
         {
             public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
             {

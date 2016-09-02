@@ -3,23 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client.Document;
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class ComplexIndexMerge : RavenTest
+    public class ComplexIndexMerge : RavenTestBase
     {
-        public class Ref
+        private class Ref
         {
             public Guid Id { get; set; }
         }
 
-        public class Entity
+        private class Entity
         {
             public Ref EntityARef { get; set; }
             public Ref EntityBRef { get; set; }
@@ -28,10 +27,8 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanQueryOnBothProperties()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.Conventions.DefaultQueryingConsistency =
-                    ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Entity
@@ -45,9 +42,9 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var id = Guid.Empty;
-                    Assert.NotEmpty(session.Query<Entity>().Where(x => x.EntityARef.Id == id).ToList());
-                    Assert.NotEmpty(session.Query<Entity>().Where(x => x.EntityBRef.Id == id).ToList());
-                    Assert.NotEmpty(session.Query<Entity>().Where(x => x.EntityARef.Id == id).ToList());
+                    Assert.NotEmpty(session.Query<Entity>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.EntityARef.Id == id).ToList());
+                    Assert.NotEmpty(session.Query<Entity>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.EntityBRef.Id == id).ToList());
+                    Assert.NotEmpty(session.Query<Entity>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.EntityARef.Id == id).ToList());
                 }
             }
         }
