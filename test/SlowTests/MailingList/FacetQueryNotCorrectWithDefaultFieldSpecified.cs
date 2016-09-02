@@ -1,28 +1,26 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class FacetQueryNotCorrectWithDefaultFieldSpecified : RavenTest
+    public class FacetQueryNotCorrectWithDefaultFieldSpecified : RavenTestBase
     {
         /// <summary>
         /// Works
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void ShouldWorkWithEmbeddedRaven()
         {
             //arrange
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.RegisterListener(new NoStaleQueriesListener());
 
@@ -41,11 +39,11 @@ namespace Raven.Tests.MailingList
         /// <summary>
         /// Should work but does not
         /// </summary>
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void ShouldWorkWithRavenServer()
         {
             //arrange
-            using(var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.RegisterListener(new NoStaleQueriesListener());
 
@@ -55,7 +53,7 @@ namespace Raven.Tests.MailingList
 
                 //Act
                 FacetResults result = ExecuteTest(store);
-                WaitForUserToContinueTheTest();
+
                 //Assert
                 CheckResults(result);
             }
@@ -63,7 +61,7 @@ namespace Raven.Tests.MailingList
 
         private static void CheckResults(FacetResults result)
         {
-            Assert.Contains("Brand", result.Results.Select(x=>x.Key));
+            Assert.Contains("Brand", result.Results.Select(x => x.Key));
             FacetResult facetResult = result.Results["Brand"];
             Assert.Equal(1, facetResult.Values.Count);
             facetResult.Values[0] = new FacetValue { Range = "mybrand1", Hits = 1 };
@@ -99,7 +97,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Product
+        private class Product
         {
             public Product(string name, string brand)
             {
@@ -112,7 +110,7 @@ namespace Raven.Tests.MailingList
             public string Brand { get; set; }
         }
 
-        public class Product_AvailableForSale2 : AbstractIndexCreationTask<Product>
+        private class Product_AvailableForSale2 : AbstractIndexCreationTask<Product>
         {
             public Product_AvailableForSale2()
             {
@@ -126,11 +124,11 @@ namespace Raven.Tests.MailingList
                                                       p.Name,
                                                       p.Brand
                                                   }
-                                      };
+                                  };
             }
         }
 
-        public class NoStaleQueriesListener : IDocumentQueryListener
+        private class NoStaleQueriesListener : IDocumentQueryListener
         {
             public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
             {

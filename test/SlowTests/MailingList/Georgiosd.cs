@@ -1,20 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Georgiosd : RavenTest
+    public class Georgiosd : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void CanGet304FromLazyFacets()
         {
-            using(var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new OrgIndex());
 
@@ -31,9 +30,9 @@ namespace Raven.Tests.MailingList
                     session.Store(new LocalFacet());
                     session.SaveChanges();
 
-                    Consume(session.Query<Org, OrgIndex>()
-                                .Customize(c => c.WaitForNonStaleResults())
-                                .ToList());
+                    session.Query<Org, OrgIndex>()
+                        .Customize(c => c.WaitForNonStaleResults())
+                        .ToList();
 
 
                     for (int i = 0; i < 5; i++)
@@ -48,22 +47,22 @@ namespace Raven.Tests.MailingList
                         Assert.Equal(5, facetResult.Values[0].Hits);
                         Assert.Equal(5, facetResult.Values[1].Hits);
                     }
-                }    
+                }
             }
         }
-        public class Sector
+        private class Sector
         {
             public int Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class Org
+        private class Org
         {
             public int Id { get; set; }
             public IList<Sector> Sectors { get; set; }
         }
 
-        public class OrgIndex : AbstractIndexCreationTask<Org>
+        private class OrgIndex : AbstractIndexCreationTask<Org>
         {
             public OrgIndex()
             {

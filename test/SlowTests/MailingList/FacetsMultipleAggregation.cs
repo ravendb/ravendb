@@ -1,20 +1,20 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class FacetsMultipleAggregation : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void CanAggregateByMinAndMaxOnSameField()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
                     Aggregation = FacetAggregation.Min,
                     AggregationField = "Prices_Range",
                     TermSortMode = FacetTermSortMode.ValueAsc,
-                    Ranges = { "[* TO *]" }
+                    Ranges = {"[* TO *]"}
                 },
                 new Facet
                 {
@@ -58,7 +58,7 @@ namespace Raven.Tests.MailingList
                     MaxResults = 1,
                     Aggregation = FacetAggregation.Max,
                     AggregationField = "Prices_Range",
-                    Ranges = { "[* TO *]" }
+                    Ranges = {"[* TO *]"}
                 },
             };
         }
@@ -82,45 +82,45 @@ namespace Raven.Tests.MailingList
                 }
             };
         }
-    }
 
-    public class Variant
-    {
-        public Price ListPrice { get; set; }
-    }
-
-    public class Product
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public IEnumerable<Variant> Variants { get; set; }
-    }
-
-    public class Price
-    {
-        public decimal Amount { get; set; }
-        public string Currency { get; set; }
-    }
-
-    public class ProductQuery
-    {
-        public string Name { get; set; }
-        public IEnumerable<decimal> Prices { get; set; }
-    }
-
-    public class Products : AbstractIndexCreationTask<Product, ProductQuery>
-    {
-        public Products()
+        private class Variant
         {
-            Map = products =>
-                from p in products
-                select new
-                {
-                    p.Name,
-                    Prices = p.Variants.Select(v => (decimal)v.ListPrice.Amount).Distinct(),
-                };
+            public Price ListPrice { get; set; }
+        }
 
-            Sort(e => e.Prices, SortOptions.Double);
+        private class Product
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public IEnumerable<Variant> Variants { get; set; }
+        }
+
+        private class Price
+        {
+            public decimal Amount { get; set; }
+            public string Currency { get; set; }
+        }
+
+        private class ProductQuery
+        {
+            public string Name { get; set; }
+            public IEnumerable<decimal> Prices { get; set; }
+        }
+
+        private class Products : AbstractIndexCreationTask<Product, ProductQuery>
+        {
+            public Products()
+            {
+                Map = products =>
+                    from p in products
+                    select new
+                    {
+                        p.Name,
+                        Prices = p.Variants.Select(v => (decimal)v.ListPrice.Amount).Distinct(),
+                    };
+
+                Sort(e => e.Prices, SortOptions.NumericDouble);
+            }
         }
     }
 }

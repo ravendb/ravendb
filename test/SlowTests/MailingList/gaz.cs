@@ -3,21 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class gaz : RavenTest
+    public class gaz : RavenTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public int CatId { get; set; }
@@ -25,7 +23,7 @@ namespace Raven.Tests.MailingList
             public double Long { get; set; }
         }
 
-        public class Foos : AbstractIndexCreationTask<Foo>
+        private class Foos : AbstractIndexCreationTask<Foo>
         {
             public Foos()
             {
@@ -34,10 +32,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void SpatialSearchBug2()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,7 +47,7 @@ namespace Raven.Tests.MailingList
 
                     WaitForIndexing(store);
 
-                    var query2 = session.Advanced.LuceneQuery<Foo, Foos>()
+                    var query2 = session.Advanced.DocumentQuery<Foo, Foos>()
                         .UsingDefaultOperator(QueryOperator.And)
                         .WithinRadiusOf("Position", 100, 20, 20, SpatialUnits.Miles)
                         .Where("CatId:2")

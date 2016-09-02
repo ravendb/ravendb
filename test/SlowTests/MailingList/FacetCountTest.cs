@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class FacetCountTest : RavenTest
+    public class FacetCountTest : RavenTestBase
     {
-        public class WodsProjection
+        private class WodsProjection
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
             public List<string> ExerciseList { get; set; }
         }
 
-        public class WodBase
+        private class WodBase
         {
             public WodBase()
             {
@@ -40,7 +40,7 @@ namespace Raven.Tests.MailingList
 
         }
 
-        public enum BenchmarkType
+        private enum BenchmarkType
         {
             Heroes = 1,
             Girls = 2,
@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
             NotBenchMark = 0
         }
 
-        public enum WodType
+        private enum WodType
         {
             AmrapWod,
             TimeWod,
@@ -60,7 +60,7 @@ namespace Raven.Tests.MailingList
             RestDay
         }
 
-        public class Wod_Search : AbstractIndexCreationTask<WodBase>
+        private class Wod_Search : AbstractIndexCreationTask<WodBase>
         {
 
             public Wod_Search()
@@ -80,7 +80,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Wod_SearchTransformer : AbstractTransformerCreationTask<WodBase>
+        private class Wod_SearchTransformer : AbstractTransformerCreationTask<WodBase>
         {
 
             public Wod_SearchTransformer()
@@ -99,10 +99,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void TestFacetsCount()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 InsertData(store);
 
@@ -147,7 +147,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        private void InsertData(EmbeddableDocumentStore store)
+        private void InsertData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {

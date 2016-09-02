@@ -3,14 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class FragmentFail : RavenTestBase
     {
@@ -33,30 +36,30 @@ namespace Raven.Tests.MailingList
             {
                 return new IndexDefinition
                 {
-                    Map =
+                    Maps =
+                    {
                         @"from doc in docs
-                        select new { Query = new [] { doc.MainIntro, doc.MainBody, doc.Heading } }",
-                    Stores =  {
-                        {
-                          "Query",
-                          FieldStorage.Yes
-                        }
+                        select new { Query = new [] { doc.MainIntro, doc.MainBody, doc.Heading } }"
                     },
-                    TermVectors = {{"Query",FieldTermVector.WithPositionsAndOffsets}},
-                    Indexes =  {
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
                         {
-                            "Query",
-                            FieldIndexing.Analyzed
+                            "Query", new IndexFieldOptions
+                            {
+                                Storage = FieldStorage.Yes,
+                                TermVector = FieldTermVector.WithPositionsAndOffsets,
+                                Indexing = FieldIndexing.Analyzed
+                            }
                         }
                     }
                 };
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Highlighting")]
         public void Fragment_Length_Should_Not_Be_More_Then_128()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

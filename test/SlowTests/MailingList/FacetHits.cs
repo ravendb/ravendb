@@ -1,19 +1,18 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Lucene.Net.Support;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class FacetsHits : RavenTest
+    public class FacetsHits : RavenTestBase
     {
-        public class Product
+        private class Product
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -21,14 +20,14 @@ namespace Raven.Tests.MailingList
             public Price Price { get; set; }
         }
 
-        public class Price
+        private class Price
         {
             public float Amount { get; set; }
             public string Currency { get; set; }
         }
 
 
-        public class Products_Stats : AbstractIndexCreationTask<Product>
+        private class Products_Stats : AbstractIndexCreationTask<Product>
         {
             public Products_Stats()
             {
@@ -41,14 +40,14 @@ namespace Raven.Tests.MailingList
 
                       };
 
-                Sort(x=>x.Price, SortOptions.Float);
+                Sort(x => x.Price, SortOptions.NumericDouble);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void CanSearchOnAllProperties()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
                 new Products_Stats().Execute(store);
