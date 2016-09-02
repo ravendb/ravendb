@@ -382,7 +382,9 @@ namespace Raven.Database.Server.Controllers
         private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
         {
             var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
-            return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream, GetQueryStringValues(req, "column")) : new JsonOutputWriter(stream);
+            return useExcelFormat ? 
+                (IOutputWriter)new ExcelOutputWriter(stream, GetQueryStringValues(req, "column")) : 
+                new JsonOutputWriter(stream);
         }
 
         private static bool IsCsvDownloadRequest(HttpRequestMessage req)

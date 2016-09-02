@@ -453,7 +453,6 @@
     <Compile Include="Spatial\ShapeConverter.cs" />
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
     <Compile Include="Spatial\WktSanitizer.cs" />
-    <Compile Include="Streaming\ExcelOutputWriter.cs" />
     <Compile Include="Streaming\IOutputWriter.cs" />
     <Compile Include="Streaming\JsonOutputWriter.cs" />
     <Compile Include="SystemTime.cs" />

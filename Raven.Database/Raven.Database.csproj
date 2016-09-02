@@ -630,6 +630,7 @@
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\SortFieldHelper.cs" />
     <Compile Include="Util\StopwatchScope.cs" />
+    <Compile Include="Util\Streams\ExcelOutputWriter.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
