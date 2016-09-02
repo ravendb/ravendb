@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class SkippedResults : RavenTest
+    public class SkippedResults : RavenTestBase
     {
+        [Fact]
         public void Can_page_when_using_nested_property_index()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -31,7 +31,7 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = (from p in session.Query<Provider, NestedPropertyIndex1>()
-                                  .Customize(x=>x.WaitForNonStaleResults())
+                                  .Customize(x => x.WaitForNonStaleResults())
                                   where p.Zip == "97520"
                                   select p).ToArray();
                     Assert.Equal(10, result.Count());
@@ -67,7 +67,7 @@ namespace Raven.Tests.MailingList
                         pageNumber++;
 
                         skippedResults += statistics.SkippedResults;
-                        recordsToSkip = pageSize*pageNumber + skippedResults;
+                        recordsToSkip = pageSize * pageNumber + skippedResults;
 
                         // I found this in the Raven.Tests.MailingList.Vlad.WillOnlyGetPost2Once() method
                         //recordsToSkip = pageSize * pageNumber + statistics.SkippedResults;
@@ -110,7 +110,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        public class Category
+        private class Category
         {
             public string Name { get; set; }
             public DateTime EffectiveFrom { get; set; }
@@ -118,7 +118,7 @@ namespace Raven.Tests.MailingList
         }
 
 
-        public class Provider
+        private class Provider
         {
             public string Name { get; set; }
             public string Zip { get; set; }
@@ -128,7 +128,7 @@ namespace Raven.Tests.MailingList
 
         // Indexing nested properties
         // Creates multiple index entries, one for each nested property combination
-        public class NestedPropertyIndex1 : AbstractIndexCreationTask<Provider>
+        private class NestedPropertyIndex1 : AbstractIndexCreationTask<Provider>
         {
             public NestedPropertyIndex1()
             {

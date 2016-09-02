@@ -3,22 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using Raven.Client;
 using System.Linq;
-using Raven.Client.Document;
+using FastTests;
+using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Samina2 : RavenTest
+    public class Samina2 : RavenTestBase
     {
-        public class PropertySearchingViewModel
+        private class PropertySearchingViewModel
         {
             public Guid Id { get; set; }
             public string UserFriendlyId { get; set; }
@@ -31,7 +29,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Unavailability
+        private class Unavailability
         {
             public DateTime StartDay { get; set; }
             public DateTime EndDay { get; set; }
@@ -42,10 +40,10 @@ namespace Raven.Tests.MailingList
         {
             DateTime startDate = DateTime.Now;
             DateTime endDate = DateTime.Now.AddDays(10);
-            
-            using (var store = NewDocumentStore())
+
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var model = new PropertySearchingViewModel() { Id = Guid.NewGuid(), UserFriendlyPropertyId = "p001" };
                     model.Unavailabilities.Add(new Unavailability() { StartDay = startDate, EndDay = endDate });
@@ -56,21 +54,21 @@ namespace Raven.Tests.MailingList
 
                 new PropertiesSearchIndex().Execute(store);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     RavenQueryStatistics stats;
                     var count = session.Query<PropertySearchingViewModel, PropertiesSearchIndex>()
                         .Statistics(out stats)
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Count(x => x.Unavailabilities.Any(y => y.StartDay >= startDate && y.EndDay <= endDate));
 
                     Assert.Equal(1, count);
                     Assert.Equal("PropertiesSearchIndex", stats.IndexName);
                 }
-            }	
+            }
         }
 
-        public class PropertiesSearchIndex : AbstractIndexCreationTask<PropertySearchingViewModel>
+        private class PropertiesSearchIndex : AbstractIndexCreationTask<PropertySearchingViewModel>
         {
             public PropertiesSearchIndex()
             {

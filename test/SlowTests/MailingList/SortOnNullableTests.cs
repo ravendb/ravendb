@@ -3,43 +3,34 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.Linq;
-using System.Reflection;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class SortOnNullableTests : RavenTest
+    public class SortOnNullableTests : RavenTestBase
     {
-
-        private SortOnNullableEntity[] data = new[]
+        private readonly SortOnNullableEntity[] _data = new[]
         {
             new SortOnNullableEntity {Text = "fail", Num = null},
             new SortOnNullableEntity {Text = "foo", Num = 2},
             new SortOnNullableEntity {Text = "boo", Num = 1}
         };
 
-        protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
-        {
-        }
-
         [Fact]
         public void SortOnNullable()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SortOnNullableEntity_Search().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    foreach (var d in data) session.Store(d);
+                    foreach (var d in _data) session.Store(d);
                     session.SaveChanges();
                 }
 
@@ -61,14 +52,14 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SortOnNullableEntity
+        private class SortOnNullableEntity
         {
             public string Id { get; set; }
             public string Text { get; set; }
             public int? Num { get; set; }
         }
 
-        public class SortOnNullableEntity_Search : AbstractIndexCreationTask<SortOnNullableEntity>
+        private class SortOnNullableEntity_Search : AbstractIndexCreationTask<SortOnNullableEntity>
         {
             public SortOnNullableEntity_Search()
             {
@@ -82,7 +73,7 @@ namespace Raven.Tests.MailingList
                 Index(x => x.Text, FieldIndexing.Analyzed);
                 Index(x => x.Num, FieldIndexing.Default);
 
-                Sort(x => x.Num, SortOptions.Int);
+                Sort(x => x.Num, SortOptions.NumericDefault);
             }
         }
     }

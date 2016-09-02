@@ -3,39 +3,38 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class SeanBuchanan : RavenTest
+    public class SeanBuchanan : RavenTestBase
     {
-        public class Consultant : INamedDocument
+        private class Consultant : INamedDocument
         {
             public int Id { get; set; }
             public string Name { get; set; }
             public int YearsOfService { get; set; }
         }
 
-        public interface INamedDocument
+        private interface INamedDocument
         {
             int Id { get; set; }
 
             string Name { get; set; }
         }
 
-        public class Skill : INamedDocument
+        private class Skill : INamedDocument
         {
             public int Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class Proficiency
+        private class Proficiency
         {
             public int Id { get; set; }
             public DenormalizedReference<Consultant> Consultant { get; set; }
@@ -43,7 +42,7 @@ namespace Raven.Tests.MailingList
             public string SkillLevel { get; set; }
         }
 
-        public class DenormalizedReference<T> where T : INamedDocument
+        private class DenormalizedReference<T> where T : INamedDocument
         {
             public int Id { get; set; }
             public string Name { get; set; }
@@ -58,28 +57,28 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Proficiencies_ConsultantId : AbstractIndexCreationTask<Proficiency>
+        private class Proficiencies_ConsultantId : AbstractIndexCreationTask<Proficiency>
         {
             public Proficiencies_ConsultantId()
             {
-                Map = proficiencies => proficiencies.Select(proficiency => new {Consultant_Id = proficiency.Consultant.Id});
+                Map = proficiencies => proficiencies.Select(proficiency => new { Consultant_Id = proficiency.Consultant.Id });
             }
         }
 
         [Fact]
         public void PatchShouldWorkCorrectly()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new Proficiencies_ConsultantId());
 
                 //Write the test data to the database.
                 using (var session = store.OpenSession())
                 {
-                    var skill1 = new Skill {Id = 1, Name = "C#"};
-                    var skill2 = new Skill {Id = 2, Name = "SQL"};
-                    var consultant1 = new Consultant {Id = 1, Name = "Subha", YearsOfService = 6};
-                    var consultant2 = new Consultant {Id = 2, Name = "Tom", YearsOfService = 5};
+                    var skill1 = new Skill { Id = 1, Name = "C#" };
+                    var skill2 = new Skill { Id = 2, Name = "SQL" };
+                    var consultant1 = new Consultant { Id = 1, Name = "Subha", YearsOfService = 6 };
+                    var consultant2 = new Consultant { Id = 2, Name = "Tom", YearsOfService = 5 };
                     var proficiency1 = new Proficiency
                     {
                         Id = 1,
@@ -133,22 +132,9 @@ namespace Raven.Tests.MailingList
                     {
                         Query = "Consultant_Id:1"
                     },
-                    new[]
+                    new PatchRequest
                     {
-                        new PatchRequest
-                        {
-                            Type = PatchCommandType.Modify,
-                            Name = "Consultant",
-                            Nested = new[]
-                            {
-                                new PatchRequest
-                                {
-                                    Type = PatchCommandType.Set,
-                                    Name = "Name",
-                                    Value = new RavenJValue("Subhashini")
-                                }
-                            }
-                        }
+                        Script = "this.Consultant.Name = 'Subhashini';"
                     },
                     options: null).WaitForCompletion();
 

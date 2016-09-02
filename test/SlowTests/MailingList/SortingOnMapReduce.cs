@@ -3,23 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class SortingOnMapReduce : RavenTestBase
     {
-        public class Tag
+        private class Tag
         {
             public string Name { get; set; }
         }
 
-        public class TagWithCount
+        private class TagWithCount
         {
             public string Name { get; set; }
             public long Count { get; set; }
@@ -28,12 +27,12 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void MapReduceSortingBug()
         {
-            using (var ds = this.NewDocumentStore())
+            using (var ds = GetDocumentStore())
             {
                 ds.DatabaseCommands.PutIndex("TagsCount",
                     new IndexDefinition
                     {
-                        Map = "from tag in docs.Tags select new { tag.Name, Count = 1 }",
+                        Maps = { "from tag in docs.Tags select new { tag.Name, Count = 1 }" },
                         Reduce = "from result in results group " +
                                  "result by result.Name into g " +
                                  "select new { Name = g.Key, Count = g.Sum(x => x.Count) }",

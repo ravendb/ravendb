@@ -3,32 +3,32 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-using Raven.Client.Embedded;
+using FastTests;
+using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class SumTests : RavenTest
+    public class SumTests : RavenTestBase
     {
-        public class Vacancy
+        private class Vacancy
         {
             public string Id { get; set; }
             public string Position { get; set; }
         }
 
-        public class VacancyApplication
+        private class VacancyApplication
         {
             public string Id { get; set; }
             public string VacancyId { get; set; }
             public string State { get; set; }
         }
 
-        public class Vacancies_ApplicationCount : AbstractIndexCreationTask<VacancyApplication, Vacancies_ApplicationCount.ReduceResult>
+        private class Vacancies_ApplicationCount : AbstractIndexCreationTask<VacancyApplication, Vacancies_ApplicationCount.ReduceResult>
         {
             public Vacancies_ApplicationCount()
             {
@@ -58,18 +58,18 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Vacancies_ApplicationCountTransformer : AbstractTransformerCreationTask<Vacancies_ApplicationCount.ReduceResult>
+        private class Vacancies_ApplicationCountTransformer : AbstractTransformerCreationTask<Vacancies_ApplicationCount.ReduceResult>
         {
             public Vacancies_ApplicationCountTransformer()
             {
                 TransformResults = results => from result in results
-                                                       group result by result.Id into g
-                                                       let vacancy = LoadDocument<Vacancy>(g.Key)
-                                                       select new
-                                                       {
-                                                           Id = g.Key,
-                                                           ApplicationCount = g.Sum(x => Convert.ToInt32(x.ApplicationCount))
-                                                       };
+                                              group result by result.Id into g
+                                              let vacancy = LoadDocument<Vacancy>(g.Key)
+                                              select new
+                                              {
+                                                  Id = g.Key,
+                                                  ApplicationCount = g.Sum(x => Convert.ToInt32(x.ApplicationCount))
+                                              };
             }
 
             public class ReduceResult
@@ -80,16 +80,16 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        static string vacancyId;
+        private readonly string _vacancyId;
 
-        private readonly EmbeddableDocumentStore store;
+        private readonly IDocumentStore _store;
 
         public SumTests()
         {
-            store = NewDocumentStore();
-            new Vacancies_ApplicationCount().Execute(store);
-            new Vacancies_ApplicationCountTransformer().Execute(store);
-            using (var session = store.OpenSession())
+            _store = GetDocumentStore();
+            new Vacancies_ApplicationCount().Execute(_store);
+            new Vacancies_ApplicationCountTransformer().Execute(_store);
+            using (var session = _store.OpenSession())
             {
                 var vacancy = new Vacancy { Position = "Developer Guy" };
                 session.Store(vacancy);
@@ -102,28 +102,28 @@ namespace Raven.Tests.MailingList
 
                 session.SaveChanges();
 
-                vacancyId = vacancy.Id;
+                _vacancyId = vacancy.Id;
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO Arek")]
         public void Can_get_application_counts_by_vacancy_id()
         {
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
                     .TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
                     .Customize(x => x.WaitForNonStaleResults())
                     .ToList();
-                Assert.Equal(results.First().Id, vacancyId);
+                Assert.Equal(results.First().Id, _vacancyId);
                 Assert.Equal(results.First().ApplicationCount, 2);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO Arek")]
         public void Can_get_application_counts_by_state()
         {
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var results = session.Query<Vacancies_ApplicationCount.ReduceResult, Vacancies_ApplicationCount>()
                     .TransformWith<Vacancies_ApplicationCountTransformer, Vacancies_ApplicationCount.ReduceResult>()
@@ -131,7 +131,7 @@ namespace Raven.Tests.MailingList
                     .Where(x => x.State == "Approved")
                     .ToList();
 
-                Assert.Equal(results.First().Id, vacancyId);
+                Assert.Equal(results.First().Id, _vacancyId);
                 Assert.Equal(results.First().ApplicationCount, 1);
             }
         }

@@ -3,18 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Stockholm : RavenTest
+    public class Stockholm : RavenTestBase
     {
-        public class Courses_Search2 : AbstractIndexCreationTask<Course>
+        private class Courses_Search2 : AbstractIndexCreationTask<Course>
         {
             public Courses_Search2()
             {
@@ -22,7 +22,7 @@ namespace Raven.Tests.MailingList
                       from course in courses
                       select new
                       {
-                        Query = new object[]
+                          Query = new object[]
                         {
                             course.Location,
                             course.Date,
@@ -33,8 +33,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-
-        public class Course
+        private class Course
         {
             public string Name { get; set; }
 
@@ -52,10 +51,10 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void ShouldIndexArray()
         {
-            using(var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Courses_Search2().Execute(store);
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var course = new Course
                     {
@@ -70,16 +69,14 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session.Advanced.DocumentQuery<Course>()
                         .WaitForNonStaleResults()
                         .WhereEquals("Query", "dotNet")
                         .ToList());
                 }
-
             }
         }
-         
     }
 }

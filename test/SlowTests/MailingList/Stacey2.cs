@@ -1,23 +1,21 @@
 using System.Collections.Generic;
-using Raven.Client.Document;
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Stacey2 : RavenTest
+    public class Stacey2 : RavenTestBase
     {
-        public class Root
+        private class Root
         {
             public string Id { get; set; }
             public Bridge Bridge { get; set; }
         }
-        public class Bridge
+        private class Bridge
         {
             public List<string> Aggregates { get; set; }
         }
-        public class Aggregate
+        private class Aggregate
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -26,32 +24,31 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void LoadWithInclude()
         {
-            using(GetNewServer())
-            using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+            using (var store = GetDocumentStore())
             {
 
                 var aggregate = new Aggregate
-                                    {
-                                        Name = "First"
-                                    };
+                {
+                    Name = "First"
+                };
 
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.UseOptimisticConcurrency = true;
-                    session.Store(aggregate); 
+                    session.Store(aggregate);
                     session.SaveChanges();
                 }
 
                 var root = new Root
-                            {
-                                Bridge = new Bridge
-                                            {
-                                                Aggregates = new List<string>
-                                                                {
-                                                                    aggregate.Id
-                                                                }
-                                            }
-                            };
+                {
+                    Bridge = new Bridge
+                    {
+                        Aggregates = new List<string>
+                        {
+                            aggregate.Id
+                        }
+                    }
+                };
 
                 using (var session = store.OpenSession())
                 {

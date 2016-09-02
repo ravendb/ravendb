@@ -1,21 +1,20 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class SubObjectProperty : RavenTest
+    public class SubObjectProperty : RavenTestBase
     {
         [Fact]
         public void CanProjectProperly()
         {
-            using(var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Sites_ByAdminData().Execute(store);
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new SiteModel
                     {
@@ -42,12 +41,12 @@ namespace Raven.Tests.MailingList
                     });
 
                     session.SaveChanges();
-                }	
-    
-                using(var session = store.OpenSession())
+                }
+
+                using (var session = store.OpenSession())
                 {
                     var groups = session.Query<SiteModel, Sites_ByAdminData>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Admin.GroupName)
                         .Select(s => s.Admin.GroupName)
                         .Distinct()
@@ -58,7 +57,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class SiteModel
+        private class SiteModel
         {
             public string Id { get; set; }
             public AdminData Admin { get; set; }
@@ -71,19 +70,19 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class AdminData
+        private class AdminData
         {
             public string Name { get; set; }
             public string GroupName { get; set; }
             public SiteStatus Status { get; set; }
         }
 
-        public enum SiteStatus
+        private enum SiteStatus
         {
             None
         }
 
-        public class Sites_ByAdminData : AbstractIndexCreationTask<SiteModel>
+        private class Sites_ByAdminData : AbstractIndexCreationTask<SiteModel>
         {
             public Sites_ByAdminData()
             {
@@ -91,7 +90,7 @@ namespace Raven.Tests.MailingList
                                select new
                                {
                                    site.Id,
-                                   Admin_GroupName= site.Admin.GroupName,
+                                   Admin_GroupName = site.Admin.GroupName,
                                    Admin_Name = site.Admin.Name,
                                    Admin_Status = site.Admin.Status
                                };

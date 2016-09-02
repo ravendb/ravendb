@@ -11,18 +11,18 @@ namespace SlowTests.Tests.Indexes
 {
     public class BoostingDuringIndexing : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string FirstName { get; set; }
             public string LastName { get; set; }
         }
 
-        public class Account
+        private class Account
         {
             public string Name { get; set; }
         }
 
-        public class UsersByName : AbstractIndexCreationTask<User>
+        private class UsersByName : AbstractIndexCreationTask<User>
         {
             public UsersByName()
             {
@@ -35,7 +35,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class UsersAndAccounts : AbstractMultiMapIndexCreationTask<UsersAndAccounts.Result>
+        private class UsersAndAccounts : AbstractMultiMapIndexCreationTask<UsersAndAccounts.Result>
         {
             public class Result
             {

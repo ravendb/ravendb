@@ -3,17 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class SuggestionFail : RavenTestBase
     {
@@ -36,39 +37,31 @@ namespace Raven.Tests.MailingList
             {
                 return new IndexDefinition
                 {
-                    Map =
+                    Maps =
+                    {
                         @"from doc in docs
-                        select new { Query = new [] { doc.MainIntro, doc.MainBody, doc.Heading } }",
-                    Stores =
-                    {
-                        {
-                            "Query",
-                            FieldStorage.Yes
-                        }
+                        select new { Query = new [] { doc.MainIntro, doc.MainBody, doc.Heading } }"
                     },
-                    SuggestionsOptions = new HashSet<string> { "Query" },
-                    Indexes =
+                    Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         {
-                            "Query",
-                            FieldIndexing.Analyzed
-                        }
-                    },
-                    TermVectors =
-                    {
-                        {
-                            "Query",
-                            FieldTermVector.WithPositionsAndOffsets
+                            "Query", new IndexFieldOptions
+                            {
+                                Storage = FieldStorage.Yes,
+                                Suggestions = true,
+                                Indexing = FieldIndexing.Analyzed,
+                                TermVector = FieldTermVector.WithPositionsAndOffsets
+                            }
                         }
                     }
                 };
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void WillFail()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

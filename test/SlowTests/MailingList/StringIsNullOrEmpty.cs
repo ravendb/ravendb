@@ -1,10 +1,9 @@
-using Raven.Abstractions.Linq;
+using FastTests;
+using Raven.Client.Linq;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class StringIsNullOrEmpty : NoDisposalNeeded
     {
@@ -14,6 +13,6 @@ namespace Raven.Tests.MailingList
             dynamic doc = new DynamicJsonObject(new RavenJObject());
 
             Assert.True(string.IsNullOrEmpty(doc.Name));
-        } 
+        }
     }
 }

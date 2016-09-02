@@ -1,24 +1,17 @@
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList 
+namespace SlowTests.MailingList
 {
     public class SortTest : RavenTestBase
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
-        {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "IndexedProperties");
-        }
-
         [Fact]
         public void ArticlesAreReturnedInIdOrder()
         {
-            using (IDocumentStore docStore = NewDocumentStore())
+            using (IDocumentStore docStore = GetDocumentStore())
             {
                 // Creates 1000 documents with Ids 1 through 1000
                 CreateArticles(docStore, 1000);
@@ -58,7 +51,7 @@ namespace Raven.Tests.MailingList
 
         private void CreateArticles(IDocumentStore docStore, int numArticles)
         {
-            for (int i = 1; i <= numArticles; i+=25)
+            for (int i = 1; i <= numArticles; i += 25)
             {
                 using (var session = docStore.OpenSession())
                 {
@@ -95,7 +88,7 @@ namespace Raven.Tests.MailingList
             new Articles_byArticleId().Execute(docStore);
         }
 
-        public class Articles_byArticleId : AbstractIndexCreationTask<Article, Article>
+        private class Articles_byArticleId : AbstractIndexCreationTask<Article, Article>
         {
             public Articles_byArticleId()
             {
@@ -104,43 +97,29 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Article
+        private class Article
         {
-            public int       Id       { get; set; }
-            public string    Title    { get; set; }
-            public UserRef[] Authors  { get; set; }
-            public string    Abstract { get; set; }
-            public string    Content  { get; set; }
-            public string[]  Tags     { get; set; }
-            public Rating    Rating   { get; set; }
-        }
-
-        public class ItemRating
-        {
-            public string ItemId { get; set; }
+            public int Id { get; set; }
+            public string Title { get; set; }
+            public UserRef[] Authors { get; set; }
+            public string Abstract { get; set; }
+            public string Content { get; set; }
+            public string[] Tags { get; set; }
             public Rating Rating { get; set; }
         }
 
-        public class Rating
+        private class Rating
         {
-            public int   VoteTotal   { get; set; }
-            public int   WeightTotal { get; set; }
-            public int   Count       { get; set; }
-            public float Score       { get; set; }
-            public int[] VoteCounts  { get; set; }
+            public int VoteTotal { get; set; }
+            public int WeightTotal { get; set; }
+            public int Count { get; set; }
+            public float Score { get; set; }
+            public int[] VoteCounts { get; set; }
         }
 
-        public class User
+        private class UserRef
         {
-            public int    Id        { get; set; }
-            public string FirstName { get; set; }
-            public string LastName  { get; set; }
-            public string Email     { get; set; }
-        }
-
-        public class UserRef
-        {
-            public int    Id   { get; set; }
+            public int Id { get; set; }
             public string Name { get; set; }
         }
     }

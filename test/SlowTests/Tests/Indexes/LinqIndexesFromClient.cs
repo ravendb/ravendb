@@ -75,7 +75,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public static dynamic GetDocumentFromString(string json, JsonOperationContext context)
+        private static dynamic GetDocumentFromString(string json, JsonOperationContext context)
         {
             var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
             var reader = context.ReadForMemory(ms, "doc");
@@ -101,7 +101,7 @@ namespace SlowTests.Tests.Indexes
             IndexAndTransformerCompiler.Compile(indexDefinition);
         }
 
-        public class Person
+        private class Person
         {
             public string[] Roles { get; set; }
         }
@@ -251,7 +251,7 @@ namespace SlowTests.Tests.Indexes
             Assert.Equal(original.Reduce, generated.Reduce);
         }
 
-        public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
+        private void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
         {
             IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
             {
@@ -323,13 +323,13 @@ users => from user in users
         }
 
 
-        public enum Gender
+        private enum Gender
         {
             Male,
             Female
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -339,18 +339,18 @@ users => from user in users
             public Gender Gender { get; set; }
         }
 
-        public class Named
+        private class Named
         {
             public string Name { get; set; }
         }
-        public class LocationCount
+        private class LocationCount
         {
             public string Location { get; set; }
             public int Count { get; set; }
         }
 
 
-        public class LocationAge
+        private class LocationAge
         {
             public string Location { get; set; }
             public decimal AverageAge { get; set; }
@@ -358,7 +358,7 @@ users => from user in users
             public decimal AgeSum { get; set; }
         }
 
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string Customer { get; set; }
@@ -370,7 +370,7 @@ users => from user in users
             }
         }
 
-        public class OrderLine
+        private class OrderLine
         {
             public string ProductId { get; set; }
             public int Quantity { get; set; }

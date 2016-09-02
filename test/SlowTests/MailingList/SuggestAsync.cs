@@ -3,53 +3,50 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
+
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class SuggestAsync : RavenTest
+    public class SuggestAsync : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string Name;
+#pragma warning disable 414
             public int Age;
+#pragma warning restore 414
         }
 
-        public class People_ByName : AbstractIndexCreationTask<Person>
+        private class People_ByName : AbstractIndexCreationTask<Person>
         {
             public People_ByName()
             {
                 Map = people =>
                       from person in people
-                      select new {person.Name};
+                      select new { person.Name };
 
-                Suggestion(x=>x.Name);
+                Suggestion(x => x.Name);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void DoWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new People_ByName().Execute(store);
                 using (IAsyncDocumentSession session = store.OpenAsyncSession())
                 {
-                    session.StoreAsync(new Person {Name = "Jack", Age = 20}).Wait();
-                    session.StoreAsync(new Person {Name = "Steve", Age = 74}).Wait();
-                    session.StoreAsync(new Person {Name = "Martin", Age = 34}).Wait();
-                    session.StoreAsync(new Person {Name = "George", Age = 12}).Wait();
+                    session.StoreAsync(new Person { Name = "Jack", Age = 20 }).Wait();
+                    session.StoreAsync(new Person { Name = "Steve", Age = 74 }).Wait();
+                    session.StoreAsync(new Person { Name = "Martin", Age = 34 }).Wait();
+                    session.StoreAsync(new Person { Name = "George", Age = 12 }).Wait();
 
                     session.SaveChangesAsync().Wait();
 
@@ -58,7 +55,6 @@ namespace Raven.Tests.MailingList
                                                            .Search(p => p.Name, "martin");
 
                     query.SuggestAsync().Wait();
-
                 }
             }
         }

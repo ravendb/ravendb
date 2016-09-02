@@ -3,20 +3,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Stif : RavenTest
+    public class Stif : RavenTestBase
     {
         [DataContract]
-        public class MyDoc
+        private class MyDoc
         {
             [DataMember]
             public Guid Id { get; set; }
@@ -27,7 +24,7 @@ namespace Raven.Tests.MailingList
         }
 
         [DataContract]
-        public class Context
+        private class Context
         {
             [DataMember]
             public string Key { get; set; }
@@ -37,7 +34,7 @@ namespace Raven.Tests.MailingList
         }
 
         [Flags]
-        public enum LogTypeEnum
+        private enum LogTypeEnum
         {
             Usage = 1,
             Changes = 2,
@@ -51,7 +48,7 @@ namespace Raven.Tests.MailingList
             All = 511
         }
 
-        public class MyDocIndex : AbstractIndexCreationTask<MyDoc, MyDocIndex.MyDocResult>
+        private class MyDocIndex : AbstractIndexCreationTask<MyDoc, MyDocIndex.MyDocResult>
         {
             public class MyDocResult
             {
@@ -72,19 +69,18 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void GetDummyDoc()
         {
-            using (var documentStore = new EmbeddableDocumentStore {RunInMemory = true})
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Conventions.SaveEnumsAsIntegers = true;
-                documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
                 documentStore.Initialize();
                 new MyDocIndex().Execute(documentStore);
 
                 using (IDocumentSession documentSession = documentStore.OpenSession())
                 {
-                    documentSession.Store(new MyDoc {Id = new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0), Message = "some dummy message"});
+                    documentSession.Store(new MyDoc { Id = new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0), Message = "some dummy message" });
                     documentSession.SaveChanges();
                 }
 
@@ -95,13 +91,12 @@ namespace Raven.Tests.MailingList
 
                     Assert.NotNull(docFetched);
 
-                    List<MyDoc> docs = documentSession.Query<MyDoc>().ToList(); //returns an empty list
+                    List<MyDoc> docs = documentSession.Query<MyDoc>().Customize(x => x.WaitForNonStaleResults()).ToList(); //returns an empty list
                     Debug.WriteLine(string.Format("found {0} docs", docs.Count));
 
                     Assert.Equal(1, docs.Count);
 
                 }
-
             }
         }
     }

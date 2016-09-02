@@ -3,29 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Raven.Client.Listeners;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class SearchByMapReduceExample : RavenTest
+    public class SearchByMapReduceExample : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void GivenAListOfLogEntriesAndAPartialClientName_Search_Returns1Player()
         {
             // Act.
-            using (IDocumentStore documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore())
             {
 
                 // Arrange.
@@ -38,11 +35,11 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void GivenAListOfLogEntriesAndAFullClientName_Search_Returns1Player()
         {
             // Act.
-            using (EmbeddableDocumentStore documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore())
             {
                 // Arrange.
                 IList<LogEntries_Search.ReduceResult> result = Search(documentStore, "Jus");
@@ -54,11 +51,11 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void GivenAListOfLogEntriesAndAFullGuid_Search_Returns1PlayerWith3ClientNames()
         {
             // Act.
-            using (IDocumentStore documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore())
             {
 
                 // Arrange.
@@ -71,11 +68,11 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void GivenAListOfLogEntriesAndAPartialEndOfClientGuid_Search_Returns1PlayerWith3ClientNames()
         {
             // Act.
-            using (EmbeddableDocumentStore documentStore = CreateDocumentStore())
+            using (var documentStore = CreateDocumentStore())
             {
 
                 // Arrange.
@@ -105,17 +102,17 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from result in results
                                     group result by result.ClientGuid
                                         into g
-                                        select new
-                                                   {
-                                                       ClientGuid = g.Key,
-                                                       ClientNames = g.SelectMany(x => x.ClientNames),
-                                                       Query = new object[]
-                                                               {
+                                    select new
+                                    {
+                                        ClientGuid = g.Key,
+                                        ClientNames = g.SelectMany(x => x.ClientNames),
+                                        Query = new object[]
+                                                           {
                                                                    g.Key,
                                                                    g.Key.ToString().Split('-'),
                                                                    g.SelectMany(x => x.ClientNames)
-                                                               }
-                                                   };
+                                                           }
+                                    };
 
                 Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
                 Store(x => x.Query, FieldStorage.No);
@@ -156,24 +153,16 @@ namespace Raven.Tests.MailingList
                 RavenQueryStatistics stats;
                 List<LogEntries_Search.ReduceResult> reduceResults = documentSession.Query<LogEntries_Search.ReduceResult, LogEntries_Search>()
                     .Statistics(out stats)
+                    .Customize(x => x.WaitForNonStaleResults())
                     .Search(x => x.Query, query + "*", escapeQueryOptions: EscapeQueryOptions.AllowPostfixWildcard)
                     .ToList();
                 return reduceResults;
             }
         }
 
-        private static EmbeddableDocumentStore CreateDocumentStore()
+        private IDocumentStore CreateDocumentStore()
         {
-            var documentStore = new EmbeddableDocumentStore
-            {
-                RunInMemory = true,
-                Conventions =
-                {
-                    DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites,
-                }
-            };
-
-            documentStore.Initialize();
+            var documentStore = GetDocumentStore();
 
             // Force query's to wait for index's to catch up. Unit Testing only :P
             documentStore.RegisterListener(new NoStaleQueriesListener());

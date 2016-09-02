@@ -1,12 +1,10 @@
 using System.Linq;
-
-using Raven.Tests.Common;
-using Raven.Tests.MailingList.PhilJones;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Strange_select_behaviour_in_query_tests : RavenTest
+    public class Strange_select_behaviour_in_query_tests : RavenTestBase
     {
         private class TestCommodityGroup
         {
@@ -17,7 +15,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void Select_using_regular_query_should_create_select_list_item()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 // Arrange
                 using (var session = store.OpenSession())
@@ -28,8 +26,8 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
 
                     var query = session.Query<TestCommodityGroup>()
-                                       .Customize(x=>x.WaitForNonStaleResults())
-                                       .Select(m => new Projections.SelectListItem { Value = m.Name, Text = m.Name })
+                                       .Customize(x => x.WaitForNonStaleResults())
+                                       .Select(m => new SelectListItem { Value = m.Name, Text = m.Name })
                                        .ToArray();
 
                     Assert.NotEmpty(query);
@@ -40,6 +38,12 @@ namespace Raven.Tests.MailingList
                     }
                 }
             }
+        }
+
+        private class SelectListItem
+        {
+            public string Text { get; set; }
+            public string Value { get; set; }
         }
     }
 }
