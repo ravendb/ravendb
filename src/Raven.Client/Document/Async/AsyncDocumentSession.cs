@@ -243,12 +243,12 @@ namespace Raven.Client.Document.Async
             var lazyValue = new Lazy<Task<T>>(() =>
                 ExecuteAllPendingLazyOperationsAsync(token)
                 .ContinueWith(t =>
-            {
-                if (t.Exception != null)
-                    throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
+                {
+                    if (t.Exception != null)
+                        throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
 
-                return GetOperationResult<T>(operation.Result);
-            }, token));
+                    return GetOperationResult<T>(operation.Result);
+                }, token));
 
             if (onEval != null)
                 onEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
@@ -715,7 +715,7 @@ namespace Raven.Client.Document.Async
             if (id == null)
                 throw new ArgumentNullException("id", "The document id cannot be null");
             object entity;
-            if (entitiesByKey.TryGetValue(id, out entity))
+            if (EntitiesById.TryGetValue(id, out entity))
             {
                 return (T)entity;
             }
@@ -996,7 +996,7 @@ namespace Raven.Client.Document.Async
 
         protected override Task<string> GenerateKeyAsync(object entity)
         {
-            return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
+            return Conventions.GenerateDocumentKeyAsync(DatabaseName, AsyncDatabaseCommands, entity);
         }
 
         public async Task RefreshAsync<T>(T entity, CancellationToken token = default(CancellationToken))

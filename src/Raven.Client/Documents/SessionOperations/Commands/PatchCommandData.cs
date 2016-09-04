@@ -3,11 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
-using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Commands
+using Raven.Client.Data;
+using Sparrow.Json.Parsing;
+
+namespace Raven.Client.Documents.SessionOperations.Commands
 {
     ///<summary>
     /// A single batch operation for a document EVAL (using a Javascript)
@@ -50,37 +50,37 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Additional command data. For internal use only.
         /// </summary>
-        public RavenJObject AdditionalData { get; set; }
+        public DynamicJsonValue AdditionalData { get; set; }
 
         /// <summary>
         /// Translates this instance to a Json object.
         /// </summary>
         /// <returns>RavenJObject representing the command.</returns>
-        public RavenJObject ToJson()
+        public DynamicJsonValue ToJson()
         {
-            var ret = new RavenJObject
-                    {
-                        {"Key", Id},
-                        {"Method", Method},
-                        {"Patch", new RavenJObject
-                        {
-                            { "Script", Patch.Script },
-                            { "Values", RavenJObject.FromObject(Patch.Values)}
-                        }},
-                        {"DebugMode", DebugMode},
-                        {"AdditionalData", AdditionalData},
-                    };
+            var json = new DynamicJsonValue
+            {
+                ["Key"] = Id,
+                ["Method"] = Method,
+                ["Patch"] = new DynamicJsonValue
+                {
+                    ["Script"] = Patch.Script,
+                    ["Values"] = Patch.Values,
+                },
+                ["DebugMode"] = DebugMode,
+                ["AdditionalData"] = AdditionalData,
+            };
             if (Etag != null)
-                ret.Add("Etag", Etag.ToString());
+                json["Etag"] = Etag;
             if (PatchIfMissing != null)
             {
-                ret.Add("PatchIfMissing", new RavenJObject
-                        {
-                            { "Script", PatchIfMissing.Script },
-                            { "Values", RavenJObject.FromObject(PatchIfMissing.Values)}
-                        });
+                json["PatchIfMissing"] = new DynamicJsonValue
+                {
+                    ["Script"] = PatchIfMissing.Script,
+                    ["Values"] = PatchIfMissing.Values,
+                };
             }
-            return ret;
+            return json;
         }
     }
 }

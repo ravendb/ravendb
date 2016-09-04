@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
@@ -28,7 +29,9 @@ using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Sparrow.Json;
 
 namespace Raven.Client.Document
 {
@@ -74,6 +77,16 @@ namespace Raven.Client.Document
             ShouldCacheRequest = url => true;
             FindIdentityProperty = q => q.Name == "Id";
             FindClrType = (id, doc, metadata) => metadata.Value<string>(Constants.Headers.RavenClrType);
+            FindClrTypeNew = (id, doc) =>
+            {
+                BlittableJsonReaderObject metadata;
+                string clrType;
+                if (doc.TryGet(Constants.Metadata.Key, out metadata) && metadata.TryGet(Constants.Headers.RavenClrType, out clrType))
+                {
+                    return clrType;
+                }
+                return null;
+            };
 
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
             TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
@@ -363,6 +376,8 @@ namespace Raven.Client.Document
         /// </summary>
         public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
 
+        public Func<string, BlittableJsonReaderObject, string> FindClrTypeNew { get; set; }
+
         /// <summary>
         /// Gets or sets the function to find the clr type name from a clr type
         /// </summary>
@@ -615,6 +630,14 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Get the CLR type (if exists) from the document
+        /// </summary>
+        public string GetClrType(string id, BlittableJsonReaderObject document)
+        {
+            return FindClrTypeNew(id, document);
+        }
+
+        /// <summary>
         ///  Get the CLR type name to be stored in the entity metadata
         /// </summary>
         public string GetClrTypeName(Type entityType)
@@ -766,7 +789,7 @@ namespace Raven.Client.Document
             {
                 var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
                 identityProperty = propertyInfo ?? identityProperty;
-    }
+            }
 
             idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
             {
@@ -792,6 +815,52 @@ namespace Raven.Client.Document
             }
         }
 
+        public object JsonDeserialize(Type type, BlittableJsonReaderObject document)
+        {
+            var jsonSerializer = CreateSerializer();
+            /*TODO: Use a 4KB memory stream which we be allocated once per session */
+            using (var ms = new MemoryStream())
+            {
+                document.WriteJsonTo(ms);
+                ms.Position = 0;
+                using (var reader = new StreamReader(ms))
+                {
+                    return jsonSerializer.Deserialize(reader, type);
+                }
+            }
+        }
+
+        public BlittableJsonReaderObject JsonSerialize(object entity, JsonOperationContext context)
+        {
+            var jsonSerializer = CreateSerializer();
+            jsonSerializer.BeforeClosingObject += (o, writer) =>
+            {
+                var ravenJTokenWriter = (RavenJTokenWriter)writer;
+                ravenJTokenWriter.AssociateCurrentOBjectWith(o);
+
+                Dictionary<string, JToken> value;
+              /*  if (MissingDictionary.TryGetValue(o, out value) == false)
+                    return;*/
+
+               /* foreach (var item in value)
+                {
+                    writer.WritePropertyName(item.Key);
+                    if (item.Value == null)
+                        writer.WriteNull();
+                    else
+                        writer.WriteValue(item.Value);
+                }*/
+            };
+
+            /*TODO: Use a 4KB memory stream which we be allocated once per session */
+            using (var ms = new MemoryStream())
+            using (var streamWriter = new StreamWriter(new MemoryStream()))
+            {
+                jsonSerializer.Serialize(streamWriter, entity);
+
+                return context.ReadForMemory(ms, "convention.Serialize");
+            }
+        }
     }
 
     [Flags]

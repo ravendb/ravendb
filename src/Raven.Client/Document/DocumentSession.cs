@@ -259,7 +259,7 @@ namespace Raven.Client.Document
                 return default(T);
             object existingEntity;
 
-            if (entitiesByKey.TryGetValue(id, out existingEntity))
+            if (EntitiesById.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
             }

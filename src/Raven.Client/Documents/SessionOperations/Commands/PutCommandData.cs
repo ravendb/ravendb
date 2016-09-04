@@ -3,10 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Commands
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+
+namespace Raven.Client.Documents.SessionOperations.Commands
 {
     /// <summary>
     /// A single batch operation for a document PUT
@@ -34,29 +35,29 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// RavenJObject representing the document.
         /// </summary>
-        public virtual RavenJObject Document { get; set; }
+        public virtual BlittableJsonReaderObject Document { get; set; }
 
         /// <summary>
         /// Additional command data. For internal use only.
         /// </summary>
-        public RavenJObject AdditionalData { get; set; }
+        public DynamicJsonValue AdditionalData { get; set; }
 
         /// <summary>
         /// Translates this instance to a Json object.
         /// </summary>
         /// <returns>RavenJObject representing the command.</returns>
-        public RavenJObject ToJson()
+        public DynamicJsonValue ToJson()
         {
-            var ret = new RavenJObject
+            var json = new DynamicJsonValue
             {
-                {"Key", Id},
-                {"Method", Method},
-                {"Document", Document},
-                {"AdditionalData", AdditionalData}
+                ["Key"] = Id,
+                ["Method"] = Method,
+                ["Document"] = Document,
+                ["AdditionalData"] = AdditionalData,
             };
             if (Etag != null)
-                ret.Add("Etag", Etag.ToString());
-            return ret;
+                json["Etag"] = Etag;
+            return json;
         }
     }
 }

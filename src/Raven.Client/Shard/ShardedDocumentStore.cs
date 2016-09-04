@@ -254,10 +254,7 @@ namespace Raven.Client.Shard
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
-            var session = new ShardedDocumentSession(database, this, Listeners, sessionId, ShardStrategy, shardDbCommands)
-                {
-                    DatabaseName = database
-                };
+            var session = new ShardedDocumentSession(database, this, null, Listeners, sessionId, ShardStrategy, shardDbCommands);
             AfterSessionCreated(session);
             return session;
         }

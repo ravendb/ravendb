@@ -516,7 +516,7 @@ namespace Raven.Client.Connection.Async
             {
                 new PatchCommandData
                 {
-                    Key = key,
+                    Id = key,
                     Patch = patch,
                 }
             }, token).ConfigureAwait(false);
@@ -532,7 +532,7 @@ namespace Raven.Client.Connection.Async
             {
                 new PatchCommandData
                 {
-                    Key = key,
+                    Id = key,
                     Patch = patch,
                     Etag = etag
                 }
@@ -548,7 +548,7 @@ namespace Raven.Client.Connection.Async
             {
                 new PatchCommandData
                 {
-                    Key = key,
+                    Id = key,
                     Patch = patchExisting,
                     PatchIfMissing = patchDefault,
                 }
@@ -1460,7 +1460,8 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
             {
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post, 
+                    operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
