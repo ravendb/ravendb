@@ -76,11 +76,9 @@ declare module "nvd3" {
 ///
 /// Ace
 ///
-
 declare module "ace/ace" {
-    export = forge;
+    export = ace;
 }
-
 
 ///
 /// ES6 - shim
@@ -104,7 +102,6 @@ interface Array<T> {
 interface ArrayIterator {
 
 }
-
 
 // Want Intellisense comments for your extensions? Use JSDoc format:
 /**

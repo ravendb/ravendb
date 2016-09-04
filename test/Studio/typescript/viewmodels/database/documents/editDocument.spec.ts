@@ -6,6 +6,7 @@ describe(viewUnderTest, () => {
     utils.initTest();
 
     it('should bind', () => {
-        return utils.runViewmodelTest(viewUnderTest, {});
+        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+            .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 });
