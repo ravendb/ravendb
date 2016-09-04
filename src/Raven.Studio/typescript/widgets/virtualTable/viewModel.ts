@@ -371,7 +371,8 @@ class ctor {
 
             var editUrl: string;
             if (selectedItem instanceof counterSummary) {
-                editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Group Name"], selectedItem["Counter Name"]);
+                let item = selectedItem as any;
+                editUrl = appUrl.forEditCounter(appUrl.getResource(), item["Group Name"] as string, item["Counter Name"] as string);
             } else if (selectedItem instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(selectedItem["Type"], selectedItem["Key"], appUrl.getTimeSeries());
             } else {

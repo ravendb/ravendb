@@ -30,14 +30,6 @@ var paths = {
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
 
-    oldLessSource: [
-        './wwwroot/Content_old/old_app.less',
-        './wwwroot/Content_old/old_bootstrap.less',
-        './wwwroot/Content_old/dynatree.custom.less',
-        './wwwroot/Content_old/awesome-bootstrap-checkbox.less'],
-    oldLessTarget: './wwwroot/Content_old/',
-    oldLessTargetSelector: './wwwroot/Content_old/**/*.css',
-
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
     cssToMerge: [

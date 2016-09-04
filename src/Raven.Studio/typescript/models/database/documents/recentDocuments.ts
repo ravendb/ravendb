@@ -2,7 +2,8 @@ import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 
 class recentDocuments {
-    static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
+    //TODO: consider using es6 map
+    private static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
     static maxRecentItems = 20;
 
     getTopRecentDocuments(activeDatabase: database, documentId: string): Array<connectedDocument> {

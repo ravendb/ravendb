@@ -41,17 +41,6 @@ gulp.task('parse-configuration', function() {
         .pipe(gulp.dest(PATHS.constantsTargetDir));
 });
 
-gulp.task('less:old', function () {
-    return gulp.src(PATHS.oldLessSource)
-        .pipe(plugins.newy(findNewestFile(PATHS.oldLessTargetSelector)))
-        .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.less({
-            sourceMap: true
-        }))
-        .pipe(plugins.sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.oldLessTarget));
-});
-
 gulp.task('less', function() {
     return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
         .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
@@ -209,7 +198,7 @@ gulp.task('watch:test', ['test'], function () {
     gulp.watch(PATHS.test.tsSource, ['test']);
 });
 
-gulp.task('compile', ['less', 'less:old', 'compile:app'], function() { });
+gulp.task('compile', ['less', 'compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.tsSource, ['compile:app']);
