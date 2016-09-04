@@ -208,7 +208,6 @@ namespace Raven.Database
 
                     IndexReplacer = new IndexReplacer(this);
                     indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
-                    InitializeTriggersExceptIndexCodecs();
 
                     EnsureAllIndexDefinitionsHaveIndexes();
 
