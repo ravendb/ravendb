@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -25,6 +26,8 @@ namespace Raven.Database.Smuggler
     public class SmugglerEmbeddedDatabaseOperations : ISmugglerDatabaseOperations
     {
         private readonly DocumentDatabase database;
+        private readonly TimeSpan timeout;
+        private readonly long maxSize;
 
         private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
@@ -34,6 +37,8 @@ namespace Raven.Database.Smuggler
         public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
         {
             this.database = database;
+            timeout = TimeSpan.FromSeconds(database.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
+            maxSize = 10*1024*1024; //10MB
         }
 
         public Action<string> Progress { get; set; }
@@ -51,7 +56,9 @@ namespace Raven.Database.Smuggler
         public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
         {
             const int dummy = 0;
-            var enumerator = database.Documents.GetDocumentsAsJson(dummy, Math.Min(Options.BatchSize, take), lastEtag, CancellationToken.None)
+            
+            var enumerator = database.Documents.GetDocumentsAsJson(dummy, Math.Min(Options.BatchSize, take), lastEtag,
+                    CancellationToken.None, maxSize, timeout)
                 .ToList()
                 .Cast<RavenJObject>()
                 .GetEnumerator();
@@ -158,10 +165,17 @@ namespace Raven.Database.Smuggler
             return new CompletedTask();
         }
 
+        private long totalSize;
+        private Stopwatch sp;
+        
         public Task PutDocument(RavenJObject document, int size)
         {
             if (document != null)
             {
+                totalSize += size;
+                if (sp == null)
+                    sp = Stopwatch.StartNew();
+
                 var metadata = document.Value<RavenJObject>("@metadata");
                 var key = metadata.Value<string>("@id");
                 document.Remove("@metadata");
@@ -173,13 +187,18 @@ namespace Raven.Database.Smuggler
                     DataAsJson = document,
                 });
 
-                if (Options.BatchSize > bulkInsertBatch.Count)
+                if (Options.BatchSize > bulkInsertBatch.Count &&
+                    totalSize <= maxSize &&
+                    sp.Elapsed <= timeout)
                     return new CompletedTask();
             }
 
+            sp.Stop();
             var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
             bulkInsertBatch = new List<JsonDocument>();
             database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = Options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid(), CancellationToken.None);
+            totalSize = 0;
+            sp.Restart();
             return new CompletedTask();
         }
 
