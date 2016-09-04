@@ -45,7 +45,7 @@ namespace Raven.Client.Document
 
         private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, RequestExecuter> _requestExecuters = new ConcurrentDictionary<string, RequestExecuter>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Lazy<RequestExecuter>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecuter>>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// The current session id - only used during construction
@@ -319,7 +319,7 @@ namespace Raven.Client.Document
             try
             {
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var requestExecuter = _requestExecuters.GetOrAdd(databaseName, new RequestExecuter(Url, databaseName, ApiKey));
+                var requestExecuter = GetRequestExecuter(databaseName);
                 var session = new Documents.DocumentSession(databaseName, this, Listeners, sessionId,
                     SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
                 // AfterSessionCreated(session);
@@ -329,6 +329,16 @@ namespace Raven.Client.Document
             {
                 currentSessionId = null;
             }
+        }
+
+        private RequestExecuter GetRequestExecuter(string databaseName)
+        {
+            Lazy<RequestExecuter> lazy;
+            if (_requestExecuters.TryGetValue(databaseName, out lazy))
+                return lazy.Value;
+            lazy = _requestExecuters.GetOrAdd(databaseName,
+                dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
+            return lazy.Value;
         }
 
         private static IDatabaseCommands SetupCommands(IDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
@@ -649,7 +659,7 @@ namespace Raven.Client.Document
                     throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var requestExecuter = _requestExecuters.GetOrAdd(databaseName, new RequestExecuter(Url, databaseName, ApiKey));
+                var requestExecuter = GetRequestExecuter(databaseName);
                 var session = new Documents.Async.AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, requestExecuter, sessionId);
                 //AfterSessionCreated(session);
                 return session;
