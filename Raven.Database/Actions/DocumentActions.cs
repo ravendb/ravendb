@@ -181,7 +181,7 @@ namespace Raven.Database.Actions
                                             ravenJObject = transformed[0];
                                             break;
                                         default:
-                                    ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
+                                            ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
                                             break;
                                     }
 
@@ -422,10 +422,11 @@ namespace Raven.Database.Actions
             return info;
         }
 
-        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag, CancellationToken token)
+        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag,
+            CancellationToken token, long? maxSize = null, TimeSpan? timeout = null)
         {
             var list = new RavenJArray();
-            GetDocuments(start, pageSize, etag, token, doc => { list.Add(doc.ToJson()); return true; });
+            GetDocuments(start, pageSize, etag, token, doc => { list.Add(doc.ToJson()); return true; }, maxSize, timeout);
             return list;
         }
 
@@ -434,7 +435,8 @@ namespace Raven.Database.Actions
             return GetDocuments(start, pageSize, etag, token, x => { addDocument(x); return true; });
         }
 
-        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument)
+        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token,
+            Func<JsonDocument, bool> addDocument, long? maxSize = null, TimeSpan? timeout = null)
         {
             Etag lastDocumentReadEtag = null;
 
@@ -446,10 +448,10 @@ namespace Raven.Database.Actions
                     {
                         var documents = etag == null
                             ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
+                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout);
 
                         var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
-                        int docCount = 0;
+                        var docCount = 0;
                         foreach (var doc in documents)
                         {
                             docCount++;
