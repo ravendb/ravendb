@@ -95,8 +95,8 @@ namespace SlowTests.MailingList
             Assert.NotNull(foos[0].FooId);
         }
 
-        [Fact(Skip = "Not working in 3.5 also")]
-        public void ShouldBeAbleToProjectIdOntoAnotherName_AndAnotherFieldNamedIdShouldNotBeAffected()
+        [Fact]
+        public void ShouldBeAbleToProjectIdOntoAnotherName_ButIdFieldWillBeFilledAnyway()
         {
             var foos = _session.Query<Foo>()
                               .Customize(x => x.WaitForNonStaleResults())
@@ -108,8 +108,9 @@ namespace SlowTests.MailingList
                               })
                               .ToList();
 
-            Assert.Null(foos[0].Id);
+            Assert.NotNull(foos[0].Id);
             Assert.NotNull(foos[0].FooId);
+            Assert.Equal(foos[0].Id, foos[0].FooId);
         }
 
         private class Foo
