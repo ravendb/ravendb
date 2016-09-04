@@ -7,14 +7,6 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
 class menu {
 
-    private $mainMenu: JQuery;
-    private $mainMenuAnchors: JQuery;
-    private $mainMenuLevels: JQuery;
-
-    private type: string = 'menu';
-    private items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
-    private itemsIndex: KnockoutComputed<{ [key: string]: leafMenuItem }>;
-
     activeItem: KnockoutObservable<menuItem> = ko.observable(null);
     deepestOpenItem: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
     level: KnockoutComputed<number> =
@@ -23,9 +15,51 @@ class menu {
             return item ? item.depth() + 1 : 0;
         });
 
+    private $mainMenuLevels: JQuery;
+
+    private type: string = 'menu';
+    private items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
+
+    private itemsFlattened: KnockoutComputed<Array<menuItem>> = ko.pureComputed(() => {
+        return this.flattenItems(this.items() || []);
+    });
+
+    private routeToItemCache: KnockoutComputed<Map<RegExp, leafMenuItem>> = ko.pureComputed(() => {
+        return this.itemsFlattened()
+            .reduce((result: Map<RegExp, leafMenuItem>, next: menuItem) => {
+                if (next.type !== 'leaf') {
+                    return result;
+                }
+
+                let route = (next as leafMenuItem).route;
+                if (typeof(route) === 'string') {
+                    cacheItem(route as string, next as leafMenuItem);
+                } else if (Array.isArray(route)) {
+                    (route as string[]).filter(x => !!x)
+                        .forEach(r => cacheItem(r, next as leafMenuItem));
+                } else {
+                    throw new Error(`Unknown route type: ${ route } ${ typeof(route) }`);
+                }
+
+                return result;
+
+                function cacheItem(route: string, item: leafMenuItem) {
+                    let regex = routeStringToRegExp(route);
+                    if (result.has(regex)) {
+                        throw new Error(`Duplicate menu item '${item.title}' for route: ${route}.`);
+                    }
+
+                    result.set(regex, item);
+                }
+            }, new Map<RegExp, leafMenuItem>());
+    });
+
+    private registeredRoutes: KnockoutComputed<Array<RegExp>> = ko.computed(() => {
+        return Array.from(this.routeToItemCache().keys());
+    });
+
     constructor(items: Array<menuItem>) {
         this.items(items);
-        this.itemsIndex = ko.computed(() => this.calculateMenuItemsIndex());
     }
 
     open($data: { item: intermediateMenuItem }, $event: JQueryEventObject) {
@@ -73,8 +107,6 @@ class menu {
     }
 
     initialize() {
-        this.$mainMenu = $('#main-menu');
-        this.$mainMenuAnchors = $('#main-menu a');
         this.$mainMenuLevels = $('#main-menu [data-level]');
 
         router.on('router:navigation:complete', () => {
@@ -85,14 +117,21 @@ class menu {
     }
 
     private setActiveMenuItem() {
-        for (let item of this.getItemsFlattened()) {
+        for (let item of this.itemsFlattened()) {
             if (item.type === 'intermediate') {
                 (item as intermediateMenuItem).isOpen(false);
             }
         }
 
-        let hashToItem = this.itemsIndex();
-        let item: leafMenuItem = hashToItem[document.location.hash];
+        let { fragment } = router.activeInstruction();
+        let matchingRoute = this.registeredRoutes()
+            .first(routeRegex => routeRegex.test(fragment));
+
+        if (!matchingRoute) {
+            return;
+        }
+
+        let item = this.routeToItemCache().get(matchingRoute);
 
         this.activeItem(item);
         this.setLevelToActiveItem();
@@ -109,29 +148,6 @@ class menu {
         while (current) {
             current.isOpen(true);
             current = current.parent() as intermediateMenuItem;
-        }
-    }
-
-    private calculateMenuItemsIndex(): ({ [key: string]: leafMenuItem }) {
-        return this.items()
-            .reduce((result: menuItem[], next: menuItem) =>
-                result.concat(flatten(next)), [] as menuItem[])
-            .filter((x: leafMenuItem) => !!x.path())
-            .reduce((result: { [key: string]: leafMenuItem }, next: leafMenuItem) => {
-                result[next.path()] = next;
-                return result;
-            }, {} as { [key: string]: leafMenuItem });
-
-        function flatten(item: menuItem): Array<menuItem> {
-            if (item.type === 'intermediate') {
-                return (item as intermediateMenuItem).children
-                    .map(flatten)
-                    .reduce((result, child) => result.concat(child), []);
-            } else if (item.type === 'leaf') {
-                return [item];
-            }
-
-            return [];
         }
     }
 
@@ -162,10 +178,6 @@ class menu {
         ko.postbox.publish(EVENTS.Menu.LevelChanged, this.level);
     }
 
-    private calculateCurrentLevel() {
-        return this.$mainMenu.find('.level-show').length;
-    }
-
     private getItemsFlattened() {
         return this.flattenItems(this.items());
     }
@@ -185,6 +197,26 @@ class menu {
             result.push(item);
         }
     }
+}
+
+/*
+    The following code has been extracted from durandal router plugin since it was private - I needed the logic transforming the route into a regular expression. Here's the original location: https://github.com/BlueSpire/Durandal/blob/master/src/plugins/js/router.js#L23
+*/
+const optionalParam = /\((.*?)\)/g;
+const namedParam = /(\(\?)?:\w+/g;
+const splatParam = /\*\w+/g;
+const escapeRegExp = /[\-{}\[\]+?.,\\\^$|#\s]/g;
+const routesAreCaseSensitive = false;
+
+function routeStringToRegExp(routeString: string) {
+    routeString = routeString.replace(escapeRegExp, '\\$&')
+        .replace(optionalParam, '(?:$1)?')
+        .replace(namedParam, function (match, optional) {
+            return optional ? match : '([^\/]+)';
+        })
+        .replace(splatParam, '(.*?)');
+
+    return new RegExp('^' + routeString + '$', routesAreCaseSensitive ? undefined : 'i');
 }
 
 export = menu;
