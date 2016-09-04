@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Sparrow;
 using FastTests.Voron.Storage;
 using SlowTests.Core.Indexing;
 using SlowTests.SlowTests.Bugs;
@@ -10,9 +11,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var x = new PageHandling())
+            using (var x = new DiffPagesTests())
             {
-                x.AllocateOverflowPages();
+                x.CanComputeSmallDifference_AndThenApplyit();
             }
 
             //Parallel.For(0, 1000, i =>

@@ -55,6 +55,7 @@ namespace Sparrow.Utils
 
         private bool WriteDiff(int start, int count)
         {
+            start *= sizeof(long);
             count *= sizeof (long);
             if (_allZeros)
             {

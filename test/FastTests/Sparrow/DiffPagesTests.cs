@@ -70,6 +70,7 @@ namespace FastTests.Sparrow
         {
             var fst = new byte[4096];
             var sec = new byte[4096];
+            var trd = new byte[4096];
 
             new Random().NextBytes(fst);
             Buffer.BlockCopy(fst, 0, sec, 0, fst.Length);
@@ -79,6 +80,7 @@ namespace FastTests.Sparrow
 
             fixed (byte* one = fst)
             fixed (byte* two = sec)
+            fixed (byte* tri = trd)
             fixed (byte* tmp = new byte[4096])
             {
                 var diffPages = new DiffPages
@@ -93,14 +95,14 @@ namespace FastTests.Sparrow
 
                 new DiffApplier
                 {
-                    Destination = one,
-                    Original = two,
+                    Destination = tri,
+                    Original = one,
                     Diff = tmp,
                     Size = 4096,
                     DiffSize = diffPages.OutputSize
                 }.Apply();
 
-                Assert.Equal(0, Memory.Compare(one, two, 4096));
+                Assert.Equal(0, Memory.Compare(tri, two, 4096));
             }
         }
 
