@@ -19,6 +19,8 @@
 @brand-counter-color: #267fbc;
 @brand-timeseries-color: #00bc7d;
 
+@layout-border: @gray-dark;
+
 @-moz-keyframes spin {
     from {
         -moz-transform: rotate(0deg);
@@ -234,8 +236,8 @@ a, .btn {
 
 hr {
     &.small {
-        margin:@grid-gutter-width/4 0;
-    }   
+        margin: @grid-gutter-width/4 0;
+    }
 }
 
 .pull-right-sm {
@@ -301,16 +303,18 @@ hr {
 .btn-group-justified {
 
     .btn {
-        box-shadow:none;
+        box-shadow: none;
+
         &.active {
-            background-color:@gray-darker;
+            background-color: @gray-darker;
         }
 
         &:not(.active) {
-            background-color:@gray-base;
-            color:@gray;
+            background-color: @gray-base;
+            color: @gray;
+
             &:hover {
-                color:@gray-lighter;
+                color: @gray-lighter;
             }
         }
     }
@@ -324,7 +328,7 @@ hr {
 
         [class^="icon-"], [class*=" icon-"] {
             margin-bottom: 8px;
-            margin-right:0;
+            margin-right: 0;
             font-size: 22px !important;
             line-height: 100%;
         }
@@ -397,14 +401,29 @@ hr {
         height: 35px;
         display: block;
         margin: auto;
-        border: 4px solid fadeout(@gray-lighter,85%);
-        border-top-color: fadeout(@gray-lighter,50%);
+        border: 4px solid fadeout(#FFF,80%);
+        border-top-color: fadeout(#FFF,30%);
         border-radius: 100px;
         -webkit-transition: border-width 0.1s ease;
         -moz-transition: border-width 0.1s ease;
         -ms-transition: border-width 0.1s ease;
         -o-transition: border-width 0.1s ease;
         transition: border-width 0.1s ease;
+    }
+}
+
+.btn .global-spinner {
+    display: inline-block;
+    position: relative;
+    top: 3px;
+    margin-right: 5px;
+    margin-top: -4px;
+
+    &:before {
+        width: 18px;
+        height: 18px;
+        border: 3px solid fadeout(#FFF,80%);
+        border-top-color: inherit;
     }
 }
 
@@ -451,10 +470,15 @@ hr {
     }
 }
 
+.limit-height {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
 .navbar {
     background-color: @gray-base;
     height: 51px;
-    border-bottom: 1px solid @gray-darker;
+    border-bottom: 1px solid @layout-border;
 
     @media (min-width:@screen-md) {
         padding: 15px 0;
@@ -472,8 +496,8 @@ hr {
 
         @media (min-width:@screen-md) {
             float: none;
-            border-bottom: 1px solid @gray-darker;
-            border-right: 1px solid @gray-darker;
+            border-bottom: 1px solid @layout-border;
+            border-right: 1px solid @layout-border;
             width: @menu-width;
             height: @navbar-height;
             position: absolute;
@@ -507,9 +531,9 @@ hr {
 
     .navbar-right {
         @media (max-width:@screen-sm-max) {
-            display:block;
-            margin:0 -15px;
-            text-align:right;
+            display: block;
+            margin: 0 -15px;
+            text-align: right;
         }
 
         li {
@@ -519,10 +543,11 @@ hr {
         [class^="icon-"], [class*=" icon-"] {
             font-size: 16px;
         }
+
         @media (min-width:@screen-md) {
             float: right;
         }
-        
+
 
         @media (min-width:@screen-xs) {
             [class^="icon-"], [class*=" icon-"] {
@@ -560,6 +585,10 @@ hr {
         -ms-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
         -o-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
         transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
+
+        .form-control {
+            border-color: @gray-dark;
+        }
 
 
         .resource-switcher-container, .search-container {
@@ -849,7 +878,7 @@ hr {
 }
 
 #menu-toggle {
-    color:@brand-primary;
+    color: @brand-primary;
 }
 
 #main-menu {
@@ -858,7 +887,7 @@ hr {
     top: 51px;
     bottom: 0;
     width: 280px;
-    border-right: 1px solid @gray-darker;
+    border-right: 1px solid @layout-border;
     -webkit-transition: width @menu-transition-ease, transform @menu-transition-ease;
     -moz-transition: width @menu-transition-ease, transform @menu-transition-ease;
     -ms-transition: width @menu-transition-ease, transform @menu-transition-ease;
@@ -999,6 +1028,7 @@ hr {
         a {
             padding-top: 5px;
             padding-bottom: 5px;
+            cursor: pointer;
         }
 
         .level {
@@ -1242,8 +1272,8 @@ hr {
 
 .border {
     margin: @grid-gutter-width/2 0;
-    padding:@grid-gutter-width/2;
-    border:1px solid @gray;
+    padding: @grid-gutter-width/2;
+    border: 1px solid @gray;
 }
 
 
@@ -1346,6 +1376,11 @@ hr {
             }
         }
     }
+}
+
+pre {
+    border-color: @gray-darker;
+    background-color: @gray-dark;
 }
 
 .panel {
