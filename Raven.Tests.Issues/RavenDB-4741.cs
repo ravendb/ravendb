@@ -18,9 +18,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void one_task_one_failing()
         {
-            var cts = new CancellationTokenSource();
-
-            using (var tp = new RTP(8, cts.Token, null))
+            using (var tp = new RTP(8))
             {
                 tp.Start();
                 var range = Enumerable.Range(0, 1).ToList();
@@ -31,7 +29,7 @@ namespace Raven.Tests.Issues
                     {
                         const int number = 100;
                         var result = number / input;
-                    });
+                    },database:null);
                 });
             }
         }
@@ -39,9 +37,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void one_task_one_failing_with_enumerator()
         {
-            var cts = new CancellationTokenSource();
-
-            using (var tp = new RTP(8, cts.Token, null))
+            using (var tp = new RTP(8))
             {
                 tp.Start();
                 var range = Enumerable.Range(0, 1).ToList();
@@ -55,7 +51,7 @@ namespace Raven.Tests.Issues
                             const int number = 100;
                             var result = number / input.Current;
                         }
-                    });
+                    },database:null);
                 });
             }
         }
@@ -63,9 +59,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void three_tasks_one_failing()
         {
-            var cts = new CancellationTokenSource();
-
-            using (var tp = new RTP(8, cts.Token, null))
+            using (var tp = new RTP(8))
             {
                 tp.Start();
                 var range = Enumerable.Range(0, 3).ToList();
@@ -76,7 +70,7 @@ namespace Raven.Tests.Issues
                     {
                         const int number = 100;
                         var result = number / input;
-                    });
+                    },database:null);
                 });
             }
         }
@@ -84,9 +78,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void three_tasks_one_failing_with_enumerator()
         {
-            var cts = new CancellationTokenSource();
-
-            using (var tp = new RTP(8, cts.Token, null))
+            using (var tp = new RTP(8))
             {
                 tp.Start();
                 var range = Enumerable.Range(0, 10000).ToList();
@@ -100,7 +92,7 @@ namespace Raven.Tests.Issues
                             const int number = 100;
                             var result = number / input.Current;
                         }
-                    });
+                    },database:null);
                 });
             }
         }
@@ -108,9 +100,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void three_tasks_one_failing_with_allowPartialBatchResumption()
         {
-            var cts = new CancellationTokenSource();
-
-            using (var tp = new RTP(8, cts.Token, null))
+            using (var tp = new RTP(8))
             {
                 tp.Start();
                 var range = Enumerable.Range(0, 3).ToList();
@@ -125,7 +115,7 @@ namespace Raven.Tests.Issues
                         if (input == 1)
                             Thread.Sleep(3000);
 
-                    }, allowPartialBatchResumption: true);
+                    }, allowPartialBatchResumption: true,database:null);
                 });
             }
         }
@@ -133,9 +123,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void three_tasks_one_failing_with_allowPartialBatchResumption_with_enumerator()
         {
-            var cts = new CancellationTokenSource();
-
-            using (var tp = new RTP(8, cts.Token, null))
+            using (var tp = new RTP(8))
             {
                 tp.Start();
                 var range = Enumerable.Range(0, 10000).ToList();
@@ -152,7 +140,7 @@ namespace Raven.Tests.Issues
                             if (input.Current == 1 || input.Current == 5000)
                                 Thread.Sleep(1000);
                         }
-                    });
+                    },database:null);
                 });
             }
         }
@@ -160,9 +148,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void three_tasks_one_failing_with_allowPartialBatchResumption_shouldnt_throw()
         {
-            var cts = new CancellationTokenSource();
-
-            using (var tp = new RTP(8, cts.Token, null))
+            using (var tp = new RTP(8))
             {
                 tp.Start();
                 var range = Enumerable.Range(0, 3).ToList();
@@ -175,7 +161,7 @@ namespace Raven.Tests.Issues
                             Thread.Sleep(30000);
 
                         var result = number / input;
-                    }, allowPartialBatchResumption: true, maxWaitMultiplier: 2500);
+                    }, allowPartialBatchResumption: true, database: null);
                 });
             }
         }

@@ -282,6 +282,25 @@ namespace Raven.Database.Util
                     streamWriter.Flush();
                 }
             }
+
+            var threadPoolThreads = package.CreateEntry(zipEntryPrefix + "raven-thread-pool-threads.json", CompressionLevel);
+
+            using (var threadPoolThreadsStream = threadPoolThreads.Open())
+            using (var streamWriter = new StreamWriter(threadPoolThreadsStream))
+            {
+                jsonSerializer.Serialize(streamWriter, database.ThreadPool.GetDebugInfo());
+                streamWriter.Flush();
+            }
+
+
+            var subscriptions = package.CreateEntry(zipEntryPrefix + "subscriptions.json", CompressionLevel);
+
+            using (var subscriptionsStream = subscriptions.Open())
+            using (var streamWriter = new StreamWriter(subscriptionsStream))
+            {
+                jsonSerializer.Serialize(streamWriter, database.Subscriptions.GetDebugInfo());
+                streamWriter.Flush();
+            }
         }
 
         internal static object GetExpectedRangeWarnings(DocumentDatabase database)
