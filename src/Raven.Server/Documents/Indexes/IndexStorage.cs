@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+                var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
                 foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slices.BeforeAllKeys))
                 {
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexStats ReadStats(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-            var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+            var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
             var stats = new IndexStats();
             stats.IsInMemory = _environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions;
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+                var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
                 var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 

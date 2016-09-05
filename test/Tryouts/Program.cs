@@ -11,9 +11,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var x = new FastTests.Server.Documents.Tombstones.BasicTombstones())
+            using (var x = new SlowTests.SlowTests.Bugs.AsyncSetBasedOps())
             {
-                x.Cleanup();
+                x.AwaitAsyncPatchByIndexShouldWork().Wait();
             }
 
             //Parallel.For(0, 1000, i =>

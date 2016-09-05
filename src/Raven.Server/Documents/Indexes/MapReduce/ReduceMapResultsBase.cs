@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _aggregationBatch.Clear();
 
             _reduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, "PageNumberToReduceResult");
-            var table = new Table(_reduceResultsSchema, "PageNumberToReduceResult", indexContext.Transaction.InnerTransaction);
+            var table = indexContext.Transaction.InnerTransaction.OpenTable(_reduceResultsSchema, "PageNumberToReduceResult");
 
             var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
             
