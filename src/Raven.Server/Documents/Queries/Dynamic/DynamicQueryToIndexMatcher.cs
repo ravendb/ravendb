@@ -135,11 +135,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var currentBestState = DynamicQueryMatchType.Complete;
 
-            if (query.MapFields.All(x => definition.ContainsField(x.Name)) == false)
+            if (query.MapFields.All(x => definition.ContainsField(x.NormalizedName)) == false)
             {
                 if (explanations != null)
                 {
-                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.Name) == false);
+                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.NormalizedName) == false);
                     explanations.Add(new Explanation(indexName, $"The following fields are missing: {string.Join(", ", missingFields)}"));
                 }
 

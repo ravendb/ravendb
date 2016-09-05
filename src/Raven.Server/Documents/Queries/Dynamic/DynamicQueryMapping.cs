@@ -72,13 +72,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var field in definitionOfExistingIndex.MapFields.Values)
             {
-                if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false)
+                if (extendedMapFields.Any(x => x.NormalizedName.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false)
                 {
-                    extendedMapFields.Add(new DynamicQueryMappingItem
-                    {
-                        Name = field.Name,
-                        MapReduceOperation = field.MapReduceOperation
-                    });
+                    extendedMapFields.Add(new DynamicQueryMappingItem(field.Name, field.MapReduceOperation));
                 }
 
                 if (extendedSortDescriptors.Any(x => x.Field.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false && field.SortOption != null)
@@ -136,10 +132,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
                 }
 
-                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem
-                {
-                    Name = x.Item1.EndsWith("_Range") ? x.Item1.Substring(0, x.Item1.Length - "_Range".Length) : x.Item1
-                });
+                dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem(x.Item1.EndsWith("_Range") ? x.Item1.Substring(0, x.Item1.Length - "_Range".Length) : x.Item1, FieldMapReduceOperation.None));
 
                 numericFields = fields.Where(x => x.Item1.EndsWith("_Range")).Select(x => x.Item1).Distinct().ToArray();
             }
@@ -149,11 +142,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 result.IsMapReduce = true;
 
-                dynamicMapFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy == false).Select(x => new DynamicQueryMappingItem
-                {
-                    Name = x.Name,
-                    MapReduceOperation = x.OperationType
-                });
+                dynamicMapFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy == false).Select(x => new DynamicQueryMappingItem(x.Name, x.OperationType));
 
                 result.GroupByFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy).Select(x => x.Name).ToArray();
 
