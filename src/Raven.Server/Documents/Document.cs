@@ -20,10 +20,15 @@ namespace Raven.Server.Documents
 
         public long Etag;
         public LazyStringValue Key;
+        public LazyStringValue LoweredKey;
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public ChangeVectorEntry[] ChangeVector;
-        
+
+        public Document()
+        {
+        }
+
         public unsafe ulong DataHash
         {
             get

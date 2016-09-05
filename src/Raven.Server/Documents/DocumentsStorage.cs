@@ -679,12 +679,17 @@ namespace Raven.Server.Documents
             };
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            var ptr = tvr.Read(2, out size);
             byte offset;
+            var ptr = tvr.Read(0, out size);
+            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
+
+            ptr = tvr.Read(2, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
+
             ptr = tvr.Read(1, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
+
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
@@ -716,8 +721,11 @@ namespace Raven.Server.Documents
             };
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKeyAndCollection method
-            var ptr = tvr.Read(3, out size);
             byte offset;
+            var ptr = tvr.Read(0, out size);
+            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
+
+            ptr = tvr.Read(3, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
 
