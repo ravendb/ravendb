@@ -11,9 +11,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var x = new DiffPagesTests())
+            using (var x = new FastTests.Server.Documents.Tombstones.BasicTombstones())
             {
-                x.CanComputeSmallDifference_AndThenApplyit();
+                x.Cleanup();
             }
 
             //Parallel.For(0, 1000, i =>
