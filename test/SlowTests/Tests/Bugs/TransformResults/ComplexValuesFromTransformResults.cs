@@ -1,27 +1,18 @@
 using System;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
-using Raven.Abstractions.MEF;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Linq;
-using Raven.Database.Impl;
-using Raven.Database.Linq;
-using Raven.Database.Plugins;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Bugs.TransformResults
+namespace SlowTests.Tests.Bugs.TransformResults
 {
-    public class ComplexValuesFromTransformResults : RavenTest
+    public class ComplexValuesFromTransformResults : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void CanCreateQueriesWithNestedSelected()
         {
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new Answers_ByAnswerEntity2().Execute(documentStore);
                 new Answers_ByAnswerEntityTransformer2().Execute(documentStore);
@@ -31,7 +22,7 @@ namespace Raven.Tests.Bugs.TransformResults
         [Fact]
         public void DecimalValues()
         {
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new Answers_ByQuestion().Execute(documentStore);
                 new Answers_ByQuestionTransformer().Execute(documentStore);
@@ -46,6 +37,8 @@ namespace Raven.Tests.Bugs.TransformResults
 
                     session.SaveChanges();
                 }
+
+                WaitForIndexing(documentStore);
 
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
@@ -63,7 +56,7 @@ namespace Raven.Tests.Bugs.TransformResults
         [Fact]
         public void write_then_read_from_stack_over_flow_types()
         {
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new QuestionWithVoteTotalIndex().Execute(documentStore);
                 new QuestionWithVoteTotalTransformer().Execute(documentStore);
@@ -107,7 +100,7 @@ namespace Raven.Tests.Bugs.TransformResults
         [Fact]
         public void object_id_should_not_be_null_after_loaded_from_transformation()
         {
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new Answers_ByAnswerEntity().Execute(documentStore);
                 new Answers_ByAnswerEntityTransformer().Execute(documentStore);
@@ -133,7 +126,7 @@ namespace Raven.Tests.Bugs.TransformResults
         [Fact]
         public void write_then_read_from_complex_entity_types()
         {
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new Answers_ByAnswerEntity().Execute(documentStore);
                 new Answers_ByAnswerEntityTransformer().Execute(documentStore);
@@ -170,10 +163,10 @@ namespace Raven.Tests.Bugs.TransformResults
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void write_then_read_from_complex_entity_types_with_Guids_as_keys()
         {
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
@@ -235,10 +228,10 @@ namespace Raven.Tests.Bugs.TransformResults
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
         public void write_then_read_answer_with_votes()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
@@ -303,7 +296,7 @@ namespace Raven.Tests.Bugs.TransformResults
         [Fact]
         public void will_work_normally_when_querying_multiple_times()
         {
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new Answers_ByAnswerEntity().Execute(documentStore);
                 new Answers_ByAnswerEntityTransformer().Execute(documentStore);
@@ -319,20 +312,20 @@ namespace Raven.Tests.Bugs.TransformResults
 
 
                     var answer = new AnswerEntity
-                                     {
-                                         Id = answerId,
-                                         Question = null,
-                                         Content = "This is doable",
-                                         UserId = user.Id
-                                     };
+                    {
+                        Id = answerId,
+                        Question = null,
+                        Content = "This is doable",
+                        UserId = user.Id
+                    };
 
                     session.Store(new Answer
-                                      {
-                                          Id = answer.Id,
-                                          UserId = answer.UserId,
-                                          QuestionId = "",
-                                          Content = answer.Content
-                                      });
+                    {
+                        Id = answer.Id,
+                        UserId = answer.UserId,
+                        QuestionId = "",
+                        Content = answer.Content
+                    });
 
                     session.SaveChanges();
                 }
@@ -368,7 +361,7 @@ namespace Raven.Tests.Bugs.TransformResults
 
         }
 
-        
+
         public static string CreateEntities(IDocumentStore documentStore)
         {
             const string questionId = @"question/259";

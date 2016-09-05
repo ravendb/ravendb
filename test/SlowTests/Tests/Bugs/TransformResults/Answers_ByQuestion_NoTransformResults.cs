@@ -1,7 +1,7 @@
 using System.Linq;
 using Raven.Client.Indexes;
 
-namespace Raven.Tests.Bugs.TransformResults
+namespace SlowTests.Tests.Bugs.TransformResults
 {
     public class Answers_ByQuestion_NoTransformResults : AbstractIndexCreationTask<AnswerVote, AnswerViewItem>
     {
@@ -10,10 +10,10 @@ namespace Raven.Tests.Bugs.TransformResults
             Map = docs => from doc in docs
                           select new
                           {
-                            AnswerId = doc.AnswerId,
-                            QuestionId = doc.QuestionId,
-                            VoteTotal = doc.Delta,
-                            DecimalTotal = doc.DecimalValue
+                              AnswerId = doc.AnswerId,
+                              QuestionId = doc.QuestionId,
+                              VoteTotal = doc.Delta,
+                              DecimalTotal = doc.DecimalValue
                           };
 
             Reduce = mapped => from map in mapped
@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs.TransformResults
                                    DecimalTotal = g.Sum(x => x.DecimalTotal)
                                };
 
-            this.IndexSortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.Int);
+            IndexSortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.NumericDefault);
         }
     }
 }

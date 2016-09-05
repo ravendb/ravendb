@@ -1,9 +1,8 @@
-using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 
-namespace Raven.Tests.Bugs.TransformResults
+namespace SlowTests.Tests.Bugs.TransformResults
 {
     public class Answers_ByAnswerEntity : AbstractIndexCreationTask<Answer>
     {

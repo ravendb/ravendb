@@ -1,23 +1,18 @@
 using System.Linq;
-using System.Threading;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Server;
-using Raven.Tests.Common;
-
-using Xunit;
 using Raven.Client.Linq;
+using Xunit;
 
-namespace Raven.Tests.Bugs.TransformResults
+namespace SlowTests.Tests.Bugs.TransformResults
 {
-    public class SortHintTester : RavenTest
+    public class SortHintTester : RavenTestBase
     {
         [Fact]
         public void will_fail_with_request_headers_too_long()
         {
-            using (var server = GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 new Answers_ByAnswerEntity().Execute(store);
                 new Answers_ByAnswerEntityTransformer().Execute(store);
@@ -25,19 +20,16 @@ namespace Raven.Tests.Bugs.TransformResults
                 store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
                 CreateEntities(store);
 
-                WaitForAllRequestsToComplete(server);
-                server.Server.ResetNumberOfRequests();
-
-                const string Content = "This is doable";
+                const string content = "This is doable";
 
                 using (var session = store.OpenSession())
                 {
                     RavenQueryStatistics stats;
-                    AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+                    var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                            .Statistics(out stats)
                            .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
                            .OrderBy(x => x.Content)
-                           .Where(x => x.Content == (Content))
+                           .Where(x => x.Content == (content))
                            .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                            .Skip(0).Take(1)
                            .SingleOrDefault();
@@ -46,7 +38,7 @@ namespace Raven.Tests.Bugs.TransformResults
                     {
                         answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                             .Statistics(out stats)
-                            .Where(x => x.Content == (Content))
+                            .Where(x => x.Content == (content))
                             .OrderBy(x => x.Content)
                             .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                             .Skip(0).Take(1)
@@ -55,11 +47,10 @@ namespace Raven.Tests.Bugs.TransformResults
                         Assert.NotNull(answerInfo);
                     }
                 }
-
             }
         }
 
-        public static string CreateEntities(IDocumentStore documentStore)
+        private static string CreateEntities(IDocumentStore documentStore)
         {
             const string questionId = @"question/259";
             const string answerId = @"answer/540";
@@ -113,7 +104,5 @@ namespace Raven.Tests.Bugs.TransformResults
             }
             return answerId;
         }
-
-
     }
 }

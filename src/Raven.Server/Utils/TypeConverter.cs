@@ -49,7 +49,7 @@ namespace Raven.Server.Utils
             if (value is bool)
                 return value;
 
-            if (value is int || value is long || value is double)
+            if (value is int || value is long || value is double || value is decimal)
                 return value;
 
             if (value is LazyDoubleValue)

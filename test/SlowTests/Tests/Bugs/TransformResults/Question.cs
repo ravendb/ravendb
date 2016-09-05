@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Tests.Bugs.TransformResults
+namespace SlowTests.Tests.Bugs.TransformResults
 {
     public class Question
     {

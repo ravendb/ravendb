@@ -1,21 +1,20 @@
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Bugs.Vlko
+namespace SlowTests.Tests.Bugs.Vlko
 {
-    public class RelationIdIndex : RavenTest
+    public class RelationIdIndex : RavenTestBase
     {
         [Fact]
         public void CanBeUsedForTransformResultsWithDocumentId()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                new ThorIndex().Execute(((IDocumentStore) store).DatabaseCommands, ((IDocumentStore) store).Conventions);
+                new ThorIndex().Execute(((IDocumentStore)store).DatabaseCommands, ((IDocumentStore)store).Conventions);
 
                 var relId = Guid.NewGuid();
                 using (var s = store.OpenSession())
@@ -51,8 +50,7 @@ namespace Raven.Tests.Bugs.Vlko
             }
         }
 
-
-        public class ThorIndex : AbstractIndexCreationTask<Thor>
+        private class ThorIndex : AbstractIndexCreationTask<Thor>
         {
             public ThorIndex()
             {
@@ -61,18 +59,16 @@ namespace Raven.Tests.Bugs.Vlko
             }
         }
 
-        public class Thor
+        private class Thor
         {
             public Guid Id { get; set; }
             public string Name { get; set; }
             public Relation Rel { get; set; }
         }
 
-        public class Relation
+        private class Relation
         {
             public Guid Id { get; set; }
         }
     }
-
-
 }

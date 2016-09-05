@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -18,6 +19,9 @@ namespace Raven.Server.Documents.Transformers
         {
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Transformation scope was not initialized. Key: " + keyOrEnumerable);
+
+            if (keyOrEnumerable == null)
+                return DynamicNullObject.Null;
 
             var keyLazy = keyOrEnumerable as LazyStringValue;
             if (keyLazy != null)
