@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -135,11 +136,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var currentBestState = DynamicQueryMatchType.Complete;
 
-            if (query.MapFields.All(x => definition.ContainsField(x.NormalizedName)) == false)
+            if (query.MapFields.All(x => definition.ContainsField(index.Type.IsAuto() ? x.Name : x.NormalizedName)) == false)
             {
                 if (explanations != null)
                 {
-                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.NormalizedName) == false);
+                    var missingFields = query.MapFields.Where(x => definition.ContainsField(index.Type.IsAuto() ? x.Name : x.NormalizedName) == false);
                     explanations.Add(new Explanation(indexName, $"The following fields are missing: {string.Join(", ", missingFields)}"));
                 }
 
@@ -150,25 +151,25 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var sortInfo in query.SortDescriptors) // with matching sort options
             {
-                var sortField = sortInfo.Field;
+                var sortFieldName = index.Type.IsAuto() ? sortInfo.Name : sortInfo.NormalizedName;
 
-                if (sortField.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName) ||
-                    sortField.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
-                    sortField.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
+                if (sortFieldName.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName) ||
+                    sortFieldName.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
+                    sortFieldName.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
                 {
-                    sortField = SortFieldHelper.ExtractName(sortField);
+                    sortFieldName = SortFieldHelper.ExtractName(sortFieldName);
                 }
 
-                if (sortField.EndsWith("_Range"))
-                    sortField = sortField.Substring(0, sortField.Length - "_Range".Length);
+                if (sortFieldName.EndsWith("_Range"))
+                    sortFieldName = sortFieldName.Substring(0, sortFieldName.Length - "_Range".Length);
 
                 IndexField indexField = null;
                 // if the field is not in the output, then we can't sort on it. 
-                if (definition.ContainsField(sortField) == false)
+                if (definition.ContainsField(sortFieldName) == false)
                 {
                     if (query.IsMapReduce == false)
                     {
-                        explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortField}' which we need to sort on"));
+                        explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortFieldName}' which we need to sort on"));
                         currentBestState = DynamicQueryMatchType.Partial;
                         continue;
                     }
@@ -177,9 +178,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     var autoMapReduceIndexDefinition = definition as AutoMapReduceIndexDefinition;
                     if (autoMapReduceIndexDefinition != null)
                     {
-                        if (autoMapReduceIndexDefinition.GroupByFields.TryGetValue(sortField, out indexField) == false)
+                        if (autoMapReduceIndexDefinition.GroupByFields.TryGetValue(sortFieldName, out indexField) == false)
                         {
-                            explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortField}' which we need to sort on"));
+                            explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortFieldName}' which we need to sort on"));
                             currentBestState = DynamicQueryMatchType.Partial;
                             continue;
                         }
@@ -195,7 +196,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
                 else
                 {
-                    indexField = definition.GetField(sortField);
+                    indexField = definition.GetField(sortFieldName);
                 }
 
                 Debug.Assert(indexField != null);
@@ -213,7 +214,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
 
                     explanations?.Add(new Explanation(indexName,
-                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortField}' ({indexField.SortOption})"));
+                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortFieldName}' ({indexField.SortOption})"));
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }
@@ -231,6 +232,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }
+
+            if (currentBestState == DynamicQueryMatchType.Partial && index.Type.IsStatic()) // we cannot support this because we might extend fields from static index into auto index
+                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
 
             return new DynamicQueryMatchResult(indexName, currentBestState)
             {
@@ -261,11 +265,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            if (query.GroupByFields.All(definition.GroupByFields.ContainsKey) == false)
+            if (query.GroupByFields.All(definition.ContainsGroupByField) == false)
             {
                 if (explanations != null)
                 {
-                    var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x) == false);
+                    var missingFields = query.GroupByFields.Where(x => definition.ContainsGroupByField(x) == false);
                     explanations?.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
                 }
 

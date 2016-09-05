@@ -20,5 +20,15 @@
         {
             return self == IndexType.MapReduce || self == IndexType.AutoMapReduce;
         }
+
+        public static bool IsAuto(this IndexType self)
+        {
+            return self == IndexType.AutoMap || self == IndexType.AutoMapReduce;
+        }
+
+        public static bool IsStatic(this IndexType self)
+        {
+            return self == IndexType.Map || self == IndexType.MapReduce;
+        }
     }
 }

@@ -13,10 +13,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             MapReduceOperation = mapReduceOperation;
         }
 
-        // TODO arek - names of this props are not really expressive, let me commment it for now and introduce single Name
-        //public string QueryFrom { get; set; }
-        //public string From { get; set; }
-        //public string To { get; set; }
         public string Name { get; }
 
         public string NormalizedName => _normalizedName ?? (_normalizedName = IndexField.ReplaceInvalidCharactersInFieldName(Name));
