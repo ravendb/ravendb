@@ -743,61 +743,66 @@
 
 
 
-                            <div class="row">
-                                <div class="col-sm-3 col-lg-2">
-                                    <label class="control-label">Filters</label>
-                                    <small class="pull-right">
-                                        <a class="text-info" title="External link: RavenDB filters documentation" target="_blank" href="#">
-                                            <span class="icon-help"></span> Help
-                                        </a>
-                                    </small>
-                                    <button class="btn btn-default btn-block btn-sm" data-bind="click: addFilter">
-                                        <span class="icon-plus"></span> Add filter
-                                    </button>
-                                </div>
-                                <div class="col-sm-9 col-lg-10">
-                                    <div class="border">
-                                        <div class="row">
-                                            <div class="col-sm-4">
-                                                <strong>Rule</strong>                                                
-                                            </div>
-                                            <div class="col-sm-4">
-                                                <strong>Value</strong>
-                                            </div>
-                                            <div class="col-sm-4">
-                                                <strong>Path</strong>
-                                            </div>
-                                        </div>
+                            <div class="toggle">
+                                <input id="useFilters" type="checkbox">
+                                <label for="useFilters">
+                                    Use Filters <a class="text-info" target="_blank" href="#">
+                                        <span class="icon-help"></span>
+                                    </a>
+                                </label>
+                            </div>
 
-                                        <div class="row">
-                                            <div class="col-sm-4">
-                                                <div class="btn-group btn-block">
-                                                    <button type="button" class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown">
-                                                        <span data-bind="visible: shouldMatch">Include</span>
-                                                        <span data-bind="visible: !shouldMatch()" style="display: none;">Exclude</span>                                                    <span class="caret"></span>
-                                                    </button>
-                                                    <ul class="dropdown-menu" role="menu">
-                                                        <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, true)">Include</a></li>
-                                                        <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, false)">Exclude</a></li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                            <div class="col-sm-4">
-                                                <strong><input class="form-control" type="text" data-bind="value: path"></strong>
-                                            </div>
-                                            <div class="col-sm-4">
-                                                <strong><input class="form-control" type="text" data-bind="value: value"></strong>
-                                            </div>
-                                           
-                                        </div>
+                            <div class="border">
+                                <div class="row">
+                                    <div class="col-sm-3 col-lg-2">
+                                        <strong>Rule</strong>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <strong>Value</strong>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <strong>Path</strong>
+
                                     </div>
                                 </div>
 
+                                <div class="row">
+                                    <div class="col-sm-3 col-lg-2">
+                                        <div class="btn-group btn-block">
+                                            <button type="button" class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown">
+                                                <span data-bind="visible: shouldMatch">Include</span>
+                                                <span data-bind="visible: !shouldMatch()" style="display: none;">Exclude</span>                                                    <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, true)">Include</a></li>
+                                                <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, false)">Exclude</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <strong><input class="form-control" type="text" data-bind="value: path"></strong>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <strong><input class="form-control" type="text" data-bind="value: value"></strong>
+                                    </div>
+                                    <div class="col-sm-1">
+                                        <label class="control-label">
+                                            <a class="reset-color"><span class="icon-cancel"></span></a>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <button class="btn btn-default">
+                                    <span class="icon-plus"></span> Add filter
+                                </button>
                             </div>
 
                             <div class="form-group">
                                 <label id="transformScriptHelp" class="control-label" data-original-title="" title="">
-                                    Transform script&nbsp; <span class="icon-info"></span>
+                                    Transform script <a class="text-info" target="_blank" href="#">
+                                        <span class="icon-help"></span>
+                                    </a>
                                 </label>
                                 <div>
                                     <pre style="height: 200px; font-size: 16px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }" class="ace_editor ui-resizable ace-xcode">
