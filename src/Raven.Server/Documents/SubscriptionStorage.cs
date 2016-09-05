@@ -93,7 +93,7 @@ namespace Raven.Server.Documents
 
             using (var tx = _environment.WriteTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var subscriptionsTree = tx.ReadTree(SubscriptionSchema.IdsTree);
                 var id = subscriptionsTree.Increment(SubscriptionSchema.Id, 1);
 
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents
                     {(byte*)&lastEtag, sizeof (long)},
                     {(byte*)&now, sizeof (long)}
                 };
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var existingSubscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
                 table.Update(existingSubscription.Id, tvb);
                 tx.Commit();
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents
 
         private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx)
         {
-            var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+            var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
             var subscriptionId = Bits.SwapBytes((ulong)id);
 
             var config = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents
         {
             using (var tx = _environment.ReadTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var subscriptionId = Bits.SwapBytes((ulong)id);
 
                 if (table.VerifyKeyExists(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong))) == false)
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents
 
             using (var tx = _environment.WriteTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
                 long subscriptionId = id;
                 TableValueReader subscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong)));
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents
             using (var tx = _environment.WriteTransaction())
             {
                 var subscriptions = new List<DynamicJsonValue>();
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var seen = 0;
                 var taken = 0;
                 foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
@@ -417,7 +417,7 @@ namespace Raven.Server.Documents
         {
             using (var tx = _environment.WriteTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 return table.NumberOfEntries;
             }
         }

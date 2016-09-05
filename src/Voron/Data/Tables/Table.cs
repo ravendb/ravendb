@@ -13,7 +13,7 @@ using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class Table : ICommittable
+    public unsafe class Table
     {
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
@@ -91,7 +91,7 @@ namespace Voron.Data.Tables
             InsertIndexValuesFor(newId, new TableValueReader(data, size));
         }
 
-        public Table(TableSchema schema, string name, Transaction tx)
+        public Table(TableSchema schema, string name, Transaction tx, int tag)
         {
             Name = name;
 
@@ -108,8 +108,6 @@ namespace Voron.Data.Tables
                 throw new InvalidDataException($"Cannot find stats value for table {name}");
 
             NumberOfEntries = stats->NumberOfEntries;
-
-            _tx.Register(this);
         }
 
         /// <summary>
@@ -146,13 +144,13 @@ namespace Voron.Data.Tables
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-			id = -1;		
-			var pkTree = GetTree(_schema.Key);
-	        var readResult = pkTree?.Read(key);
-	        if (readResult == null)
-		        return false;
+            id = -1;		
+            var pkTree = GetTree(_schema.Key);
+            var readResult = pkTree?.Read(key);
+            if (readResult == null)
+                return false;
 
-	        id = readResult.Reader.ReadLittleEndianInt64();
+            id = readResult.Reader.ReadLittleEndianInt64();
             return true;
         }
 
@@ -722,11 +720,6 @@ namespace Voron.Data.Tables
             foreach (var id in toDelete)
                 Delete(id);
             return toDelete.Count;
-        }
-
-        public bool RequiresParticipation
-        {
-            get { return true; }
         }
 
         public void PrepareForCommit()

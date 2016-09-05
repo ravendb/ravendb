@@ -34,7 +34,7 @@ namespace SlowTests.Voron
                 using (var tx = env.WriteTransaction())
                 {
                     var options = tx.CreateTree("Options");
-                    var entries = new Table(_entriesSchema, "IndexEntries", tx);
+                    var entries = tx.OpenTable(_entriesSchema, "IndexEntries");
                     for (int i = 0; i < 10; i++)
                     {
                         var assembly = typeof(DuplicatePageUsage).GetTypeInfo().Assembly;

@@ -38,7 +38,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(schema, "docs", tx);
+                var docs = tx.OpenTable(schema, "docs");
                 for (long i = 0; i < Transactions * ItemsPerTransaction; i++)
                 {
                     ms.Position = 0;
@@ -51,7 +51,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(schema, "docs", tx);
+                var docs = tx.OpenTable(schema, "docs");
 
                 var array = new byte[100];
                 for (int i = 0; i < Transactions * ItemsPerTransaction; i++)
@@ -83,7 +83,7 @@ namespace FastTests.Voron.Tables
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    var docs = new Table(DocsSchema, "docs", tx);
+                    var docs = tx.OpenTable(DocsSchema, "docs");
 
                     for (int i = 0; i < 1000; i++)
                     {
@@ -95,7 +95,7 @@ namespace FastTests.Voron.Tables
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    var docs = new Table(DocsSchema, "docs", tx);
+                    var docs = tx.OpenTable(DocsSchema, "docs");
 
                     var ids = new List<long>();
                     foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slices.BeforeAllKeys))
@@ -112,7 +112,7 @@ namespace FastTests.Voron.Tables
 
                 using (var tx = Env.ReadTransaction())
                 {
-                    var docs = new Table(DocsSchema, "docs", tx);
+                    var docs = tx.OpenTable(DocsSchema, "docs");
 
                     var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1)));
                     Assert.Empty(reader);
