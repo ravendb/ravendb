@@ -20,7 +20,7 @@ namespace Sparrow.Utils
         public byte* Modified;
         public byte* Output;
         public int OutputSize;
-        public bool IsDiff;
+        public bool IsDiff { get; private set; }
         private bool _allZeros;
 
         public void ComputeDiff()
@@ -41,7 +41,7 @@ namespace Sparrow.Utils
                     if (start != i)
                     {
                         if (WriteDiff(start, i - start) == false)
-                            return;
+                            return ;
                     }
                     start = i + 1;
                     _allZeros = true;
@@ -49,7 +49,37 @@ namespace Sparrow.Utils
             }
             if (start != len)
             {
-                WriteDiff(start, Size - start);
+                WriteDiff(start, Size/sizeof(long) - start);
+            }
+        }
+
+        public void ComputeNew()
+        {
+            Debug.Assert(Size % sizeof(long) == 0);
+            var len = Size / sizeof(long);
+            IsDiff = true;
+
+            var start = 0;
+            OutputSize = 0;
+            _allZeros = true;
+            for (int i = 0; i < len; i++)
+            {
+                var modifiedVal = ((long*)Modified)[i];
+                _allZeros &= modifiedVal == 0;
+                if (0 == modifiedVal)
+                {
+                    if (start != i)
+                    {
+                        if (WriteDiff(start, i - start) == false)
+                            return ;
+                    }
+                    start = i + 1;
+                    _allZeros = true;
+                }
+            }
+            if (start != len)
+            {
+                WriteDiff(start, Size/ sizeof(long) - start);
             }
         }
 

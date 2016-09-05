@@ -77,7 +77,7 @@ namespace Voron.Impl.Journal
 
             if (checkCrc && !ValidatePagesHash(options, current))
                 return false;
-           
+
             byte* outputPage;           
             if (current->Compressed)
             {
@@ -91,11 +91,9 @@ namespace Voron.Impl.Journal
             }
             else
             {
-                _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
-                outputPage = _recoveryPager.AcquirePagePointer(null, _recoveryPage);
-                UnmanagedMemory.Set(outputPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
-
-                Memory.Copy(outputPage, _pager.AcquirePagePointer(null, _readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
+                options.InvokeRecoveryError(this, "Got an invalid uncompressed transaction", null);
+                RequireHeaderUpdate = true;
+                return false;
             }
 
             var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();

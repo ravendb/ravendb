@@ -11,6 +11,26 @@ using Voron.Global;
 
 namespace Voron.Impl.Journal
 {
+    [StructLayout(LayoutKind.Explicit, Pack = 1)] // ADIADI :: Pack ?
+    public struct TransactionHeaderPageInfo
+    {
+        [FieldOffset(0)]
+        public long PageNumber; // negative for pages with Diff optimization
+
+        [FieldOffset(8)]
+        public int Size; // offset from last page
+
+        [FieldOffset(12)]
+        public JournalPageType Type;
+    }
+
+    public enum JournalPageType
+    {
+        None,
+        Diff,
+        Full
+    }
+
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct TransactionHeader
     {
