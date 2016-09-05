@@ -6,36 +6,20 @@
 
 using System.Collections.Generic;
 using System.Linq;
-
-using Raven.Abstractions.Indexing;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Indexing;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.SlowTests.Queries
-{   
-    public class IntersectionQueryWithLargeDataset : RavenTest
+namespace SlowTests.SlowTests.Queries
+{
+    public class IntersectionQueryWithLargeDataset : RavenTestBase
     {
-        [Fact]
-        public void CanPerformIntersectionQuery_Remotely()
-        {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
-            {
-                ExecuteTest(store);
-            }
-        }
-
         [Fact]
         public void CanPerformIntersectionQuery_Embedded()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTest(store);
             }
@@ -48,9 +32,9 @@ namespace Raven.SlowTests.Queries
             // there are 10K documents, each combination of "Lorem" and "Nullam" has 100 matching documents.
             // Suspect that this may be failing because each individual slice (Lorem: L and Nullam: N)
             // has 1000 documents, which is greater than default page size of 128.
-            foreach (string L in Lorem)
+            foreach (string L in _lorem)
             {
-                foreach (string N in Nullam)
+                foreach (string N in _nullam)
                 {
                     using (var session = store.OpenSession())
                     {
@@ -72,13 +56,15 @@ namespace Raven.SlowTests.Queries
             using (var s = store.OpenSession())
             {
                 store.DatabaseCommands.PutIndex("TestAttributesByAttributes",
-                                                    new IndexDefinition
-                                                    {
-                                                        Map =
-                                                        @"from e in docs.TestAttributes
-                                                            from r in e.Attributes
-                                                            select new { Attributes_Key = r.Key, Attributes_Value = r.Value }"
-                                                    });
+                    new IndexDefinition
+                    {
+                        Maps =
+                        {
+                          @"from e in docs.TestAttributes
+                            from r in e.Attributes
+                            select new { Attributes_Key = r.Key, Attributes_Value = r.Value }"
+                        }
+                    });
 
                 foreach (var sample in GetSampleData())
                 {
@@ -90,22 +76,22 @@ namespace Raven.SlowTests.Queries
             WaitForIndexing(store);
         }
 
-        readonly string[] Lorem = { "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit", "Sed", "auctor", "erat" };
-        readonly string[] Nullam = { "nec", "quam", "id", "risus", "congue", "bibendum", "Nam", "lacinia", "eros", "quis" };
-        readonly string[] Quisque = { "varius", "rutrum", "magna", "posuere", "urna", "sollicitudin", "Integer", "libero", "lacus", "tincidunt" };
-        readonly string[] Aliquam = { "erat", "volutpat", "placerat", "interdum", "felis", "luctus", "quam", "sagittis", "mattis", "Proin" };
+        private readonly string[] _lorem = { "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit", "Sed", "auctor", "erat" };
+        private readonly string[] _nullam = { "nec", "quam", "id", "risus", "congue", "bibendum", "Nam", "lacinia", "eros", "quis" };
+        private readonly string[] _quisque = { "varius", "rutrum", "magna", "posuere", "urna", "sollicitudin", "Integer", "libero", "lacus", "tincidunt" };
+        private readonly string[] _aliquam = { "erat", "volutpat", "placerat", "interdum", "felis", "luctus", "quam", "sagittis", "mattis", "Proin" };
 
         private IEnumerable<TestAttributes> GetSampleData()
         {
             List<TestAttributes> result = new List<TestAttributes>();
 
-            foreach (string L in Lorem)
+            foreach (string L in _lorem)
             {
-                foreach (string N in Nullam)
+                foreach (string N in _nullam)
                 {
-                    foreach (string Q in Quisque)
+                    foreach (string Q in _quisque)
                     {
-                        foreach (string A in Aliquam)
+                        foreach (string A in _aliquam)
                         {
                             TestAttributes t = new TestAttributes { Attributes = new Dictionary<string, string>(), val = 1 };
                             t.Attributes.Add("Lorem", L);
@@ -120,7 +106,7 @@ namespace Raven.SlowTests.Queries
             return result;
         }
 
-        public class TestAttributes
+        private class TestAttributes
         {
             public string Id { get; set; }
             public Dictionary<string, string> Attributes { get; set; }

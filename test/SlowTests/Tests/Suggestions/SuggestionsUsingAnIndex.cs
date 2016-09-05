@@ -3,55 +3,60 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Bugs;
-using Raven.Tests.Common;
-
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Suggestions
+namespace SlowTests.Tests.Suggestions
 {
-    public class SuggestionsUsingAnIndex : RavenTest, IDisposable
+    public class SuggestionsUsingAnIndex : RavenTestBase
     {
-        public class DefaultSuggestionIndex : AbstractIndexCreationTask<User>
+        private class User
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Email { get; set; }
+        }
+
+        private class DefaultSuggestionIndex : AbstractIndexCreationTask<User>
         {
             public DefaultSuggestionIndex()
             {
                 Map = users => from user in users
-                               select new {user.Name};
+                               select new { user.Name };
 
                 Suggestion(user => user.Name);
             }
         }
 
-        public class SuggestionIndex : AbstractIndexCreationTask<User>
+        private class SuggestionIndex : AbstractIndexCreationTask<User>
         {
             public SuggestionIndex()
             {
                 Map = users => from user in users
-                               select new {user.Name};
+                               select new { user.Name };
 
                 Suggestion(user => user.Name);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void ExactMatch()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new DefaultSuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
-                    s.Store(new User {Name = "Ayende"});
-                    s.Store(new User {Name = "Oren"});
+                    s.Store(new User { Name = "Ayende" });
+                    s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
 
                     s.Query<User, DefaultSuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
@@ -72,17 +77,17 @@ namespace Raven.Tests.Suggestions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void UsingLinq()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new DefaultSuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
-                    s.Store(new User {Name = "Ayende"});
-                    s.Store(new User {Name = "Oren"});
+                    s.Store(new User { Name = "Ayende" });
+                    s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
 
                     s.Query<User, DefaultSuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
@@ -100,17 +105,17 @@ namespace Raven.Tests.Suggestions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void UsingLinq_with_typo_with_options_multiple_fields()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new DefaultSuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
-                    s.Store(new User {Name = "Ayende"});
-                    s.Store(new User {Name = "Oren"});
+                    s.Store(new User { Name = "Ayende" });
+                    s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
 
                     s.Query<User, DefaultSuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
@@ -121,7 +126,7 @@ namespace Raven.Tests.Suggestions
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
                                                        .Where(x => x.Name == "Orin")
                                                        .Where(x => x.Email == "whatever")
-                                                       .Suggest(new SuggestionQuery {Field = "Name", Term = "Orin"});
+                                                       .Suggest(new SuggestionQuery { Field = "Name", Term = "Orin" });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
@@ -129,17 +134,17 @@ namespace Raven.Tests.Suggestions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void UsingLinq_with_typo_multiple_fields_in_reverse_order()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new DefaultSuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
-                    s.Store(new User {Name = "Ayende"});
-                    s.Store(new User {Name = "Oren"});
+                    s.Store(new User { Name = "Ayende" });
+                    s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
 
                     s.Query<User, DefaultSuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
@@ -150,7 +155,7 @@ namespace Raven.Tests.Suggestions
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
                                                        .Where(x => x.Email == "whatever")
                                                        .Where(x => x.Name == "Orin")
-                                                       .Suggest(new SuggestionQuery {Field = "Name", Term = "Orin"});
+                                                       .Suggest(new SuggestionQuery { Field = "Name", Term = "Orin" });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
@@ -158,17 +163,17 @@ namespace Raven.Tests.Suggestions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void UsingLinq_WithOptions()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new SuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
-                    s.Store(new User {Name = "Ayende"});
-                    s.Store(new User {Name = "Oren"});
+                    s.Store(new User { Name = "Ayende" });
+                    s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
 
                     s.Query<User, SuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
@@ -178,7 +183,7 @@ namespace Raven.Tests.Suggestions
                 {
                     var suggestionQueryResult = session.Query<User, SuggestionIndex>()
                                                        .Where(x => x.Name == "Orin")
-                                                       .Suggest(new SuggestionQuery {Accuracy = 0.4f});
+                                                       .Suggest(new SuggestionQuery { Accuracy = 0.4f });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
@@ -186,17 +191,17 @@ namespace Raven.Tests.Suggestions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void WithTypo()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 documentStore.ExecuteIndex(new SuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
-                    s.Store(new User {Name = "Ayende"});
-                    s.Store(new User {Name = "Oren"});
+                    s.Store(new User { Name = "Ayende" });
+                    s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
 
                     s.Query<User, SuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
@@ -209,8 +214,8 @@ namespace Raven.Tests.Suggestions
                         Field = "Name",
                         Term = "Oern", // intentional typo
                         MaxSuggestions = 10,
-                        Accuracy = 0.1f,						  
-                        Distance = StringDistanceTypes.NGram  
+                        Accuracy = 0.1f,
+                        Distance = StringDistanceTypes.NGram
                     });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);

@@ -3,14 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
+using FastTests;
 using Lucene.Net.Analysis;
-using Raven.Database.Indexing;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Queries;
 using Xunit;
 
-namespace Raven.Tests.Queries
+namespace SlowTests.Tests.Queries
 {
-    public class CommentsInQueries : IDisposable
+    public class CommentsInQueries : NoDisposalNeeded
     {
         [Fact]
         public void ShouldBeSafelyIgnored()
@@ -21,16 +23,11 @@ Hi: ""where // are "" // comment
 
 Be: http\://localhost\:8080
 
-",new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer()));
+", new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer()));
 
             var s = query.ToString();
 
             Assert.DoesNotContain("comment", s);
-        }
-
-        public void Dispose()
-        {
-            
         }
     }
 }

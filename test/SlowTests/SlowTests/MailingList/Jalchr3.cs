@@ -1,24 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.SlowTests.MailingList
+namespace SlowTests.SlowTests.MailingList
 {
-    public class Jalchr2 : RavenTest
+    public class Jalchr3 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Streaming")]
         public void Streaming_documents_will_respect_the_sorting_order()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                                             serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
@@ -86,6 +83,7 @@ namespace Raven.SlowTests.MailingList
                     var index = 0;
                     while (enumerator.MoveNext())
                     {
+
                         Assert.True(enumerator.Current.Document.CreatedDate == orderedList[index].CreatedDate,
                             "Failed at: " + index
                             + ", " + enumerator.Current.Document.CreatedDate.ToString("yyyy-MM-dd hh:mm:ss.sssssss")
@@ -97,28 +95,25 @@ namespace Raven.SlowTests.MailingList
                 }
             }
         }
-
-        class User
+        private class User
         {
             public Guid Id { get; set; }
             public string Name { get; set; }
             public DateTime CreatedDate { get; set; }
         }
 
-        class User_Entity : AbstractIndexCreationTask<User>
+        private class User_Entity : AbstractIndexCreationTask<User>
         {
             public User_Entity()
             {
                 Map = users => from user in users
                                select new
-                                      {
-                                          user.Id,
-                                          user.Name,
-                                          user.CreatedDate,
-                                      };
+                               {
+                                   user.Id,
+                                   user.Name,
+                                   user.CreatedDate,
+                               };
             }
         }
-
-
     }
 }

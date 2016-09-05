@@ -3,44 +3,42 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.Querying
+namespace SlowTests.Tests.Querying
 {
-    public class HighlightesTests : RavenTest
+    public class HighlightesTests : RavenTestBase
     {
-        public interface ISearchable
+        private interface ISearchable
         {
             string Slug { get; set; }
             string Title { get; set; }
             string Content { get; set; }
         }
 
-        public class EventsItem : ISearchable
+        private class EventsItem : ISearchable
         {
             public int Id { get; set; }
             public string Title { get; set; }
             public string Slug { get; set; }
             public string Content { get; set; }
         }
-        
-        public class SearchResults
+
+        private class SearchResults
         {
             public ISearchable Result { get; set; }
             public List<string> Highlights { get; set; }
             public string Title { get; set; }
         }
 
-        public class ContentSearchIndex : AbstractMultiMapIndexCreationTask<ISearchable>
+        private class ContentSearchIndex : AbstractMultiMapIndexCreationTask<ISearchable>
         {
             public ContentSearchIndex()
             {
@@ -63,12 +61,12 @@ namespace Raven.Tests.Querying
             }
         }
 
-        [Theory]
+        [Theory(Skip = "Missing feature: Highlighting")]
         [InlineData("session")]
         public void SearchWithHighlightes(string q)
         {
-            using(var store = NewDocumentStore())
-            {               
+            using (var store = GetDocumentStore())
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new EventsItem

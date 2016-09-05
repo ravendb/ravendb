@@ -3,32 +3,35 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Linq;
-using Raven.Tests.Bugs;
-using Raven.Tests.Common;
 
+using System.Collections.Generic;
+using System.Linq;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Suggestions
+namespace SlowTests.Tests.Suggestions
 {
-    using System.Collections.Generic;
-
-    public class SuggestionsLazy : RavenTest
+    public class SuggestionsLazy : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void UsingLinq()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("Test", new IndexDefinition
                 {
-                    Map = "from doc in docs select new { doc.Name }",
-                    SuggestionsOptions = new HashSet<string> { "Name" }
+                    Maps = { "from doc in docs.Users select new { doc.Name }" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        {
+                            "Name",
+                            new IndexFieldOptions { Suggestions = true }
+                        }
+                    }
                 });
                 using (var s = store.OpenSession())
                 {
