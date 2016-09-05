@@ -8,6 +8,8 @@ using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using CsvHelper;
+using CsvHelper.Configuration;
 
 namespace Raven.Abstractions.Streaming
 {
@@ -17,7 +19,9 @@ namespace Raven.Abstractions.Streaming
 
         private readonly Stream stream;
         private readonly string[] customColumns;
+        private IEnumerable<string> properties;
         private StreamWriter writer;
+        private CsvWriter csvWriter;
         private bool doIncludeId;
 
         public ExcelOutputWriter(Stream stream, string[] customColumns = null)
@@ -35,16 +39,14 @@ namespace Raven.Abstractions.Streaming
 
             writer.Flush();
             stream.Flush();
-#if !DNXCORE50
-            writer.Close();
-#else
-            writer.Dispose();
-#endif
+
+            csvWriter?.Dispose();
         }
 
         public void WriteHeader()
         {
             writer = new StreamWriter(stream, Encoding.UTF8);
+            csvWriter = new CsvWriter(writer);
         }
 
         public void Write(RavenJObject result)
@@ -65,9 +67,8 @@ namespace Raven.Abstractions.Streaming
                     {
                         if (metadata.TryGetValue("@id", out token))
                         {
-                            OutputCsvValue(token.Value<string>());
+                            csvWriter.WriteField(token.Value<string>());
                         }
-                        writer.Write(',');
                     }
                 }
             }
@@ -75,34 +76,36 @@ namespace Raven.Abstractions.Streaming
             foreach (var property in properties)
             {
                 var token = result.SelectToken(property);
-                if (token != null)
+                if (token == null)
                 {
-                    switch (token.Type)
-                    {
-                        case JTokenType.Null:
-                            break;
-
-                        case JTokenType.Array:
-                        case JTokenType.Object:
-                            OutputCsvValue(token.ToString(Formatting.None));
-                            break;
-
-                        default:
-                            OutputCsvValue(token.Value<string>());
-                            break;
-                    }
+                    csvWriter.WriteField(null);
+                    continue;
                 }
 
-                writer.Write(',');
-            }
+                switch (token.Type)
+                {
+                    case JTokenType.Null:
+                        csvWriter.WriteField(null);
+                        break;
 
-            writer.WriteLine();
+                    case JTokenType.Array:
+                    case JTokenType.Object:
+                        csvWriter.WriteField(token.ToString(Formatting.None));
+                        break;
+
+                    default:
+                        csvWriter.WriteField(token.Value<string>());
+                        break;
+                }
+            }
+        
+            csvWriter.NextRecord();
         }
 
         public void Write(string result)
         {
-            OutputCsvValue(result);
-            writer.WriteLine();
+            csvWriter.WriteField(result);
+            csvWriter.NextRecord();
         }
 
         public void WriteError(Exception exception)
@@ -143,9 +146,7 @@ namespace Raven.Abstractions.Streaming
                 {
                     if (metadata.TryGetValue("@id", out token))
                     {
-                        OutputCsvValue("@id");
-                        writer.Write(',');
-
+                        csvWriter.WriteField("@id");
                         includeId = true;
                     }
                 }
@@ -153,24 +154,10 @@ namespace Raven.Abstractions.Streaming
 
             foreach (var property in properties)
             {
-                OutputCsvValue(property);
-                writer.Write(',');
+                csvWriter.WriteField(property);
             }
-            writer.WriteLine();
-        }
 
-        private static readonly char[] RequireQuotesChars = { ',', '\r', '\n', '"' };
-        private IEnumerable<string> properties;
-
-        private void OutputCsvValue(string val)
-        {
-            var needsQuoutes = val.IndexOfAny(RequireQuotesChars) != -1;
-            if (needsQuoutes)
-                writer.Write('"');
-
-            writer.Write(needsQuoutes ? val.Replace("\"", "\"\"") : val);
-            if (needsQuoutes)
-                writer.Write('"');
+            csvWriter.NextRecord();
         }
 
     }
