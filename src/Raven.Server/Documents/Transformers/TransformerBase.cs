@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Transformers
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Transformation scope was not initialized. Key: " + keyOrEnumerable);
 
-            if (keyOrEnumerable == null)
+            if (keyOrEnumerable == null || keyOrEnumerable is DynamicNullObject)
                 return DynamicNullObject.Null;
 
             var keyLazy = keyOrEnumerable as LazyStringValue;
