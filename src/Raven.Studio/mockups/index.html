@@ -46,17 +46,17 @@
 
         <div class="container-fluid">
             <div class="navbar-header">
-                
+
                 <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
             </div>
             <div id="navbar">
                 <ul class="nav navbar-nav navbar-right">
-                    
-                        <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
-                        <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
-                        <li><a href="#" class="icon-help"></a></li>
-                        <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-</ul>
+
+                    <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
+                    <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
+                    <li><a href="#" class="icon-help"></a></li>
+                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                </ul>
                 <div class="inputs-container hidden-xs">
                     <div class="search-container active">
                         <input type="search" class="form-control omnisearch" placeholder="search" />
@@ -802,6 +802,12 @@
                                     <button class="btn btn-default">default</button>
                                     <button class="btn btn-lg btn-default">.btn-lg</button>
                                 </p>
+                                <h5>Addons:</h5>
+                                <p class="text-center">
+                                    <button class="btn btn-default"><span class="icon-info"></span> icon-*</button>
+                                    <button class="btn btn-default"><span class="global-spinner"></span> global spinner</button>
+
+                                </p>
                                 <hr />
                                 <h5>description:</h5>
                                 <p>Hilights interactive buttons and links</p>
@@ -831,9 +837,35 @@
                         </div>
                     </div>
             </section>
+            <h2>forms</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>.form-control</p>
+                        </div>
+                        <div class="col-sm-9">
+                            <input class="form-control" placeholder="placeholder" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>.input-group with .input-group-addon</p>
+                        </div>
+                        <div class="col-sm-9">
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <div class="input-group-addon">addon</div>
+                                    <input class="form-control" placeholder="placeholder">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <h2>Toggles</h2>
-            <div class="panel">
+            <section class="panel">
                 <div class="panel-body">
                     <form role="form">
                         <div class="row">
@@ -910,7 +942,7 @@
                                     <label for="inlinetoggle3"> Inline Three </label>
                                 </div>
                             </div>
-                           
+
                             <div class="col-md-4">
                                 <h3>
                                     Disabled
@@ -941,9 +973,9 @@
                         </div>
                     </form>
                 </div>
-            </div>
+            </section>
             <h2>Checkboxes</h2>
-            <div class="panel">
+            <section class="panel">
                 <div class="panel-body">
                     <form role="form">
                         <div class="row">
@@ -1071,11 +1103,11 @@
                         </div>
                     </form>
                 </div>
-            </div>
+            </section>
             <h2>Radios</h2>
-            <div class="panel">
+            <section class="panel">
                 <div class="panel-body">
-                   
+
                     <form role="form">
                         <div class="row">
                             <div class="col-md-4">
@@ -1188,7 +1220,9 @@
                         </div>
                     </form>
                 </div>
-            </div>
+            </section>
+
+
 
         </div>
     </div>

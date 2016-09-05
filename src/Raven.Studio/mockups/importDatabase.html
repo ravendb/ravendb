@@ -350,20 +350,11 @@
 
     <div class="container-fluid content-container">
         <div class="content-container-margin">
-            <h1>Export Database</h1>
+            <h1>Import Database</h1>
             <div class="panel">
                 <div class="panel-body">
-                    <p>Export your database to a .ravendbdump file.</p>
-                    <div class="row">
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <div class="input-group">
-                                    <div class="input-group-addon">filename</div>
-                                    <input class="form-control" value="mockup.ravendump" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <p>Import data from a .ravendbdump file into the current database.</p>
+                    <p class="text-warning"><span class="icon-warning"></span> Importing will overwrite any existing documents and indexes.</p>
                     <div class="row">
                         <div class="col-lg-12">
 
@@ -424,334 +415,40 @@
                                     </div>
                                 </div>
                             </div>
+                           
                             <div class="toggle">
                                 <input id="expiredDocuments" type="checkbox">
                                 <label for="expiredDocuments">
-                                    Include Expired documents
+                                    Strip replication information from documents metadata
                                 </label>
                             </div>
                             <div class="toggle">
-                                <input id="Collections" type="checkbox">
-                                <label for="Collections">
-                                    Export all collections
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+                                    Disable versioning bundle during import
                                 </label>
                             </div>
-                            <div class="border">
-                                <div class="row">
-                                    <div class="col-sm-6">
-                                        <h2>Choose collections:</h2>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-addon"><span class="glyphicon glyphicon-filter" aria-hidden="true"></span></span>
-                                            <input class="form-control" placeholder="Filter" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <hr />
-                                <div class="row limit-height">
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection1" class="styled" type="checkbox" checked>
-                                            <label for="Collection1">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection2" class="styled" type="checkbox">
-                                            <label for="Collection2">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection3" class="styled" type="checkbox">
-                                            <label for="Collection3">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection4" class="styled" type="checkbox">
-                                            <label for="Collection4">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection5" class="styled" type="checkbox">
-                                            <label for="Collection5">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection6" class="styled" type="checkbox" checked>
-                                            <label for="Collection6">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection1" class="styled" type="checkbox" checked>
-                                            <label for="Collection1">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection2" class="styled" type="checkbox">
-                                            <label for="Collection2">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection3" class="styled" type="checkbox">
-                                            <label for="Collection3">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection4" class="styled" type="checkbox">
-                                            <label for="Collection4">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection5" class="styled" type="checkbox">
-                                            <label for="Collection5">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection6" class="styled" type="checkbox" checked>
-                                            <label for="Collection6">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection1" class="styled" type="checkbox" checked>
-                                            <label for="Collection1">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection2" class="styled" type="checkbox">
-                                            <label for="Collection2">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection3" class="styled" type="checkbox">
-                                            <label for="Collection3">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection4" class="styled" type="checkbox">
-                                            <label for="Collection4">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection5" class="styled" type="checkbox">
-                                            <label for="Collection5">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection6" class="styled" type="checkbox" checked>
-                                            <label for="Collection6">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection1" class="styled" type="checkbox" checked>
-                                            <label for="Collection1">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection2" class="styled" type="checkbox">
-                                            <label for="Collection2">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection3" class="styled" type="checkbox">
-                                            <label for="Collection3">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection4" class="styled" type="checkbox">
-                                            <label for="Collection4">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection5" class="styled" type="checkbox">
-                                            <label for="Collection5">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection6" class="styled" type="checkbox" checked>
-                                            <label for="Collection6">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection1" class="styled" type="checkbox" checked>
-                                            <label for="Collection1">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection2" class="styled" type="checkbox">
-                                            <label for="Collection2">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection3" class="styled" type="checkbox">
-                                            <label for="Collection3">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection4" class="styled" type="checkbox">
-                                            <label for="Collection4">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection5" class="styled" type="checkbox">
-                                            <label for="Collection5">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection6" class="styled" type="checkbox" checked>
-                                            <label for="Collection6">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection1" class="styled" type="checkbox" checked>
-                                            <label for="Collection1">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection2" class="styled" type="checkbox">
-                                            <label for="Collection2">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection3" class="styled" type="checkbox">
-                                            <label for="Collection3">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection4" class="styled" type="checkbox">
-                                            <label for="Collection4">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection5" class="styled" type="checkbox">
-                                            <label for="Collection5">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <div class="toggle toggle-info">
-                                            <input id="Collection6" class="styled" type="checkbox" checked>
-                                            <label for="Collection6">
-                                                ApplicationUsers
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
 
+                                    Include Expired documents
+                                </label>
+                            </div>
+                            <br />
 
 
                             <div class="row">
                                 <div class="col-sm-3 col-lg-2">
                                     <label class="control-label">Filters</label>
-                                    <small class="pull-right">
-                                        <a class="text-info" title="External link: RavenDB filters documentation" target="_blank" href="#">
-                                            <span class="icon-help"></span> Help
-                                        </a>
-                                    </small>
-                                    <button class="btn btn-default btn-block btn-sm" data-bind="click: addFilter">
+                                    <span class="pull-right">
+                                        <small class="pull-right">
+                                            <a class="text-info" title="External link: RavenDB filters documentation" target="_blank" href="#">
+                                                <span class="icon-help"></span> Help
+                                            </a>
+                                        </small>
+                                    </span>
+                                    <button class="btn btn-default btn-block btn-sm">
                                         <span class="icon-plus"></span> Add filter
                                     </button>
                                 </div>
@@ -759,13 +456,14 @@
                                     <div class="border">
                                         <div class="row">
                                             <div class="col-sm-4">
-                                                <strong>Rule</strong>                                                
+                                                <strong>Rule</strong>
                                             </div>
                                             <div class="col-sm-4">
                                                 <strong>Value</strong>
                                             </div>
                                             <div class="col-sm-4">
                                                 <strong>Path</strong>
+                                                
                                             </div>
                                         </div>
 
@@ -821,8 +519,9 @@
                     <button class="btn btn-info" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
                         Advanced
                     </button>
-                    <button class="btn btn-success"><span class="glyphicon glyphicon-save"></span> Export Database</button>
-                    <button class="btn btn-success"><span class="global-spinner"></span> Export Database</button>
+                    <button class="btn btn-success"><span class="icon-document"></span> Choose file</button>
+                    <button class="btn btn-success" disabled><span class="glyphicon glyphicon-open"></span> Import Database</button>
+                    <button class="btn btn-success"><span class="global-spinner"></span> Import Database</button>
                 </div>
             </div>
         </div>
