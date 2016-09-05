@@ -105,7 +105,7 @@ namespace Raven.Server.Documents
 
         public static string GetCollectionName(string key, BlittableJsonReaderObject document, out bool isSystemDocument)
         {
-            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
             {
                 isSystemDocument = true;
                 return SystemDocumentsCollection;

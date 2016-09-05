@@ -1010,8 +1010,6 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document,
             ChangeVectorEntry[] changeVector = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentException("Document key cannot be null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
@@ -1021,6 +1019,9 @@ namespace Raven.Server.Documents
             var collectionName = GetCollectionName(key, document, out originalCollectionName, out isSystemDocument);
             DocsSchema.Create(context.Transaction.InnerTransaction, collectionName);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
+
+            if (string.IsNullOrWhiteSpace(key))
+                key = Guid.NewGuid().ToString();
 
             if (key[key.Length - 1] == '/')
             {
