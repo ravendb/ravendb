@@ -5,6 +5,7 @@ require('./gulp/shim');
 var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
+    path = require('path'),
     del = require('del'),
     Map = require('es6-map'),
     runSequence = require('run-sequence'),
@@ -108,8 +109,8 @@ gulp.task('release:images', function() {
 });
 
 gulp.task('release:fonts', function() {
-    return gulp.src('wwwroot/fonts/*')
-       .pipe(gulp.dest(PATHS.releaseTarget + "fonts"));
+    return gulp.src('wwwroot/Content/css/fonts/**/*')
+       .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'App/fonts')));
 });
 
 
@@ -218,9 +219,9 @@ gulp.task('release', function (cb) {
             'release:libs',
             'release:favicon',
             'release:images',
-            'release:fonts',
             'release:html',
             'release:css',
+            'release:fonts',
             'release:durandal'
         ],
         cb);
