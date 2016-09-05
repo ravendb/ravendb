@@ -1,21 +1,18 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Document;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using SlowTests.Utils;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class WhenGroupinByLocation : RavenTest
+    public class WhenGroupinByLocation : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void CanFindSale()
         {
-            using (var d = NewDocumentStore())
+            using (var d = GetDocumentStore())
             {
                 new Sales_ByLocation().Execute(d);
                 using (var s = d.OpenSession())
@@ -35,7 +32,7 @@ namespace Raven.Tests.MailingList
                     List<SiteSale> sitesales = s.Query<SiteSale, Sales_ByLocation>().Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                    Assert.Empty(d.SystemDatabase.Statistics.Errors);
+                    TestHelper.AssertNoIndexErrors(d);
 
                     Assert.NotEmpty(sitesales);
                 }
@@ -44,8 +41,7 @@ namespace Raven.Tests.MailingList
 
         #region Nested type: Order
 
-        [Serializable]
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string SaleId { get; set; }
@@ -55,8 +51,7 @@ namespace Raven.Tests.MailingList
 
         #region Nested type: Sale
 
-        [Serializable]
-        public class Sale
+        private class Sale
         {
             public string Id { get; set; }
             public string Title { get; set; }
@@ -78,7 +73,7 @@ namespace Raven.Tests.MailingList
 
         #region Nested type: Sales_ByLocation
 
-        public class Sales_ByLocation : AbstractMultiMapIndexCreationTask<SiteSale>
+        private class Sales_ByLocation : AbstractMultiMapIndexCreationTask<SiteSale>
         {
             public Sales_ByLocation()
             {
@@ -103,16 +98,16 @@ namespace Raven.Tests.MailingList
                 Reduce = sitesales => from sitesale in sitesales
                                       group sitesale by sitesale.SaleId
                                           into sales
-                                          let locations = sales.SelectMany(x => x.Locations)
-                                          from sale in sales
-                                          select new
-                                          {
-                                              _ = locations.Select(l => SpatialIndex.Generate(l.Lat, l.Lng)),
-                                              // marking this as empty works
-                                              sale.SaleId,
-                                              Locations = locations,
-                                              TotalSold = sales.Sum(x => x.TotalSold)
-                                          };
+                                      let locations = sales.SelectMany(x => x.Locations)
+                                      from sale in sales
+                                      select new
+                                      {
+                                          _ = locations.Select(l => SpatialGenerate(l.Lat, l.Lng)),
+                                          // marking this as empty works
+                                          sale.SaleId,
+                                          Locations = locations,
+                                          TotalSold = sales.Sum(x => x.TotalSold)
+                                      };
             }
         }
 
@@ -120,8 +115,7 @@ namespace Raven.Tests.MailingList
 
         #region Nested type: SiteSale
 
-        [Serializable]
-        public class SiteSale
+        private class SiteSale
         {
             public string SaleId { get; set; }
             public Location[] Locations { get; set; }

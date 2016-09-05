@@ -3,26 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
-using Raven.Tests.Common;
-
 using Xunit;
-using Raven.Client;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Bhiku : RavenTest
+    public class Bhiku : RavenTestBase
     {
         [Fact]
         public void CanUseBoost_StartsWith()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Student { FirstName = "David", LastName = "Globe" });
@@ -39,7 +39,7 @@ namespace Raven.Tests.MailingList
                         .WaitForNonStaleResults()
                         .WhereStartsWith("FirstName", "David").Boost(3)
                         .WhereStartsWith("LastName", "David")
-                        .OrderBy(Constants.TemporaryScoreValue, "LastName")
+                        .OrderBy(Constants.Indexing.Fields.IndexFieldScoreName, "LastName")
                         .ToList();
 
                     Assert.Equal(3, students.Count);
@@ -54,7 +54,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void CanUseBoost_Equal()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -71,7 +71,7 @@ namespace Raven.Tests.MailingList
                     var queryable = session.Query<Student, Student_ByName>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.FirstName == ("David") || x.LastName == ("David"))
-                        .OrderByScore().ThenBy(x=>x.LastName)
+                        .OrderByScore().ThenBy(x => x.LastName)
                         ;
                     var students = queryable
                         .ToList();
@@ -85,7 +85,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Student
+        private class Student
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
@@ -93,7 +93,7 @@ namespace Raven.Tests.MailingList
             public DateTime DateOfBirth { get; set; }
         }
 
-        public class Student_ByName : AbstractIndexCreationTask<Student>
+        private class Student_ByName : AbstractIndexCreationTask<Student>
         {
             public Student_ByName()
             {

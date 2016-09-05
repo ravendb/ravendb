@@ -1,28 +1,24 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
+using FastTests;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using SlowTests.Utils;
 using Xunit;
-using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Client.Linq;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class CanRetrieveFacetCountsOfQueryResults : RavenTestBase
+    public class CanRetrieveFacetCountsOfQueryResults2 : RavenTestBase
     {
-
-        public enum Tag
+        private enum Tag
         {
             HasPool,
             HasGarden,
             HasTennis
         }
 
-        public class AccItem
+        private class AccItem
         {
             public int Id { get; set; }
             public double? Lat { get; set; }
@@ -36,7 +32,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class AccItems_Spatial : AbstractIndexCreationTask<AccItem>
+        private class AccItems_Spatial : AbstractIndexCreationTask<AccItem>
         {
             public AccItems_Spatial()
             {
@@ -45,7 +41,7 @@ namespace Raven.Tests.MailingList
                     select new
                     {
                         i,
-                        __distance = SpatialIndex.Generate((double)i.Lat, (double)i.Lon),
+                        __distance = SpatialGenerate((double)i.Lat, (double)i.Lon),
                         i.Name,
                         i.Bedrooms,
                         i.Attributes
@@ -53,7 +49,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class AccItems_Attributes : AbstractIndexCreationTask<AccItem>
+        private class AccItems_Attributes : AbstractIndexCreationTask<AccItem>
         {
             public AccItems_Attributes()
             {
@@ -66,19 +62,19 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void CanRetrieveFacetCounts()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    var item1 = new AccItem { Lat = 52.156161, Lon = 1.602483, Name = "House one", Bedrooms = 2 };
+                    var item1 = new AccItem { Lat = 52.3243, Lon = 1.6787, Name = "House one", Bedrooms = 2 };
                     item1.Attributes.Add(Tag.HasGarden);
                     item1.Attributes.Add(Tag.HasPool);
-                    var item2 = new AccItem { Lat = 52.156161, Lon = 1.602483, Name = "House two", Bedrooms = 2 };
+                    var item2 = new AccItem { Lat = 52.163824, Lon = 1.446762, Name = "House two", Bedrooms = 2 };
                     item2.Attributes.Add(Tag.HasGarden);
-                    var item3 = new AccItem { Lat = 52.156161, Lon = 1.602483, Name = "Bungalow three", Bedrooms = 3 };
+                    var item3 = new AccItem { Lat = 54.977768, Lon = -1.615672, Name = "Bungalow three", Bedrooms = 3 };
                     item3.Attributes.Add(Tag.HasGarden);
                     item3.Attributes.Add(Tag.HasPool);
                     item3.Attributes.Add(Tag.HasTennis);
@@ -104,16 +100,24 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
+                    /*
                     var query = session.Query<AccItem, AccItems_Spatial>()
                                        .Customize(customization => customization.WaitForNonStaleResults())
                                        .Customize(x => x.WithinRadiusOf(radius: 10, latitude: 52.156161, longitude: 1.602483))
                                        .Where(x => x.Bedrooms == 2);
+                     */
+                    var query = session.Query<AccItem, AccItems_Spatial>()
+                                       .Customize(customization => customization.WaitForNonStaleResults())
+                                       .Customize(x => x.WithinRadiusOf(radius: 100, latitude: 52.156161, longitude: 1.602483));
                     var partialFacetResults = query
                         .ToFacets("facets/AttributeFacets");
                     var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
                                                   .ToFacets("facets/AttributeFacets");
+                    var results = query.ToList();
 
-                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    TestHelper.AssertNoIndexErrors(store);
+
+                    Assert.Equal(2, results.Count);
 
                     var partialGardenFacet =
                         partialFacetResults.Results["Attributes"].Values.First(
@@ -125,11 +129,9 @@ namespace Raven.Tests.MailingList
                             x => x.Range.Contains("hasgarden"));
                     Assert.Equal(3, fullGardenFacet.Hits);
 
-
-                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    TestHelper.AssertNoIndexErrors(store);
                 }
             }
         }
-
     }
 }

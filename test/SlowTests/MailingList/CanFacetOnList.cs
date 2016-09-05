@@ -1,21 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
     public class FacetTest : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Facets")]
         public void CanFacetOnList()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new BlogIndex().Execute(store);
 
@@ -61,13 +59,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class BlogPost
+        private class BlogPost
         {
             public string Title { get; set; }
             public List<string> Tags { get; set; }
         }
 
-        public class BlogIndex : AbstractIndexCreationTask<BlogPost>
+        private class BlogIndex : AbstractIndexCreationTask<BlogPost>
         {
             public BlogIndex()
             {
@@ -79,7 +77,6 @@ namespace Raven.Tests.MailingList
                 Store("Tags", Raven.Abstractions.Indexing.FieldStorage.Yes);
                 Index("Tags", Raven.Abstractions.Indexing.FieldIndexing.NotAnalyzed);
             }
-
         }
     }
 }

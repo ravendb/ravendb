@@ -1,16 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Document;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Adrian : RavenTest
+    public class Adrian : RavenTestBase
     {
-        public class ContentDescriptorByMetadata : AbstractIndexCreationTask<ContentDescriptor>
+        private class ContentDescriptorByMetadata : AbstractIndexCreationTask<ContentDescriptor>
         {
             public ContentDescriptorByMetadata()
             {
@@ -23,28 +21,15 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class ContentDescriptor
+        private class ContentDescriptor
         {
             public Dictionary<string, string> Identify { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void CanCreateIndex()
         {
-            using(var store = NewDocumentStore())
-            {
-                new ContentDescriptorByMetadata().Execute(store);
-            }
-        }
-
-        [Fact]
-        public void CanCreateIndex_Remote()
-        {
-            using(GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 new ContentDescriptorByMetadata().Execute(store);
             }

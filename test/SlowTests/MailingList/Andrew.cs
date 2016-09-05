@@ -1,21 +1,23 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class Andrew : RavenTest
+    public class Andrew : RavenTestBase
     {
         [Fact]
         public void CanCompile()
         {
-            var technologySummaryIndex = new TechnologySummary_Index {Conventions = new DocumentConvention
+            var technologySummaryIndex = new TechnologySummary_Index
             {
-                PrettifyGeneratedLinqExpressions = false
-            }};
+                Conventions = new DocumentConvention
+                {
+                    PrettifyGeneratedLinqExpressions = false
+                }
+            };
 
             var indexDefinition = technologySummaryIndex.CreateIndexDefinition();
 
@@ -24,10 +26,10 @@ namespace Raven.Tests.MailingList
     TechnologyId = technology.__document_id,
     DrugId = technology.Drug.Id
 })",
-                indexDefinition.Map);
+                indexDefinition.Maps.First());
         }
 
-        public class TechnologySummary_Index : AbstractIndexCreationTask<Technology, TechnologySummary>
+        private class TechnologySummary_Index : AbstractIndexCreationTask<Technology, TechnologySummary>
         {
             public TechnologySummary_Index()
             {
@@ -42,31 +44,37 @@ namespace Raven.Tests.MailingList
                 Reduce = results => from result in results
                                     group result by result.TechnologyId
                                         into g
-                                        let rec = g.LastOrDefault()
-                                        select
-                                            new
-                                            {
-                                                rec.TechnologyId,
-                                                rec.DrugId,
-                                            };
+                                    let rec = g.LastOrDefault()
+                                    select
+                                        new
+                                        {
+                                            rec.TechnologyId,
+                                            rec.DrugId,
+                                        };
             }
         }
 
-        public class TechnologySummary
+        private class TechnologySummary
         {
+#pragma warning disable 649
             public string TechnologyId;
             public string DrugId;
+#pragma warning restore 649
         }
 
-        public class Technology
+        private class Technology
         {
+#pragma warning disable 649
             public string Id;
             public Drug Drug;
+#pragma warning restore 649
         }
 
-        public class Drug
+        private class Drug
         {
+#pragma warning disable 649
             public string Id;
+#pragma warning restore 649
         }
     }
 }

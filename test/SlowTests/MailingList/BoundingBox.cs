@@ -3,34 +3,32 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace SlowTests.MailingList
 {
-    public class BoundingBox : RavenTest
+    public class BoundingBox : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Spatial")]
         public void ShouldGetRightResults()
         {
             // verify using http://arthur-e.github.io/Wicket/sandbox-gmaps3.html
-            string outer = "POLYGON((-2.14 53.0,-2.14 53.6,-1.52 53.6,-1.52 53.0,-2.14 53.0))";
-            string inner = "POLYGON((-1.778 53.205,-1.778 53.207,-1.776 53.207,-1.776 53.205,-1.778 53.205))";
+            var outer = "POLYGON((-2.14 53.0,-2.14 53.6,-1.52 53.6,-1.52 53.0,-2.14 53.0))";
+            var inner = "POLYGON((-1.778 53.205,-1.778 53.207,-1.776 53.207,-1.776 53.205,-1.778 53.205))";
 
-            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 new Shapes_SpatialIndex().Execute(documentStore);
                 using (IDocumentSession db = documentStore.OpenSession())
                 {
-                    var shape = new Shape {Wkt = inner,};
+                    var shape = new Shape { Wkt = inner, };
                     db.Store(shape);
                     db.SaveChanges();
                 }
@@ -47,13 +45,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class Shape
+        private class Shape
         {
             public int Id { get; set; }
             public string Wkt { get; set; }
         }
 
-        public class Shapes_SpatialIndex : AbstractIndexCreationTask<Shape>
+        private class Shapes_SpatialIndex : AbstractIndexCreationTask<Shape>
         {
             public Shapes_SpatialIndex()
             {
