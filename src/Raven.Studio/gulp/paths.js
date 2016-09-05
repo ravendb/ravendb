@@ -33,7 +33,7 @@ var paths = {
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
     cssToMerge: [
-        'wwwroot/Content/bootstrap.css',
+        'wwwroot/Content/css/bootstrap/bootstrap.css',
         'wwwroot/lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css',
         'wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css',
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
@@ -42,10 +42,10 @@ var paths = {
         'wwwroot/lib/nprogress/nprogress.css',
         'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
-        'wwwroot/Content/dynatree.custom.css',
         'wwwroot/lib/nvd3/build/nv.d3.css',
-        'wwwroot/Content/app.css',
-        'wwwroot/lib/animate.css/animate.css'
+        'wwwroot/lib/animate.css/animate.css',
+        'wwwroot/Content/css/styles.css',
+        'wwwroot/Content/css/legacy_styles.css'
     ],
     externalLibs: [
         'jquery/dist/jquery.min.js',
