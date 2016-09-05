@@ -427,10 +427,10 @@ namespace Voron.Impl
                 _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
                 _dirtyOverflowPages.Remove(pageNumber + i);
                 _dirtyPages.Add(pageNumber + i);
-
                 var newPage = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer + i);
                 newPage.PageNumber = pageNumber + i;
                 newPage.Flags = PageFlags.Single;
+                TrackWritablePage(newPage);
             }
         }
 
