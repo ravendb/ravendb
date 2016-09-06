@@ -125,7 +125,6 @@ namespace Sparrow.Utils
     /// </summary>
     public unsafe class DiffApplier
     {
-        public byte* Original;
         public byte* Diff;
         public byte* Destination;
         public int DiffSize;
@@ -133,7 +132,6 @@ namespace Sparrow.Utils
 
         public void Apply()
         {
-            Memory.BulkCopy(Destination, Original, Size);
             var pos = 0;
             while (pos < DiffSize)
             {

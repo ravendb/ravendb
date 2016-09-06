@@ -552,8 +552,6 @@ namespace Voron.Impl
                 FreePage(_pagesToFreeOnCommit.Pop());
             }
             _txHeader->LastPageNumber = _state.NextPageNumber - 1;
-            _txHeader->PageCount = _allocatedPagesInTransaction;
-            _txHeader->OverflowPageCount = _overflowPagesInTransaction;
             _state.Root.CopyTo(&_txHeader->Root);
 
             _txHeader->TxMarker |= TransactionMarker.Commit;

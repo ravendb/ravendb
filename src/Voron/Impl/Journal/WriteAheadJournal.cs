@@ -25,7 +25,6 @@ namespace Voron.Impl.Journal
 {
     public unsafe class WriteAheadJournal : IDisposable
     {
-        private static int __ADIADI__;
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
 
@@ -47,7 +46,7 @@ namespace Voron.Impl.Journal
         private readonly AbstractPager _compressionPager;
 
         private LazyTransactionBuffer _lazyTransactionBuffer;
-        private DiffPages _diffPage = new DiffPages();
+        private readonly DiffPages _diffPage = new DiffPages();
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         public WriteAheadJournal(StorageEnvironment env)
@@ -152,22 +151,13 @@ namespace Voron.Impl.Journal
                     RecoverCurrentJournalSize(pager);
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                    var journalReader = new JournalReader(pager, recoveryPager, lastSyncedTransactionId, transactionHeader);
+                    var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId, transactionHeader);
                     journalReader.RecoverAndValidate(_env.Options);
 
-                    var pagesToWrite = journalReader
-                        .TransactionPageTranslation
-                        .Select(kvp => recoveryPager.Read(null, kvp.Value.JournalPos))
-                        .OrderBy(x => x.PageNumber)
-                        .ToList();
-
-                    var lastReadHeaderPtr = journalReader.LastTransactionHeader;
+                   var lastReadHeaderPtr = journalReader.LastTransactionHeader;
 
                     if (lastReadHeaderPtr != null)
                     {
-                        if (pagesToWrite.Count > 0)
-                            ApplyPagesToDataFileFromJournal(pagesToWrite);
-
                         *txHeader = *lastReadHeaderPtr;
                         lastSyncedTxId = txHeader->TransactionId;
                         lastSyncedJournal = journalNumber;
@@ -954,7 +944,6 @@ namespace Voron.Impl.Journal
 
             foreach (var txPage in txPages)
             {
-                __ADIADI__++;
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txPage.ScratchFileNumber,
                     txPage.PositionInScratchBuffer);
 
@@ -965,16 +954,11 @@ namespace Voron.Impl.Journal
                 {
                     _diffPage.Original = txPage.PreviousVersion.Pointer;
                     _diffPage.ComputeDiff();
-                    
-                    //if (__ADIADI__ % 10000 == 0)
-                    //    Console.WriteLine($"{__ADIADI__} :: Compute Diff from {txPage.NumberOfPages * pageSize} to {_diffPage.OutputSize}");
                 }
                 else
                 {
                     _diffPage.Original = null;
                     _diffPage.ComputeNew();
-                    //if (__ADIADI__ % 10000 == 0)
-                    //    Console.WriteLine($"{__ADIADI__} :: Compute New  from {txPage.NumberOfPages * pageSize} to {_diffPage.OutputSize}");
                 }
 
                 write += _diffPage.OutputSize;
@@ -1013,6 +997,7 @@ namespace Voron.Impl.Journal
             txHeader->Compressed = true;
             txHeader->CompressedSize = compressedLen;
             txHeader->UncompressedSize = totalSizeWritten;
+            txHeader->PageCount = txPages.Count;
             txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, compressedLen);
 
             var prepreToWriteToJournal = new CompressedPagesResult
