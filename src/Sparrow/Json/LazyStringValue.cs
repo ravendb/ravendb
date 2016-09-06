@@ -6,7 +6,7 @@ using System.Text;
 namespace Sparrow.Json
 {
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
-        IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable
+        IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
     {
         public readonly JsonOperationContext Context;
         public readonly byte* Buffer;
@@ -123,6 +123,24 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return (string)this; // invoke the implicit string conversion
+        }
+
+        public int CompareTo(object obj)
+        {
+            if (obj == null)
+                return 1;
+
+            var lsv = obj as LazyStringValue;
+
+            if (lsv != null)
+                return CompareTo(lsv);
+
+            var s = obj as string;
+
+            if (s != null)
+                return CompareTo(s);
+
+            throw new NotSupportedException($"Cannot compare LazyStringValue to object of type {obj.GetType().Name}");
         }
 
         public void Dispose()
