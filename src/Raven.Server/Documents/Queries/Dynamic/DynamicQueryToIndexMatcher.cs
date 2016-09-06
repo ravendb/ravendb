@@ -136,15 +136,28 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var currentBestState = DynamicQueryMatchType.Complete;
 
-            if (query.MapFields.All(x => definition.ContainsField(index.Type.IsAuto() ? x.Name : x.NormalizedName)) == false)
+            foreach (var field in query.MapFields)
             {
-                if (explanations != null)
+                IndexField indexField;
+                if (definition.TryGetField(index.Type.IsAuto() ? field.Name : field.NormalizedName, out indexField))
                 {
-                    var missingFields = query.MapFields.Where(x => definition.ContainsField(index.Type.IsAuto() ? x.Name : x.NormalizedName) == false);
-                    explanations.Add(new Explanation(indexName, $"The following fields are missing: {string.Join(", ", missingFields)}"));
-                }
+                    if (string.IsNullOrWhiteSpace(indexField.Analyzer) == false)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following field have a custom analyzer: {indexField.Name}"));
+                        currentBestState = DynamicQueryMatchType.Partial;
+                    }
 
-                currentBestState = DynamicQueryMatchType.Partial;
+                    if (indexField.Indexing != FieldIndexing.Default)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following field is not using default indexing: {indexField.Name}"));
+                        currentBestState = DynamicQueryMatchType.Partial;
+                    }
+                }
+                else
+                {
+                    explanations?.Add(new Explanation(indexName, $"The following field is missing: {indexField.Name}"));
+                    currentBestState = DynamicQueryMatchType.Partial;
+                }
             }
 
             //TODO arek: ignore highlighting for now
