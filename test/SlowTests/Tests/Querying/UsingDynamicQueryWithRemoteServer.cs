@@ -511,7 +511,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        public class Blog
+        private class Blog
         {
             public User User { get; set; }
 
@@ -524,12 +524,12 @@ namespace SlowTests.Tests.Querying
             public string Category { get; set; }
         }
 
-        public class Tag
+        private class Tag
         {
             public string Name { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }

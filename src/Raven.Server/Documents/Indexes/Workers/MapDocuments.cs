@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 try
                                 {
-                                    _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, collectionStats);
+                                    _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
 
                                     collectionStats.RecordMapSuccess();
                                 }

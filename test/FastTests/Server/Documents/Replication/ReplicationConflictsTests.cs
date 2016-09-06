@@ -20,7 +20,7 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationConflictsTests : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public int Age { get; set; }

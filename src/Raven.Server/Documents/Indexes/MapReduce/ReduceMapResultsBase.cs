@@ -126,6 +126,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     writer.IndexDocument(reduceKeyHash, new Document
                     {
                         Key = reduceKeyHash,
+                        LoweredKey = reduceKeyHash,
                         Data = output
                     }, stats);
                 }
@@ -205,6 +206,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 writer.IndexDocument(reduceKeyHash, new Document
                                 {
                                     Key = reduceKeyHash,
+                                    LoweredKey = reduceKeyHash,
                                     Data = output
                                 }, stats);
                             }
@@ -279,6 +281,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                     writer.IndexDocument(reduceKeyHash, new Document
                                     {
                                         Key = reduceKeyHash,
+                                        LoweredKey = reduceKeyHash,
                                         Data = output
                                     }, stats);
                                 }

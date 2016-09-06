@@ -429,6 +429,7 @@ namespace Voron.Data.Tables
                             var sectionPageNumber = it.CurrentKey;
                             _activeDataSmallSection = new ActiveRawDataSmallSection(_tx.LowLevelTransaction,
                                 sectionPageNumber);
+                            _activeDataSmallSection.DataMoved += OnDataMoved;
                             if (_activeDataSmallSection.TryAllocate(size, out id))
                             {
                                 ActiveCandidateSection.Delete(sectionPageNumber);
@@ -440,7 +441,7 @@ namespace Voron.Data.Tables
                 }
 
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name);
-
+                _activeDataSmallSection.DataMoved += OnDataMoved;
                 var pageNumber = Slice.From(_tx.Allocator, EndianBitConverter.Little.GetBytes(_activeDataSmallSection.PageNumber), ByteStringType.Immutable);
                 _tableTree.Add(TableSchema.ActiveSection, pageNumber);
 

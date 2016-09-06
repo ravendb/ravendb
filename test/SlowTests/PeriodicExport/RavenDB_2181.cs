@@ -10,12 +10,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Util;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Xunit;
 
-namespace FastTests.Server.Documents.PeriodicExport
+namespace SlowTests.PeriodicExport
 {
     public class RavenDB_2181 : NoDisposalNeeded
     {

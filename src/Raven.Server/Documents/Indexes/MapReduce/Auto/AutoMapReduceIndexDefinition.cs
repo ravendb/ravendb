@@ -30,6 +30,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase); ;
         }
 
+        public bool ContainsGroupByField(string field)
+        {
+            return GroupByFields.ContainsKey(field);
+        }
+
         protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);

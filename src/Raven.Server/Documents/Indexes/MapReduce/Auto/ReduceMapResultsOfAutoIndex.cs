@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         string stringValue;
 
                         IndexField indexField;
-                        if (_indexDefinition.MapFields.TryGetValue(propertyName, out indexField))
+                        if (_indexDefinition.TryGetField(propertyName, out indexField))
                         {
                             switch (indexField.MapReduceOperation)
                             {
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             };
                         }
 
-                        if (_indexDefinition.GroupByFields.ContainsKey(propertyName) == false)
+                        if (_indexDefinition.ContainsGroupByField(propertyName) == false)
                         {
                             // we want to reuse existing entry to get a reduce key
 

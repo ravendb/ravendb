@@ -55,7 +55,7 @@ namespace Raven.Abstractions.Commands
                 {"AdditionalData", AdditionalData}
             };
             if (Etag != null)
-                ret.Add("Etag", Etag.ToString());
+                ret.Add("Etag", Etag);
             return ret;
         }
     }

@@ -679,12 +679,17 @@ namespace Raven.Server.Documents
             };
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
-            var ptr = tvr.Read(2, out size);
             byte offset;
+            var ptr = tvr.Read(0, out size);
+            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
+
+            ptr = tvr.Read(2, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
+
             ptr = tvr.Read(1, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
+
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
@@ -716,8 +721,11 @@ namespace Raven.Server.Documents
             };
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKeyAndCollection method
-            var ptr = tvr.Read(3, out size);
             byte offset;
+            var ptr = tvr.Read(0, out size);
+            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
+
+            ptr = tvr.Read(3, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
 
@@ -1010,8 +1018,6 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document,
             ChangeVectorEntry[] changeVector = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentException("Document key cannot be null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
@@ -1021,6 +1027,9 @@ namespace Raven.Server.Documents
             var collectionName = GetCollectionName(key, document, out originalCollectionName, out isSystemDocument);
             DocsSchema.Create(context.Transaction.InnerTransaction, collectionName);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
+
+            if (string.IsNullOrWhiteSpace(key))
+                key = Guid.NewGuid().ToString();
 
             if (key[key.Length - 1] == '/')
             {

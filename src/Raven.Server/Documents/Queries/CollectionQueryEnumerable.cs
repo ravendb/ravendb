@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Voron;
@@ -58,6 +60,7 @@ namespace Raven.Server.Documents.Queries
             private IEnumerator<Document> _inner;
             private int _innerCount;
             private readonly List<Slice> _ids;
+            private Sort _sort;
 
             public Enumerator(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context)
             {
@@ -71,6 +74,26 @@ namespace Raven.Server.Documents.Queries
                     _alreadySeenProjections = new HashSet<ulong>();
 
                 _ids = ExtractIdsFromQuery(query);
+                _sort = ExtractSortFromQuery(query);
+            }
+
+            private static Sort ExtractSortFromQuery(IndexQueryServerSide query)
+            {
+                if (query.SortedFields == null || query.SortedFields.Length == 0)
+                    return null;
+
+                Debug.Assert(query.SortedFields.Length == 1);
+
+                var randomField = query.SortedFields[0];
+
+                Debug.Assert(randomField.Field.StartsWith(Constants.Indexing.Fields.RandomFieldName));
+
+                var customFieldName = SortFieldHelper.ExtractName(randomField.Field);
+
+                if (customFieldName.IsNullOrWhiteSpace())
+                    return new Sort(null);
+
+                return new Sort(customFieldName);
             }
 
             private List<Slice> ExtractIdsFromQuery(IndexQueryServerSide query)
@@ -142,10 +165,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (_inner == null)
                     {
-                        _inner = _ids != null && _ids.Count > 0
-                            ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize).GetEnumerator()
-                            : _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize).GetEnumerator();
-
+                        _inner = GetDocuments().GetEnumerator();
                         _innerCount = 0;
                     }
 
@@ -166,9 +186,9 @@ namespace Raven.Server.Documents.Queries
 
                     _innerCount++;
 
-                    var doc = _fieldsToFetch.IsProjection
-                                ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
-                                : _inner.Current;
+                    var doc = _fieldsToFetch.IsProjection 
+                        ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context) 
+                        : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
                     {
@@ -189,6 +209,24 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
+            private IEnumerable<Document> GetDocuments()
+            {
+                var documents = _ids != null && _ids.Count > 0
+                    ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize)
+                    : _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize);
+
+                return ApplySorting(documents);
+            }
+
+            private IEnumerable<Document> ApplySorting(IEnumerable<Document> documents)
+            {
+                if (_sort == null)
+                    return documents;
+
+                return documents
+                    .OrderBy(x => _sort.Next());
+            }
+
             private int Initialize()
             {
                 _initialized = true;
@@ -206,13 +244,13 @@ namespace Raven.Server.Documents.Queries
                 while (true)
                 {
                     var count = 0;
-                    foreach (var document in _documents.GetDocumentsAfter(_context, _collection, 0, start, _query.PageSize))
+                    foreach (var document in ApplySorting(_documents.GetDocumentsAfter(_context, _collection, 0, start, _query.PageSize)))
                     {
                         count++;
 
-                        var doc = _fieldsToFetch.IsProjection
-                                ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
-                                : document;
+                        var doc = _fieldsToFetch.IsProjection 
+                            ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context) 
+                            : _inner.Current;
 
                         if (doc.Data.Count <= 0)
                             continue;
@@ -244,6 +282,24 @@ namespace Raven.Server.Documents.Queries
 
             public void Dispose()
             {
+            }
+
+            private class Sort
+            {
+                private readonly Random _random;
+
+                public Sort(string field)
+                {
+                    if (string.IsNullOrWhiteSpace(field))
+                        field = Guid.NewGuid().ToString();
+
+                    _random = new Random(field.GetHashCode());
+                }
+
+                public int Next()
+                {
+                    return _random.Next();
+                }
             }
         }
     }

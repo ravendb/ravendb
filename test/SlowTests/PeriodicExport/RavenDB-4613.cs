@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,7 +13,7 @@ using FastTests;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.PeriodicExport
 {
     public class RavenDB_4163 : NoDisposalNeeded
     {

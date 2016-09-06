@@ -912,15 +912,15 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var sortedField in query.SortedFields)
                 {
                     var f = sortedField.Field;
-                    //if (f == Constants.TemporaryScoreValue)
-                    //    continue;
+                    if (f == Constants.Indexing.Fields.IndexFieldScoreName)
+                        continue;
 
                     if (f.StartsWith(Constants.Indexing.Fields.RandomFieldName) || f.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
                         continue;
 
                     if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
                     {
-                        f = SortFieldHelper.CustomField(f).Name;
+                        f = SortFieldHelper.ExtractName(f);
                         if (string.IsNullOrEmpty(f))
                             throw new ArgumentException("Alpha numeric sorting requires a field name");
                     }

@@ -3,15 +3,14 @@
 // (see accompanying GPPGcopyright.rtf)
 
 using System;
-using System.Text;
-using System.Globalization;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 
-namespace QUT.Gppg
+namespace Raven.Server.Documents.Queries.Parse
 {
     /// <summary>
     /// Abstract class for GPPG shift-reduce parsers.
