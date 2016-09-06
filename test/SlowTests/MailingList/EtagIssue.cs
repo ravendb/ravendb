@@ -278,7 +278,7 @@ namespace SlowTests.MailingList
 
             yield return new PatchCommandData
             {
-                Key = user.Id,
+                Id = user.Id,
                 Patch = new PatchRequest
                 {
                     Script = patchScript,
@@ -292,7 +292,7 @@ namespace SlowTests.MailingList
 
             yield return new PatchCommandData
             {
-                Key = organization.Id,
+                Id = organization.Id,
                 Patch = new PatchRequest
                 {
                     Script = patchScript,
