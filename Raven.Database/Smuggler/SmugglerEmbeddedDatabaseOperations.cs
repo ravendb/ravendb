@@ -164,14 +164,15 @@ namespace Raven.Database.Smuggler
         }
 
         private long totalSize;
-        private Lazy<Stopwatch> sp = new Lazy<Stopwatch>(()=>new Stopwatch());
+        private Stopwatch? sp = null;
         
         public Task PutDocument(RavenJObject document, int size)
         {
             if (document != null)
             {
                 totalSize += size;
-                sp.Value.Restart();
+                if (sp == null)
+                    sp = Stopwatch.StartNew();
 
                 var metadata = document.Value<RavenJObject>("@metadata");
                 var key = metadata.Value<string>("@id");
@@ -186,16 +187,22 @@ namespace Raven.Database.Smuggler
 
                 if (Options.BatchSize > bulkInsertBatch.Count &&
                     totalSize <= maxSize &&
-                    sp.Value.Elapsed <= timeout)
+                    sp.Elapsed <= timeout)
                     return new CompletedTask();
             }
 
-            sp.Value.Stop();
+            var stopWatchExists = sp != null;
+            if (stopWatchExists)
+                sp.Stop();
+
             var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
             bulkInsertBatch = new List<JsonDocument>();
             database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = Options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid(), CancellationToken.None);
             totalSize = 0;
-            sp.Value.Restart();
+
+            if (stopWatchExists)
+                sp.Restart();
+
             return new CompletedTask();
         }
 
