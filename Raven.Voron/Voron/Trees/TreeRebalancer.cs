@@ -31,11 +31,12 @@ namespace Voron.Trees
             
             _cursor.Pop();
 
-            var parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _tree, _cursor.CurrentPage);
+            var parentPage = _cursor.CurrentPage;
             _cursor.Update(_cursor.Pages.First, parentPage);
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
+                parentPage = _tx.ModifyPage(parentPage.PageNumber, _tree, parentPage);
                 // need to change the implicit left page
                 if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
                 {
@@ -55,6 +56,7 @@ namespace Voron.Trees
 
             if (page.IsBranch && page.NumberOfEntries == 1)
             {
+                parentPage = _tx.ModifyPage(parentPage.PageNumber, _tree, parentPage);
                 RemoveBranchWithOneEntry(page, parentPage);
 
                 return parentPage;
@@ -64,9 +66,10 @@ namespace Voron.Trees
             if (page.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                 page.NumberOfEntries >= minKeys)
                 return null; // above space/keys thresholds
-
+            //from this point we always modify parent page
+            parentPage = _tx.ModifyPage(parentPage.PageNumber, _tree, parentPage);
             Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
-
+            //sibling is already modified inside
             var sibling = SetupMoveOrMerge(page, parentPage);
             Debug.Assert(sibling.PageNumber != page.PageNumber);
 
@@ -351,7 +354,7 @@ namespace Voron.Trees
             var node = page.GetNode(0);
             Debug.Assert(node->Flags == (NodeFlags.PageRef));
 
-            var rootPage = _tx.ModifyPage(node->PageNumber, _tree, null);
+            var rootPage = _tx.GetReadOnlyPage(node->PageNumber);
             _tree.State.RootPageNumber = rootPage.PageNumber;
             _tree.State.Depth--;
 
