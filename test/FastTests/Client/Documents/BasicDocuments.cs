@@ -12,6 +12,21 @@ namespace FastTests.Client.Documents
     public class BasicDocuments : RavenTestBase
     {
         [Fact]
+        public async Task CanStoreAnonymousObject()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new { Name = "Fitzchak" });
+                    await session.StoreAsync(new { Name = "Arek" });
+
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+        [Fact]
         public async Task GetAsync()
         {
             using (var store = GetDocumentStore())

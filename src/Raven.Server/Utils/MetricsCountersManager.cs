@@ -94,5 +94,18 @@ namespace Raven.Server.Utils
                 ["OneMinuteRate"] = Math.Round(meterValue.OneMinuteRate, 3),
             };
         }
+
+
+        public static void SetMinimalHumaneMeterData(this MeterMetric self, string name, DynamicJsonValue obj)
+        {
+            obj["HumaneTotal" + name] = Sizes.Humane(self.Count);
+            obj["Humane" + name + "Rate"] = Sizes.Humane((long)self.OneMinuteRate);
+        }
+
+        public static void SetMinimalMeterData(this MeterMetric self, string name, DynamicJsonValue obj)
+        {
+            obj["Total" + name] = self.Count;
+            obj[name + "Rate"] = Math.Round(self.OneMinuteRate,2);
+        }
     }
 }

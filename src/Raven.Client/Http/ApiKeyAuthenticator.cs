@@ -17,7 +17,7 @@ namespace Raven.Client.Http
 {
     public class ApiKeyAuthenticator : IDisposable
     {
-        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<ApiKeyAuthenticator>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyAuthenticator>("Client");
         private readonly CancellationTokenSource _disposedToken = new CancellationTokenSource();
 
         public async Task<string> AuthenticateAsync(string url, string apiKey, JsonOperationContext context)

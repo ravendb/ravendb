@@ -66,6 +66,11 @@ namespace Raven.Client.Document
             Operation.Dispose();
         }
 
+        public string Store(object entity)
+        {
+            return AsyncHelpers.RunSync(() => StoreAsync(entity));
+        }
+
         public async Task<string> StoreAsync(object entity)
         {
             var id = GetId(entity);

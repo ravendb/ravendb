@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Data.Tables;
 using Voron.Global;
 
 namespace Voron.Impl
@@ -20,7 +21,7 @@ namespace Voron.Impl
         }
 
         private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
-        private readonly HashSet<ICommittable> _participants = new HashSet<ICommittable>();
+        private readonly Dictionary<string, Table> _tables = new Dictionary<string, Table>();
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
@@ -70,9 +71,14 @@ namespace Voron.Impl
             _lowLevelTransaction.Commit();
         }
 
-        public void Register(ICommittable participant)
+        public Table OpenTable(TableSchema schema, string name)
         {
-            _participants.Add(participant);
+            Table openTable;
+            if (_tables.TryGetValue(name, out openTable))
+                return openTable;
+            openTable = new Table(schema, name, this,1);
+            _tables[name] = openTable;
+            return openTable;
         }
 
         internal void PrepareForCommit()
@@ -104,10 +110,9 @@ namespace Voron.Impl
                 }
             }
 
-            foreach (var participant in _participants)
+            foreach (var participant in _tables.Values)
             {
-                if (participant.RequiresParticipation)
-                    participant.PrepareForCommit();
+                participant.PrepareForCommit();
             }
         }
 

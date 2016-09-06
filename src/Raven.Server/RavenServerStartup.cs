@@ -2,18 +2,23 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NLog.Config;
+using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server.Routing;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using LogManager = NLog.LogManager;
@@ -24,6 +29,7 @@ namespace Raven.Server
     {
         private RequestRouter _router;
         private RavenServer _server;
+        private int _requestId;
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
@@ -46,7 +52,31 @@ namespace Raven.Server
             try
             {
                 context.Response.StatusCode = 200;
-                await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+                var sp = Stopwatch.StartNew();
+                var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+                sp.Stop();
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                {
+                    var requestId = Interlocked.Increment(ref _requestId);
+
+                    var twn = new TrafficWatchNotification
+                    {
+                        TimeStamp = DateTime.UtcNow,
+                        RequestId = requestId, // counted only for traffic watch
+                        HttpMethod = context.Request.Method ?? "N/A", // N/A ?
+                        ElapsedMilliseconds = sp.ElapsedMilliseconds,
+                        ResponseStatusCode = context.Response.StatusCode,
+                        RequestUri = context.Request.GetEncodedUrl(),
+                        AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
+                        TenantName = tenant ?? "N/A",
+                        CustomInfo = "", // TODO: Implement
+                        InnerRequestsCount = 0, // TODO: Implement
+                        QueryTimings = null, // TODO: Implement
+                    };
+
+                    TrafficWatchManager.DispatchMessage(twn);
+                }
             }
             catch (Exception e)
             {

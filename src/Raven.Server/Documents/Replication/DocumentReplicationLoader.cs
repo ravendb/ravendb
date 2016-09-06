@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication
         public DocumentReplicationLoader(DocumentDatabase database)
         {
             _database = database;
-            _log = LoggerSetup.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
+            _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
         }
@@ -147,14 +147,14 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-	        try
-	        {
-				//at this stage we can be already disposed, so ...
-		        _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
-	        }
-	        catch (ObjectDisposedException)
-	        {
-	        }
+            try
+            {
+                //at this stage we can be already disposed, so ...
+                _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
@@ -196,19 +196,19 @@ namespace Raven.Server.Documents.Replication
             if (replicationDocument?.Destinations == null) //precaution
                 return;
 
-			if (_log.IsInfoEnabled)
-				_log.Info("Initializing outgoing replications..");
-			foreach (var destination in replicationDocument.Destinations)
+            if (_log.IsInfoEnabled)
+                _log.Info("Initializing outgoing replications..");
+            foreach (var destination in replicationDocument.Destinations)
             {
-				if(_log.IsInfoEnabled)
-					_log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
+                if(_log.IsInfoEnabled)
+                    _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
                 AddAndStartOutgoingReplication(destination);
             }
-			if (_log.IsInfoEnabled)
-				_log.Info("Finished initialization of outgoing replications..");
-		}
+            if (_log.IsInfoEnabled)
+                _log.Info("Finished initialization of outgoing replications..");
+        }
 
-		private void AddAndStartOutgoingReplication(ReplicationDestination destination)
+        private void AddAndStartOutgoingReplication(ReplicationDestination destination)
         {
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;

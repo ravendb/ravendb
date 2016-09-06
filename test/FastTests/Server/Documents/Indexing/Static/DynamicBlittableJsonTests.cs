@@ -81,7 +81,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             return new Document
             {
                 Data = data,
-                Key = _ctx.GetLazyString(id)
+                Key = _ctx.GetLazyString(id),
+                LoweredKey = _ctx.GetLazyString(id.ToLowerInvariant())
             };
         }
 

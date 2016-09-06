@@ -7,16 +7,15 @@
 // ==============================================================
 
 using System;
-using System.IO;
-using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.Serialization;
 using System.Globalization;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 
-namespace QUT.GplexBuffers
+namespace Raven.Server.Documents.Queries.Parse
 {
 // Code copied from GPLEX embedded resource
     public class BufferException : Exception

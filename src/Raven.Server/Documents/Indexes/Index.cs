@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
-            _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             lock (_locker)
             {
                 if (_initialized)
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Indexes
                     _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-                    _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
+                    _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
@@ -912,15 +912,15 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var sortedField in query.SortedFields)
                 {
                     var f = sortedField.Field;
-                    //if (f == Constants.TemporaryScoreValue)
-                    //    continue;
+                    if (f == Constants.Indexing.Fields.IndexFieldScoreName)
+                        continue;
 
                     if (f.StartsWith(Constants.Indexing.Fields.RandomFieldName) || f.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
                         continue;
 
                     if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
                     {
-                        f = SortFieldHelper.CustomField(f).Name;
+                        f = SortFieldHelper.ExtractName(f);
                         if (string.IsNullOrEmpty(f))
                             throw new ArgumentException("Alpha numeric sorting requires a field name");
                     }

@@ -328,7 +328,10 @@ namespace Voron.Data.RawData
 
         protected virtual void OnDataMoved(long previousid, long newid, byte* data, int size)
         {
-            DataMoved?.Invoke(previousid, newid, data, size);
+            var onDataMoved = DataMoved;
+            if (onDataMoved == null)
+                throw new InvalidOperationException("Trying to move data, but no one is listening to the move!");
+            onDataMoved(previousid, newid, data, size);
         }
     }
 }

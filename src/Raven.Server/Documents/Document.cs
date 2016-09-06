@@ -21,10 +21,15 @@ namespace Raven.Server.Documents
 
         public long Etag;
         public LazyStringValue Key;
+        public LazyStringValue LoweredKey;
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public ChangeVectorEntry[] ChangeVector;
-        
+
+        public Document()
+        {
+        }
+
         public unsafe ulong DataHash
         {
             get
@@ -106,7 +111,7 @@ namespace Raven.Server.Documents
 
         public static string GetCollectionName(string key, BlittableJsonReaderObject document, out bool isSystemDocument)
         {
-            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
             {
                 isSystemDocument = true;
                 return SystemDocumentsCollection;

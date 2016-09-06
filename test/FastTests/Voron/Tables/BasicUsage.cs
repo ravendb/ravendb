@@ -27,7 +27,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 SetHelper(docs, "users/1",  "Users", 1L, "{'Name': 'Oren'}");
 
@@ -36,7 +36,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 var handle = docs.ReadByKey(Slice.From(tx.Allocator, "users/1"));
 
                 int size;
@@ -58,7 +58,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
                 tx.Commit();
@@ -66,7 +66,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 SetHelper(docs, "users/1", "Users", 2L, "{'Name': 'Eini'}");
 
                 tx.Commit();
@@ -74,7 +74,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 var handle = docs.ReadByKey(Slice.From(tx.Allocator, "users/1"));
 
                 int size;
@@ -97,7 +97,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 SetHelper(docs, "users/1",  "Users", 1L, "{'Name': 'Oren'}");
 
 
@@ -106,7 +106,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
 
@@ -115,7 +115,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 Assert.Null(docs.ReadByKey(Slice.From(tx.Allocator, "users/1")));
             }

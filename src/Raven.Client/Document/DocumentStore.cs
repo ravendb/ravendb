@@ -45,6 +45,8 @@ namespace Raven.Client.Document
 
         private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
 
+        private readonly ConcurrentDictionary<string, Lazy<RequestExecuter>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecuter>>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// The current session id - only used during construction
         /// </summary>
@@ -131,8 +133,6 @@ namespace Raven.Client.Document
             SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
             Conventions = new DocumentConvention();
         }
-
-        public RequestExecuter RequestExecuter { get; private set; }
 
         private string identifier;
 
@@ -270,6 +270,26 @@ namespace Raven.Client.Document
             });
         }
 
+        /// <summary>
+        /// Opens the session.
+        /// </summary>
+        /// <returns></returns>
+        public Documents.DocumentSession OpenNewSession()
+        {
+            return OpenNewSession(new OpenSessionOptions());
+        }
+
+        /// <summary>
+        /// Opens the session for a particular database
+        /// </summary>
+        public Documents.DocumentSession OpenNewSession(string database)
+        {
+            return OpenNewSession(new OpenSessionOptions
+            {
+                Database = database
+            });
+        }
+
         public override IDocumentSession OpenSession(OpenSessionOptions options)
         {
             EnsureNotClosed();
@@ -278,11 +298,9 @@ namespace Raven.Client.Document
             currentSessionId = sessionId;
             try
             {
-                var session = new DocumentSession(options.Database, this, Listeners, sessionId,
-                    SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
-                    {
-                        DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
-                    };
+                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+                var session = new DocumentSession(databaseName, this, Listeners, sessionId,
+                    SetupCommands(DatabaseCommands, databaseName, options.Credentials, options));
                 AfterSessionCreated(session);
                 return session;
             }
@@ -290,6 +308,37 @@ namespace Raven.Client.Document
             {
                 currentSessionId = null;
             }
+        }
+
+        public Documents.DocumentSession OpenNewSession(OpenSessionOptions options)
+        {
+            EnsureNotClosed();
+
+            var sessionId = Guid.NewGuid();
+            currentSessionId = sessionId;
+            try
+            {
+                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+                var requestExecuter = GetRequestExecuter(databaseName);
+                var session = new Documents.DocumentSession(databaseName, this, Listeners, sessionId,
+                    SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
+                // AfterSessionCreated(session);
+                return session;
+            }
+            finally
+            {
+                currentSessionId = null;
+            }
+        }
+
+        private RequestExecuter GetRequestExecuter(string databaseName)
+        {
+            Lazy<RequestExecuter> lazy;
+            if (_requestExecuters.TryGetValue(databaseName, out lazy))
+                return lazy.Value;
+            lazy = _requestExecuters.GetOrAdd(databaseName,
+                dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
+            return lazy.Value;
         }
 
         private static IDatabaseCommands SetupCommands(IDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
@@ -331,7 +380,6 @@ namespace Raven.Client.Document
             AssertValidConfiguration();
 
             jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent, Conventions.AuthenticationScheme);
-            RequestExecuter = new RequestExecuter(this);
 
             try
             {
@@ -597,7 +645,7 @@ namespace Raven.Client.Document
             });
         }
 
-        private IAsyncDocumentSession OpenAsyncSessionInternal(OpenSessionOptions options)
+        private Documents.Async.AsyncDocumentSession OpenNewAsyncSessionInternal(OpenSessionOptions options)
         {
             AssertInitialized();
             EnsureNotClosed();
@@ -610,17 +658,33 @@ namespace Raven.Client.Document
                 if (AsyncDatabaseCommands == null)
                     throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-                var session = new AsyncDocumentSession(options.Database, this, asyncDatabaseCommands, Listeners, sessionId)
-                {
-                    DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
-                };
-                AfterSessionCreated(session);
+                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+                var requestExecuter = GetRequestExecuter(databaseName);
+                var session = new Documents.Async.AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, requestExecuter, sessionId);
+                //AfterSessionCreated(session);
                 return session;
             }
             finally
             {
                 currentSessionId = null;
             }
+        }
+
+        /// <summary>
+        /// Opens the async session.
+        /// </summary>
+        /// <returns></returns>
+        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession(string databaseName)
+        {
+            return OpenNewAsyncSession(new OpenSessionOptions
+            {
+                Database = databaseName
+            });
+        }
+
+        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession(OpenSessionOptions options)
+        {
+            return OpenNewAsyncSessionInternal(options);
         }
 
         /// <summary>
@@ -642,6 +706,30 @@ namespace Raven.Client.Document
             {
                 Database = databaseName
             });
+        }
+
+        private IAsyncDocumentSession OpenAsyncSessionInternal(OpenSessionOptions options)
+        {
+            AssertInitialized();
+            EnsureNotClosed();
+
+            var sessionId = Guid.NewGuid();
+            currentSessionId = sessionId;
+            try
+            {
+                var asyncDatabaseCommands = SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options);
+                if (AsyncDatabaseCommands == null)
+                    throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
+
+                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+                var session = new AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, Listeners, sessionId);
+                AfterSessionCreated(session);
+                return session;
+            }
+            finally
+            {
+                currentSessionId = null;
+            }
         }
 
         public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)

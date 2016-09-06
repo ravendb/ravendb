@@ -13,7 +13,7 @@ using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class Table : ICommittable
+    public unsafe class Table
     {
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
@@ -91,7 +91,7 @@ namespace Voron.Data.Tables
             InsertIndexValuesFor(newId, new TableValueReader(data, size));
         }
 
-        public Table(TableSchema schema, string name, Transaction tx)
+        public Table(TableSchema schema, string name, Transaction tx, int tag)
         {
             Name = name;
 
@@ -108,8 +108,6 @@ namespace Voron.Data.Tables
                 throw new InvalidDataException($"Cannot find stats value for table {name}");
 
             NumberOfEntries = stats->NumberOfEntries;
-
-            _tx.Register(this);
         }
 
         /// <summary>
@@ -146,13 +144,13 @@ namespace Voron.Data.Tables
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-			id = -1;		
-			var pkTree = GetTree(_schema.Key);
-	        var readResult = pkTree?.Read(key);
-	        if (readResult == null)
-		        return false;
+            id = -1;		
+            var pkTree = GetTree(_schema.Key);
+            var readResult = pkTree?.Read(key);
+            if (readResult == null)
+                return false;
 
-	        id = readResult.Reader.ReadLittleEndianInt64();
+            id = readResult.Reader.ReadLittleEndianInt64();
             return true;
         }
 
@@ -431,6 +429,7 @@ namespace Voron.Data.Tables
                             var sectionPageNumber = it.CurrentKey;
                             _activeDataSmallSection = new ActiveRawDataSmallSection(_tx.LowLevelTransaction,
                                 sectionPageNumber);
+                            _activeDataSmallSection.DataMoved += OnDataMoved;
                             if (_activeDataSmallSection.TryAllocate(size, out id))
                             {
                                 ActiveCandidateSection.Delete(sectionPageNumber);
@@ -442,7 +441,7 @@ namespace Voron.Data.Tables
                 }
 
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name);
-
+                _activeDataSmallSection.DataMoved += OnDataMoved;
                 var pageNumber = Slice.From(_tx.Allocator, EndianBitConverter.Little.GetBytes(_activeDataSmallSection.PageNumber), ByteStringType.Immutable);
                 _tableTree.Add(TableSchema.ActiveSection, pageNumber);
 
@@ -722,11 +721,6 @@ namespace Voron.Data.Tables
             foreach (var id in toDelete)
                 Delete(id);
             return toDelete.Count;
-        }
-
-        public bool RequiresParticipation
-        {
-            get { return true; }
         }
 
         public void PrepareForCommit()

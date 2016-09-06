@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.SqlReplication
         public SqlReplicationLoader(DocumentDatabase database)
         {
             _database = database;
-            _logger = LoggerSetup.Instance.GetLogger(_database.Name, GetType().FullName);
+            _logger = LoggingSource.Instance.GetLogger(_database.Name, GetType().FullName);
             _database.Notifications.OnDocumentChange += WakeReplication;
             _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
 

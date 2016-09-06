@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicExport
             _database = database;
             _configuration = configuration;
             _status = status;
-            _logger = LoggerSetup.Instance.GetLogger<PeriodicExportRunner>(_database.Name);
+            _logger = LoggingSource.Instance.GetLogger<PeriodicExportRunner>(_database.Name);
             _cancellationToken = new CancellationTokenSource();
 
             if (configuration.IntervalMilliseconds.HasValue && configuration.IntervalMilliseconds.Value > 0)

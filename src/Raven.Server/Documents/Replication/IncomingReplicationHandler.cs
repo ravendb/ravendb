@@ -40,8 +40,8 @@ namespace Raven.Server.Documents.Replication
                                           .ContextPool
                                           .AllocateOperationContext(out _context);
 
-            _log = LoggerSetup.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(TcpConnection.DocumentDatabase.Name);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
         }
 
         public void Start()

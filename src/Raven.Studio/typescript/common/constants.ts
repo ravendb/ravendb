@@ -23,7 +23,7 @@ const enum checkbox {
     Checked = 2
 }
 
-enum TenantType {
+const enum TenantType {
     Database = 0,
     FileSystem = 1,
     CounterStorage = 2,

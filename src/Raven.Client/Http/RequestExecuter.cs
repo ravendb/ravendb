@@ -10,12 +10,11 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Util;
 using Raven.Client.Exceptions;
 using Sparrow.Logging;
 
@@ -23,10 +22,9 @@ namespace Raven.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
-        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<RequestExecuter>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
 
-        private readonly DocumentStore _store;
-        private readonly JsonContextPool _contextPool;
+        public readonly JsonContextPool ContextPool;
 
         public class AggresiveCacheOptions
         {
@@ -48,24 +46,25 @@ namespace Raven.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
-        public RequestExecuter(DocumentStore store)
+        public RequestExecuter(string url, string databaseName, string apiKey)
         {
-            _store = store;
             _topology = new Topology
             {
                 LeaderNode = new ServerNode
                 {
-                    Database = _store.DefaultDatabase,
-                    ApiKey = _store.ApiKey,
-                    Url = _store.Url,
+                    Url = url,
+                    Database = databaseName,
+                    ApiKey = apiKey,
                 },
-                Etag = int.MinValue
+                ReadBehavior = ReadBehavior.LeaderOnly,
+                WriteBehavior = WriteBehavior.LeaderOnly,
+                Etag = int.MinValue,
             };
 
             var handler = new HttpClientHandler();
             _httpClient = new HttpClient(handler);
 
-            _contextPool = new JsonContextPool();
+            ContextPool = new JsonContextPool();
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
             _updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -81,7 +80,7 @@ namespace Raven.Client.Http
         private async Task UpdateTopology()
         {
             JsonOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out context))
             {
                 var node = _topology.LeaderNode;
 
@@ -92,7 +91,7 @@ namespace Raven.Client.Http
                     _firstTimeTryLoadFromTopologyCache = false;
 
                     var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
-                    if (cachedTopology != null)
+                    if (cachedTopology != null && cachedTopology.Etag > 0)
                     {
                         _topology = cachedTopology;
                         // we have cached topology, but we need to verify it is up to date, we'll check in 
@@ -124,9 +123,15 @@ namespace Raven.Client.Http
             }
         }
 
-        public async Task ExecuteAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command)
+        public void Execute<TResult>(RavenCommand<TResult> command, JsonOperationContext context)
+        {
+            AsyncHelpers.RunSync(() => ExecuteAsync(command, context));
+        }
+
+        public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command, JsonOperationContext context)
         {
             var choosenNode = ChooseNodeForRequest(command);
+
             await ExecuteAsync(choosenNode, context, command);
         }
 
@@ -138,7 +143,7 @@ namespace Raven.Client.Http
             long cachedEtag;
             BlittableJsonReaderObject cachedValue;
             HttpCache.ReleaseCacheItem cachedItem;
-            using (cachedItem = _cache.Get(context, url, out cachedEtag, out cachedValue))
+            using (cachedItem = GetFromCache(context, command, request, url, out cachedEtag, out cachedValue))
             {
                 if (cachedEtag != 0)
                 {
@@ -209,6 +214,20 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
+        {
+            if (command.IsReadRequest)
+            {
+                if (request.Method != HttpMethod.Get)
+                    url = request.Method + "-" + url;
+                return _cache.Get(context, url, out cachedEtag, out cachedValue);
+            }
+
+            cachedEtag = 0;
+            cachedValue = null;
+            return new HttpCache.ReleaseCacheItem();
         }
 
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
@@ -470,7 +489,7 @@ namespace Raven.Client.Http
         private void UpdateCurrentTokenCallback(object _)
         {
             JsonOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out context))
             {
                 var topology = _topology;
 
@@ -571,7 +590,7 @@ namespace Raven.Client.Http
         {
             _cache.Dispose();
             _authenticator.Dispose();
-            _contextPool.Dispose();
+            ContextPool.Dispose();
         }
     }
 }

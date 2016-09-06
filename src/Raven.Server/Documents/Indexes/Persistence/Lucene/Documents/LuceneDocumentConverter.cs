@@ -32,9 +32,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var document = (Document)doc;
             if (document.Key != null)
             {
-                Debug.Assert(key == document.Key);
+                Debug.Assert(document.LoweredKey != null && key == document.LoweredKey);
 
-                yield return GetOrCreateKeyField(document.Key);
+                yield return GetOrCreateKeyField(document.LoweredKey);
             }
 
             if (_reduceOutput)

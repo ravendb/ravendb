@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Key of a document.
         /// </summary>
-        string Key { get; }
+        string Id { get; }
 
         /// <summary>
         /// Returns operation method.

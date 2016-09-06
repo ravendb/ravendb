@@ -20,14 +20,17 @@
       "buildOptions": {
         "optimize": true
       }
+    },
+    "Validate": {
+      "buildOptions": {
+        "optimize": true,
+        "define": [ "VALIDATE", "VALIDATE_PAGES" ]
+      }
     }
   },
 
   "frameworks": {
-    "netstandard1.6": {},
-    "netcoreapp1.0": {
-      "imports": "dnxcore50"
-    }
+    "netstandard1.6": {}
   },
 
   "dependencies": {

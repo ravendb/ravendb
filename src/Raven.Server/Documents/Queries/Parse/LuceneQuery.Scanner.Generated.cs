@@ -26,14 +26,12 @@
 #define BYTEMODE
 
 using System;
-using System.IO;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Reflection;
 
-using QUT.GplexBuffers;
-
-namespace Raven.Database.Indexing
+namespace Raven.Server.Documents.Queries.Parse
 {
     /// <summary>
     /// Summary Canonical example of GPLEX automaton

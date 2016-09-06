@@ -7,7 +7,9 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 import viewLocator = require("durandal/viewLocator");
 
+import MENU_BASED_ROUTER_CONFIGURATION = require("common/shell/routerConfiguration");
 import menu = require("common/shell/menu");
+import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeResourceTracker = require("viewmodels/resources/activeResourceTracker");
 import resourceSwitcher = require("common/shell/resourceSwitcher");
 import searchBox = require("common/shell/searchBox");
@@ -115,7 +117,7 @@ class shell extends viewModelBase {
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
 
-    mainMenu = new menu();
+    mainMenu = new menu(generateMenuItems(activeResourceTracker.default.resource()));
     searchBox = new searchBox();
     resourceSwitcher = new resourceSwitcher(shell.resources);
 
@@ -238,12 +240,22 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
+        let updateMenu = (resource: resource) => {
+            let items = generateMenuItems(resource);
+            this.mainMenu.update(items);
+        };
+
+        updateMenu(activeResourceTracker.default.resource());
+        activeResourceTracker.default.resource.subscribe(updateMenu);
+
         this.resourceSwitcher.initialize();
         this.searchBox.initialize();
     }
 
     compositionComplete() {
         super.compositionComplete();
+        $("#body").removeClass('loading-active');
+
         this.initializeShellComponents();
     }
 
@@ -417,7 +429,7 @@ class shell extends viewModelBase {
             }
         ] as Array<DurandalRouteConfiguration>;
 
-        return routes.concat(this.mainMenu.routerConfiguration());
+        return routes.concat(MENU_BASED_ROUTER_CONFIGURATION);
     }
 
     private fecthStudioConfigForDatabase(db: database) {
@@ -804,7 +816,7 @@ class shell extends viewModelBase {
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
-        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
+        var editDocUrl = appUrl.forEditDoc(docId, this.activeDatabase());
         this.navigate(editDocUrl);
     }
 

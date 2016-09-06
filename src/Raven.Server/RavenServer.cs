@@ -57,8 +57,8 @@ namespace Raven.Server
             ServerStore = new ServerStore(Configuration);
             Metrics = new MetricsCountersManager();
             Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-            _logger = LoggerSetup.Instance.GetLogger<RavenServer>("Raven/Server");
-            _tcpLogger = LoggerSetup.Instance.GetLogger<RavenServer>("<TcpServer>");
+            _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
+            _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
 
         public async Task<int> GetTcpServerPortAsync()

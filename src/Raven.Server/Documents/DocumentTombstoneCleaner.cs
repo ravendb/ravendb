@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
         public DocumentTombstoneCleaner(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
-            _logger = LoggerSetup.Instance.GetLogger<DocumentTombstoneCleaner>(_documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<DocumentTombstoneCleaner>(_documentDatabase.Name);
         }
 
         public void Initialize()

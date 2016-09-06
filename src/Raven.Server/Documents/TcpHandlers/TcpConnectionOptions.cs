@@ -125,17 +125,16 @@ namespace Raven.Server.Documents.TcpHandlers
                 ["Operation"] = Operation.ToString(),
                 ["ClientUri"] = TcpClient.Client.RemoteEndPoint.ToString(),
                 ["ConnectedAt"] = _connectedAt,
-                ["Duration"] = (DateTime.UtcNow - _connectedAt).ToString(),
-                ["HumaneTotalReceived"] = Sizes.Humane(_bytesReceivedMetric.Count),
-                ["HumaneReceivedRate"] = Sizes.Humane((long) _bytesReceivedMetric.OneMinuteRate),
-                ["HumaneTotalSent"] = Sizes.Humane(_bytesSentMetric.Count),
-                ["HumaneSentRate"] = Sizes.Humane((long) _bytesSentMetric.OneMinuteRate),
-
-                ["TotalReceived"] = _bytesReceivedMetric.Count,
-                ["ReceivedRate"] = Math.Round(_bytesReceivedMetric.OneMinuteRate, 2),
-                ["TotalSent"] = _bytesSentMetric.Count,
-                ["SentRate"] = Math.Round(_bytesSentMetric.OneMinuteRate, 2),
+                ["Duration"] = (DateTime.UtcNow - _connectedAt).ToString()
             };
+
+
+            _bytesReceivedMetric.SetMinimalHumaneMeterData("Received", stats);
+            _bytesSentMetric.SetMinimalHumaneMeterData("Sent", stats);
+
+            _bytesReceivedMetric.SetMinimalMeterData("Received", stats);
+            _bytesSentMetric.SetMinimalMeterData("Sent", stats);
+
             GetTypeSpecificStats?.Invoke(context, stats);
             return stats;
         }

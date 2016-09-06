@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
-            _logger = LoggerSetup.Instance
+            _logger = LoggingSource.Instance
                 .GetLogger<MapDocuments>(indexStorage.DocumentDatabase.Name);
         }
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 try
                                 {
-                                    _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, collectionStats);
+                                    _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
 
                                     collectionStats.RecordMapSuccess();
                                 }

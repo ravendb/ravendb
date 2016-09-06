@@ -548,33 +548,27 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         }
 
         [Fact]
-        public async Task CreateDocumentWillThrowIfEmptyKeyProvided()
+        public async Task CreateDocumentWillNotThrowIfEmptyKeyProvided()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Id = "CustomTypes/1", Value = 10});
+                    await session.StoreAsync(new CustomType { Id = "CustomTypes/1", Value = 10 });
                     await session.SaveChangesAsync();
                 }
 
-                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
-                    {
-                        Script = @"PutDocument(null, { 'Property': 'Value'});",
-                    });
+                    Script = @"PutDocument(null, { 'Property': 'Value'});",
                 });
-                Assert.Contains("Document key cannot be null or whitespace", exception.Message);
 
-                exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
-                    {
-                        Script = @"PutDocument('    ', { 'Property': 'Value'});",
-                    });
+                    Script = @"PutDocument('    ', { 'Property': 'Value'});",
                 });
-                Assert.Contains("Document key cannot be null or whitespace", exception.Message);
+
+                Assert.Equal(3, store.DatabaseCommands.GetStatistics().CountOfDocuments);
             }
         }
 

@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher, documentDatabase);
-            _logger = LoggerSetup.Instance.GetLogger<IndexReadOperation>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<IndexReadOperation>(documentDatabase.Name);
         }
 
         public int EntriesCount()
@@ -304,12 +304,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (InvariantCompare.IsPrefix(x.Field, Constants.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
                 {
-                    var customField = SortFieldHelper.CustomField(x.Field);
-                    if (string.IsNullOrEmpty(customField.Name))
+                    var customFieldName = SortFieldHelper.ExtractName(x.Field);
+                    if (customFieldName.IsNullOrWhiteSpace())
                         throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
 
                     var anSort = new AlphaNumericComparatorSource();
-                    return new SortField(customField.Name, anSort, x.Descending);
+                    return new SortField(customFieldName, anSort, x.Descending);
+                }
+
+                if (InvariantCompare.IsPrefix(x.Field, Constants.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                {
+                    var customFieldName = SortFieldHelper.ExtractName(x.Field);
+                    if (customFieldName.IsNullOrWhiteSpace()) // truly random
+                        return new RandomSortField(Guid.NewGuid().ToString());
+
+                    return new RandomSortField(customFieldName);
                 }
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))

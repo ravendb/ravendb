@@ -7,7 +7,7 @@ var require = {
         'Squire': '../../src/Raven.Studio/wwwroot/lib/Squire.js/src/Squire',
         'utils': 'js/utils',
         "moment": studioWwwrootPrefix + "lib/moment/moment",
-        'ace': studioWwwrootPrefix + 'lib/ace/lib/ace',
+        'ace': studioWwwrootPrefix + 'Content/ace',
 
         'endpoints': studioWwwrootPrefix + 'App/endpoints',
         'text': studioWwwrootPrefix + 'lib/requirejs-text/text',

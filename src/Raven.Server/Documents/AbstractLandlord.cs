@@ -36,7 +36,7 @@ namespace Raven.Server.Documents
             ServerStore = serverStore;
             ResourceSemaphore = new SemaphoreSlim(ServerStore.Configuration.Databases.MaxConcurrentResourceLoads);
             ConcurrentResourceLoadTimeout = ServerStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
-            _logger = LoggerSetup.Instance.GetLogger<AbstractLandlord<TResource>>("Raven/Server");
+            _logger = LoggingSource.Instance.GetLogger<AbstractLandlord<TResource>>("Raven/Server");
         }
 
         public abstract Task<TResource> TryGetOrCreateResourceStore(StringSegment resourceName);

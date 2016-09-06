@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             TcpConnection = connectionOptions;
             _bufferedWriter = new BlittableJsonTextWriter(connectionOptions.Context, _buffer);
-            _logger = LoggerSetup.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
 

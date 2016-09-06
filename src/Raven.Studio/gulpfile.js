@@ -5,6 +5,7 @@ require('./gulp/shim');
 var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
+    path = require('path'),
     del = require('del'),
     Map = require('es6-map'),
     runSequence = require('run-sequence'),
@@ -39,17 +40,6 @@ gulp.task('parse-configuration', function() {
     return gulp.src(PATHS.configurationFilesToParse)
         .pipe(parseConfiguration('configuration.ts'))
         .pipe(gulp.dest(PATHS.constantsTargetDir));
-});
-
-gulp.task('less:old', function () {
-    return gulp.src(PATHS.oldLessSource)
-        .pipe(plugins.newy(findNewestFile(PATHS.oldLessTargetSelector)))
-        .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.less({
-            sourceMap: true
-        }))
-        .pipe(plugins.sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.oldLessTarget));
 });
 
 gulp.task('less', function() {
@@ -119,8 +109,8 @@ gulp.task('release:images', function() {
 });
 
 gulp.task('release:fonts', function() {
-    return gulp.src('wwwroot/fonts/*')
-       .pipe(gulp.dest(PATHS.releaseTarget + "fonts"));
+    return gulp.src('wwwroot/Content/css/fonts/**/*')
+       .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'App/fonts')));
 });
 
 
@@ -209,7 +199,7 @@ gulp.task('watch:test', ['test'], function () {
     gulp.watch(PATHS.test.tsSource, ['test']);
 });
 
-gulp.task('compile', ['less', 'less:old', 'compile:app'], function() { });
+gulp.task('compile', ['less', 'compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.tsSource, ['compile:app']);
@@ -229,9 +219,9 @@ gulp.task('release', function (cb) {
             'release:libs',
             'release:favicon',
             'release:images',
-            'release:fonts',
             'release:html',
             'release:css',
+            'release:fonts',
             'release:durandal'
         ],
         cb);

@@ -34,15 +34,12 @@
     "mocha": "~2.0.1",
     "chai": "^3.5.0",
     "Squire.js": "squire#^0.2.0",
-    "es6-promise": "^3.2.2"
+    "es6-shim": "^0.35.1"
   },
   "resolutions": {
     "jquery": "^2.2.0",
     "requirejs": "^2.1.22",
     "knockout": ">= 2.0",
     "lodash": "^4.11.1"
-  },
-  "devDependencies": {
-    "ace": "^1.2.5"
   }
 }

@@ -11,7 +11,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         
         <link rel="shortcut icon" href="favicon.ico" />
-        <link rel="apple-touch-icon" href="Content/images/logo.png"/>
+        
+        <!-- TODO: embed this! -->
+        <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
 
         <!-- build:css App/styles.css -->
             <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
@@ -20,7 +22,7 @@
             <link rel="stylesheet" href="Content/css/legacy_styles.css" />
             <link rel="stylesheet" href="lib/font-awesome/css/font-awesome.css" />
         <!-- /build -->
-
+        
         <script type="text/javascript">
             if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
                 var msViewportStyle = document.createElement("style");
@@ -30,13 +32,9 @@
             }
         </script>
     </head>
-    <body>
+    <body class="loading-active">
     <div id="applicationHost">
-        <div class="splash">
-            <div class="message">
-                <img alt="RavenDB" src="Content_old/images/logo.png" />
-            </div>
-        </div>
+        <div class="loading-overlay"></div>
     </div>
     <iframe id="downloadFrame" style="display: none"></iframe>
 

@@ -17,7 +17,7 @@ namespace Sparrow.Json
         private List<IntPtr> _olderBuffers;
 
         private bool _isDisposed;
-        private static readonly Logger _logger = LoggerSetup.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
 
         public int Allocated => _allocated;
 

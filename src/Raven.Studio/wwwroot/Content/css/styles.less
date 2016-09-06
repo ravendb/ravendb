@@ -1,4 +1,6 @@
+
 @import "bootstrap/variables.less";
+@import "fonts.less";
 @import "icons.less";
 
 @import "testing-elements.less"; /* do not include in final build */
@@ -144,6 +146,11 @@
 /* GENERAL LAYOUT */
 
 html, body {
+    width: 100%;
+    height: 100%;
+}
+
+#applicationHost {
     width: 100%;
     height: 100%;
 }
@@ -925,6 +932,10 @@ hr {
         }
     }
 
+    li.active a {
+        background-color: @brand-primary;
+    }
+
     .arrow-right > a {
         &:after {
             position: absolute;
@@ -1075,12 +1086,14 @@ hr {
 
             & > ul {
                 & > li > a, & > h3 {
-                    opacity: 0;
+                    /*opacity: 0;*/
+                    visibility: hidden;
                 }
 
                 & > li {
                     &:before {
-                        opacity: 0;
+                        visibility: hidden;
+                        /*opacity: 0;*/
                     }
                 }
             }
@@ -1094,7 +1107,8 @@ hr {
             }
 
             & > ul > li > a, & > h2, & > .back {
-                opacity: 0;
+                visibility: hidden;
+                /*opacity: 0;*/
             }
         }
     }
