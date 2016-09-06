@@ -9,8 +9,42 @@ using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class DocumentReplicationtHandler : DatabaseRequestHandler
+    public class DocumentReplicationHandler : DatabaseRequestHandler
     {
+		[RavenAction("/databases/*/replication/tombstones", "GET",
+			"/databases/{databaseName:string}/replication/tombstones?start={start:int}&take={take:int}")]
+		public Task GetAllTombstones()
+		{
+			var start = GetIntValueQueryString("start", false) ?? 0;
+			var take = GetIntValueQueryString("take", false) ?? 1024;
+
+			HttpContext.Response.StatusCode = 200;
+
+			DocumentsOperationContext context;
+			using (ContextPool.AllocateOperationContext(out context))
+			using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+			using (context.OpenReadTransaction())
+			{
+				var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take);
+				var array = new DynamicJsonArray();
+				foreach (var tombstone in tombstones)
+				{
+					array.Add(new DynamicJsonValue
+					{
+						["Key"] = tombstone.Key,
+						["Collection"] = tombstone.Collection,
+						["Etag"] = tombstone.Etag,
+						["DeletedEtag"] = tombstone.DeletedEtag,
+						["ChangeVector"] = tombstone.ChangeVector.ToJson()
+					});
+				}
+
+				context.Write(writer,array);
+			}
+
+			return Task.CompletedTask;
+		}
+
 		//get conflicts for specified document
 		[RavenAction("/databases/*/replication/conflicts", "GET", 
 			"/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]

@@ -1,25 +1,107 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Json.Linq;
+using Xunit;
 
 namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
-        protected void WaitForReplicationBetween(DocumentStore storeFrom, DocumentStore storeTo, int timeout)
-        {
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds <= timeout)
-            {
-                
-            }
-        }
+		protected bool WaitForDocumentDeletion(DocumentStore store,
+			string docId,
+			int timeout = 10000)
+		{
+			if (Debugger.IsAttached)
+				timeout *= 100;
+
+			var sw = Stopwatch.StartNew();
+			while (sw.ElapsedMilliseconds < timeout)
+			{
+				using (var session = store.OpenSession())
+				{
+					var doc = session.Load<dynamic>(docId);
+					if (doc == null)
+						return true;
+				}
+				Thread.Sleep(10);
+			}
+
+			return false;
+		}
+
+		protected bool WaitForDocument(DocumentStore store,
+		    string docId,
+		    int timeout = 10000)
+	    {
+		    if (Debugger.IsAttached)
+			    timeout *= 100;
+
+		    var sw = Stopwatch.StartNew();
+		    while (sw.ElapsedMilliseconds < timeout)
+		    {
+			    using (var session = store.OpenSession())
+			    {
+				    var doc = session.Load<dynamic>(docId);
+				    if (doc != null)
+					    return true;
+			    }
+			    Thread.Sleep(10);
+		    }
+
+		    return false;
+	    }
+
+		protected async Task<List<string>> WaitUntilHasTombstones(
+				DocumentStore store,
+				int count = 1,
+				int timeout = 4000)
+		{
+			if (Debugger.IsAttached)
+				timeout *= 100;
+			List<string> tombstones;
+			var sw = Stopwatch.StartNew();
+			do
+			{
+				tombstones = await GetTombstones(store);
+
+				if (tombstones == null ||
+					tombstones.Count >= count)
+					break;
+
+				if (sw.ElapsedMilliseconds > timeout)
+				{
+					Assert.False(true, store.Identifier + " -> Timed out while waiting for tombstones, we have " + tombstones.Count + " tombstones, but should have " + count);
+				}
+
+			} while (true);
+			return tombstones ?? new List<string>();
+		}
 
 
-        protected T WaitForDocumentToReplicate<T>(DocumentStore store, string id, int timeout)
+		protected async Task<List<string>> GetTombstones(DocumentStore store)
+		{
+			var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/tombstones";
+			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+			{
+				request.ExecuteRequest();
+				var tombstonesJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
+				var tombstones = tombstonesJson.Select(x => x.Value<string>("Key")).ToList();
+				return tombstones;
+			}
+		}
+
+		protected T WaitForDocumentToReplicate<T>(DocumentStore store, string id, int timeout)
             where T : class
         {
             var sw = Stopwatch.StartNew();
@@ -36,24 +118,25 @@ namespace FastTests.Server.Documents.Replication
 
             return default(T);
         }
-        
-        protected static void SetupReplication(DocumentStore fromStore, DocumentStore toStore)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = new List<ReplicationDestination>
-                    {
-                        new ReplicationDestination
-                        {
-                            Database = toStore.DefaultDatabase,
-                            Url = toStore.Url
-                        }
-                    }
-                }, Constants.Replication.DocumentReplicationConfiguration);
-                session.SaveChanges();
-            }
-        }
+
+		protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
+		{
+			using (var session = fromStore.OpenSession())
+			{
+				var destinations = new List<ReplicationDestination>();
+				foreach (var store in toStores)
+					destinations.Add(
+						new ReplicationDestination
+						{
+							Database = store.DefaultDatabase,
+							Url = store.Url
+						});
+				session.Store(new ReplicationDocument
+				{
+					Destinations = destinations
+				}, Constants.Replication.DocumentReplicationConfiguration);
+				session.SaveChanges();
+			}
+		}		
     }
 }
