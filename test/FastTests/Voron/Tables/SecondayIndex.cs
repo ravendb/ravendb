@@ -22,7 +22,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
 
@@ -31,7 +31,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
                 var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], etag)
@@ -59,7 +59,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
                 tx.Commit();
@@ -67,7 +67,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
 
@@ -76,7 +76,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1)));
                 Assert.Empty(reader);
@@ -96,7 +96,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
 
@@ -105,7 +105,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 SetHelper(docs, "users/1", "Users", 2L, "{'Name': 'Eini'}");
 
@@ -114,7 +114,7 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, "docs", tx);
+                var docs = tx.OpenTable(DocsSchema, "docs");
 
                 var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
                 var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], etag)

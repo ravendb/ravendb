@@ -14,14 +14,14 @@ class startCompactCommand extends commandBase {
 
         var result = $.Deferred();
 
-        new deleteDocumentCommand('Raven/Database/Compact/Status/' + this.dbToCompact, null)
+        new deleteDocumentCommand('Raven/Database/Compact/Status/' + this.dbToCompact, null)//TODO: use endpoints
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to delete compact status document!", response.responseText, response.statusText);
                 result.reject();
             })
             .done(_=> {
-                var url = '/admin/compact' + this.urlEncodeArgs({ database: this.dbToCompact });
+                var url = '/admin/compact' + this.urlEncodeArgs({ database: this.dbToCompact });//TODO: use endpoints
                 this.post(url, null, null)
                     .fail((response: JQueryXHR) => {
                         this.reportError("Failed to compact database!", response.responseText, response.statusText);

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(tombstone.Key, sizeof(ulong));
+            var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
 
             if (documentMapEntries.NumberOfEntries == 0)
                 return;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 store.Delete(mapEntry.Id);
             }
 
-            _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.Key, sizeof(ulong));
+            _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)

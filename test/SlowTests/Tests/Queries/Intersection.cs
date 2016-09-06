@@ -20,27 +20,27 @@ namespace SlowTests.Tests.Queries
     public class IntersectionQuery : RavenTestBase
     {
         [Fact]
-        public async Task CanPerformIntersectionQuery_Remotely()
+        public void CanPerformIntersectionQuery_Remotely()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTest(store);
             }
         }
 
         [Fact]
-        public async Task CanPerformIntersectionQuery_Embedded()
+        public void CanPerformIntersectionQuery_Embedded()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTest(store);
             }
         }
 
         [Fact]
-        public async Task CanPerformIntersectionQuery_Linq()
+        public void CanPerformIntersectionQuery_Linq()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateIndexAndSampleData(store);
 

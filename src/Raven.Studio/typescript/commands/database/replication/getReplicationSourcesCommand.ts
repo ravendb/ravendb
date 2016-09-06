@@ -14,7 +14,7 @@ class getReplicationSourcesCommand extends commandBase {
             pageSize: 1024
         };
 
-        return this.query("/docs", args, this.db, (dtos: replicationSourceDto[]) => {
+        return this.query("/docs", args, this.db, (dtos: replicationSourceDto[]) => {//TODO: use endpoints
             var result: dictionary<string> = {};
             // insert remote databases info
             dtos.forEach(v => result[v.ServerInstanceId] = database.getNameFromUrl(v.Source));

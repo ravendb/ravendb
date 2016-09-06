@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Expiration
         private ExpiredDocumentsCleaner(DocumentDatabase database, ExpirationConfiguration configuration)
         {
             _database = database;
-            _logger = LoggerSetup.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
+            _logger = LoggingSource.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
             var deleteFrequencyInSeconds = configuration.DeleteFrequencySeconds ?? 60;
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Initialized expired document cleaner, will check for expired documents every {deleteFrequencyInSeconds} seconds");
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Expiration
                                     // We have to check this as the user can update this valud.
                                     string expirationDate;
                                     BlittableJsonReaderObject metadata;
-                                    if (document.Data.TryGet(Constants.Metadata, out metadata) == false ||
+                                    if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false ||
                                         metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate) == false)
                                         continue;
 
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Expiration
         {
             string expirationDate;
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata, out metadata) == false ||
+            if (document.TryGet(Constants.Metadata.Key, out metadata) == false ||
                 metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate) == false)
                 return;
 

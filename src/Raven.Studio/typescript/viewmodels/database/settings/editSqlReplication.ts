@@ -265,7 +265,7 @@ class editSqlReplication extends viewModelBase {
 
         if (this.initialReplicationId !== currentDocumentId) {
             delete this.editedReplication().__metadata.etag;
-            delete this.editedReplication().__metadata.lastModified;
+            delete this.editedReplication().__metadata.lastModified; //TODO last -modified is not longer used? use Raven-Last-Modified
         }
 
         var newDoc = new document(this.editedReplication().toDto());

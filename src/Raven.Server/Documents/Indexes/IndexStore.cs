@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
-            _logger = LoggerSetup.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
         }
 
         public Task InitializeAsync()
@@ -484,15 +484,6 @@ namespace Raven.Server.Documents.Indexes
                         throw new AggregateException("Could not load some of the indexes", exceptions);
                 }
             }
-        }
-
-        public List<IndexDefinitionBase> GetIndexDefinitionsForCollection(string collection, IndexType type)
-        {
-            return _indexes
-                .GetForCollection(collection)
-                .Where(x => x.Type == type)
-                .Select(x => x.Definition)
-                .ToList();
         }
 
         public IEnumerable<Index> GetIndexesForCollection(string collection)

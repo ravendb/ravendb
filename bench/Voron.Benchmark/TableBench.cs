@@ -152,7 +152,7 @@ namespace Voron.Benchmark
                 {
                     using (var tx = env.WriteTransaction())
                     {
-                        var docs = new Table(docsSchema, "docs", tx);
+                        var docs = tx.OpenTable(docsSchema, "docs");
 
                         for (long i = 0; i < Configuration.ItemsPerTransaction; i++)
                         {
@@ -190,7 +190,7 @@ namespace Voron.Benchmark
                 sw.Start();
                 using (var tx = env.WriteTransaction())
                 {
-                    var docs = new Table(docsSchema, "docs", tx);
+                    var docs = tx.OpenTable(docsSchema, "docs");
                     foreach (var l in _randomNumbers)
                     {
                         ms.Position = 0;
@@ -224,7 +224,7 @@ namespace Voron.Benchmark
                 sw.Start();
                 using (var tx = env.WriteTransaction())
                 {
-                    var docs = new Table(docsSchema, "docs", tx);
+                    var docs = tx.OpenTable(docsSchema, "docs");
                     for (long i = 0; i < Configuration.Transactions * Configuration.ItemsPerTransaction; i++)
                     {
                         ms.Position = 0;
@@ -260,7 +260,7 @@ namespace Voron.Benchmark
                 {
                     using (var tx = env.WriteTransaction())
                     {
-                        var docs = new Table(docsSchema, "docs", tx);
+                        var docs = tx.OpenTable(docsSchema, "docs");
 
                         for (long i = 0; i < Configuration.ItemsPerTransaction; i++)
                         {
@@ -302,7 +302,7 @@ namespace Voron.Benchmark
                     var sp = Stopwatch.StartNew();
                     using (var tx = env.WriteTransaction())
                     {
-                        var docs = new Table(docsSchema, "docs", tx);
+                        var docs = tx.OpenTable(docsSchema, "docs");
 
                         for (long i = 0; i < Configuration.ItemsPerTransaction; i++)
                         {
@@ -338,7 +338,7 @@ namespace Voron.Benchmark
                     {
                         using (var tx = env.ReadTransaction())
                         {
-                            var docs = new Table(docsSchema, "docs", tx);
+                            var docs = tx.OpenTable(docsSchema, "docs");
 
                             var ms = new byte[100];
                             for (int j = 0; j < ((Configuration.ItemsPerTransaction * Configuration.Transactions) / concurrency); j++)
@@ -391,7 +391,7 @@ namespace Voron.Benchmark
                         var local = 0;
                         using (var tx = env.ReadTransaction())
                         {
-                            var docs = new Table(docsSchema, "docs", tx);
+                            var docs = tx.OpenTable(docsSchema, "docs");
 
                             foreach (var reader in docs.SeekByPrimaryKey(Slices.BeforeAllKeys) )
                             {
@@ -421,7 +421,7 @@ namespace Voron.Benchmark
                 sw.Start();
                 using (var tx = env.ReadTransaction())
                 {
-                    var docs = new Table(docsSchema, "docs", tx);
+                    var docs = tx.OpenTable(docsSchema, "docs");
 
                     var ms = new byte[100];
                     for (int i = 0; i < Configuration.Transactions * Configuration.ItemsPerTransaction; i++)

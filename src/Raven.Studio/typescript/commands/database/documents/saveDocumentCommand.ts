@@ -14,11 +14,11 @@ class saveDocumentCommand extends commandBase {
             this.reportInfo("Saving " + this.id + "...");
         }
 
-        var commands: Array<bulkDocumentDto> = [this.document.toBulkDoc("PUT")];
+        let commands: Array<bulkDocumentDto> = [this.document.toBulkDoc("PUT")];
 
-        var args = ko.toJSON(commands);
-        var url = endpoints.databases.batch.bulk_docs;
-        var saveTask = this.post(url, args, this.db);
+        let args = ko.toJSON(commands);
+        let url = endpoints.databases.batch.bulk_docs;
+        let saveTask = this.post(url, args, this.db);
 
         if (this.reportSaveProgress) {
             saveTask.done(() => this.reportSuccess("Saved " + this.id));

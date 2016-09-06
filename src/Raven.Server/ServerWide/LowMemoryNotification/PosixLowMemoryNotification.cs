@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         {
             _shutdownNotification = shutdownNotification;
             _configuration = configuration;
-            _logger = LoggerSetup.Instance.GetLogger<PosixLowMemoryNotification>(configuration.DatabaseName);
+            _logger = LoggingSource.Instance.GetLogger<PosixLowMemoryNotification>(configuration.DatabaseName);
             new Thread(MonitorMemoryUsage)
             {
                 IsBackground = true,

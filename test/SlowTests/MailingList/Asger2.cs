@@ -9,9 +9,9 @@ namespace SlowTests.MailingList
     public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenTestBase
     {
         [Fact]
-        public async Task it_fails_but_should_not()
+        public void it_fails_but_should_not()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Roots_ByUserId().Execute(store);
 

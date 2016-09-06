@@ -30,7 +30,8 @@ namespace Raven.Client.Document
         /// </summary>
         public bool TryGetIdFromInstance(object entity, out string id)
         {
-            if (entity == null) throw new ArgumentNullException("entity");
+            if (entity == null)
+                throw new ArgumentNullException("entity");
             var identityProperty = GetIdentityProperty(entity.GetType());
             if (identityProperty != null)
             {

@@ -20,8 +20,10 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr CreateMemoryResourceNotification(int notificationType);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool QueryMemoryResourceNotification(IntPtr hResNotification, out bool isResourceStateMet);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+
 
         [DllImport("kernel32.dll")]
         private static extern uint WaitForMultipleObjects(uint nCount, IntPtr[] lpHandles, bool bWaitAll, uint dwMilliseconds);
@@ -41,7 +43,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
         public WinLowMemoryNotification(CancellationToken shutdownNotification, RavenConfiguration configuration)
         {
-            _logger = LoggerSetup.Instance.GetLogger<WinLowMemoryNotification>(configuration.DatabaseName);
+            _logger = LoggingSource.Instance.GetLogger<WinLowMemoryNotification>(configuration.DatabaseName);
             lowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
             lowMemoryNotificationHandle = CreateMemoryResourceNotification(LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
 
@@ -103,9 +105,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                                 "Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
                         break;
                 }
-
-                Thread.Sleep(TimeSpan.FromSeconds(60));
-                    // prevent triggering the event oto frequent when the low memory notification object is in the signaled state
+                // prevent triggering the event too frequent when the low memory notification object is in the signaled state
+                WaitForSingleObject(appDomainUnloadEvent, 60 * 1000);
             }
         }
 

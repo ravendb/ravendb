@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Documents.Replication
@@ -13,25 +8,22 @@ namespace FastTests.Server.Documents.Replication
     {
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public int Age { get; set; }
         }
 
         [Fact]
-        public async Task Master_master_replication_from_etag_zero_without_conflict_should_work()
+        public void Master_master_replication_from_etag_zero_without_conflict_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
-            using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                store1.DefaultDatabase = dbName1;
-                store2.DefaultDatabase = dbName2;
-
-                SetupReplication(dbName2, store1, store2);
-                SetupReplication(dbName1, store2, store1);
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User
@@ -77,17 +69,14 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Master_slave_replication_from_etag_zero_should_work()
+        public void Master_slave_replication_from_etag_zero_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
-            using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                store1.DefaultDatabase = dbName1;
-                store2.DefaultDatabase = dbName2;
-
-                SetupReplication(dbName2, store1, store2);
+                SetupReplication(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
@@ -120,17 +109,14 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Master_slave_replication_with_multiple_PUTS_should_work()
+        public void Master_slave_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
-            using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                store1.DefaultDatabase = dbName1;
-                store2.DefaultDatabase = dbName2;
-
-                SetupReplication(dbName2, store1, store2);
+                SetupReplication(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
@@ -191,18 +177,15 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Master_master_replication_with_multiple_PUTS_should_work()
+        public void Master_master_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
-            using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                store1.DefaultDatabase = dbName1;
-                store2.DefaultDatabase = dbName2;
-
-                SetupReplication(dbName2, store1, store2);
-                SetupReplication(dbName1, store2, store1);
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
 
                 using (var session = store1.OpenSession())
                 {
@@ -284,20 +267,17 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact(Skip = "WIP, not ready to run yet")]
-        public async Task Master_slave_replication_with_exceptions_should_work()
+        public void Master_slave_replication_with_exceptions_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-            using (var store1 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName1))
-            using (var store2 = await GetDocumentStore(modifyDatabaseDocument: document => document.Id = dbName2))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                store1.DefaultDatabase = dbName1;
-                store2.DefaultDatabase = dbName2;
-
                 //TODO : configure test code to throw exceptions at server-side during replication
                 //TODO : (find a way to do so)
 
-                SetupReplication(dbName2, store1, store2);
+                SetupReplication(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {

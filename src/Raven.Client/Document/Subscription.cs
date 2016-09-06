@@ -368,14 +368,14 @@ namespace Raven.Client.Document
         private void NotifySubscribers(RavenJObject curDoc, out long lastReceivedEtag)
         {
             T instance;
-            var metadata = curDoc[Constants.Metadata] as RavenJObject;
-            lastReceivedEtag = metadata[Constants.MetadataEtagId].Value<long>();
+            var metadata = curDoc[Constants.Metadata.Key] as RavenJObject;
+            lastReceivedEtag = metadata[Constants.Metadata.Etag].Value<long>();
 
             if (_isStronglyTyped)
             {
                 instance = curDoc.Deserialize<T>(_conventions);
 
-                var docId = metadata[Constants.MetadataDocId].Value<string>();
+                var docId = metadata[Constants.Metadata.Id].Value<string>();
 
                 if (string.IsNullOrEmpty(docId) == false)
                     _generateEntityIdOnTheClient.TrySetIdentity(instance, docId);

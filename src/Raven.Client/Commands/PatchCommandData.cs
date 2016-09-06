@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Key of a document to patch.
         /// </summary>
-        public string Key { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// Returns operation method. In this case EVAL.
@@ -60,7 +60,7 @@ namespace Raven.Abstractions.Commands
         {
             var ret = new RavenJObject
                     {
-                        {"Key", Key},
+                        {"Key", Id},
                         {"Method", Method},
                         {"Patch", new RavenJObject
                         {

@@ -17,9 +17,9 @@ namespace SlowTests.Tests.Queries
         }
 
         [Fact]
-        public async Task Remote()
+        public void Remote()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {

@@ -1,269 +1,91 @@
-<div>
-<div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor:  selectedColor().backgroundColor}">
-
-<div data-bind="text: selectedEnvironmentText(), visible: canShowEnvironmentText()" id="environment-header">Environment</div>
-
-<div class="container-fluid">
-<div class="navbar-header">
-    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#topNavBarCollapse">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-    </button>
-</div>
-
-<div class="collapse navbar-collapse" id="topNavBarCollapse">
-<div data-bind="visible: appUrls.isAreaActive('admin')">
-    <ul class="nav navbar-nav">
-        <li class="navbar-splitbutton active">
-            <h3>Manage Your Server</h3>
-        </li>
-    </ul>
-</div>
-
-<div data-bind="visible: canShowDatabaseNavbar(), css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
-    <ul class="nav navbar-nav">
-        <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
-            <a data-bind="attr: { href: appUrls.documents }">Documents</a>
-        </li>
-        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents') }">
-            <a class="dropdown-toggle caret-after" data-toggle="dropdown">
-                <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu">
-                <li>
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.documents }">Documents</a>
-                </li>
-                <li data-bind="visible: $root.hasReplicationSupport()">
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.conflicts }">Conflicts</a>
-                </li>
-                <li>
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.patch }">Patch</a>
-                </li>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">RavenDB</a>
+            <a class="menu-collapse-button icon-menu-collapse" title="collapse menu"></a>
+        </div>
+        <div id="navbar">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
+                <li><a href="#" class="icon-help"></a></li>
+                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
             </ul>
-        </li>
-
-        <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Indexes') }">
-            <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
-        </li>
-        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }">
-            <a class="dropdown-toggle caret-after" data-toggle="dropdown">
-                <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu">
-                <li>
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.indexes }">Indexes</a>
-                </li>
-                <li>
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.transformers }">Transformers</a>
-                </li>
-            </ul>
-        </li>
-        <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Query') }">
-            <a data-bind="attr: { href: appUrls.query(null) }">Query</a>
-        </li>
-        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query') }">
-            <a class="dropdown-toggle caret-after" data-toggle="dropdown">
-                <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu">
-                <li>
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.query(null) }">Query</a>
-                </li>
-                <li>
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.reporting }">Reporting</a>
-                </li>
-                <li>
-                    <a tabindex="-1" data-bind="attr: { href: appUrls.exploration }">Data exploration</a>
-                </li>
-            </ul>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Tasks') }">
-            <a data-bind="attr: { href: appUrls.tasks }">Tasks</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Settings') }">
-            <a data-bind="attr: { href: appUrls.settings }">Settings</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Status') }">
-            <a data-bind="attr: { href: appUrls.status }">Status</a>
-        </li>
-    </ul>
-    <ul class="nav navbar-nav">
-        <li class="dropdown">
-            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                <i class="fa fa-plus"></i> New <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu">
-                <li>
-                    <a href="#" data-bind="click: newDocument">
-                        <i class="fa fa-file-o"></i>
-                        <span>Document</span>
-                        <span class="text-muted keyboard-shortcut">Ctrl+Alt+N</span>
-                    </a>
-                </li>
-                <li>
-                    <a data-bind="attr: { href: newIndexUrl }">Index</a>
-                </li>
-                <li>
-                    <a data-bind="attr: { href: newTransformerUrl }">Transformer</a>
-                </li>
-            </ul>
-        </li>
-    </ul>
-    <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
-        <input id="goToDocInput" title="Search for a document (Alt+G)" accesskey="G"
-               type="text" class="form-control" placeholder="Go to document" data-bind="textInput: goToDocumentSearch, disable: isActiveDatabaseDisabled" autocomplete="off"/>
-        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
-            <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
-                <a role="menuitem" tabindex="-1" href="#">
-                    <span class="collection-color-strip" data-bind="css: $root.getDocCssClass($data)"></span>
-                    <span class="text" data-bind="text: $data['@metadata']['@id']"></span>
-                </a>
-            </li>
-        </ul>
-    </form>
-    
-    <span class="new_layout" style="float: left">New layout mode</span>
-    <span class="old_layout" style="float: left">Old layout mode</span>
-</div>
-
-
-
-<div data-bind="visible: canShowFileSystemNavbar, css: { 'menu-item-disabled': isActiveFileSystemDisabled }">
-    <ul class="nav navbar-nav">
-        <li data-bind="css: { active: appUrls.isActive('Files') }">
-            <a data-bind="attr: { href: appUrls.filesystemFiles }">Files</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Search') }">
-            <a data-bind="attr: { href: appUrls.filesystemSearch }">Search</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Synchronization') }">
-            <a data-bind="attr: { href: appUrls.filesystemSynchronization }">Synchronization</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Status') }">
-            <a data-bind="attr: { href: appUrls.filesystemStatus }">Status</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Tasks') }">
-            <a data-bind="attr: { href: appUrls.filesystemTasks }">Tasks</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Settings') }, visible: canShowFileSystemSettings">
-            <a data-bind="attr: { href: appUrls.filesystemSettings }">Settings</a>
-        </li>
-
-        <li data-bind="css: { active: appUrls.isActive('Configuration') }">
-            <a data-bind="attr: { href: appUrls.filesystemConfiguration }">Configurations</a>
-        </li>
-    </ul>
-</div>
-
-<div data-bind="visible: canShowCountersNavbar, css: { 'menu-item-disabled': isActiveCounterStorageDisabled }">
-    <ul class=" nav navbar-nav">
-        <li data-bind="css: { active: appUrls.isActive('Counters') }">
-            <a data-bind="attr: { href: appUrls.counterStorageCounters }">Counters</a>
-        </li>
-        <li data-bind="css: { active: appUrls.isActive('Replication') }">
-            <a data-bind="attr: { href: appUrls.counterStorageReplication }">Replication</a>
-        </li>
-        <li data-bind="css: { active: appUrls.isActive('Stats') }">
-            <a data-bind="attr: { href: appUrls.counterStorageStats }">Stats</a>
-        </li>
-        <li data-bind="css: { active: appUrls.isActive('Configuration') }">
-            <a data-bind="attr: { href: appUrls.counterStorageConfiguration }">Configuration</a>
-        </li>
-    </ul>
-</div>
-
-<div data-bind="visible: canShowTimeSeriesNavbar, css: { 'menu-item-disabled': isActiveTimeSeriesDisabled }">
-    <ul class=" nav navbar-nav">
-        <li data-bind="css: { active: appUrls.isActive('TimeSeries') }">
-            <a data-bind="attr: { href: appUrls.timeSeriesType }">Time Series</a>
-        </li>
-        <li data-bind="css: { active: appUrls.isActive('Stats') }">
-            <a data-bind="attr: { href: appUrls.timeSeriesStats }">Stats</a>
-        </li>
-        <li data-bind="css: { active: appUrls.isActive('Configuration') }">
-            <a data-bind="attr: { href: appUrls.timeSeriesConfiguration }">Configuration</a>
-        </li>
-    </ul>
-</div>
-
-<div>
-    <ul class="nav navbar-nav navbar-right hidden-xs hidden-sm databases">
-        <li id="brand" class="navbar-right" style="padding-left: 5px;">
-            <a class="navbar-brand" href="http://ravendb.net" target="_blank">
-                <img style="height: 24px" src="content/images/raven.png"/>
-            </a>
-        </li>
-        <!-- ko if:showLogOutButton -->
-        <li id="logOut" class="navbar-right" style="padding-left: 5px; padding-top: 5px">
-            <button data-bind="click: logOut" class="btn btn-danger"><i class="fa fa-sign-out"></i> Log out</button>
-        </li>
-        <!-- /ko -->
-        <!-- ko if:showContinueTestButton() -->
-        <li id="continueTest" class="navbar-right" style="padding-left: 5px; padding-top: 5px">
-            <button data-bind="click: continueTest" class="btn btn-danger"><i class="fa fa-play"></i> Continue test</button>
-        </li>
-        <!-- /ko -->
-        <li class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
-            <a id="tenantNameLink" class="dropdown-toggle" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
-                <span class="resource-link" data-bind="style: { maxWidth: $root.maxResourceNameWidth() }">
-                                    <span data-bind="text: name, attr: { title: name }"></span>
-                                </span>
-
-                <b class="caret resource-caret" data-bind="visible: $root.listedResources().length > 0"></b>
-
-
-            </a>
-            <ul class="dropdown-menu scrollable-resource-menu" role="menu" data-bind="foreach: listedResources, visible: $root.listedResources().length > 0">
-                <li>
-                    <a href="#" data-bind="click: $root.selectResource.bind($root, $data)">
-                        <span data-bind="attr: { class: iconName }"></span>
-                        <span data-bind="text: name"></span>
-                    </a>
-                </li>
-            </ul>
-        </li>
-        <li id="featureName" class="navbar-right">
-            <div>
-                <ul class="nav navbar-nav">
-                    <li class="vertical-navbar-menu-item">
-                        <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: getCurrentActiveFeatureHref() }">
-                            <span data-bind="text: getCurrentActiveFeatureName()"></span>&nbsp;
-                            <i class="fa fa-caret-right" data-bind="visible: canShowResourcesNavbar"></i>&nbsp;
-                        </a>
-                    </li>
-                    <li class="dropdown vertical-navbar-menu-item" data-bind="visible: appUrls.isAreaActive('admin')()">
-                        <a class="dropdown-toggle vertical-bottom-container" data-toggle="dropdown">
-                            <i class="fa fa-caret-down"></i>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="#resources" data-bind="click: navigateToResources.bind($root)">Resources</a>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+            <div class="inputs-container hidden-xs">
+                <div class="search-container">
+                    <input type="search" class="form-control omnisearch" placeholder="search" />
+                    <div class="icon-search"></div>
+                    <div class="autocomplete-list box-container">
+                        <div class="scroller">
+                            <section>
+                                <h4>Menu</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Documents</h4>
+                                <ul>
+                                    <li>
+                                        <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
+                                        <ul>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
+                                        <ul>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="#" class="more">MORE</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Indexes</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Transformers</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/Company</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <div class="global-spinner"></div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+                <div class="resource-switcher-container" data-bind="with: resourceSwitcher">
+                    <div class="form-control btn-toggle resource-switcher">
+                        <span class="database" data-bind="text: $root.activeResource() ? $root.activeResource().name:''"></span>
+                    </div>
+                    <div class="box-container">
+                        <div class="database-filter-container">
+                            <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
+                        </div>
+                        <div class="scroller">
+                            <section>
+                                <ul class="database-list" data-bind="foreach: filteredResources">
+                                    <li><a href="#" data-bind="click: $root.selectResource.bind($root, $data), text: name" class="database"></a></li>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </li>
-        <li class="navbar-right" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)" title="Show errors" style="padding-left: 0;">
-            <a href="#" style="padding-left: 0; padding-right: 0"><i class="fa fa-warning text-danger"></i></a>
-        </li>
-    </ul>
-</div>
-</div>
-</div>
-</div>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
 
-<!--Alerts container-->
+
 <div class="studio-alerts" data-bind="with: currentAlert">
     <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 || type === 4 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
@@ -277,94 +99,58 @@
     </div>
 </div>
 
-<div id="splash-spinner">
-    <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
+<script type="text/html" id="leafMenuItem">
+    <li data-bind="with: item, css: { 'active': menu.activeItem() === item }">
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path, title: title }">
+            <span data-bind="css: css"></span>
+            <span data-bind="text: title"></span>
+        </a>
+    </li>
+</script>
 
-</div>
+<script type="text/html" id="intermediateMenuItem">
+    <li class="arrow-right">
+    <a data-bind="attr: { title: item.title }, click: menu.open.bind(menu)" >
+        <span data-bind="css: item.css"></span>
+        <span data-bind="text: item.title"></span>
+    </a>
+    <div data-bind="click: menu.handleLevelClick.bind(menu), css: { 'level-show': item.isOpen, ['level-' + (item.depth() + 1) ]: true }, attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1 }" class="level">
+            <h2 data-bind="text: item.title"></h2>
+            <a class="back" data-bind="click: menu.back.bind(menu)" title="back">back</a>
 
-<footer style="z-index: 999" id="shellFooter">
-    <div class="navbar navbar-fixed-bottom navbar-inverse">
-        <div class="navbar-inner">
-            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: !isActiveDatabaseDisabled() && canShowDatabaseNavbar()">
-                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
-                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
-                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
-                </li>
-
-                <!-- ko with: statistics -->
-                <li><a class="navbar-link" data-bind="text: countOfDocumentsText, attr: { href: $parents[1].appUrls.documents }"></a></li>
-                <li><a class="navbar-link" data-bind="text: countOfFilteredIndexesText, attr: { href: $parents[1].appUrls.indexes, title: 'Total indexes including disabled and abandoned: ' + countOfIndexesText() }"></a></li>
-                <li><a class="navbar-link" data-bind="text: staleFilteredIndexesCountText, attr: { href: $parents[1].appUrls.status, title: 'Total stale indexes including disabled and abandoned: ' + staleIndexesCountText() }"></a></li>
-                <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
-                <!--<li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>-->
-                <li class="raw-url hidden-sm" data-bind="visible: $root.rawUrlIsVisible">
-                    <a class="navbar-link" href="#" target='_blank' data-bind="text: $root.currentRawUrl, attr: { href: $root.currentRawUrl, title: $root.currentRawUrl }" style="max-width: 180px; -ms-text-overflow: ellipsis; -o-text-overflow: ellipsis; text-overflow: ellipsis; overflow-x: hidden; white-space: nowrap;"></a>
-                </li>
+            <ul data-bind="foreach: item.children">
+                <!-- ko template: { name: type + 'MenuItem', data: { item: $data, level: $parent.level + 1, menu: $parent.menu }} -->
                 <!-- /ko -->
             </ul>
-
-            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: !isActiveFileSystemDisabled() && canShowFileSystemNavbar()">
-                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
-                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
-                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
-                </li>
-
-                <!-- ko with: statistics -->
-                <li><a data-bind="text: fileCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: requestsCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: meanDurationText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <!-- /ko -->
-            </ul>
-
-            <ul class="nav navbar-nav" data-bind="with: activeCounterStorage, visible: !isActiveCounterStorageDisabled() && canShowCountersNavbar()">
-                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
-                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
-                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
-                </li>
-
-                <!-- ko with: statistics -->
-                <li><a data-bind="text: counterCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: groupCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: requestsPerSecondText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <!-- /ko -->
-            </ul>
-
-            <ul class="nav navbar-nav" data-bind="with: activeTimeSeries, visible: !isActiveTimeSeriesDisabled() && canShowTimeSeriesNavbar()">
-                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
-                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
-                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
-                </li>
-
-                <!-- ko with: statistics -->
-                <li><a data-bind="text: typesCountText"></a></li>
-                <li><a data-bind="text: keysCountText"></a></li>
-                <li><a data-bind="text: pointsCountText"></a></li>
-                <!-- /ko -->
-            </ul>
-
-            <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
-                <!-- ko with: $root -->
-                <li data-bind="visible: isInCluster()"><a class="navbar-link" href="#" data-bind="click: navigateToClusterSettings" title="This server is part of cluster"><span class="text-danger"><i class="fa fa-cubes"></i> Cluster</span></a></li>
-                <li>
-                    <div class="btn-group" role="group">
-                        <button type="button" data-bind="attr: { class: 'btn btn-default ' + licenseStatus() }, click: $root.showLicenseStatusDialog.bind($root)">
-                            <div class="roundborder">
-                                <i class="fa fa-file-text-o"></i>
-                            </div>
-                        </button>
-                        <button type="button" data-bind="attr: { class: 'btn btn-default ' + supportStatus() }, click: $root.showLicenseStatusDialog.bind($root)">
-                            <div class="roundborder ">
-                                <i class="fa fa-comments-o"></i>
-                            </div>
-                        </button>
-                    </div>
-                </li>
-                <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
-                <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>
-                <!-- /ko -->
-            </ul>
-
         </div>
+
+</script>
+
+<script type="text/html" id="separatorMenuItem">
+    <!-- ko if: !!item.title -->
+    <h3 data-bind="text: item.title"></h3>
+    <!-- /ko -->
+    <!-- ko if: !item.title -->
+    <hr />
+    <!-- /ko -->
+</script>
+
+<nav id="main-menu" class="main-menu" 
+     data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }" >
+        <div class="level-0"
+             data-level="0"
+             data-level-name="Menu"
+             data-bind="click: handleLevelClick">
+            <ul data-bind="foreach: items">
+                <!-- ko template: { name: type + 'MenuItem', data: { item: $data, menu: $parent }} -->
+                <!-- /ko -->
+            </ul>
+        </div>
+    </nav>
+
+<div id="page-host-root" class="container-fluid content-container">
+    <div class="content-container-margin">
+        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
-</footer>
 </div>
+

@@ -8,7 +8,7 @@ class getKillQueryCommand extends commandBase {
     }
 
     execute(): JQueryPromise<userInfoDto> {
-        var url = "/admin/killQuery";
+        var url = "/admin/killQuery";//TODO: use endpoints
         var args = {
             id: this.queryId
         }

@@ -9,8 +9,6 @@ class trafficWatchClient {
     public connectionOpeningTask: JQueryDeferred<any>;
     public connectionClosingTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
-    static isServerSupportingWebSockets: boolean = true;
-    private eventSource: EventSource;
     private readyStateOpen = 1;
     private eventsId:string;
     private isCleanClose: boolean = false;
@@ -33,9 +31,7 @@ class trafficWatchClient {
         if ("WebSocket" in window) {
             this.connectWebSocket(connectionString);
         } else {
-            //The browser doesn't support nor websocket nor eventsource
-            //or we are in IE10 or IE11 and the server doesn't support WebSockets.
-            //Anyway, at this point a warning message was already shown. 
+            //The browser doesn't support websocket
             this.connectionOpeningTask.reject();
         }
     }
@@ -98,16 +94,10 @@ class trafficWatchClient {
     
     disconnect() {
         this.connectionOpeningTask.done(() => {
-            if (this.webSocket && this.webSocket.readyState == this.readyStateOpen){
+            if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){
                 console.log("Disconnecting from WebSocket HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
                 this.isCleanClose = true;
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
-            }
-            else if (this.eventSource && this.eventSource.readyState == this.readyStateOpen) {
-                console.log("Disconnecting from EventSource HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
-                this.isCleanClose = true;
-                this.eventSource.close();
-                this.connectionClosingTask.resolve();
             }
         });
     }

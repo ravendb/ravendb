@@ -18,7 +18,7 @@ class saveTransformerLockModeCommand extends commandBase {
             mode: this.lockMode
         };
         
-        var url = "/transformers/" + this.transformerName + this.urlEncodeArgs(args);
+        var url = "/transformers/" + this.transformerName + this.urlEncodeArgs(args);//TODO: use endpoints
         var saveTask = this.post(url, JSON.stringify(args), this.db, { dataType: 'text' });
         saveTask.done(() => this.reportSuccess("Saved " + this.transformerName));
         saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save this " + this.transformerName, response.responseText));

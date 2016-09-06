@@ -1,9 +1,11 @@
+/// <reference path="../typings/tsd.d.ts" />
+
 requirejs.config({
     paths: {
         text: '../lib/requirejs-text/text',
         durandal: '../lib/Durandal/js',
         plugins: '../lib/Durandal/js/plugins',
-        ace: '../lib/ace/lib/ace'
+        ace: '../Content/ace'
     },
 
     map: {
@@ -21,8 +23,8 @@ requirejs.config({
     waitSeconds: 30
 });
 
-define('jquery', () => jQuery);
-define('knockout', () => ko);
+define('jquery', () => jQuery);//TODO: consider using jquery + deps using requirejs
+define('knockout', () => ko); //TODO: condider using requirejs
 /* TODO
 define('nvd3', ['d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], (d3, nv, timelines, chart) => nv);
 define('dagre', ['d3', 'd3/dagre'], (d3, dagre) => dagre);
@@ -46,12 +48,12 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
         //Look for partial views in a 'views' folder in the root.
         viewLocator.useConvention();
 
-        if ("WebSocket" in window || "EventSource" in window) {
+        if ("WebSocket" in window) {
             //Show the app by setting the root view model for our application with a transition.
             app.setRoot("viewmodels/shell", "entrance");
             composition.defaultTransitionName = "fadeIn";
         } else {
-            //The browser doesn't support nor WebSocket nor EventSource. IE 9, Firefox 6, Chrome 6 and below.
+            //The browser doesn't support WebSocket
             app.showMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);
             NProgress.done();
         }

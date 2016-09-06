@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Connection;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -34,14 +35,14 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task ShouldThrow()
+        public void ShouldThrow()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                var e = Assert.Throws<ErrorResponseException>(() => new InvalidMultiMapIndex().Execute(store));
+                var e = Assert.Throws<IndexCompilationException>(() => new InvalidMultiMapIndex().Execute(store));
                 Assert.Contains("Map and Reduce functions of a index must return identical types.", e.Message);
 
-                e = Assert.Throws<ErrorResponseException>(() => new InvalidMapReduceIndex().Execute(store));
+                e = Assert.Throws<IndexCompilationException>(() => new InvalidMapReduceIndex().Execute(store));
                 Assert.Contains("Map and Reduce functions of a index must return identical types.", e.Message);
             }
         }

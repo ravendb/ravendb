@@ -161,27 +161,7 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public static string TranslateField(string field)
         {
-            var fieldParts = field.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-
-            var result = new StringBuilder();
-            foreach (var fieldPart in fieldParts)
-            {
-                if ((char.IsLetter(fieldPart[0]) == false && fieldPart[0] != '_') ||
-                    fieldPart.Any(c => char.IsLetterOrDigit(c) == false && c != '_'
-                        && c != ',' /* we allow the comma operator for collections */))
-                {
-                    result.Append("[\"").Append(fieldPart).Append("\"]");
-                }
-                else
-                {
-                    if (result.Length > 0)
-                        result.Append('.');
-
-                    result
-                        .Append(fieldPart);
-                }
-            }
-            return result.ToString();
+            return field;
         }
     }
 }

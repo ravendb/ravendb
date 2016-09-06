@@ -12,7 +12,7 @@ class explainReplicationCommand extends commandBase {
             destinationUrl: this.url, 
             databaseName: this.databaseName
         };
-        return this.query("/replication/explain/" + this.documentId, args, this.db);
+        return this.query("/replication/explain/" + this.documentId, args, this.db);//TODO: use endpoints
     }
 
 }

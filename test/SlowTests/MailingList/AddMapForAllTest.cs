@@ -47,9 +47,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task IndexOnAbstractParentIndexesChildClasses()
+        public void IndexOnAbstractParentIndexesChildClasses()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new AnimalsByName().Execute(store);
 

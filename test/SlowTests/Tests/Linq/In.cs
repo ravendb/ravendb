@@ -54,9 +54,9 @@ namespace SlowTests.Tests.Linq
         private readonly Guid userId = new Guid("dc89a428-7eb2-428c-bc97-99763db25f9a");
 
         [Fact]
-        public async Task WithNotEmptyObjectsArray()
+        public void WithNotEmptyObjectsArray()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SearchableElements().Execute(store);
 
@@ -88,9 +88,9 @@ namespace SlowTests.Tests.Linq
         private readonly string[] _users = { "a-A 1", " -", "- " };
 
         [Fact]
-        public async Task CanQueryEvilDashStrings()
+        public void CanQueryEvilDashStrings()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SearchableElements().Execute(store);
 
@@ -107,9 +107,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WithNotEmptyGuidsArray()
+        public void WithNotEmptyGuidsArray()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SearchableElements().Execute(store);
 
@@ -138,9 +138,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WithEmptyObjectsArray()
+        public void WithEmptyObjectsArray()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SearchableElements().Execute(store);
 
@@ -169,9 +169,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WithEmptyGuidsArray()
+        public void WithEmptyGuidsArray()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SearchableElements().Execute(store);
 

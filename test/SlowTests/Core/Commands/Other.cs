@@ -21,7 +21,7 @@ namespace SlowTests.Core.Commands
         [Fact(Skip = "Missing endpoint: /build/version")]
         public async Task CanGetBuildNumber()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
 
@@ -32,7 +32,7 @@ namespace SlowTests.Core.Commands
         [Fact]
         public async Task CanGetStatistics()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var databaseStatistics = await store.AsyncDatabaseCommands.GetStatisticsAsync();
 
@@ -45,7 +45,7 @@ namespace SlowTests.Core.Commands
         [Fact(Skip = "Missing endpoint: /build/version")]
         public async Task CanGetBuildVersion()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var build = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
                 Assert.NotNull(build);
@@ -55,7 +55,7 @@ namespace SlowTests.Core.Commands
         [Fact(Skip = "Missing endpoint: /databases")]
         public async Task CanGetAListOfDatabasesAsync()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var names = await store.AsyncDatabaseCommands.GlobalAdmin.GetDatabaseNamesAsync(25);
                 Assert.Contains(store.DefaultDatabase, names);
@@ -63,10 +63,10 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: /docs/startsWith")]
-        public async Task CanSwitchDatabases()
+        public void CanSwitchDatabases()
         {
-            using (var store1 = await GetDocumentStore(dbSuffixIdentifier: "store1"))
-            using (var store2 = await GetDocumentStore(dbSuffixIdentifier: "store2"))
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
             {
                 store1.DatabaseCommands.Put(
                     "items/1",
@@ -101,9 +101,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public async Task CanGetUrlForDocument()
+        public void CanGetUrlForDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put(
                     "items/1",
@@ -118,9 +118,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public async Task CanDisableAllCaching()
+        public void CanDisableAllCaching()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
                 Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);

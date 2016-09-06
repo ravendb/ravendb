@@ -37,9 +37,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanSearchOnAllProperties()
+        public void CanSearchOnAllProperties()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_AllProperties().Execute(store);
 

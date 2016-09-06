@@ -21,10 +21,10 @@ namespace SlowTests.MailingList
             public Dictionary<int, double> Statistcs { get; set; }
         }
 
-        [Fact(Skip = "TODO arek - figure out why we are translating the field in auto-index to Statistcs[4] instead of Statistcs.4")]
-        public async Task CanOrderByDictionaryValue()
+        [Fact]
+        public void CanOrderByDictionaryValue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

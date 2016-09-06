@@ -25,9 +25,9 @@ namespace SlowTests.Core.Indexing
     public class ReferencedDocuments : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanUseLoadDocumentToIndexReferencedDocs()
+        public void CanUseLoadDocumentToIndexReferencedDocs()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var postsByContent = new Posts_ByContent();
                 postsByContent.Execute(store);
@@ -84,9 +84,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task BasicLoadDocumentsWithEnumerable()
+        public void BasicLoadDocumentsWithEnumerable()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Companies_ByEmployeeLastName().Execute(store);
 
@@ -129,9 +129,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task BasicLoadDocuments()
+        public void BasicLoadDocuments()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_ByCity().Execute(store);
 
@@ -259,9 +259,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task ShouldReindexOnReferencedDocumentChange()
+        public void ShouldReindexOnReferencedDocumentChange()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var postsByContent = new Posts_ByContent();
                 postsByContent.Execute(store);
@@ -311,9 +311,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanProceedWhenReferencedDocumentsAreMissing()
+        public void CanProceedWhenReferencedDocumentsAreMissing()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var postsByContent = new Posts_ByContent();
                 postsByContent.Execute(store);

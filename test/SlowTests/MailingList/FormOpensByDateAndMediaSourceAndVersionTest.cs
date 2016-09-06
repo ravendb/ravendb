@@ -13,9 +13,9 @@ namespace SlowTests.MailingList
     public class FormOpensByDateAndMediaSourceAndVersionTest : RavenTestBase
     {
         [Fact]
-        public async Task ShouldWork()
+        public void ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 InitData(store);
                 using (var session = store.OpenSession())
@@ -30,9 +30,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Should_return_18_after_aggregation()
+        public void Should_return_18_after_aggregation()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 InitData(store);
                 IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
@@ -50,9 +50,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Should_return_12_after_aggregating_all_GOO()
+        public void Should_return_12_after_aggregating_all_GOO()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 InitData(store);
                 IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
@@ -71,9 +71,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Should_return_3_after_aggregating_all_GOO_Version_5_on_20120902()
+        public void Should_return_3_after_aggregating_all_GOO_Version_5_on_20120902()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 InitData(store);
                 IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;

@@ -18,9 +18,9 @@ namespace SlowTests.Core.Indexing
     public class IndexDefinitionMethods : RavenTestBase
     {
         [Fact]
-        public async Task CanUseMetadataFor()
+        public void CanUseMetadataFor()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Companies_CompanyByType().Execute(store);
                 WaitForIndexing(store);
@@ -75,9 +75,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task CanUseAsDocumentToIndexAllDocumentFields()
+        public void CanUseAsDocumentToIndexAllDocumentFields()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -100,9 +100,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task CanUseRecurse()
+        public void CanUseRecurse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Posts_Recurse().Execute(store);
 
@@ -128,9 +128,9 @@ namespace SlowTests.Core.Indexing
         }
 
         [Fact]
-        public async Task CreateAndQuerySimpleIndexWithReferencedDocuments()
+        public void CreateAndQuerySimpleIndexWithReferencedDocuments()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Companies_WithReferencedEmployees().Execute(store);
                 new CompanyEmployeesTransformer().Execute(store);

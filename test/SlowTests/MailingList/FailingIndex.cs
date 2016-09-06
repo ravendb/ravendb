@@ -28,15 +28,15 @@ namespace SlowTests.MailingList
 #pragma warning restore 649
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
         }
 
         [Fact]
-        public async Task ShouldBeAbleToCreate()
+        public void ShouldBeAbleToCreate()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

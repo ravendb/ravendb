@@ -13,7 +13,7 @@ class ioTestCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         var promise = $.Deferred();
-        var url = '/admin/ioTest';
+        var url = '/admin/ioTest';//TODO: use endpoints
         this.post(url, ko.toJSON(this.testParameters), null)
             .done((result: operationIdDto) => {
                 this.operationIdTask.resolve(result.OperationId);

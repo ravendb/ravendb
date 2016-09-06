@@ -57,7 +57,17 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
 
         public TransactionFlags Flags { get; }
-        public bool IsLazyTransaction { get; set; }
+
+        public bool IsLazyTransaction
+        {
+            get { return _isLazyTransaction; }
+            set
+            {
+                _isLazyTransaction = value;
+                if (_isLazyTransaction)
+                    _env.Journal.HasLazyTransactions = true;
+            }
+        }
 
 
         internal bool CreatedByJournalApplicator;
@@ -239,15 +249,16 @@ namespace Voron.Impl
             Page newPage;
             if ( currentPage.IsOverflow )
             {
-                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num);
-                pageSize = currentPage.OverflowSize;
+                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage);
+                pageSize = Environment.Options.PageSize*
+                           _dataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
             }
             else
             {
-                newPage = AllocatePage(1, num); // allocate new page in a log file but with the same number			
+                newPage = AllocatePage(1, num, currentPage); // allocate new page in a log file but with the same number			
                 pageSize = Environment.Options.PageSize;
             }
-            
+
             Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);
 
             TrackWritablePage(newPage);           
@@ -256,7 +267,7 @@ namespace Voron.Impl
         }
 
         private const int InvalidScratchFile = -1;
-        private PagerStateCacheItem lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
+        private PagerStateCacheItem _lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
         private bool _disposed;
 
         public Page GetPage(long pageNumber)
@@ -275,7 +286,7 @@ namespace Voron.Impl
                 PagerState state = null;
                 if (_scratchPagerStates != null)
                 {
-                    var lastUsed = lastScratchFileUsed;
+                    var lastUsed = _lastScratchFileUsed;
                     if (lastUsed.FileNumber == value.ScratchFileNumber)
                     {
                         state = lastUsed.State;
@@ -283,7 +294,7 @@ namespace Voron.Impl
                     else
                     {
                         state = _scratchPagerStates[value.ScratchFileNumber];
-                        lastScratchFileUsed = new PagerStateCacheItem(value.ScratchFileNumber, state);
+                        _lastScratchFileUsed = new PagerStateCacheItem(value.ScratchFileNumber, state);
                     }
                 }
 
@@ -302,7 +313,7 @@ namespace Voron.Impl
             return p;
         }
 
-        public Page AllocatePage(int numberOfPages, long? pageNumber = null)
+        public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page previousPage = null)
         {
             if (pageNumber == null)
             {
@@ -313,12 +324,12 @@ namespace Voron.Impl
                     State.NextPageNumber += numberOfPages;
                 }
             }
-            return AllocatePage(numberOfPages, pageNumber.Value);
+            return AllocatePage(numberOfPages, pageNumber.Value, previousPage);
         }
 
-        private Page AllocateOverflowPage(long headerSize, long dataSize, long? pageNumber = null)
+        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null, Page previousPage = null)
         {
-            long overflowSize = headerSize + dataSize;
+            long overflowSize = 0 + pageSize;
             if (overflowSize > int.MaxValue - 1)
                 throw new InvalidOperationException($"Cannot allocate chunks bigger than { int.MaxValue / 1024 * 1024 } Mb.");
 
@@ -326,29 +337,14 @@ namespace Voron.Impl
 
             long numberOfPages = (overflowSize / _pageSize) + (overflowSize % _pageSize == 0 ? 0 : 1);
 
-            var overflowPage = AllocatePage((int)numberOfPages, pageNumber);
+            var overflowPage = AllocatePage((int)numberOfPages, pageNumber, previousPage);
             overflowPage.Flags = PageFlags.Overflow;
             overflowPage.OverflowSize = (int)overflowSize;
 
             return overflowPage;
         }
 
-        public Page AllocateOverflowPage(long dataSize, long? pageNumber = null) 
-        {
-            return AllocateOverflowPage(sizeof(PageHeader), dataSize, pageNumber);
-        }
-
-        public Page AllocateOverflowPage<T>(long dataSize, long? pageNumber = null) where T : struct
-        {
-            return AllocateOverflowPage(Marshal.SizeOf<T>(), dataSize, pageNumber);
-        }
-
-        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null)
-        {
-            return AllocateOverflowPage(0, pageSize, pageNumber);
-        }
-
-        private Page AllocatePage(int numberOfPages, long pageNumber)
+        private Page AllocatePage(int numberOfPages, long pageNumber, Page previousVersion)
         {	       
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
@@ -373,6 +369,7 @@ namespace Voron.Impl
             VerifyNoDuplicateScratchPages();
 #endif
             var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
+            pageFromScratchBuffer.PreviousVersion = previousVersion;
             _transactionPages.Add(pageFromScratchBuffer);
 
             _allocatedPagesInTransaction++;
@@ -390,6 +387,8 @@ namespace Voron.Impl
 
             var newPage = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
+            
+            UnmanagedMemory.Set(newPage.Pointer, 0, Environment.Options.PageSize * numberOfPages);
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
 
@@ -428,10 +427,10 @@ namespace Voron.Impl
                 _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
                 _dirtyOverflowPages.Remove(pageNumber + i);
                 _dirtyPages.Add(pageNumber + i);
-
                 var newPage = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer + i);
                 newPage.PageNumber = pageNumber + i;
                 newPage.Flags = PageFlags.Single;
+                TrackWritablePage(newPage);
             }
         }
 
@@ -614,6 +613,7 @@ namespace Voron.Impl
         }
 
         private PagerState _lastState;
+        private bool _isLazyTransaction;
 
         internal void EnsurePagerStateReference(PagerState state)
         {

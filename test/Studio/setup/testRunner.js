@@ -5,7 +5,7 @@ require([], function() {
         logEnabled = !isPhantomJS;
 
     mocha.setup('bdd')
-        .globals(['jQuery*', '__extends'])
+        .globals(['jQuery*', '__extends', 'ace'])
         .checkLeaks()
         .slow(1500)
         .timeout(5000);
@@ -13,8 +13,7 @@ require([], function() {
     function run() {
         if (isPhantomJS) {
             mochaPhantomJS.run();
-        }
-        else {
+        } else {
             if (logEnabled) console.log('running tests');
             mocha.run();
         }

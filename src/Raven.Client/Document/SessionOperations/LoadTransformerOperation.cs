@@ -92,7 +92,7 @@ namespace Raven.Client.Document.SessionOperations
 
         private bool EnsureNotReadVetoed(RavenJObject result)
         {
-            var metadata = result.Value<RavenJObject>(Constants.Metadata);
+            var metadata = result.Value<RavenJObject>(Constants.Metadata.Key);
             if (metadata != null)
                 documentSession.EnsureNotReadVetoed(metadata); // this will throw on read veto
 

@@ -16,9 +16,9 @@ namespace SlowTests.Tests.Linq
     public class OfTypeSupport : RavenTestBase
     {
         [Fact]
-        public async Task OfTypeWillBeConvertedToWhere()
+        public void OfTypeWillBeConvertedToWhere()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new TagSummaryIndex().Execute(store);
             }

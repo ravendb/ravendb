@@ -8,7 +8,7 @@ class getEffectiveSqlReplicationConnectionStringsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<configurationDocumentDto<sqlReplicationConnectionsDto>> {
-        var url = "/configuration/document/Raven/SqlReplication/Connections";
+        var url = "/configuration/document/Raven/SqlReplication/Connections";//TODO: use endpoints
         return this.query<configurationDocumentDto<sqlReplicationConnectionsDto>>(url, null, this.db);
     }
 

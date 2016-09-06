@@ -7,7 +7,7 @@ class getCSharpIndexDefinitionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<string> {
-        var url = "/c-sharp-index-definition/" + this.indexName;
+        var url = "/c-sharp-index-definition/" + this.indexName;//TODO: use endpoints
         return this.query(url, null, this.db);
     }
 }

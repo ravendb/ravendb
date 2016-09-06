@@ -12,11 +12,11 @@ namespace SlowTests.SlowTests.Issues
     public class RavenDB_1280 : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task Referenced_Docs_Are_Indexed_During_Heavy_Writing()
+        public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
         {
             const int iterations = 6000;
 
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 Console.WriteLine("Making parallel inserts...");
                 var sp = Stopwatch.StartNew();
@@ -66,9 +66,9 @@ namespace SlowTests.SlowTests.Issues
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanHandleMultipleMissingDocumentsInMultipleIndexes()
+        public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var indexDefinition = new EmailIndex().CreateIndexDefinition();
 

@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
             var document = ((Document[])mapResults)[0];
-            Debug.Assert(key == document.Key);
+            Debug.Assert(key == document.LoweredKey);
 
             var mappedResult = new DynamicJsonValue();
 
@@ -148,14 +148,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 _reduceKeyProcessor.Process(result);
             }
 
-            var mappedresult = indexContext.ReadObject(mappedResult, document.Key);
+            var mappedresult = indexContext.ReadObject(mappedResult, key);
 
             var mapResult = _singleOutputList[0];
 
             mapResult.Data = mappedresult;
             mapResult.ReduceKeyHash = _reduceKeyProcessor.Hash;
 
-            PutMapResults(document.Key, _singleOutputList, indexContext);
+            PutMapResults(key, _singleOutputList, indexContext);
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }

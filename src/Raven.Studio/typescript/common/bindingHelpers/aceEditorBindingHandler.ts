@@ -1,9 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts" />
-/// <amd-dependency path="ace/ext/language_tools" />
-/// <amd-dependency path="ace/mode/lucene" />
-/// <amd-dependency path="ace/theme/xcode" />
-/// <amd-dependency path="ace/mode/json" />
-//TODO: <amd-dependency path="ace/mode/json_newline_friendly" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 
@@ -15,7 +10,7 @@ import ace = require("ace/ace");
 class aceEditorBindingHandler {
 
     defaults = {
-        theme: "ace/theme/xcode",
+        theme: "ace/theme/ambiance",
         fontSize: "16px",
         lang: "ace/mode/csharp",
         readOnly: false,
@@ -29,6 +24,17 @@ class aceEditorBindingHandler {
     static isInFullScreeenMode = ko.observable<boolean>(false);
     static goToFullScreenText = "Press Shift + F11  to enter full screen mode";
     static leaveFullScreenText = "Press Shift + F11 or Esc to leave full screen mode";
+
+    // used in tests
+    static useWebWorkers = true;
+
+    static getEditorBySelection(selector: JQuery): AceAjax.Editor {
+        if (selector.length) {
+            var element = selector[0];
+            return ko.utils.domData.get(element, "aceEditor");
+        }
+        return null;
+    }
 
     static install() {
         if (!ko.bindingHandlers["aceEditor"]) {
@@ -117,7 +123,7 @@ class aceEditorBindingHandler {
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement,
         valueAccessor: () => {
-            code: string;
+            code: KnockoutObservable<string>;
             theme?: string;
             fontSize?: string;
             lang?: string;
@@ -154,7 +160,7 @@ class aceEditorBindingHandler {
         var bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
         var getFocus = bindingValues.getFocus;
 
-        if (typeof code !== "function") {
+        if (!ko.isObservable(code)) {
             throw new Error("code should be an observable");
         }
 
@@ -168,6 +174,8 @@ class aceEditorBindingHandler {
         aceEditor.setOption("newLineMode", "windows");
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
+        aceEditor.getSession().setUseWorker(aceEditorBindingHandler.useWebWorkers);
+        aceEditor.$blockScrolling = Infinity;
         aceEditor.getSession().setMode(lang);
         aceEditor.setReadOnly(readOnly);
 

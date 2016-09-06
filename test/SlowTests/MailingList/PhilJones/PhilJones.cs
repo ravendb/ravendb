@@ -58,9 +58,9 @@ namespace SlowTests.MailingList.PhilJones
         }
 
         [Fact]
-        public async Task ravendb_fails_to_map()
+        public void ravendb_fails_to_map()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Foos_BarProjection().Execute(store);
 

@@ -30,9 +30,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanWork()
+        public void CanWork()
         {
-            using(var store = await GetDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 store.Conventions.SaveEnumsAsIntegers = true;
                 new Index().Execute(store);

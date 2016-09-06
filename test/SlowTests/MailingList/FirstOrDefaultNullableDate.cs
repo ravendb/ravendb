@@ -38,10 +38,10 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "TODO: arek - group by 1")]
-        public async Task ShouldWork()
+        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        public void ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Index().Execute(store);
             }

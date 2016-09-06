@@ -9,7 +9,7 @@ import jsonUtil = require("common/jsonUtil");
 import viewModelBase = require("viewmodels/viewModelBase");
 import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import messagePublisher = require("common/messagePublisher");
-import shell = require('viewmodels/shell');
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class databaseSettings extends viewModelBase {
     document = ko.observable<document>();
@@ -29,7 +29,6 @@ class databaseSettings extends viewModelBase {
 
     constructor() {
         super();
-        viewModelBase.layout.setMode(true);
         aceEditorBindingHandler.install();
 
         this.document.subscribe(doc => {
@@ -64,7 +63,7 @@ class databaseSettings extends viewModelBase {
         super.canActivate(args);
         var deferred = $.Deferred();
 
-        this.isForbidden(!shell.isGlobalAdmin());
+        this.isForbidden(!accessHelper.isGlobalAdmin());
         if (this.isForbidden()) {
             deferred.resolve({ can: true });
         } else {

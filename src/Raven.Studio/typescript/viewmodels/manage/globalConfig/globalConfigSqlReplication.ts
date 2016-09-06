@@ -41,7 +41,7 @@ class globalConfigSqlReplication extends viewModelBase {
     canActivate() {
         var deferred = $.Deferred();
 
-        if (this.settingsAccess.isForbidden()) {
+        if (settingsAccessAuthorizer.isForbidden()) {
             deferred.resolve({ can: true });
         } else {
             this.loadConnections()
@@ -54,7 +54,7 @@ class globalConfigSqlReplication extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.dirtyFlag = new ko.DirtyFlag([this.connections]);
-        this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !settingsAccessAuthorizer.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     saveChanges() {

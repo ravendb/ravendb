@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Transformers
         public TransformerStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
-            _log = LoggerSetup.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
+            _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
         }
 
         public Task InitializeAsync()
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Transformers
 
                     try
                     {
-                        var transformer = Transformer.Open(transformerId, transformerFile.FullName, _documentDatabase.Configuration.Indexing, LoggerSetup.Instance.GetLogger<Transformer>(_documentDatabase.Name));
+                        var transformer = Transformer.Open(transformerId, transformerFile.FullName, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
                         _transformers.Add(transformer);
                     }
                     catch (Exception e)
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Transformers
                 }
 
                 var transformerId = _transformers.GetNextIndexId();
-                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing, LoggerSetup.Instance.GetLogger<Transformer>(_documentDatabase.Name));
+                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
 
                 return CreateTransformerInternal(transformer, transformerId);
             }

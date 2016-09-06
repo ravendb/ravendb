@@ -129,9 +129,9 @@ namespace SlowTests.MailingList.PhilJones
         }
 
         [Fact]
-        public async Task OrderByDescending_is_ignored_when_using_multimap_index()
+        public void OrderByDescending_is_ignored_when_using_multimap_index()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Proposals_ListProjection().Execute(store);
                 new Proposals_ListProjectionTransformer().Execute(store);

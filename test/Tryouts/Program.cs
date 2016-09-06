@@ -1,47 +1,29 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Replication;
-using SlowTests.Tests.Linq;
+using FastTests.Sparrow;
+using FastTests.Voron.Storage;
+using SlowTests.Core.Indexing;
+using SlowTests.SlowTests.Bugs;
 
 namespace Tryouts
 {
-  
     public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            Console.WriteLine("First run");
-            using (var f = new WhereClause())
+            using (var x = new SlowTests.SlowTests.Bugs.AsyncSetBasedOps())
             {
-                f.CanUnderstandSimpleContainsInExpression2().Wait();
-            }
-            Console.WriteLine("starting");
-            var tasks = new Task[100];
-            for (int i = 0; i < tasks.Length; i++)
-            {
-                var copy = i;
-                tasks[i] = Task.Run(async () =>
-                {
-
-                    Console.WriteLine(copy);
-                    try
-                    {
-                        using (var f = new WhereClause())
-                        {
-                            await f.CanUnderstandSimpleContainsInExpression2();
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                    }
-                    Console.WriteLine(-copy);
-                });
+                x.AwaitAsyncPatchByIndexShouldWork().Wait();
             }
 
-            Task.WaitAll(tasks);
-
+            //Parallel.For(0, 1000, i =>
+            //{
+            //    using (var x = new Fanout())
+            //    {
+            //        x.ShouldSkipDocumentsIfMaxIndexOutputsPerDocumentIsExceeded();
+            //    }
+            //    Console.WriteLine(i);
+            //});
         }
     }
 }

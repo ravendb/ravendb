@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes
             _index = index;
             _contextPool = contextPool;
             DocumentDatabase = database;
-            _logger = LoggerSetup.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
         }
 
         public void Initialize(StorageEnvironment environment)
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+                var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
                 foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slices.BeforeAllKeys))
                 {
@@ -168,10 +168,21 @@ namespace Raven.Server.Documents.Indexes
             return errors;
         }
 
+        public DateTime? ReadLastIndexingTime(RavenTransaction tx)
+        {
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+
+            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+            if (lastIndexingTime == null)
+                return null;
+
+            return DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
+        }
+
         public IndexStats ReadStats(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-            var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+            var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
             var stats = new IndexStats();
             stats.IsInMemory = _environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions;
@@ -288,7 +299,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+                var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
                 var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 

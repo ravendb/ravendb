@@ -10,14 +10,15 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Util;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Xunit;
 
-namespace FastTests.Server.Documents.PeriodicExport
+namespace SlowTests.PeriodicExport
 {
-    public class RavenDB_2181
+    public class RavenDB_2181 : NoDisposalNeeded
     {
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";

@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class createSampleDataCommand extends commandBase {
     constructor(private db: database) {
@@ -9,7 +10,7 @@ class createSampleDataCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Creating Sample Data, Please wait...");
 
-        return this.post("/studio-tasks/createSampleData", null, this.db, { dataType: 'text' })
+        return this.post(endpoints.databases.sampleData.studioSampleData, null, this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to create sample data", response.responseText, response.statusText))
             .done(() => this.reportSuccess("Sample data creation completed"));
     }

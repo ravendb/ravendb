@@ -15,7 +15,7 @@ namespace FastTests.Voron.Storage
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var page = tx.LowLevelTransaction.AllocateOverflowPage(16000);
+                var page = tx.LowLevelTransaction.AllocateOverflowRawPage(16000);
                 page.DataPointer[15999] = 255;
 
                 pageNumber = page.PageNumber;

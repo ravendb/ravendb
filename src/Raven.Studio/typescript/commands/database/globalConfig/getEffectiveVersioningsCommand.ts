@@ -10,7 +10,7 @@ class getEffectiveVersioningsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<configurationDocument<versioningEntry>[]> {
-        var url = "/configuration/versioning";
+        var url = "/configuration/versioning";//TODO: use endpoints
         var mapper = (configs: configurationDocumentDto<versioningEntryDto>[]): configurationDocument<versioningEntry>[]=> {
             return configs.map(config =>
                 configurationDocument.fromDtoWithTransform<versioningEntryDto, versioningEntry>(config, (x: versioningEntryDto) => new versioningEntry(x, true)));

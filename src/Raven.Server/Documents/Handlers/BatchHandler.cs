@@ -1,16 +1,15 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
+using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Extensions;
+using Raven.Client.Documents.SessionOperations.Commands;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Exceptions;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Handlers
@@ -20,6 +19,7 @@ namespace Raven.Server.Documents.Handlers
         private struct CommandData
         {
             public string Method;
+            // TODO: Change to ID
             public string Key;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
@@ -58,14 +58,14 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var cmd = commands.GetByIndex<BlittableJsonReaderObject>(i);
 
-                    if (cmd.TryGet("Method", out parsedCommands[i].Method) == false)
-                        throw new InvalidDataException("Missing 'Method' property");
-                    if (cmd.TryGet("Key", out parsedCommands[i].Key) == false)
-                        throw new InvalidDataException("Missing 'Key' property");
+                    if (cmd.TryGet(nameof(CommandData.Method), out parsedCommands[i].Method) == false)
+                        throw new InvalidDataException($"Missing '{nameof(CommandData.Method)}' property");
+
+                    cmd.TryGet(nameof(CommandData.Key), out parsedCommands[i].Key); // Key can be null, we will generate new one
 
                     // optional
-                    cmd.TryGet("ETag", out parsedCommands[i].Etag);
-                    cmd.TryGet("AdditionalData", out parsedCommands[i].AdditionalData);
+                    cmd.TryGet(nameof(CommandData.Etag), out parsedCommands[i].Etag);
+                    cmd.TryGet(nameof(CommandData.AdditionalData), out parsedCommands[i].AdditionalData);
 
                     // We have to do additional processing on the documents
                     // in particular, prepare them for disk by compressing strings, validating floats, etc
@@ -77,8 +77,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         case "PUT":
                             BlittableJsonReaderObject doc;
-                            if (cmd.TryGet("Document", out doc) == false)
-                                throw new InvalidDataException("Missing 'Document' property");
+                            if (cmd.TryGet(nameof(PutCommandData.Document), out doc) == false)
+                                throw new InvalidDataException($"Missing '{nameof(PutCommandData.Document)}' property");
 
                             // we need to split this document to an independent blittable document
                             // and this time, we'll prepare it for disk.
@@ -87,11 +87,11 @@ namespace Raven.Server.Documents.Handlers
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             break;
                         case "PATCH":
-                            cmd.TryGet("DebugMode", out parsedCommands[i].IsDebugMode);
+                            cmd.TryGet(nameof(PatchCommandData.DebugMode), out parsedCommands[i].IsDebugMode);
 
                             BlittableJsonReaderObject patch;
-                            if (cmd.TryGet("Patch", out patch) == false)
-                                throw new InvalidDataException("Missing 'Patch' property");
+                            if (cmd.TryGet(nameof(PatchCommandData.Patch), out patch) == false)
+                                throw new InvalidDataException($"Missing '{nameof(PatchCommandData.Patch)}' property");
 
                             parsedCommands[i].Patch = PatchRequest.Parse(patch);
                             break;
@@ -104,10 +104,16 @@ namespace Raven.Server.Documents.Handlers
                     ParsedCommands = parsedCommands,
                     Reply = new DynamicJsonArray()
                 };
-
-                await Database.TxMerger.Enqueue(mergedCmd);
-
-                HttpContext.Response.StatusCode = 201;
+                try
+                {
+                    await Database.TxMerger.Enqueue(mergedCmd);
+                }
+                catch (ConcurrencyException)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    throw;
+                }
+                HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
                     readBatchCommandContext.Write(writer, mergedCmd.Reply);
@@ -134,7 +140,7 @@ namespace Raven.Server.Documents.Handlers
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
                             BlittableJsonReaderObject metadata;
-                            cmd.Document.TryGet(Constants.Metadata, out metadata);
+                            cmd.Document.TryGet(Constants.Metadata.Key, out metadata);
 
                             Reply.Add(new DynamicJsonValue
                             {

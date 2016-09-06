@@ -10,7 +10,7 @@ class resetSqlReplicationCommand extends commandBase {
         var args = {
              disable: this.disable
         };
-        var url = "/studio-tasks/sql-replication-toggle-disable" + super.urlEncodeArgs(args);
+        var url = "/studio-tasks/sql-replication-toggle-disable" + super.urlEncodeArgs(args);//TODO: use endpoints
 
         return this.post(url, null, this.db)
             .fail((result: JQueryXHR) => {

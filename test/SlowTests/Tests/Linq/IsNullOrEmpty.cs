@@ -13,9 +13,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmptyEqTrue()
+        public void IsNullOrEmptyEqTrue()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -35,9 +35,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmptyEqFalse()
+        public void IsNullOrEmptyEqFalse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -55,9 +55,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task IsNullOrEmptyNegated()
+        public void IsNullOrEmptyNegated()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -75,9 +75,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WithAny()
+        public void WithAny()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -95,9 +95,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WithAnyEqFalse()
+        public void WithAnyEqFalse()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

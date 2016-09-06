@@ -19,8 +19,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         protected RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, Dictionary<string, IndexField> fields, bool forQuerying = false)
         {
-            if (fields.ContainsKey(Constants.AllFields))
-                throw new InvalidOperationException($"Detected '{Constants.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
+            if (fields.ContainsKey(Constants.Indexing.Fields.AllFields))
+                throw new InvalidOperationException($"Detected '{Constants.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
 
             var defaultAnalyzer = createDefaultAnalyzer();
 

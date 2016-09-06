@@ -13,9 +13,9 @@ namespace Raven.Tests.Core
     public class MultiGetOperations : RavenTestBase
     {
         [Fact]
-        public async Task UnlessAccessedLazyLoadsAreNoOp()
+        public void UnlessAccessedLazyLoadsAreNoOp()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -27,9 +27,9 @@ namespace Raven.Tests.Core
         }
 
         [Fact]
-        public async Task WithPaging()
+        public void WithPaging()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

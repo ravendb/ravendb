@@ -23,14 +23,14 @@ class deleteLocalPeriodicExportSetupCommand extends commandBase {
             }
         }
 
-        var url = "/admin/databases/" + this.db.name;
+        var url = "/admin/databases/" + this.db.name;//TODO: use endpoints
         
         var putArgs = JSON.stringify(this.setupToPersist.removeDatabaseSettings());
         return this.put(url, putArgs, null, jQueryOptions);
     }
 
     private deleteSetup(): JQueryPromise<any> {
-        var url = "/docs?id=Raven/Backup/Periodic/Setup";
+        var url = "/docs?id=Raven/Backup/Periodic/Setup";//TODO: use endpoints
         return this.del(url, null, this.db);
     }
 }

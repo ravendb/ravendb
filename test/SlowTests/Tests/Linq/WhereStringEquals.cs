@@ -10,9 +10,9 @@ namespace SlowTests.Tests.Linq
     public class WhereStringEquals : RavenTestBase
     {
         [Fact]
-        public async Task QueryString_CaseSensitive_ShouldWork()
+        public void QueryString_CaseSensitive_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -27,9 +27,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task QueryString_IgnoreCase_ShouldWork()
+        public void QueryString_IgnoreCase_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -45,9 +45,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork()
+        public void QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -63,9 +63,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork_InvertParametersOrder()
+        public void QueryString_WithoutSpecifyingTheComparisonType_ShouldJustWork_InvertParametersOrder()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -81,9 +81,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task RegularStringEqual_ShouldWork()
+        public void RegularStringEqual_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -99,9 +99,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task ConstantStringEquals_ShouldWork()
+        public void ConstantStringEquals_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -117,9 +117,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task StringEqualsConstant_ShouldWork()
+        public void StringEqualsConstant_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -135,9 +135,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task StringEqualsConstant_IgnoreCase_ShouldWork()
+        public void StringEqualsConstant_IgnoreCase_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -153,9 +153,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task StringEqualsConstant_CaseSensitive_ShouldWork()
+        public void StringEqualsConstant_CaseSensitive_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 
@@ -171,9 +171,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task RegularStringEqual_CaseSensitive_ShouldWork()
+        public void RegularStringEqual_CaseSensitive_ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 

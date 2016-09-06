@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.Null:
                 case ValueType.EmptyString:
                 case ValueType.Numeric:
+                case ValueType.BlittableJsonObject:
+                case ValueType.DynamicJsonObject:
                     defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS;
                     break;
                 default:
@@ -163,8 +165,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.DateTimeOffset)
             {
                 var dateTimeOffset = (DateTimeOffset)value;
+
                 string dateAsString;
-                if (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS)
+                if (field.Indexing != FieldIndexing.Default && (indexing == Field.Index.NOT_ANALYZED || indexing == Field.Index.NOT_ANALYZED_NO_NORMS))
                     dateAsString = dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
                 else
                     dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
@@ -230,6 +233,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
+            if (valueType == ValueType.Lucene)
+            {
+                yield return (AbstractField)value;
+                yield break;
+            }
+
             if (valueType == ValueType.Double)
             {
                 yield return GetOrCreateField(path, null, ((LazyDoubleValue)value).Inner, null, storage, indexing, termVector);
@@ -283,6 +292,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is LazyDoubleValue) return ValueType.Double;
 
+            if (value is AbstractField) return ValueType.Lucene;
+
             if (value is IConvertible) return ValueType.Convertible;
 
             if (value is BlittableJsonReaderObject) return ValueType.BlittableJsonObject;
@@ -293,9 +304,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected Field GetOrCreateKeyField(LazyStringValue key)
         {
             if (_reduceOutput == false)
-                return GetOrCreateField(Constants.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                return GetOrCreateField(Constants.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
-            return GetOrCreateField(Constants.ReduceKeyFieldName, null, key, null, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            return GetOrCreateField(Constants.Indexing.Fields.ReduceKeyFieldName, null, key, null, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
         protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
@@ -351,6 +362,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             else
             {
                 field = cached.Field;
+                if (lazyValue != null && cached.LazyStringReader == null)
+                    cached.LazyStringReader = new LazyStringReader();
+                if (blittableValue != null && cached.BlittableObjectReader == null)
+                    cached.BlittableObjectReader = new BlittableObjectReader();
 
                 if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
                 {
@@ -461,7 +476,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             DateTimeOffset,
 
-            Enum
+            Enum,
+
+            Lucene
         }
     }
 }

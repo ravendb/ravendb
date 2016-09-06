@@ -26,7 +26,6 @@
     "d3": "^3.5.15",
     "nvd3": "^1.8.2",
     "dagre-d3": "^0.4.17",
-    "ace": "^1.2.3",
     "jszip-utils": "^0.0.2",
     "jszip": "^2.5.0",
     "text": "requirejs-text#^2.0.14",
@@ -35,7 +34,7 @@
     "mocha": "~2.0.1",
     "chai": "^3.5.0",
     "Squire.js": "squire#^0.2.0",
-    "es6-promise": "^3.2.2"
+    "es6-shim": "^0.35.1"
   },
   "resolutions": {
     "jquery": "^2.2.0",

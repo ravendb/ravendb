@@ -1,10 +1,9 @@
 import commandBase = require("commands/commandBase");
-import appUrl = require("common/appUrl");
 
 class licenseCheckConnectivityCommand extends commandBase {
 
     execute(): JQueryPromise<boolean> {
-        var url = "/admin/license/connectivity";
+        var url = "/admin/license/connectivity";//TODO: use endpoints
         return this.query(url, null, null, r => r.Success);
     }
 

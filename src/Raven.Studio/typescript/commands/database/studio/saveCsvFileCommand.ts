@@ -20,7 +20,7 @@ class saveCsvFileCommand extends commandBase {
             contentType: false,
             dataType: 'text' 
         };
-        var saveTask = this.post("/studio-tasks/loadCsvFile", this.fileData, this.db, jQueryOptions);
+        var saveTask = this.post("/studio-tasks/loadCsvFile", this.fileData, this.db, jQueryOptions);//TODO: use endpoints
         saveTask.done(() => this.reportSuccess("CSV file imported"));
         saveTask.fail((response: JQueryXHR) => this.reportError("Failed to import CSV file", response.responseText, response.statusText));
         return saveTask;

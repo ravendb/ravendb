@@ -34,9 +34,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanWorkProperly()
+        public void CanWorkProperly()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ItemIndex().Execute(store);
                 using (var session = store.OpenSession())

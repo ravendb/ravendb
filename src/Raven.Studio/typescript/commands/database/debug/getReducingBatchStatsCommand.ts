@@ -9,7 +9,7 @@ class getReducingBatchStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<reducingBatchInfoDto[]> {
-        var url = "/debug/reducing-batch-stats";
+        var url = "/debug/reducing-batch-stats";//TODO: use endpoints
         var args = { lastId: this.lastId };
         var inlinePerfStats = (entry: any[]) => {
             var result: { indexName: string, stats: any[] }[] = [];

@@ -30,9 +30,9 @@ namespace SlowTests.Core.Querying
     public class Searching : RavenTestBase
     {
         [Fact]
-        public async Task CanSearchByMultipleTerms()
+        public void CanSearchByMultipleTerms()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("Posts/ByTitle", new IndexDefinition
                 {
@@ -84,9 +84,9 @@ namespace SlowTests.Core.Querying
         }
 
         [Fact]
-        public async Task CanSearchByMultipleFields()
+        public void CanSearchByMultipleFields()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("Posts/ByTitleAndDescription", new IndexDefinition
                 {
@@ -154,9 +154,9 @@ namespace SlowTests.Core.Querying
         }
 
         [Fact(Skip = "Missing feature: Spatial")]
-        public async Task CanDoSpatialSearch()
+        public void CanDoSpatialSearch()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var eventsSpatialIndex = new Events_SpatialIndex();
                 eventsSpatialIndex.Execute(store);
@@ -241,9 +241,9 @@ namespace SlowTests.Core.Querying
         }
 
         [Fact]
-        public async Task CanDoSearchBoosting()
+        public void CanDoSearchBoosting()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_ByName().Execute(store);
 
@@ -279,9 +279,9 @@ namespace SlowTests.Core.Querying
         }
 
         [Fact(Skip = "Missing feature: Suggestions")]
-        public async Task CanProvideSuggestionsAndLazySuggestions()
+        public void CanProvideSuggestionsAndLazySuggestions()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_ByName().Execute(store);
 
@@ -331,9 +331,9 @@ namespace SlowTests.Core.Querying
         }
 
         [Fact(Skip = "Missing feature: Facets")]
-        public async Task CanPerformFacetedSearchAndLazyFacatedSearch()
+        public void CanPerformFacetedSearchAndLazyFacatedSearch()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new CameraCost().Execute(store);
 

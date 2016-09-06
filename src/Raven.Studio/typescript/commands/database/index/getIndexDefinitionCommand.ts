@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class getIndexDefinitionCommand extends commandBase {
     constructor(private indexName: string, private db: database) {
@@ -7,7 +8,7 @@ class getIndexDefinitionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<indexDefinitionContainerDto> {
-        var url = "/indexes";
+        var url = endpoints.databases.index.indexes;
         var args = {
             name: this.indexName
         }

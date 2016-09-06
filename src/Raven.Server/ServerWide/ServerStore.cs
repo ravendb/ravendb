@@ -48,7 +48,7 @@ namespace Raven.Server.ServerWide
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
-            _logger = LoggerSetup.Instance.GetLogger<ServerStore>("ServerStore");
+            _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
             DatabasesLandlord = new DatabasesLandlord(this);
 
             // We use the follow format for the items data
@@ -105,7 +105,7 @@ namespace Raven.Server.ServerWide
 
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
         {
-            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
             var reader = items.ReadByKey(Slice.From(ctx.Allocator, id.ToLowerInvariant()));
             if (reader == null)
                 return null;
@@ -116,7 +116,7 @@ namespace Raven.Server.ServerWide
 
         public void Delete(TransactionOperationContext ctx, string id)
         {
-            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
             items.DeleteByKey(Slice.From(ctx.Allocator, id.ToLowerInvariant()));
         }
 
@@ -128,7 +128,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
         {
-            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
             var loweredPrefix = Slice.From(ctx.Allocator, prefix.ToLowerInvariant());
             foreach (var result in items.SeekByPrimaryKey(loweredPrefix, startsWith: true))
             {
@@ -158,8 +158,7 @@ namespace Raven.Server.ServerWide
         {
             var idAsSlice = Slice.From(ctx.Allocator, id);
             var loweredId = Slice.From(ctx.Allocator, id.ToLowerInvariant());
-            var items = new Table(_itemsSchema, "Items", ctx.Transaction.InnerTransaction);
-
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
             items.Set(new TableValueBuilder
             {

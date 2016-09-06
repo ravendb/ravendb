@@ -16,7 +16,7 @@ class simulateSqlReplicationCommand extends  commandBase{
             sqlReplication: JSON.stringify(this.simulatedSqlReplication.toDto())
         };
 
-        return this.post("/studio-tasks/simulate-sql-replication", JSON.stringify(args), this.db, { dataType: undefined }, 60000);
+        return this.post("/studio-tasks/simulate-sql-replication", JSON.stringify(args), this.db, { dataType: undefined }, 60000);//TODO: use endpoints
     }
 }
 

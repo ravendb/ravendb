@@ -22,7 +22,7 @@ namespace FastTests.Server.Documents.Notifications
 
         public async Task CanGetNotificationAboutDocumentPut()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
                 var taskObservable = store.Changes();
@@ -48,7 +48,7 @@ namespace FastTests.Server.Documents.Notifications
 
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
                 var taskObservable = store.Changes();
@@ -76,7 +76,7 @@ namespace FastTests.Server.Documents.Notifications
 
         public async Task CanGetNotificationAboutDocumentDelete()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
                 var taskObservable = store.Changes();
@@ -107,7 +107,7 @@ namespace FastTests.Server.Documents.Notifications
 
         public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var taskObservable = store.Changes("does-not-exists");
 

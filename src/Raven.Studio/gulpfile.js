@@ -1,15 +1,17 @@
-﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile' ProjectOpened='restore' />
+﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile-changed:app' ProjectOpened='restore' />
 
 require('./gulp/shim');
 
 var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
+    path = require('path'),
     del = require('del'),
     Map = require('es6-map'),
     runSequence = require('run-sequence'),
     exec = require('child_process').exec,
     parseHandlers = require('./gulp/parseHandlers'),
+    parseConfiguration = require('./gulp/parseConfiguration'),
     findNewestFile = require('./gulp/findNewestFile'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util');
@@ -31,22 +33,17 @@ gulp.task('clean', function () {
 gulp.task('parse-handlers', function() {
     return gulp.src(PATHS.handlersToParse)
         .pipe(parseHandlers('endpoints.ts'))
-        .pipe(gulp.dest(PATHS.handlersConstantsTargetDir));
+        .pipe(gulp.dest(PATHS.constantsTargetDir));
 });
 
-gulp.task('less:old', function () {
-    return gulp.src(PATHS.oldLessSource)
-        .pipe(plugins.newy(findNewestFile(PATHS.oldLessTargetSelector)))
-        .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.less({
-            sourceMap: true
-        }))
-        .pipe(plugins.sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.oldLessTarget));
+gulp.task('parse-configuration', function() {
+    return gulp.src(PATHS.configurationFilesToParse)
+        .pipe(parseConfiguration('configuration.ts'))
+        .pipe(gulp.dest(PATHS.constantsTargetDir));
 });
 
 gulp.task('less', function() {
-    return gulp.src(PATHS.lessSource)
+    return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
         .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.less({
@@ -66,7 +63,6 @@ gulp.task('generate-typings', function(cb) {
 
 gulp.task('compile:test', ['generate-ts'], function() {
      return gulp.src([PATHS.test.tsSource])
-        .pipe(plugins.changed(PATHS.test.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.typescript(tsCompilerConfig))
         .js
@@ -75,6 +71,15 @@ gulp.task('compile:test', ['generate-ts'], function() {
 });
 
 gulp.task('compile:app', ['generate-ts'], function () {
+    return gulp.src([PATHS.tsSource])
+        .pipe(plugins.sourcemaps.init())
+        .pipe(plugins.typescript(tsCompilerConfig))
+        .js
+        .pipe(plugins.sourcemaps.write("."))
+        .pipe(gulp.dest(PATHS.tsOutput));
+});
+
+gulp.task('compile-changed:app', ['generate-ts'], function() {
     return gulp.src([PATHS.tsSource])
         .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
@@ -104,8 +109,8 @@ gulp.task('release:images', function() {
 });
 
 gulp.task('release:fonts', function() {
-    return gulp.src('wwwroot/fonts/*')
-       .pipe(gulp.dest(PATHS.releaseTarget + "fonts"));
+    return gulp.src('wwwroot/Content/css/fonts/**/*')
+       .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'App/fonts')));
 });
 
 
@@ -179,7 +184,7 @@ gulp.task('generate-test-list', function () {
 gulp.task('mochaTests', function () {
     var mocha = plugins.mochaPhantomjs({
         reporter: 'spec',
-        dump:'test.log'
+        dump: 'test.log'
     });
 
     return gulp.src(PATHS.test.html).pipe(mocha);
@@ -194,7 +199,7 @@ gulp.task('watch:test', ['test'], function () {
     gulp.watch(PATHS.test.tsSource, ['test']);
 });
 
-gulp.task('compile', ['less', 'less:old', 'compile:app'], function() { });
+gulp.task('compile', ['less', 'compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.tsSource, ['compile:app']);
@@ -202,7 +207,7 @@ gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.lessSource, ['less']);
 });
 
-gulp.task('generate-ts', ['parse-handlers', 'generate-typings'], function() {});
+gulp.task('generate-ts', ['parse-handlers', 'parse-configuration', 'generate-typings'], function() {});
 
 gulp.task('restore', ['bower', 'typings']);
 
@@ -214,9 +219,9 @@ gulp.task('release', function (cb) {
             'release:libs',
             'release:favicon',
             'release:images',
-            'release:fonts',
             'release:html',
             'release:css',
+            'release:fonts',
             'release:durandal'
         ],
         cb);

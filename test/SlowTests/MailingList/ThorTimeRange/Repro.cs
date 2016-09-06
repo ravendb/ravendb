@@ -97,9 +97,9 @@ namespace SlowTests.MailingList.ThorTimeRange
         }
 
         [Fact]
-        public async Task CanPersistAndLoad_WORKS()
+        public void CanPersistAndLoad_WORKS()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Utility.CreateTestData(store);
 
@@ -117,9 +117,9 @@ namespace SlowTests.MailingList.ThorTimeRange
         }
 
         [Fact]
-        public async Task CanPersistAndLoad_WORKS2()
+        public void CanPersistAndLoad_WORKS2()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Utility.CreateTestData(store);
 
@@ -143,9 +143,9 @@ namespace SlowTests.MailingList.ThorTimeRange
         }
 
         [Fact]
-        public async Task CanPersistAndLoad_FAILS()
+        public void CanPersistAndLoad_FAILS()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Utility.CreateTestData(store);
 

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Raven.Traffic": {
+      "commandName": "Project",
+      "commandLineArgs": "rec http://localhost:8080/ test recording.json"
+    }
+  }
+}

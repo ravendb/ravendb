@@ -84,9 +84,9 @@ namespace SlowTests.MailingList.spokeypokey
 
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanReferenceChildDocumentsInIndex()
+        public void CanReferenceChildDocumentsInIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
                 new ProviderAndTaxonomyCodeIndex1().Execute(store);

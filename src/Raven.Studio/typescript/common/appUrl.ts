@@ -5,6 +5,7 @@ import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
 import resource = require("models/resources/resource");
+import activeResource = require("../viewmodels/resources/activeResourceTracker");
 import router = require("plugins/router");
 import collection = require("models/database/documents/collection");
 import messagePublisher = require("common/messagePublisher");
@@ -23,10 +24,10 @@ class appUrl {
 
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
     public static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
-    private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-    private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-    private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
-    private static currentTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
+    private static currentDatabase = activeResource.default.database;
+    private static currentFilesystem = activeResource.default.fileSystem;
+    private static currentCounterStorage = activeResource.default.counterStorage;
+    private static currentTimeSeries = activeResource.default.timeSeries;
     
     // Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
@@ -234,10 +235,6 @@ class appUrl {
         return "#admin/settings/cluster";
     }
 
-    static forWindowsAuth(): string {
-        return "#admin/settings/windowsAuth";
-    }
-
     static forGlobalConfig(): string {
         return '#admin/settings/globalConfig';
     }
@@ -345,15 +342,12 @@ class appUrl {
     /**
     * Gets the URL for edit document.
     * @param id The ID of the document to edit, or null to edit a new document.
-    * @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
-    * @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
     * @param database The database to use in the URL. If null, the current database will be used.
     */
-    static forEditDoc(id: string, collectionName: string, docIndexInCollection: number, db: database): string {
+    static forEditDoc(id: string, db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
         var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
-        var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
-        return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
+        return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
     }
 
     static forEditItem(itemId: string, rs: resource, itemIndex: number, collectionName?: string): string {
@@ -381,9 +375,13 @@ class appUrl {
         return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
     }
 
-    static forNewDoc(db: database): string {
+    static forNewDoc(db: database, collection: string = null): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
-        return "#databases/edit?" + databaseUrlPart;
+        var url = "#databases/edit?" + databaseUrlPart;
+        if (collection) {
+            url += "&new=" + encodeURIComponent(collection);
+        }
+        return url;
     }
 
 

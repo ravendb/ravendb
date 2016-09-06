@@ -25,7 +25,7 @@ class saveGlobalSettingsCommand extends commandBase {
         }
 
         var args = JSON.stringify(this.document.toDto());
-        var url = "/configuration/global/settings";
+        var url = "/configuration/global/settings";//TODO: use endpoints
         var saveTask = this.put(url, args, null, jQueryOptions);
         saveTask.done(() => this.reportSuccess("Global Settings were successfully saved!"));
         saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save global settings!", response.responseText, response.statusText));

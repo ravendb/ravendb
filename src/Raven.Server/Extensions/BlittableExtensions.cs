@@ -17,7 +17,7 @@ namespace Raven.Server
         {
             DynamicJsonValue mutableMetadata;
             BlittableJsonReaderObject metadata;
-            if (doc.TryGet(Constants.Metadata, out metadata))
+            if (doc.TryGet(Constants.Metadata.Key, out metadata))
             {
                 metadata.Modifications = mutableMetadata = new DynamicJsonValue(metadata);
             }
@@ -25,7 +25,7 @@ namespace Raven.Server
             {
                 doc.Modifications = new DynamicJsonValue(doc)
                 {
-                    [Constants.Metadata] = mutableMetadata = new DynamicJsonValue()
+                    [Constants.Metadata.Key] = mutableMetadata = new DynamicJsonValue()
                 };
             }
 

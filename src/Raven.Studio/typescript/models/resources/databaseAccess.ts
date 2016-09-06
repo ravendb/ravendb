@@ -1,5 +1,6 @@
 import shell = require("viewmodels/shell");
 import resource = require("models/resources/resource");
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class databaseAccess {
 
@@ -50,7 +51,9 @@ class databaseAccess {
         this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
         this.searchResults = ko.computed(() => {
-            var readOnly = shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings();
+            var readOnly = accessHelper.isGlobalAdmin() === false &&
+                accessHelper.canReadWriteSettings() === false &&
+                accessHelper.canReadSettings();
             if (readOnly)
                 return [];
 

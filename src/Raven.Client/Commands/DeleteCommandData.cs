@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Key of a document to delete.
         /// </summary>
-        public virtual string Key { get; set; }
+        public virtual string Id { get; set; }
 
         /// <summary>
         /// Returns operation method. In this case DELETE.
@@ -44,7 +44,7 @@ namespace Raven.Abstractions.Commands
         {
             return new RavenJObject
                     {
-                        {"Key", Key},
+                        {"Key", Id},
                         {"Etag", new RavenJValue(Etag != null ? (object) Etag.ToString() : null)},
                         {"Method", Method},
                         {"AdditionalData", AdditionalData}

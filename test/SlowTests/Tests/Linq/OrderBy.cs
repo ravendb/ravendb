@@ -21,9 +21,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanDescOrderBy_AProjection()
+        public void CanDescOrderBy_AProjection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -45,9 +45,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanAscOrderBy_AProjection()
+        public void CanAscOrderBy_AProjection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

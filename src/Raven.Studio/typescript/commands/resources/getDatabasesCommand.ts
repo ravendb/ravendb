@@ -8,7 +8,7 @@ class getDatabasesCommand extends commandBase {
             pageSize: 1024,
             getAdditionalData: true
         };
-        var url = "/databases";
+        var url = "/databases";//TODO: use endpoints
 
         var resultsSelector = (databases: databaseDto[]) => databases.map((db: databaseDto) =>
             new database(db.Name, db.IsAdminCurrentTenant, db.Disabled, db.Bundles, db.IndexingDisabled, db.RejectClientsEnabled, db.IsLoaded, db.ClusterWide));

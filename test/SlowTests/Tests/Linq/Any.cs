@@ -18,9 +18,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanQueryArrayWithAny()
+        public void CanQueryArrayWithAny()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -41,9 +41,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCountWithAny()
+        public void CanCountWithAny()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -61,9 +61,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCountWithLengthGreaterThenZero()
+        public void CanCountWithLengthGreaterThenZero()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -84,9 +84,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCountWithCountGreaterThenZero()
+        public void CanCountWithCountGreaterThenZero()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -110,9 +110,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task EmptyArraysShouldBeCountedProperlyWhenUsingAny()
+        public void EmptyArraysShouldBeCountedProperlyWhenUsingAny()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -130,9 +130,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task CanCountNullArraysWithAnyIfHaveAnotherPropertyStoredInTheIndex()
+        public void CanCountNullArraysWithAnyIfHaveAnotherPropertyStoredInTheIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -155,9 +155,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task NullRefWhenQuerying()
+        public void NullRefWhenQuerying()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

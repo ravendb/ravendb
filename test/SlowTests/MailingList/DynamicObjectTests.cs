@@ -21,9 +21,9 @@ namespace SlowTests.MailingList
         /// some interesting exceptions
         /// </summary>
         [Fact]
-        public async Task GetAllRecordsWithXtraFields()
+        public void GetAllRecordsWithXtraFields()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new FakeObjsIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -48,9 +48,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task GetAllRecordsWithOutXtraFields()
+        public void GetAllRecordsWithOutXtraFields()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new FakeObjsIndex().Execute(store);
                 using (var session = store.OpenSession())

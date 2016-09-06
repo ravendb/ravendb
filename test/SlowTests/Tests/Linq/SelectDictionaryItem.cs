@@ -16,9 +16,9 @@ namespace SlowTests.Tests.Linq
     public class SelectDictionaryItem : RavenTestBase
     {
         [Fact]
-        public async Task SupportProjectionOnDictionaryField()
+        public void SupportProjectionOnDictionaryField()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

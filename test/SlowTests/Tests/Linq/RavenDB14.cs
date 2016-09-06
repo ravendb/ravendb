@@ -21,9 +21,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WhereThenFirstHasAND()
+        public void WhereThenFirstHasAND()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.RegisterListener(new RecordQueriesListener(_queries));
                 var documentSession = store.OpenSession();
@@ -34,9 +34,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WhereThenSingleHasAND()
+        public void WhereThenSingleHasAND()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.RegisterListener(new RecordQueriesListener(_queries));
                 var documentSession = store.OpenSession();

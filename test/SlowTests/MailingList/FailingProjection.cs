@@ -16,9 +16,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "Missing feature: Streams")]
-        public async Task TestFailingProjection()
+        public void TestFailingProjection()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

@@ -20,9 +20,9 @@ namespace SlowTests.MailingList.Everett
     public class CanReadBytes : RavenTestBase
     {
         [Fact]
-        public async Task query_for_object_with_byte_array_with_TypeNameHandling_All()
+        public void query_for_object_with_byte_array_with_TypeNameHandling_All()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions = new DocumentConvention
                 {
@@ -56,9 +56,9 @@ namespace SlowTests.MailingList.Everett
         }
 
         [Fact]
-        public async Task query_for_object_with_byte_array_with_default_TypeNameHandling()
+        public void query_for_object_with_byte_array_with_default_TypeNameHandling()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = new DocumentConvention().CreateSerializer();
@@ -84,9 +84,9 @@ namespace SlowTests.MailingList.Everett
         }
 
         [Fact]
-        public async Task load_object_with_byte_array_with_TypeNameHandling_All()
+        public void load_object_with_byte_array_with_TypeNameHandling_All()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions = new DocumentConvention
                 {
@@ -114,9 +114,9 @@ namespace SlowTests.MailingList.Everett
         }
 
         [Fact]
-        public async Task load_object_with_byte_array_with_default_TypeNameHandling()
+        public void load_object_with_byte_array_with_default_TypeNameHandling()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
                 var jsonSerializer = new DocumentConvention().CreateSerializer();

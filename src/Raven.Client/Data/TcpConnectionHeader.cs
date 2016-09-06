@@ -9,7 +9,7 @@ namespace Raven.Abstractions.Data
             None,
             BulkInsert,
             Subscription,
-            Replication
+            Replication,
         }
 
         public string DatabaseName { get; set; }

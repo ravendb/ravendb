@@ -44,9 +44,9 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public async Task WillSupportLast()
+        public void WillSupportLast()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

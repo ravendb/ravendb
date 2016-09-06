@@ -96,7 +96,7 @@ class dynamicHeightBindingHandler {
             }
 
             var elementTop = $element.offset().top;
-            var footerTop = targetElement.position().top;
+            var footerTop = targetElement.position() ? targetElement.position().top : ($(window).height() - 28); //TODO: we use temporary fallback value!
             var padding = 5 + bottomMargin;
             var desiredElementHeight = footerTop - elementTop - padding - containerOffset;
             if ($(document).fullScreen()) {

@@ -16,7 +16,7 @@ class saveClusterConfigurationCommand extends commandBase {
 
     private saveSetup(): JQueryPromise<any> {
         var putArgs = JSON.stringify(this.dto);
-        return this.put("/admin/cluster/commands/configuration", putArgs, this.db, { dataType: undefined });
+        return this.put("/admin/cluster/commands/configuration", putArgs, this.db, { dataType: undefined });//TODO: use endpoints
     }
 }
 

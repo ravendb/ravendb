@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Replication
         {
             _database = database;
             _destination = destination;
-            _log = LoggerSetup.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
+            _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _database.Notifications.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
@@ -124,8 +124,7 @@ namespace Raven.Server.Documents.Replication
                             ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
                             ["MachineName"] = Environment.MachineName,
                         });
-                        _writer.Flush();
-
+                        _writer.Flush();						
                         using (_context.OpenReadTransaction())
                         {
                             HandleServerResponse();
@@ -255,10 +254,8 @@ namespace Raven.Server.Documents.Replication
             var readTx = _context.OpenReadTransaction();
             try
             {
-
                 var replicationBatch = new List<Document>();
                 var lastEtag = _lastSentEtag;
-
                 // we scan through the documents to send to the other side, we need to be careful about
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
@@ -266,11 +263,13 @@ namespace Raven.Server.Documents.Replication
                 var timeout = Debugger.IsAttached ? 60*1000 : 1000;
                 while (sp.ElapsedMilliseconds < timeout)
                 {
-                    _cts.Token.ThrowIfCancellationRequested();
+                    _cts.Token.ThrowIfCancellationRequested();					
+
                     foreach (var document in _database.DocumentsStorage.GetDocumentsAfter(_context, lastEtag, 0, 1024))
                     {
                         if (sp.ElapsedMilliseconds > timeout)
                             break;
+                        _cts.Token.ThrowIfCancellationRequested(); //cancel in the middle of a batch
 
                         lastEtag = document.Etag;
 
@@ -293,7 +292,6 @@ namespace Raven.Server.Documents.Replication
                             }
                             continue;
                         }
-
                         replicationBatch.Add(document);
                     }
 
@@ -302,13 +300,17 @@ namespace Raven.Server.Documents.Replication
 
                     // if we are at the end, we are done
                     if (lastEtag == DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction))
+                    {
                         break;
+                    }
                 }
+
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info(
                         $"Found {replicationBatch.Count:#,#;;0} documents to replicate to {_destination.Database} @ {_destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
                 }
+
                 if (replicationBatch.Count == 0)
                 {
                     var hasModification = lastEtag != _lastSentEtag;
@@ -339,12 +341,13 @@ namespace Raven.Server.Documents.Replication
                     $"Starting sending replication batch ({_database.Name}) with {docs.Count:#,#;;0} docs and last etag {lastEtag}");
 
             var sw = Stopwatch.StartNew();
-            _context.Write(_writer, new DynamicJsonValue
+            var headerJson = new DynamicJsonValue
             {
                 ["Type"] = "ReplicationBatch",
                 ["LastEtag"] = lastEtag,
                 ["Documents"] = docs.Count
-            });
+            };
+            _context.Write(_writer, headerJson);
             _writer.Flush();
             foreach (var document in docs)
             {

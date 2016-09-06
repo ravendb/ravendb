@@ -59,9 +59,9 @@ namespace SlowTests.Tests
         }
 
         [Fact]
-        private async Task ShouldWork()
+        private void ShouldWork()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new SimpleMapReduceIndex().Execute(store);
 

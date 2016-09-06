@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -22,8 +23,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private Logger _logger;
 
-        private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
-        private readonly Term _reduceKeyHash = new Term(Constants.ReduceKeyFieldName, "Dummy");
+        private readonly Term _documentId = new Term(Constants.Indexing.Fields.DocumentIdFieldName, "Dummy");
+        private readonly Term _reduceKeyHash = new Term(Constants.Indexing.Fields.ReduceKeyFieldName, "Dummy");
 
         private readonly string _name;
 
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _name = name;
             _converter = converter;
-            _logger = LoggerSetup.Instance.GetLogger<IndexWriteOperation>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<IndexWriteOperation>(documentDatabase.Name);
             try
             {
                 _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields);

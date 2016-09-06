@@ -9,7 +9,7 @@ import cssGenerator = require("common/cssGenerator");
 
 class collection implements ICollectionBase {
     colorClass = ""; 
-    documentCount: any = ko.observable(0);
+    documentCount: KnockoutObservable<number> = ko.observable(0);
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
     isAllDocuments = false;
     isSystemDocuments = false;

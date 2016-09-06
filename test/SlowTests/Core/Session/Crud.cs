@@ -29,7 +29,7 @@ namespace SlowTests.Core.Session
         [Fact]
         public async Task CanSaveAndLoad()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -55,7 +55,7 @@ namespace SlowTests.Core.Session
         [Fact]
         public async Task CanSaveAndLoadDynamicDocuments()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -79,9 +79,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanLoadWithTransformer()
+        public void CanLoadWithTransformer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new PostWithContentTransformer().Execute(store);
 
@@ -110,7 +110,7 @@ namespace SlowTests.Core.Session
         [Fact]
         public async Task CanDelete()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -140,7 +140,7 @@ namespace SlowTests.Core.Session
         [Fact]
         public async Task CanLoadWithInclude()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -180,9 +180,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task DeletingEntityThatIsNotTrackedShouldThrow()
+        public void DeletingEntityThatIsNotTrackedShouldThrow()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -193,9 +193,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task DeletingEntityByIdThatIsNotTrackedShouldThrow()
+        public void DeletingEntityByIdThatIsNotTrackedShouldThrow()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -220,9 +220,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task StoringDocumentWithTheSameIdInTheSameSessionShouldThrow()
+        public void StoringDocumentWithTheSameIdInTheSameSessionShouldThrow()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

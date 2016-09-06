@@ -23,9 +23,9 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanUseExtensionMethods()
+        public void CanUseExtensionMethods()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
                 {

@@ -63,9 +63,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanSortInGerman()
+        public void CanSortInGerman()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ZC_CountryCityStateCodeACIndex().Execute(store);
                 using (var session = store.OpenSession())

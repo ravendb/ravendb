@@ -11,7 +11,7 @@ namespace FastTests.Voron.Bugs
         [Fact]
         public async Task SupportRandomOrder()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {

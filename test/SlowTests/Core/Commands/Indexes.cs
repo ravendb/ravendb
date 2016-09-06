@@ -29,7 +29,7 @@ namespace SlowTests.Core.Commands
         [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const string usersByname = "users/byName";
 
@@ -60,9 +60,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public async Task CanGetTermsForIndex()
+        public void CanGetTermsForIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -95,9 +95,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
-        public async Task CanGetTermsForIndex_WithPaging()
+        public void CanGetTermsForIndex_WithPaging()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -130,9 +130,9 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact(Skip = "Missing feature: query for index entries only")]
-        public async Task CanQueryForMetadataAndIndexEntriesOnly()
+        public void CanQueryForMetadataAndIndexEntriesOnly()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -157,7 +157,7 @@ namespace SlowTests.Core.Commands
 
                 var metadataOnly = store.DatabaseCommands.Query("test", new IndexQuery(), metadataOnly: true).Results;
 
-                Assert.True(metadataOnly.TrueForAll(x => x.Keys.Count == 1 && x.Keys.First() == Constants.Metadata));
+                Assert.True(metadataOnly.TrueForAll(x => x.Keys.Count == 1 && x.Keys.First() == Constants.Metadata.Key));
 
                 var entriesOnly = store.DatabaseCommands.Query("test", new IndexQuery()
                 {
@@ -169,7 +169,7 @@ namespace SlowTests.Core.Commands
                     Assert.Equal(2, entriesOnly[i].Keys.Count);
 
                     Assert.Equal("user" + i, entriesOnly[i].Value<string>("Name"));
-                    Assert.Equal("users/" + (i + 1), entriesOnly[i].Value<string>(Constants.DocumentIdFieldName));
+                    Assert.Equal("users/" + (i + 1), entriesOnly[i].Value<string>(Constants.Indexing.Fields.DocumentIdFieldName));
                 }
             }
         }
@@ -179,7 +179,7 @@ namespace SlowTests.Core.Commands
         {
             var index1 = new Users_ByName();
             var index2 = new Posts_ByTitleAndContent();
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 index1.Execute(store);
                 index2.Execute(store);
@@ -195,7 +195,7 @@ namespace SlowTests.Core.Commands
         public async Task CanResetIndex()
         {
             var index = new Users_ByName();
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 index.Execute(store);
                 using (var session = store.OpenSession())

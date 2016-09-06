@@ -6,7 +6,10 @@ var paths = {
     handlersToParse: [
         '../Raven.Server/**/*Handler.cs'
     ],
-    handlersConstantsTargetDir: './typescript/',
+    configurationFilesToParse:[
+        '../Raven.Server/Config/Categories/**/*Configuration.cs'
+    ],
+    constantsTargetDir: './typescript/',
     typingsConfig: './typings.json',
     tsSource: './typescript/**/*.ts',
     typings: './typings/**/*.d.ts',
@@ -21,25 +24,16 @@ var paths = {
     },
 
     lessSource: [
-        './wwwroot/Content/app.less',
-        './wwwroot/Content/bootstrap.less',
-        './wwwroot/Content/dynatree.custom.less',
-        './wwwroot/Content/awesome-bootstrap-checkbox.less'],
+        './wwwroot/Content/css/styles.less',
+        './wwwroot/Content/css/legacy_styles.less',
+        './wwwroot/Content/css/bootstrap/bootstrap.less'],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
-
-    oldLessSource: [
-        './wwwroot/Content_old/old_app.less',
-        './wwwroot/Content_old/old_bootstrap.less',
-        './wwwroot/Content_old/dynatree.custom.less',
-        './wwwroot/Content_old/awesome-bootstrap-checkbox.less'],
-    oldLessTarget: './wwwroot/Content_old/',
-    oldLessTargetSelector: './wwwroot/Content_old/**/*.css',
 
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
     cssToMerge: [
-        'wwwroot/Content/bootstrap.css',
+        'wwwroot/Content/css/bootstrap/bootstrap.css',
         'wwwroot/lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css',
         'wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css',
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
@@ -48,10 +42,10 @@ var paths = {
         'wwwroot/lib/nprogress/nprogress.css',
         'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
-        'wwwroot/Content/dynatree.custom.css',
         'wwwroot/lib/nvd3/build/nv.d3.css',
-        'wwwroot/Content/app.css',
-        'wwwroot/lib/animate.css/animate.css'
+        'wwwroot/lib/animate.css/animate.css',
+        'wwwroot/Content/css/styles.css',
+        'wwwroot/Content/css/legacy_styles.css'
     ],
     externalLibs: [
         'jquery/dist/jquery.min.js',

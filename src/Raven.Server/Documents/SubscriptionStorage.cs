@@ -13,6 +13,7 @@ using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Database.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Binary;
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents
         private readonly StorageEnvironment _environment;
         private Sparrow.Logging.Logger _logger; 
 
-        private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
+        private readonly UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         public SubscriptionStorage(DocumentDatabase db)
         {
@@ -51,10 +52,10 @@ namespace Raven.Server.Documents
             options.SchemaVersion = 1;
             options.TransactionsMode=TransactionsMode.Lazy;
             _environment = new StorageEnvironment(options);
-            _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");
-
             var databaseName = db.Name;
-            _logger = LoggerSetup.Instance.GetLogger<SubscriptionStorage>(databaseName);
+            _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling("Subscriptions", databaseName);
+            
+            _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents
 
             using (var tx = _environment.WriteTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var subscriptionsTree = tx.ReadTree(SubscriptionSchema.IdsTree);
                 var id = subscriptionsTree.Increment(SubscriptionSchema.Id, 1);
 
@@ -143,7 +144,7 @@ namespace Raven.Server.Documents
                     {(byte*)&lastEtag, sizeof (long)},
                     {(byte*)&now, sizeof (long)}
                 };
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var existingSubscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
                 table.Update(existingSubscription.Id, tvb);
                 tx.Commit();
@@ -172,7 +173,7 @@ namespace Raven.Server.Documents
 
         private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx)
         {
-            var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+            var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
             var subscriptionId = Bits.SwapBytes((ulong)id);
 
             var config = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
@@ -187,7 +188,7 @@ namespace Raven.Server.Documents
         {
             using (var tx = _environment.ReadTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var subscriptionId = Bits.SwapBytes((ulong)id);
 
                 if (table.VerifyKeyExists(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong))) == false)
@@ -208,7 +209,7 @@ namespace Raven.Server.Documents
 
             using (var tx = _environment.WriteTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
                 long subscriptionId = id;
                 TableValueReader subscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong)));
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents
                 _logger.Info($"Subscription with id {subscriptionId} connection was dropped");
         }
 
-        private unsafe DynamicJsonValue ExtractSubscriptionConfigValue(TableValueReader tvr, DocumentsOperationContext context)
+        private unsafe DynamicJsonValue ExtractSubscriptionConfigValue(TableValueReader tvr, JsonOperationContext context)
         {
             int size;
             var subscriptionId =
@@ -246,7 +247,10 @@ namespace Raven.Server.Documents
                 *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out size);
             var timeOfReceivingLastAck =
                 *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.TimeOfReceivingLastAck, out size);
-            var criteria = new BlittableJsonReaderObject(tvr.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out size), size, context);
+            var ptr = tvr.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out size);
+            var data = context.GetMemory(size);
+            Memory.Copy((byte*) data.Address, ptr, size);
+            var criteria = new BlittableJsonReaderObject((byte*)data.Address, size, context);
             
             return new DynamicJsonValue
                 {
@@ -257,15 +261,19 @@ namespace Raven.Server.Documents
                 };
         }
 
-        private void GetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData, bool writeHistory = false)
+        private void SetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
         {
             var subscriptionConnection = subscriptionState.Connection;
             if (subscriptionConnection != null)
                 SetSubscriptionConnectionStats(subscriptionConnection, subscriptionData);
 
-            if (!writeHistory) return;
+            SetSubscriptionHistory(subscriptionState, subscriptionData);
+        }
 
-            var recentConnections = new List<DynamicJsonValue>();
+        private void SetSubscriptionHistory(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
+        {
+            var recentConnections = new DynamicJsonArray();
+            subscriptionData["RecentConnections"] = recentConnections;
 
             foreach (var connection in subscriptionState.RecentConnections)
             {
@@ -274,18 +282,16 @@ namespace Raven.Server.Documents
                 recentConnections.Add(connectionStats);
             }
 
-            subscriptionData["RecentConnections"] = new DynamicJsonArray(recentConnections);
-            recentConnections.Clear();
 
+            var rejectedConnections = new DynamicJsonArray();
+            subscriptionData["RecentRejectedConnections"] = rejectedConnections;
             foreach (var connection in subscriptionState.RecentRejectedConnections)
             {
                 var connectionStats = new DynamicJsonValue();
                 SetSubscriptionConnectionStats(connection, connectionStats);
-                recentConnections.Add(connectionStats);
+                rejectedConnections.Add(connectionStats);
             }
 
-            subscriptionData["RecentRejectedConnections"] =
-                new DynamicJsonArray(recentConnections);
         }
 
         public unsafe void GetAllSubscriptions(BlittableJsonTextWriter writer,
@@ -294,7 +300,7 @@ namespace Raven.Server.Documents
             using (var tx = _environment.WriteTransaction())
             {
                 var subscriptions = new List<DynamicJsonValue>();
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var seen = 0;
                 var taken = 0;
                 foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
@@ -314,7 +320,7 @@ namespace Raven.Server.Documents
 
                     if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
                     {
-                        GetSubscriptionStateData(subscriptionState, subscriptionData);
+                        SetSubscriptionStateData(subscriptionState, subscriptionData);
                     }
 
                     taken++;
@@ -328,7 +334,7 @@ namespace Raven.Server.Documents
 
         private void SetSubscriptionConnectionStats(SubscriptionConnection connection, DynamicJsonValue config)
         {
-            config["ClientUri"] = connection.ClientEndpoint.ToString();
+            config["ClientUri"] = connection.TcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
             config["ConnectedAt"] = connection.Stats.ConnectedAt;
             config["ConnectionException"] = connection.ConnectionException;
 
@@ -368,7 +374,7 @@ namespace Raven.Server.Documents
                     }
 
                     var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
-                    GetSubscriptionStateData(subscriptionState, subscriptionData);
+                    SetSubscriptionStateData(subscriptionState, subscriptionData);
                     connections.Add(subscriptionData);
                     taken++;
                 }
@@ -378,23 +384,25 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void GetRunningSubscriptionConnectionHistory(BlittableJsonTextWriter writer, DocumentsOperationContext context, long subscriptionId)
+        public DynamicJsonValue GetRunningSubscriptionConnectionHistory(JsonOperationContext context, long subscriptionId)
         {
             SubscriptionState subscriptionState;
-            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState)) return;
+            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState)) return null;
 
             var subscriptionConnection = subscriptionState.Connection;
-            if (subscriptionConnection == null) return;
+            if (subscriptionConnection == null) return null;
 
             using (var tx = _environment.ReadTransaction())
             {
                 var subscriptionData =
                     ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
-                GetSubscriptionStateData(subscriptionState, subscriptionData, true);
+                SetSubscriptionStateData(subscriptionState, subscriptionData);
+                SetSubscriptionHistory(subscriptionState, subscriptionData);
 
-                context.Write(writer, subscriptionData);
+                return subscriptionData;
             }
         }
+        
         public long GetRunningCount()
         {
             return _subscriptionStates.Count(x=>x.Value.Connection!=null);
@@ -409,7 +417,7 @@ namespace Raven.Server.Documents
         {
             using (var tx = _environment.WriteTransaction())
             {
-                var table = new Table(_subscriptionsSchema, SubscriptionSchema.SubsTree, tx);
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 return table.NumberOfEntries;
             }
         }

@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _indexStorage = indexStorage;
             _metrics = metrics;
             _mapReduceContext = mapReduceContext;
-            _logger = LoggerSetup.Instance.GetLogger<ReduceMapResultsBase<T>>(indexStorage.DocumentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<ReduceMapResultsBase<T>>(indexStorage.DocumentDatabase.Name);
         }
 
         public string Name => "Reduce";
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _aggregationBatch.Clear();
 
             _reduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, "PageNumberToReduceResult");
-            var table = new Table(_reduceResultsSchema, "PageNumberToReduceResult", indexContext.Transaction.InnerTransaction);
+            var table = indexContext.Transaction.InnerTransaction.OpenTable(_reduceResultsSchema, "PageNumberToReduceResult");
 
             var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
             
@@ -126,6 +126,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     writer.IndexDocument(reduceKeyHash, new Document
                     {
                         Key = reduceKeyHash,
+                        LoweredKey = reduceKeyHash,
                         Data = output
                     }, stats);
                 }
@@ -205,6 +206,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 writer.IndexDocument(reduceKeyHash, new Document
                                 {
                                     Key = reduceKeyHash,
+                                    LoweredKey = reduceKeyHash,
                                     Data = output
                                 }, stats);
                             }
@@ -279,6 +281,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                     writer.IndexDocument(reduceKeyHash, new Document
                                     {
                                         Key = reduceKeyHash,
+                                        LoweredKey = reduceKeyHash,
                                         Data = output
                                     }, stats);
                                 }

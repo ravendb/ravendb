@@ -8,6 +8,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
+using Raven.Client.Http;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Json.Linq;
@@ -24,18 +25,15 @@ namespace Raven.Client.Shard
         protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
 
 
-        protected BaseShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+        protected BaseShardedDocumentSession(string databaseName, ShardedDocumentStore documentStore, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id,
             ShardStrategy shardStrategy, IDictionary<string, TDatabaseCommands> shardDbCommands)
-            : base(dbName, documentStore, listeners, id)
+            : base(databaseName, documentStore, listeners, id)
         {
             this.shardStrategy = shardStrategy;
             this.shardDbCommands = shardDbCommands;
         }
 
-        public override string DatabaseName
-        {
-            get { return _databaseName; }
-        }
+        public new string DatabaseName => _databaseName;
 
         #region Sharding support methods
 
@@ -127,18 +125,18 @@ namespace Raven.Client.Shard
             {
                 var shardsToOperateOn = GetShardsToOperateOn(new ShardRequestData
                 {
-                    Keys = { cmd.Key }
+                    Keys = { cmd.Id }
                 }).Select(x => x.Item1).ToList();
 
                 if (shardsToOperateOn.Count == 0)
                 {
-                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Id +
                                                         " because it matched no shards");
                 }
 
                 if (shardsToOperateOn.Count > 1)
                 {
-                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+                    throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Id +
                                                         " because it matched multiple shards");
 
                 }

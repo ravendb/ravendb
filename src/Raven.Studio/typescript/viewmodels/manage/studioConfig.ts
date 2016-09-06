@@ -4,10 +4,10 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import appUrl = require("common/appUrl");
 import documentClass = require("models/database/documents/document");
 import serverBuildReminder = require("common/serverBuildReminder");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
+import accessHelper = require("viewmodels/shell/accessHelper");
 import numberFormattingStorage = require("common/numberFormattingStorage");
 
 class studioConfig extends viewModelBase {
@@ -57,8 +57,8 @@ class studioConfig extends viewModelBase {
         var self = this;
         this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
 
-        this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
-        this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
+        this.isForbidden((accessHelper.isGlobalAdmin() || accessHelper.canReadWriteSettings() || accessHelper.canReadSettings()) === false);
+        this.isReadOnly = ko.computed(() => accessHelper.isGlobalAdmin() === false && accessHelper.canReadWriteSettings() === false && accessHelper.canReadSettings());
 
         this.rawFormat(numberFormattingStorage.shouldUseRaw());
     }

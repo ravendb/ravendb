@@ -8,7 +8,7 @@ class getClusterNodesStatusCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        return this.query("/cluster/status", null, this.db);
+        return this.query("/cluster/status", null, this.db);//TODO: use endpoints
     }
 }
 

@@ -17,13 +17,19 @@ namespace Sparrow.Json
                 var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
 
                 var vars = new Dictionary<Type, ParameterExpression>();
-                NewExpression instance;
 
+                if (typeof(T) == typeof(BlittableJsonReaderArray))
+                {
+                    return null;
+                }
+
+                NewExpression instance;
                 var ctor = typeof(T).GetConstructor(EmptyTypes);
                 if (ctor != null)
                     instance = Expression.New(ctor);
                 else
                     instance = Expression.New(typeof(T));
+
                 var propInit = new List<MemberBinding>();
                 foreach (var fieldInfo in typeof(T).GetFields())
                 {
@@ -39,7 +45,6 @@ namespace Sparrow.Json
                 }
 
                 var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
-
                 return lambda.Compile();
             }
             catch (Exception e)
@@ -61,7 +66,9 @@ namespace Sparrow.Json
                 type == typeof(double) ||
                 type.GetTypeInfo().IsEnum ||
                 type == typeof(Guid) ||
-                type == typeof(DateTime))
+                type == typeof(DateTime) ||
+                type == typeof(BlittableJsonReaderArray) ||
+                type == typeof(BlittableJsonReaderObject))
             {
                 var value = GetParameter(propertyType, vars);
 
@@ -121,6 +128,7 @@ namespace Sparrow.Json
             {
                 return Expression.Default(type);
             }*/
+
             if (propertyType.IsArray)
             {
                 var valueType = propertyType.GetElementType();
@@ -128,6 +136,7 @@ namespace Sparrow.Json
                 var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToArray), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
             }
+
             // ToObject
             {
                 var converterExpression = Expression.Constant(GetConverterFromCache(propertyType));

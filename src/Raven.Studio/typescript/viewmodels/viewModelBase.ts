@@ -1,11 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import appUrl = require("common/appUrl");
-import database = require("models/resources/database");
-import resource = require("models/resources/resource");
-import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterStorage");
-import timeSeries = require("models/timeSeries/timeSeries");
+import activeResourceTracker = require("viewmodels/resources/activeResourceTracker");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
@@ -16,26 +12,20 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
-import layoutSwitcher = require("viewmodels/layoutSwitcher");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
 
-    static layout = new layoutSwitcher();
+    activeDatabase = activeResourceTracker.default.database;
+    activeFilesystem = activeResourceTracker.default.fileSystem;
+    activeCounterStorage = activeResourceTracker.default.counterStorage;
+    activeTimeSeries = activeResourceTracker.default.timeSeries;
+    
+    downloader = new downloader();
 
-    public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-    public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-    public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
-    public activeTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
-    public lastActivatedResource = ko.observable<resource>()
-        .subscribeTo("ActivateDatabase", true)
-        .subscribeTo("ActivateFilesystem", true)
-        .subscribeTo("ActivateCounterStorage", true)
-        .subscribeTo("ActivateTimeSeries", true);
-
-    public downloader = new downloader();
+    isBusy = ko.observable<boolean>(false);
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
@@ -44,6 +34,7 @@ class viewModelBase {
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     static showSplash = ko.observable<boolean>(false);
     private isAttached = false;
+    
     dirtyFlag = new ko.DirtyFlag([]);
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
@@ -54,7 +45,6 @@ class viewModelBase {
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
-        viewModelBase.layout.setMode(false);
     }
 
     /*
@@ -67,38 +57,13 @@ class viewModelBase {
     canActivate(args: any): any {
         var self = this;
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
-
         this.downloader.reset();
 
         var resource = appUrl.getResource();
-        if (resource instanceof filesystem) {
-            var fs = this.activeFilesystem();
+        if (resource && resource.disabled()) {
+            messagePublisher.reportError(`${resource.fullTypeName} '${resource.name}' is disabled!`,
+                `You can't access any section of the ${resource.fullTypeName.toLowerCase()} while it's disabled.`);
 
-            if (!!fs && fs.disabled()) {
-                messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system while it's disabled.");
-                return { redirect: appUrl.forResources() };
-            }
-        } else if (resource instanceof counterStorage) {
-            var cs = this.activeCounterStorage();
-
-            if (!!cs && cs.disabled()) {
-                messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
-                return { redirect: appUrl.forResources() };
-            }
-        } else if (resource instanceof timeSeries) {
-            var ts = this.activeTimeSeries();
-
-            if (!!ts && ts.disabled()) {
-                messagePublisher.reportError("Time Series '" + ts.name + "' is disabled!", "You can't access any section of the time series while it's disabled.");
-                return { redirect: appUrl.forResources() };
-            }
-        } else { //it's a database
-            var db = this.activeDatabase();
-
-            if (!!db && db.disabled()) {
-                messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database while it's disabled.");
-                return { redirect: appUrl.forResources() };
-            }
         }
 
         return true;
@@ -144,6 +109,13 @@ class viewModelBase {
         window.addEventListener("beforeunload", this.beforeUnloadListener, false);
         this.isAttached = true;
         viewModelBase.showSplash(false);
+        this.rightPanelSetup();
+    }
+
+    private rightPanelSetup() {
+        var $pageHostRoot = $("#page-host-root");
+        var hasRightPanel = !!$("#right-options-panel", $pageHostRoot).length;
+        $pageHostRoot.toggleClass("enable-right-options-panel", hasRightPanel);
     }
 
     /*
@@ -181,14 +153,6 @@ class viewModelBase {
      * Called by Durandal when the view model is unloaded and after the view is removed from the DOM.
      */
     detached() {
-        this.activeDatabase.unsubscribeFrom("ActivateDatabase");
-        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
-        this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
-        this.activeTimeSeries.unsubscribeFrom("ActivateTimeSeries");
-        this.lastActivatedResource.unsubscribeFrom("ActivateDatabase");
-        this.lastActivatedResource.unsubscribeFrom("ActivateFilesystem");
-        this.lastActivatedResource.unsubscribeFrom("ActivateCounterStorage");
-        this.lastActivatedResource.unsubscribeFrom("ActivateTimeSeries");
         this.currentHelpLink.unsubscribeFrom("currentHelpLink");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
@@ -215,7 +179,7 @@ class viewModelBase {
     }
 
     cleanupNotifications() {
-        this.notifications.forEach((notification: changeSubscription) => notification.off());
+        //TODO: this.notifications.forEach((notification: changeSubscription) => notification.off());
         this.notifications = [];
     }
 
@@ -315,7 +279,7 @@ class viewModelBase {
     }
 
     canContinueIfNotDirty(title: string, confirmationMessage: string) {
-        var deferred = $.Deferred();
+        var deferred = $.Deferred<void>();
 
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
@@ -380,6 +344,8 @@ class viewModelBase {
             ko.postbox.publish('globalHelpLink', null);
         }
     }
+
+    
 }
 
 export = viewModelBase;

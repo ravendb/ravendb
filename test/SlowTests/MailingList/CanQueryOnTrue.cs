@@ -21,9 +21,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanQuery()
+        public void CanQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {

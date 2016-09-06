@@ -8,7 +8,7 @@ class getStatusDebugCurrentlyIndexingCommand extends commandBase {
     }
 
     execute(): JQueryPromise<statusDebugCurrentlyIndexingDto> {
-        var url = "/debug/currently-indexing";
+        var url = "/debug/currently-indexing";//TODO: use endpoints
         return this.query<statusDebugCurrentlyIndexingDto>(url, null, this.db);
     }
 }

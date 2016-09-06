@@ -13,12 +13,12 @@ namespace SlowTests.MailingList
     public class HierarchicalInheritanceIndexing : RavenTestBase
     {
         [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
-        public async Task CanCreateIndex()
+        public void CanCreateIndex()
         {
             Guid rootId = Guid.NewGuid();
             Guid childId = Guid.NewGuid();
             Guid grandChildId = Guid.NewGuid();
-            using (var documentStore = await GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {

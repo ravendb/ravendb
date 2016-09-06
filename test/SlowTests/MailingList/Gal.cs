@@ -16,14 +16,14 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact(Skip = "TODO arek: how to handle queries with @in<__document_id>() only")]
-        public async Task UsingInQuery()
+        [Fact]
+        public void UsingInQuery()
         {
             var id1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var id2 = Guid.Parse("00000000-0000-0000-0000-000000000002");
             var id3 = Guid.Parse("00000000-0000-0000-0000-000000000003");
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

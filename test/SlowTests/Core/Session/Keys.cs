@@ -23,9 +23,9 @@ namespace SlowTests.Core.Session
     public class Keys : RavenTestBase
     {
         [Fact]
-        public async Task GetDocumentId()
+        public void GetDocumentId()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -47,7 +47,7 @@ namespace SlowTests.Core.Session
         [Fact]
         public async Task KeyGeneration()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.RegisterIdConvention<User>((databaseName, commands, entity) => "abc");
                 store.Conventions.RegisterAsyncIdConvention<User>((databaseName, commands, entity) => new CompletedTask<string>("def"));
@@ -77,9 +77,9 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public async Task KeyGenerationOnLoad()
+        public void KeyGenerationOnLoad()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.RegisterIdConvention<TShirt>((databaseName, commands, entity) => "ts/" + entity.ReleaseYear);
                 store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);

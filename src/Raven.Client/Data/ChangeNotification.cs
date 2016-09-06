@@ -222,7 +222,7 @@ namespace Raven.Abstractions.Data
         public string TenantName { get; set; }
         public string CustomInfo { get; set; }
         public int InnerRequestsCount { get; set; }
-        public RavenJObject QueryTimings { get; set; }
+        public object QueryTimings { get; set; } // TODO: fix this
     }
 
     public class DataSubscriptionChangeNotification : EventArgs

@@ -9,7 +9,7 @@ class replicateAllIndexesCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        var indexesUrl = '/databases/' + this.db.name + '/replication/replicate-indexes?op=replicate-all';
+        var indexesUrl = '/databases/' + this.db.name + '/replication/replicate-indexes?op=replicate-all';//TODO: use endpoints
 
         return this.post(indexesUrl, null, null, { dataType: undefined })
             .fail((response: JQueryXHR) => {

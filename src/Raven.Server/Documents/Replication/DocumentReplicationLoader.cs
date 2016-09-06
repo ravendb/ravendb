@@ -2,9 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
@@ -44,7 +42,7 @@ namespace Raven.Server.Documents.Replication
         public DocumentReplicationLoader(DocumentDatabase database)
         {
             _database = database;
-            _log = LoggerSetup.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
+            _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
         }
@@ -54,10 +52,10 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x=>x.Destination);
 
-        public void AcceptIncomingConnection(TcpConnectionParams tcpConnectionParams)
+        public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
-            using (var readerObject = tcpConnectionParams.MultiDocumentParser.ParseToMemory("IncomingReplication/get-last-etag-message read"))
+            using (var readerObject = tcpConnectionOptions.MultiDocumentParser.ParseToMemory("IncomingReplication/get-last-etag-message read"))
             {
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
             }
@@ -81,7 +79,7 @@ namespace Raven.Server.Documents.Replication
 
             DocumentsOperationContext documentsOperationContext;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
-            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionParams.Stream))
+            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
             using (documentsOperationContext.OpenReadTransaction())
             {
                 var changeVector = new DynamicJsonArray();
@@ -89,7 +87,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     changeVector.Add(new DynamicJsonValue
                     {
-                        ["DbId"] = changeVectorEntry.DbId,
+                        ["DbId"] = changeVectorEntry.DbId.ToString(),
                         ["Etag"] = changeVectorEntry.Etag
                     });
                 }
@@ -106,12 +104,7 @@ namespace Raven.Server.Documents.Replication
             var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
             {
                 //TODO: fix the disposable of the passed context and all the params cleanly
-                var newIncoming = new IncomingReplicationHandler(
-                        tcpConnectionParams.MultiDocumentParser,
-                        _database,
-                        tcpConnectionParams.TcpClient,
-                        tcpConnectionParams.Stream,
-                        getLatestEtagMessage);
+                var newIncoming = new IncomingReplicationHandler(tcpConnectionOptions,getLatestEtagMessage);
                 newIncoming.Failed += OnIncomingReceiveFailed;
                 newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
                 if (_log.IsInfoEnabled)
@@ -152,7 +145,15 @@ namespace Raven.Server.Documents.Replication
                         minDiff = diff;
                 }
             }
-            _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
+
+            try
+            {
+                //at this stage we can be already disposed, so ...
+                _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
@@ -194,10 +195,16 @@ namespace Raven.Server.Documents.Replication
             if (replicationDocument?.Destinations == null) //precaution
                 return;
 
+            if (_log.IsInfoEnabled)
+                _log.Info("Initializing outgoing replications..");
             foreach (var destination in replicationDocument.Destinations)
             {
+                if(_log.IsInfoEnabled)
+                    _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
                 AddAndStartOutgoingReplication(destination);
             }
+            if (_log.IsInfoEnabled)
+                _log.Info("Finished initialization of outgoing replications..");
         }
 
         private void AddAndStartOutgoingReplication(ReplicationDestination destination)

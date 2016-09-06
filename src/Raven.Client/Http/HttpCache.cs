@@ -5,14 +5,16 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
+
 
 namespace Raven.Client.Http
 {
     public class HttpCache : IDisposable
     {
-        private static readonly Logger Logger = LoggerSetup.Instance.GetLogger<HttpCache>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<HttpCache>("Client");
 
         private readonly long _maxSize;
         private readonly ConcurrentDictionary<string, HttpCacheItem> _items = new ConcurrentDictionary<string, HttpCacheItem>();
@@ -22,7 +24,7 @@ namespace Raven.Client.Http
         public HttpCache(long maxSize = 1024 * 1024L * 512L)
         {
             _maxSize = maxSize;
-            _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache));
+            _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache), "Client");
         }
 
         public unsafe class HttpCacheItem : IDisposable

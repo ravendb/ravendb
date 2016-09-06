@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _initialized;
 
-        protected UnmanagedBuffersPool _unmanagedBuffersPool;
+        protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         private StorageEnvironment _environment;
 
@@ -87,6 +87,7 @@ namespace Raven.Server.Documents.Indexes
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         private DateTime? _lastQueryingTime;
+        private DateTime? _lastIndexingTime;
 
         public readonly HashSet<string> Collections;
 
@@ -163,7 +164,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
-            _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             lock (_locker)
             {
                 if (_initialized)
@@ -202,10 +203,10 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase = documentDatabase;
                     _environment = environment;
-                    _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
+                    _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-                    _logger = LoggerSetup.Instance.GetLogger<Index>(documentDatabase.Name);
+                    _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
@@ -241,6 +242,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Priority = _indexStorage.ReadPriority(tx);
                 _lastQueryingTime = SystemTime.UtcNow;
+                _lastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
             }
         }
 
@@ -376,8 +378,6 @@ namespace Raven.Server.Documents.Indexes
                     if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, collection, cutoff.Value) > 0)
                         return true;
                 }
-
-
             }
 
             return false;
@@ -437,6 +437,7 @@ namespace Raven.Server.Documents.Indexes
                         _mre.Reset();
 
                         var stats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
+                        _lastIndexingTime = stats.StartTime;
                         using (var scope = stats.CreateScope())
                         {
                             try
@@ -769,7 +770,7 @@ namespace Raven.Server.Documents.Indexes
 
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
-                            documentsContext.Reset();
+                            documentsContext.CloseTransaction();
                             indexContext.Reset();
 
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
@@ -784,7 +785,7 @@ namespace Raven.Server.Documents.Indexes
                         FillQueryResult(result, isStale, documentsContext, indexContext);
 
                         if (Type.IsMapReduce() && transformer == null)
-                            documentsContext.Reset(); // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
+                            documentsContext.CloseTransaction(); // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
@@ -911,20 +912,20 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var sortedField in query.SortedFields)
                 {
                     var f = sortedField.Field;
-                    //if (f == Constants.TemporaryScoreValue)
-                    //    continue;
-
-                    if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
+                    if (f == Constants.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
-                    if (f.StartsWith(Constants.AlphaNumericFieldName))
+                    if (f.StartsWith(Constants.Indexing.Fields.RandomFieldName) || f.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
+                        continue;
+
+                    if (f.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName))
                     {
-                        f = SortFieldHelper.CustomField(f).Name;
+                        f = SortFieldHelper.ExtractName(f);
                         if (string.IsNullOrEmpty(f))
                             throw new ArgumentException("Alpha numeric sorting requires a field name");
                     }
 
-                    if (IndexPersistence.ContainsField(f) == false && f.StartsWith(Constants.DistanceFieldName) == false && IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+                    if (IndexPersistence.ContainsField(f) == false && f.StartsWith(Constants.Indexing.Fields.DistanceFieldName) == false && IndexPersistence.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
                         throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
                 }
             }
@@ -932,12 +933,10 @@ namespace Raven.Server.Documents.Indexes
 
         private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            var stats = ReadStats(indexContext.Transaction);
-
             result.IndexName = Name;
             result.IsStale = isStale;
-            result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
-            result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
+            result.IndexTimestamp = _lastIndexingTime ?? DateTime.MinValue;
+            result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 

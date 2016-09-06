@@ -152,8 +152,6 @@ class ctor {
             var numOfRowsInUse = this.recycleRows().filter((r: row) => r.isInUse()).length;
             return numOfRowsInUse === 0 && !this.settings.rowsAreLoading();
         });
-
-        this.registerColumnResizing();
     }
 
     // Attached is called by Durandal when the view is attached to the DOM.
@@ -176,6 +174,10 @@ class ctor {
         if (this.settings.useContextMenu) {
             this.setupContextMenu();
         }
+    }
+
+    compositionComplete() {
+        this.registerColumnResizing();
     }
 
     detached() {
@@ -369,7 +371,8 @@ class ctor {
 
             var editUrl: string;
             if (selectedItem instanceof counterSummary) {
-                editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Group Name"], selectedItem["Counter Name"]);
+                let item = selectedItem as any;
+                editUrl = appUrl.forEditCounter(appUrl.getResource(), item["Group Name"] as string, item["Counter Name"] as string);
             } else if (selectedItem instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(selectedItem["Type"], selectedItem["Key"], appUrl.getTimeSeries());
             } else {

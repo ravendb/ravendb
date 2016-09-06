@@ -51,6 +51,12 @@ namespace Raven.Server.Documents.Transformers
             IEnumerable transformedResults;
             while (docsEnumerator.MoveNext(out transformedResults))
             {
+                if (docsEnumerator.Current == null)
+                {
+                    yield return Document.ExplicitNull;
+                    continue;
+                }
+
                 using (docsEnumerator.Current.Data)
                 {
                     var values = new DynamicJsonArray();
@@ -59,19 +65,9 @@ namespace Raven.Server.Documents.Transformers
                         ["$values"] = values
                     };
 
-                    PropertyAccessor accessor = null;
                     foreach (var transformedResult in transformedResults)
                     {
-                        if (accessor == null)
-                            accessor = TypeConverter.GetPropertyAccessor(transformedResult);
-
-                        var value = new DynamicJsonValue();
-                        foreach (var property in accessor.Properties)
-                        {
-                            var propertyValue = property.Value.GetValue(transformedResult);
-                            value[property.Key] = TypeConverter.ConvertType(propertyValue, _context);
-                        }
-
+                        var value = TypeConverter.ConvertType(transformedResult, _context);
                         values.Add(value);
                     }
 

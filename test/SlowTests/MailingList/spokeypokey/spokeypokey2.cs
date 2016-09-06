@@ -134,9 +134,9 @@ namespace SlowTests.MailingList.spokeypokey
 
         //1105376
         [Fact]
-        public async Task Can_search_by_Zip()
+        public void Can_search_by_Zip()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateTestData(store);
 

@@ -10,9 +10,9 @@ namespace SlowTests.Tests.Indexes
     public class AnalyzerResolution : RavenTestBase
     {
         [Fact]
-        public async Task can_resolve_internal_analyzer()
+        public void can_resolve_internal_analyzer()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("test", new IndexDefinitionBuilder<User>
                 {

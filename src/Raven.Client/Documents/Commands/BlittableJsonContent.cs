@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
@@ -9,13 +10,11 @@ namespace Raven.Client.Documents.Commands
 {
     public class BlittableJsonContent : HttpContent
     {
-        private readonly BlittableJsonReaderObject _document;
-        private readonly JsonOperationContext _context;
+        private readonly Action<Stream> _writer;
 
-        public BlittableJsonContent(BlittableJsonReaderObject document, JsonOperationContext context)
+        public BlittableJsonContent(Action<Stream> writer)
         {
-            _document = document;
-            _context = context;
+            _writer = writer;
             Headers.ContentEncoding.Add("gzip");
         }
 
@@ -23,19 +22,13 @@ namespace Raven.Client.Documents.Commands
         {
             using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
             {
-                _context.Write(gzipStream, _document);
+                _writer(gzipStream);
             }
             return Task.CompletedTask;
         }
 
         protected override bool TryComputeLength(out long length)
         {
-            if (_document == null)
-            {
-                length = 0;
-                return true;
-            }
-
             length = -1;
             return false;
         }

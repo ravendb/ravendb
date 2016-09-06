@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog.Common;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -17,6 +18,7 @@ using Raven.Json.Linq;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using AsyncHelpers = Raven.Abstractions.Util.AsyncHelpers;
 
 namespace Raven.Client.Document
 {
@@ -27,16 +29,18 @@ namespace Raven.Client.Document
         private readonly Task _getServerResponseTask;
         private JsonOperationContext _jsonOperationContext;
         private readonly BlockingCollection<MemoryStream> _documents = new BlockingCollection<MemoryStream>();
+
         private readonly BlockingCollection<MemoryStream> _buffers =
             // we use a stack based back end to ensure that we always use the active buffers
             new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
+
         private readonly Task _writeToServerTask;
         private DateTime _lastHeartbeat;
         private readonly long _sentAccumulator;
 
         private readonly ManualResetEventSlim _throttlingEvent = new ManualResetEventSlim();
         private bool _isThrottling;
-        private readonly long _maxDiffSizeBeforeThrottling = 20L*1024*1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
+        private readonly long _maxDiffSizeBeforeThrottling = 20L * 1024 * 1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
         private TcpClient _tcpClient;
         private string _url;
 
@@ -57,7 +61,7 @@ namespace Raven.Client.Document
         public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
-            _jsonOperationContext = new JsonOperationContext(1024*1024, 16*1024);
+            _jsonOperationContext = new JsonOperationContext(1024 * 1024, 16 * 1024);
             _cts = cts ?? new CancellationTokenSource();
             _tcpClient = new TcpClient();
 
@@ -66,9 +70,8 @@ namespace Raven.Client.Document
                 _buffers.Add(new MemoryStream());
             }
 
-
             var connectToServerTask = ConnectToServer(asyncServerClient);
-            
+
             _sentAccumulator = 0;
             _getServerResponseTask = connectToServerTask.ContinueWith(task =>
             {
@@ -84,12 +87,12 @@ namespace Raven.Client.Document
 
         private async Task<Stream> ConnectToServer(AsyncServerClient asyncServerClient)
         {
-            var connectionInfo = await asyncServerClient.GetTcpInfoAsync();
+            var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
             _url = asyncServerClient.Url;
-            await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port);
+            await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port).ConfigureAwait(false);
 
             _tcpClient.NoDelay = true;
-            _tcpClient.SendBufferSize = 32*1024;
+            _tcpClient.SendBufferSize = 32 * 1024;
             _tcpClient.ReceiveBufferSize = 4096;
             var networkStream = _tcpClient.GetStream();
 
@@ -102,7 +105,7 @@ namespace Raven.Client.Document
             var jsonParserState = new JsonParserState();
             var buffer = _jsonOperationContext.GetManagedBuffer();
             var streamNetworkBuffer = new BufferedStream(serverStream, 32 * 1024);
-            var writeToStreamBuffer = new byte[32*1024];
+            var writeToStreamBuffer = new byte[32 * 1024];
             var header = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
             {
                 DatabaseName = MultiDatabase.GetDatabaseName(_url),
@@ -209,7 +212,7 @@ namespace Raven.Client.Document
 
                 writer.ReadObject();
 
-                var  result = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+                var result = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
 
                 parser.SetBuffer(buffer.Array, result.Count);
                 while (writer.Read() == false)
@@ -222,7 +225,7 @@ namespace Raven.Client.Document
                             return null;
                     }
 
-                    result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+                    result = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
 
                     parser.SetBuffer(buffer.Array, result.Count);
                 }
@@ -277,29 +280,29 @@ namespace Raven.Client.Document
                                     break;
 
                                 case "Processed":
-                                {
-                                    long processedSize;
-                                    if (response.TryGet("Size", out processedSize) == false)
-                                        throw new InvalidOperationException("Invalid Processed response from server " +
-                                                                            (response.ToString() ?? "null"));
+                                    {
+                                        long processedSize;
+                                        if (response.TryGet("Size", out processedSize) == false)
+                                            throw new InvalidOperationException("Invalid Processed response from server " +
+                                                                                (response.ToString() ?? "null"));
 
-                                    if (_sentAccumulator - processedSize > _maxDiffSizeBeforeThrottling)
-                                    {
-                                        if (_isThrottling == false)
+                                        if (_sentAccumulator - processedSize > _maxDiffSizeBeforeThrottling)
                                         {
-                                            _throttlingEvent.Reset();
-                                            _isThrottling = true;
+                                            if (_isThrottling == false)
+                                            {
+                                                _throttlingEvent.Reset();
+                                                _isThrottling = true;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (_isThrottling)
+                                            {
+                                                _isThrottling = false;
+                                                _throttlingEvent.Set();
+                                            }
                                         }
                                     }
-                                    else
-                                    {
-                                        if (_isThrottling)
-                                        {
-                                            _isThrottling = false;
-                                            _throttlingEvent.Set();
-                                        }
-                                    }
-                                }
                                     break;
 
                                 case "Completed":
@@ -307,11 +310,11 @@ namespace Raven.Client.Document
                                     completed = true;
                                     break;
                                 default:
-                                {
-                                    msg = "Received unexpected message from a server : " + responseType;
-                                    ReportProgress(msg);
-                                    throw new BulkInsertProtocolViolationExeption(msg);
-                                }
+                                    {
+                                        msg = "Received unexpected message from a server : " + responseType;
+                                        ReportProgress(msg);
+                                        throw new BulkInsertProtocolViolationExeption(msg);
+                                    }
                             }
                         }
                         _lastHeartbeat = SystemTime.UtcNow;
@@ -324,17 +327,17 @@ namespace Raven.Client.Document
         {
             _cts.Token.ThrowIfCancellationRequested();
 
-            await AssertValidServerConnection();// we should never actually get here, the await will throw
+            await AssertValidServerConnection().ConfigureAwait(false);// we should never actually get here, the await will throw
 
-            metadata[Constants.MetadataDocId] = id;
-            data[Constants.Metadata] = metadata;
+            metadata[Constants.Metadata.Id] = id;
+            data[Constants.Metadata.Key] = metadata;
 
             MemoryStream jsonBuffer;
             while (true)
             {
                 if (_buffers.TryTake(out jsonBuffer, 250))
                     break;
-                await AssertValidServerConnection();
+                await AssertValidServerConnection().ConfigureAwait(false);
             }
             jsonBuffer.SetLength(0);
 
@@ -358,7 +361,7 @@ namespace Raven.Client.Document
 
         public void Dispose()
         {
-            DisposeAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            AsyncHelpers.RunSync(DisposeAsync);
         }
 
         public async Task DisposeAsync()
@@ -379,7 +382,7 @@ namespace Raven.Client.Document
                     while (true)
                     {
                         var timeoutTask = Task.Delay(timeDelay);
-                        var res = await Task.WhenAny(timeoutTask, _getServerResponseTask);
+                        var res = await Task.WhenAny(timeoutTask, _getServerResponseTask).ConfigureAwait(false);
                         if (timeoutTask != res)
                             break;
                         if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(60))

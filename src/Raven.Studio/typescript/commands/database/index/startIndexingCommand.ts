@@ -8,9 +8,9 @@ class startIndexingCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-      this.reportInfo("Enabling indexing...");
+        this.reportInfo("Enabling indexing...");
 
-        var url = '/admin/startIndexing';
+        var url = '/admin/startIndexing';//TODO: use endpoints
         var createTask = this.post(url, null, this.db);
         createTask.done(() => this.reportSuccess("Indexing was enabled"));
         createTask.fail((response: JQueryXHR) => this.reportError("Failed to enable indexing", response.responseText, response.statusText));

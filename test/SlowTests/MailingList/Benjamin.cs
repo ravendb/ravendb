@@ -18,9 +18,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task Can_project_nested_objects()
+        public void Can_project_nested_objects()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

@@ -19,9 +19,9 @@ namespace SlowTests.Core.Querying
     public class Linq : RavenTestBase
     {
         [Fact]
-        public async Task CanQueryUsingLinq()
+        public void CanQueryUsingLinq()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

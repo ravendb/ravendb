@@ -11,9 +11,9 @@ namespace SlowTests.MailingList
     public class Everett616 : RavenTestBase
     {
         [Fact]
-        public async Task CanIndexWithNoErrors_DatetimeOffset()
+        public void CanIndexWithNoErrors_DatetimeOffset()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put("test/1", null,
                                            RavenJObject.Parse(
@@ -80,9 +80,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public async Task CanIndexWithNoErrors_Datetime()
+        public void CanIndexWithNoErrors_Datetime()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Put("test/1", null,
                                            RavenJObject.Parse(

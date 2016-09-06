@@ -11,7 +11,7 @@ class getStatusStorageBreakdownCommand extends commandBase {
     private calculationCompleted = $.Deferred<Array<string>>();
 
     execute(): JQueryPromise<{ OperationId: number; }> {
-        var url = "/admin/detailed-storage-breakdown";
+        var url = "/admin/detailed-storage-breakdown";//TODO: use endpoints
         return this.query<any>(url, null, this.db)
             .done((response) => {
                 this.monitorOperation(response.OperationId);

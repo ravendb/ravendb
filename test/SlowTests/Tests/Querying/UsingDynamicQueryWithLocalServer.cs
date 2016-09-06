@@ -19,7 +19,7 @@ namespace SlowTests.Tests.Querying
     public class UsingDynamicQueryWithLocalServer : RavenTestBase
     {
         [Fact]
-        public async Task CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
+        public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
         {
             var blogOne = new Blog
             {
@@ -46,7 +46,7 @@ namespace SlowTests.Tests.Querying
                  }
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -71,7 +71,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task CanPerformDynamicQueryUsingClientLinqQuery()
+        public void CanPerformDynamicQueryUsingClientLinqQuery()
         {
             var blogOne = new Blog
             {
@@ -89,7 +89,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Rhinos"
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -114,9 +114,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task QueryForASpecificTypeDoesNotBringBackOtherTypes()
+        public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -135,7 +135,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public async Task CanPerformDynamicQueryUsingClientLuceneQuery()
+        public void CanPerformDynamicQueryUsingClientLuceneQuery()
         {
             var blogOne = new Blog
             {
@@ -153,7 +153,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Rhinos"
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -177,7 +177,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
+        public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
         {
             var blogOne = new Blog
             {
@@ -195,7 +195,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Los Rhinos"
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string blogOneId;
                 string blogTwoId;
@@ -234,7 +234,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task CanPerformDynamicQueryWithHighlighting()
+        public void CanPerformDynamicQueryWithHighlighting()
         {
             var blogOne = new Blog
             {
@@ -252,7 +252,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Los Rhinos"
             };
 
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string blogOneId;
                 string blogTwoId;
@@ -294,9 +294,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task ExecutesQueryWithHighlightingsAgainstSimpleIndex()
+        public void ExecutesQueryWithHighlightingsAgainstSimpleIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
                 store.DatabaseCommands.PutIndex(indexName,
@@ -367,9 +367,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
+        public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
                 store.DatabaseCommands.PutIndex(indexName,
@@ -437,9 +437,9 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact(Skip = "Missing feature: Highlighting")]
-        public async Task ExecutesQueryWithHighlightingsAndProjections()
+        public void ExecutesQueryWithHighlightingsAndProjections()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
                 store.DatabaseCommands.PutIndex(indexName,

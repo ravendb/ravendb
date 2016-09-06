@@ -16,9 +16,9 @@ namespace SlowTests.MailingList
         }
 
         [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
-        public async Task CanQuery()
+        public void CanQuery()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -43,11 +43,11 @@ namespace SlowTests.MailingList
 
         [Theory]
         [CriticalCultures]
-        public async Task CanQueryWithOtherCulture(CultureInfo culture)
+        public void CanQueryWithOtherCulture(CultureInfo culture)
         {
             using (CultureHelper.EnsureCulture(culture))
             {
-                using (var store = await GetDocumentStore())
+                using (var store = GetDocumentStore())
                 {
                     using (var session = store.OpenSession())
                     {

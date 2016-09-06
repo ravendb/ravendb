@@ -22,7 +22,7 @@ class getIdentitiesCommand extends commandBase {
             pageSize: this.take
         };
 
-        var url = "/debug/identities";
+        var url = "/debug/identities";//TODO: use endpoints
         var identitiesTask = $.Deferred();
         this.query<statusDebugIdentitiesDto>(url, args, this.ownerDb).
             fail(response => identitiesTask.reject(response)).

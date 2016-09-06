@@ -8,7 +8,7 @@ class getRunningTasksCommand extends commandBase {
     }
 
     execute(): JQueryPromise<runningTaskDto[]> {
-        var url = "/operations";
+        var url = "/operations";//TODO: use endpoints
         return this.query<runningTaskDto[]>(url, null, this.db);
     }
 }

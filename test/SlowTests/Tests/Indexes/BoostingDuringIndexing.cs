@@ -11,18 +11,18 @@ namespace SlowTests.Tests.Indexes
 {
     public class BoostingDuringIndexing : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string FirstName { get; set; }
             public string LastName { get; set; }
         }
 
-        public class Account
+        private class Account
         {
             public string Name { get; set; }
         }
 
-        public class UsersByName : AbstractIndexCreationTask<User>
+        private class UsersByName : AbstractIndexCreationTask<User>
         {
             public UsersByName()
             {
@@ -35,7 +35,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class UsersAndAccounts : AbstractMultiMapIndexCreationTask<UsersAndAccounts.Result>
+        private class UsersAndAccounts : AbstractMultiMapIndexCreationTask<UsersAndAccounts.Result>
         {
             public class Result
             {
@@ -56,9 +56,9 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact]
-        public async Task CanBoostFullDocument()
+        public void CanBoostFullDocument()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UsersAndAccounts().Execute(store);
 
@@ -92,9 +92,9 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Fact]
-        public async Task CanGetBoostedValues()
+        public void CanGetBoostedValues()
         {
-            using (var store = await GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UsersByName().Execute(store);
 

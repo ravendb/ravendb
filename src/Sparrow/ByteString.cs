@@ -741,6 +741,9 @@ namespace Sparrow
         /// </summary>
         public void ToLowerCase(ref ByteString str)
         {
+            if (str.Length == 0)
+                return;
+
             if (str.IsMutable == false)
                 throw new InvalidOperationException("Cannot mutate an immutable ByteString");
 

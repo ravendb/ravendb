@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import status = require("viewmodels/database/status/status");
 import shell = require('viewmodels/shell');
+import accessHelper = require("viewmodels/shell/accessHelper");
 
 class statusDebug extends viewModelBase {
     router: DurandalRouter;
@@ -21,7 +22,7 @@ class statusDebug extends viewModelBase {
                 { route: 'databases/status/debug/currentlyIndexing', moduleId: 'viewmodels/database/status/debug/statusDebugCurrentlyIndexing', title: 'Currently indexing', tooltip: "Displays currently performed indexing work", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugCurrentlyIndexing },
                 { route: 'databases/status/debug/queries', moduleId: 'viewmodels/database/status/debug/statusDebugQueries', title: 'Queries', tooltip: "Displays currently running queries", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugQueries },
                 { route: 'databases/status/debug/tasks', moduleId: 'viewmodels/database/status/debug/statusDebugTasks', title: 'Tasks', tooltip: "Displays currently running index tasks", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugTasks },
-                { route: 'databases/status/debug/routes', moduleId: 'viewmodels/database/status/debug/statusDebugRoutes', title: 'Routes', tooltip: "Displays all available routes", nav: shell.isGlobalAdmin(), dynamicHash: appUrl.forCurrentDatabase().statusDebugRoutes },
+                { route: 'databases/status/debug/routes', moduleId: 'viewmodels/database/status/debug/statusDebugRoutes', title: 'Routes', tooltip: "Displays all available routes", nav: accessHelper.isGlobalAdmin(), dynamicHash: appUrl.forCurrentDatabase().statusDebugRoutes },
                 { route: 'databases/status/debug/sqlReplication', moduleId: 'viewmodels/database/status/debug/statusDebugSqlReplication', title: 'SQL Replication', tooltip: "Shows information about SQL replication", nav: db.isBundleActive("SqlReplication"), dynamicHash: appUrl.forCurrentDatabase().statusDebugSqlReplication },
                 { route: 'databases/status/debug/indexFields', moduleId: 'viewmodels/database/status/debug/statusDebugIndexFields', title: 'Index fields', tooltip: "Shows names of indexed fields based on entered index definition", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugIndexFields },
                 { route: 'databases/status/debug/identities', moduleId: 'viewmodels/database/status/debug/statusDebugIdentities', title: 'Identities', tooltip: "Shows identities values for collections", nav: true, dynamicHash: appUrl.forCurrentDatabase().statusDebugIdentities },
