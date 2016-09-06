@@ -164,7 +164,7 @@ namespace Raven.Database.Smuggler
         }
 
         private long totalSize;
-        private Stopwatch? sp = null;
+        private Stopwatch sp;
         
         public Task PutDocument(RavenJObject document, int size)
         {
