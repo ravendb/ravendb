@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -59,9 +60,13 @@ namespace Raven.Database.Server.Controllers
             if (data == null || string.IsNullOrEmpty(data.TransformResults))
                 return GetMessageWithString("Expected json document with 'TransformResults' property", HttpStatusCode.BadRequest);
 
+            var replicationQueryString = GetQueryStringValue(Constants.IsReplicatedUrlParamName);
+            var isReplication = !string.IsNullOrWhiteSpace(replicationQueryString) &&
+                replicationQueryString.Equals("true", StringComparison.InvariantCultureIgnoreCase);
+
             try
             {
-                var transformerName = Database.Transformers.PutTransform(transformer, data);
+                var transformerName = Database.Transformers.PutTransform(transformer, data, isReplication);
                 return GetMessageWithObject(new { Transformer = transformerName }, HttpStatusCode.Created);
             }
             catch (Exception ex)
@@ -91,6 +96,7 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithStringAsTask("Cannot find transformer : " + transformer, HttpStatusCode.NotFound);
 
             transformerDefinition.LockMode = transformerLockMode;
+            transformerDefinition.TransformerVersion = (transformerDefinition.TransformerVersion ?? 0) + 1;
             Database.IndexDefinitionStorage.UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(transformerDefinition);
 
             return GetEmptyMessageAsTask();
@@ -113,7 +119,5 @@ namespace Raven.Database.Server.Controllers
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
-
-
     }
 }

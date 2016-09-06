@@ -59,7 +59,7 @@ namespace Raven.Database.Actions
                                      {
                                          {"name", new RavenJValue(indexName) },
                                          {"definition", RavenJObject.FromObject(definitions)},
-                                         {"lockMode",new RavenJValue(definitions.LockMode.ToString())}
+                                         {"lockMode", new RavenJValue(definitions.LockMode.ToString())}
                                      };
                     }));
 
@@ -70,6 +70,7 @@ namespace Raven.Database.Actions
             return IndexDefinitionStorage.GetTransformerDefinition(name);
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public bool DeleteTransform(string name)
         {
             if (!IndexDefinitionStorage.RemoveTransformer(name)) 
@@ -86,7 +87,7 @@ namespace Raven.Database.Actions
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public string PutTransform(string name, TransformerDefinition definition)
+        public string PutTransform(string name, TransformerDefinition definition, bool isReplication = false)
         {
             if (name == null) throw new ArgumentNullException("name");
             if (definition == null) throw new ArgumentNullException("definition");
@@ -96,11 +97,27 @@ namespace Raven.Database.Actions
             var existingDefinition = IndexDefinitionStorage.GetTransformerDefinition(name);
             if (existingDefinition != null)
             {
+                if (definition.TransformerVersion != null && existingDefinition.TransformerVersion != null &&
+                    definition.TransformerVersion <= existingDefinition.TransformerVersion)
+                {
+                    //this new transformer is an older version of the current one
+                    return null;
+                }
+
+                // whether we update the transformer definition or not,
+                // we need to update the transformer version
+                existingDefinition.TransformerVersion = definition.TransformerVersion =
+                    Math.Max(existingDefinition.TransformerVersion ?? 0, definition.TransformerVersion ?? 0);
+
                 switch (existingDefinition.LockMode)
                 {
                     case TransformerLockMode.Unlock:
                         if (existingDefinition.Equals(definition))
                             return name; // no op for the same transformer
+
+                        if (isReplication == false)
+                            definition.TransformerVersion++;
+                            
                         break;
                     case TransformerLockMode.LockedIgnore:
                         Log.Info("Transformer {0} not saved because it was lock (with ignore)", name);
@@ -109,6 +126,16 @@ namespace Raven.Database.Actions
                         throw new ArgumentOutOfRangeException();
                 }
             }
+            else if (isReplication == false)
+            {
+                // we're creating a new transformer,
+                // we need to take the transformer version of the deleted transformer (if exists)
+                definition.TransformerVersion = GetDeletedTransformerId(definition.Name);
+                definition.TransformerVersion++;
+            }
+
+            if (definition.TransformerVersion == null)
+                definition.TransformerVersion = 0;
 
             var generator = IndexDefinitionStorage.CompileTransform(definition);
 
@@ -138,10 +165,28 @@ namespace Raven.Database.Actions
                 {
                     Name = name,
                     Type = TransformerChangeTypes.TransformerAdded,
+                    Version = definition.TransformerVersion
                 }));
             }
 
             return name;
+        }
+
+        private int GetDeletedTransformerId(string transformerName)
+        {
+            var version = 0;
+
+            TransactionalStorage.Batch(action =>
+            {
+                var li = action.Lists.Read(Constants.RavenReplicationTransformerTombstones, transformerName);
+                if (li == null)
+                    return;
+
+                var versionStr = li.Data.Value<string>("TransformerVersion");
+                int.TryParse(versionStr, out version);
+            });
+
+            return version;
         }
 
         public int GetNextTemporaryTransformerIndex()
