@@ -354,7 +354,18 @@
             <div class="panel">
                 <div class="panel-body">
                     <p>Import data from a .ravendbdump file into the current database.</p>
-                    <p class="text-warning"><span class="icon-warning"></span> Importing will overwrite any existing documents and indexes.</p>
+                    <p class="text-warning"><span class="icon-warning"></span> Note: Importing will overwrite any existing documents and indexes.</p>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <input type="text" value="filename.ravendbdump" class="form-control">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default btn-success input-group-addon-button"><span class="icon-document"></span> Choose File</button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <br />
                     <div class="row">
                         <div class="col-lg-12">
 
@@ -511,14 +522,13 @@
                             <div class="form-group">
 
                                 <label class="control-label">Command</label>
-                                <div class="row">
-                                    <div class="col-lg-2 col-sm-3"><button class="btn btn-default"><span class="icon-copy"></span> coppy to clipboard</button></div>
-                                    <div class="col-lg-10 col-sm-9">
-                                        <input onClick="this.select();" class="form-control" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
-                                    </div>
+                                <div class="input-group">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default btn-sm"><span class="icon-copy"></span> Copy to clipboard</button>
+                                    </span>
+                                    <input onClick="this.select();" class="form-control input-sm" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
                                 </div>
                             </div>
-
                         </form>
                     </div>
                     <hr />
@@ -527,7 +537,6 @@
                     <button class="btn btn-info" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
                         Advanced
                     </button>
-                    <button class="btn btn-success"><span class="icon-document"></span> Choose file</button>
                     <button class="btn btn-success" disabled><span class="glyphicon glyphicon-open"></span> Import Database</button>
                     <button class="btn btn-success"><span class="global-spinner"></span> Import Database</button>
                 </div>
