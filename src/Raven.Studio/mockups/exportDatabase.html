@@ -799,11 +799,14 @@
                             </div>
 
                             <div class="form-group">
-                                <label id="transformScriptHelp" class="control-label" data-original-title="" title="">
-                                    Transform script <a class="text-info" target="_blank" href="#">
-                                        <span class="icon-help"></span>
-                                    </a>
-                                </label>
+                                <div class="toggle">
+                                    <input id="useTransformScript" type="checkbox">
+                                    <label for="useTransformScript">
+                                        Use Transform script <a class="text-info" target="_blank" href="#">
+                                            <span class="icon-help"></span>
+                                        </a>
+                                    </label>
+                                </div>
                                 <div>
                                     <pre style="height: 200px; font-size: 16px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }" class="ace_editor ui-resizable ace-xcode">
 <textarea class="ace_text-input" wrap="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="opacity: 0; height: 19px; width: 8.79688px; left: 46px; top: 0px;"></textarea>
@@ -813,8 +816,12 @@
                             <div class="form-group">
 
                                 <label class="control-label">Command</label>
-                                <div>
-                                    <pre></pre>
+
+                                <div class="row">
+                                    <div class="col-lg-2 col-sm-3"><button class="btn btn-default"><span class="icon-copy"></span> coppy to clipboard</button></div>
+                                    <div class="col-lg-10 col-sm-9">
+                                        <input onClick="this.select();" class="form-control" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
+                                    </div>
                                 </div>
                             </div>
 

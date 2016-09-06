@@ -212,7 +212,7 @@ h6 {
 
 
 a, .btn {
-    text-decoration:none !important;
+    text-decoration: none !important;
 
     &:hover, &:active, &:focus {
         outline: 0 !important;
@@ -337,6 +337,14 @@ hr {
 
 .form-control {
     box-shadow: none;
+
+    &::selection {
+        background:@brand-primary;
+    }
+
+    &::-moz-selection {
+        background:@brand-primary;
+    }
 }
 
 .vcenter {
@@ -1381,6 +1389,7 @@ hr {
 pre {
     border-color: @gray-darker;
     background-color: @gray-dark;
+    color: @gray-light;
 }
 
 .panel {
@@ -1397,6 +1406,7 @@ pre {
 
 ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
     background-color: #F5F5F5;
 }
 

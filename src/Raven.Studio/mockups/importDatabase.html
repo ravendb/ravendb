@@ -511,8 +511,11 @@
                             <div class="form-group">
 
                                 <label class="control-label">Command</label>
-                                <div>
-                                    <pre></pre>
+                                <div class="row">
+                                    <div class="col-lg-2 col-sm-3"><button class="btn btn-default"><span class="icon-copy"></span> coppy to clipboard</button></div>
+                                    <div class="col-lg-10 col-sm-9">
+                                        <input onClick="this.select();" class="form-control" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
+                                    </div>
                                 </div>
                             </div>
 
