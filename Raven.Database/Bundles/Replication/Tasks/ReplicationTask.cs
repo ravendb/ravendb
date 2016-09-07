@@ -59,13 +59,6 @@ namespace Raven.Bundles.Replication.Tasks
         private bool firstTimeFoundNoReplicationDocument = true;
         private bool wrongReplicationSourceAlertSent = false;
         private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
-        /*private TimeSpan _replicationFrequency;
-        private TimeSpan _lastQueriedFrequency;
-        private Timer _indexReplicationTaskTimer;
-        private Timer _lastQueriedTaskTimer;*/
-        
-        //private readonly object _indexReplicationTaskLock = new object();
-        //private readonly object _lastQueriedTaskLock = new object();
 
         private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>();
 
@@ -101,7 +94,6 @@ namespace Raven.Bundles.Replication.Tasks
 
         public ReplicationTask()
         {
-            //TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
             ShouldWaitForWork = true;
         }
 
@@ -109,9 +101,6 @@ namespace Raven.Bundles.Replication.Tasks
         {
             docDb = database;
             _transactionalStorageId = docDb.TransactionalStorage.Id.ToString();
-
-            //docDb.Notifications.OnIndexChange += OnIndexChange;
-            //docDb.Notifications.OnTransformerChange += OnTransformerChange;
 
             var replicationRequestTimeoutInMs = docDb.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
@@ -129,74 +118,11 @@ namespace Raven.Bundles.Replication.Tasks
             IndexReplication = new IndexReplicationTask(database, httpRavenRequestFactory, this);
             TransformerReplication = new TransformerReplicationTask(database, httpRavenRequestFactory, this);
 
-            /*_replicationFrequency = TimeSpan.FromSeconds(database.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
-            _lastQueriedFrequency = TimeSpan.FromSeconds(database.Configuration.TimeToWaitBeforeRunningIdleIndexes.TotalSeconds / 2);
-
-            _indexReplicationTaskTimer = database.TimerManager.NewTimer(x => ReplicateIndexesAndTransformersTask(x), TimeSpan.Zero, _replicationFrequency);
-            _lastQueriedTaskTimer = database.TimerManager.NewTimer(SendLastQueriedTask, TimeSpan.Zero, _lastQueriedFrequency);
-*/
             task.Start();
 
             IndexReplication.Start();
             TransformerReplication.Start();
         }
-
-        /*private void OnTransformerChange(DocumentDatabase documentDatabase, TransformerChangeNotification eventArgs)
-        {
-            switch (eventArgs.Type)
-            {
-                case TransformerChangeTypes.TransformerAdded:
-                    //if created transformer with the same name as deleted one, we should prevent its deletion replication
-                    docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationTransformerTombstones, eventArgs.Name));
-                    break;
-                case TransformerChangeTypes.TransformerRemoved:
-                    var metadata = new RavenJObject
-                    {
-                        {Constants.RavenTransformerDeleteMarker, true},
-                        {Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()},
-                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)}
-                    };
-
-                    docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationTransformerTombstones, eventArgs.Name, metadata, UuidType.Transformers));
-                    break;
-            }
-        }
-
-        private void OnIndexChange(DocumentDatabase documentDatabase, IndexChangeNotification eventArgs)
-        {
-            switch (eventArgs.Type)
-            {
-                case IndexChangeTypes.IndexAdded:
-                    //if created index with the same name as deleted one, we should prevent its deletion replication
-                    docDb.TransactionalStorage.Batch(
-                        accessor =>
-                        {
-                            var li = accessor.Lists.Read(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
-                            if (li == null) return;
-                            int version;
-                            string versionStr = li.Data.Value<string>("IndexVersion");
-                            if (int.TryParse(versionStr, out version))
-                            {
-                                if (eventArgs.Version.HasValue && version < eventArgs.Version.Value)
-                                {
-                                    accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
-                                }
-                            }
-                        });
-                    break;
-                case IndexChangeTypes.IndexRemoved:
-                    var metadata = new RavenJObject
-                    {
-                        {Constants.RavenIndexDeleteMarker, true},
-                        {Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()},
-                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)},
-                        {"IndexVersion", eventArgs.Version }
-                    };
-
-                    docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
-                    break;
-            }
-        }*/
 
         public void Pause()
         {
@@ -1007,337 +933,11 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-
-        /*public void SendLastQueriedTask(object state)
-        {
-            if (docDb.Disposed)
-                return;
-            if (Monitor.TryEnter(_lastQueriedTaskLock) == false)
-                return;
-            try
-            {
-                using (CultureHelper.EnsureInvariantCulture())
-                {
-                    var relevantIndexLastQueries = new Dictionary<string, DateTime>();
-                    var relevantIndexes = docDb.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false && indexStats.Priority != IndexingPriority.Error && indexStats.Priority != IndexingPriority.Disabled && indexStats.LastQueryTimestamp.HasValue);
-                    foreach (var relevantIndex in relevantIndexes)
-                    {
-                        relevantIndexLastQueries[relevantIndex.Name] = relevantIndex.LastQueryTimestamp.GetValueOrDefault();
-                    }
-
-                    if (relevantIndexLastQueries.Count == 0) return;
-
-                    var destinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
-                    foreach (var destination in destinations)
-                    {
-                        try
-                        {
-                            string url = destination.ConnectionStringOptions.Url + "/indexes/last-queried";
-
-                            var replicationRequest = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-                            replicationRequest.Write(RavenJObject.FromObject(relevantIndexLastQueries));
-                            replicationRequest.ExecuteRequest();
-                        }
-                        catch (Exception e)
-                        {
-                            HandleRequestBufferingErrors(e, destination);
-
-                            log.WarnException("Could not update last query time of " + destination.ConnectionStringOptions.Url, e);
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                log.ErrorException("Failed to send last queried timestamp of indexes", e);
-            }
-            finally
-            {
-                Monitor.Exit(_lastQueriedTaskLock);
-            }
-        }
-    
-        public bool ReplicateIndexesAndTransformersTask(object state, Func<ReplicationDestination,bool> shouldSkipDestinationPredicate = null, bool replicateIndexes = true, bool replicateTransformers = true)
-        {
-            if (docDb.Disposed)
-                return false;
-
-            if (Monitor.TryEnter(_indexReplicationTaskLock) == false)
-                return false;
-
-            try
-            {
-                using (CultureHelper.EnsureInvariantCulture())
-                {
-                    shouldSkipDestinationPredicate = shouldSkipDestinationPredicate ?? (x => x.SkipIndexReplication == false);
-                    var replicationDestinations = GetReplicationDestinations(x => shouldSkipDestinationPredicate(x));
-
-                    foreach (var destination in replicationDestinations)
-                    {
-                        try
-                        {
-                            var indexTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationIndexesTombstones, 0, 64);
-                            var replicatedIndexTombstones = new Dictionary<string, int>();
-
-                            if(replicateIndexes)
-                                ReplicateIndexDeletionIfNeeded(indexTombstones, destination, replicatedIndexTombstones);
-
-                            var transformerTombstones = GetIndexAndTransformersTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64);
-                            var replicatedTransformerTombstones = new Dictionary<string, int>();
-
-                            if(replicateTransformers)
-                                ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
-                            
-                            if (docDb.Indexes.Definitions.Length > 0 && replicateIndexes)
-                            {
-                                var sideBySideIndexes = docDb.Indexes.Definitions.Where(x => x.IsSideBySideIndex)
-                                                                                 .ToDictionary(x => x.Name, x=> x);
-                                
-                                foreach (var indexDefinition in docDb.Indexes.Definitions.Where(x => !x.IsSideBySideIndex))
-                                {
-                                    IndexDefinition sideBySideIndexDefinition;
-                                    if (sideBySideIndexes.TryGetValue(Constants.SideBySideIndexNamePrefix + indexDefinition.Name, out sideBySideIndexDefinition))
-                                        ReplicateSingleSideBySideIndex(destination, indexDefinition, sideBySideIndexDefinition);
-                                    else
-                                        ReplicateSingleIndex(destination, indexDefinition);
-                                }
-                            }
-
-                            if (docDb.Transformers.Definitions.Length > 0 && replicateTransformers)
-                            {
-                                foreach (var definition in docDb.Transformers.Definitions)
-                                    ReplicateSingleTransformer(destination, definition);
-                            }
-
-                            docDb.TransactionalStorage.Batch(actions =>
-                            {
-                                if (replicateIndexes)
-                                {
-                                    foreach (var indexTombstone in replicatedIndexTombstones)
-                                    {
-                                        if (indexTombstone.Value != replicationDestinations.Length &&
-                                            docDb.IndexStorage.HasIndex(indexTombstone.Key) == false)
-                                            continue;
-                                        actions.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexTombstone.Key);
-                                    }
-                                }
-
-                                if (replicateTransformers)
-                                {
-                                    foreach (var transformerTombstone in replicatedTransformerTombstones)
-                                    {
-                                        var transfomerExists = docDb.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
-                                        if (transformerTombstone.Value != replicationDestinations.Length &&
-                                            transfomerExists == false)
-                                            continue;
-
-                                        actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
-                                    }
-                                }
-                            });
-                        }
-                        catch (Exception e)
-                        {
-                            log.ErrorException("Failed to replicate indexes and transformers to " + destination, e);
-                        }
-                    }
-
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                log.ErrorException("Failed to replicate indexes and transformers", e);
-
-                return false;
-            }
-            finally
-            {
-                Monitor.Exit(_indexReplicationTaskLock);
-            }
-        }
-
-        private void ReplicateSingleSideBySideIndex(ReplicationStrategy destination, IndexDefinition indexDefinition, IndexDefinition sideBySideIndexDefinition)
-        {
-            var url = string.Format("{0}/replication/side-by-side?{1}", destination.ConnectionStringOptions.Url, GetDebugInformation());
-            IndexReplaceDocument indexReplaceDocument;
-
-            try
-            {
-                indexReplaceDocument = docDb.Documents.Get(Constants.IndexReplacePrefix + sideBySideIndexDefinition.Name, null).DataAsJson.JsonDeserialization<IndexReplaceDocument>();
-            }
-            catch (Exception e)
-            {
-                log.Warn("Cannot get side-by-side index replacement document. Aborting operation. (this exception should not happen and the cause should be investigated)", e);
-                return;
-            }
-
-            var sideBySideReplicationInfo = new SideBySideReplicationInfo
-            {
-                Index = indexDefinition,
-                SideBySideIndex = sideBySideIndexDefinition,
-                OriginDatabaseId = destination.CurrentDatabaseId,
-                IndexReplaceDocument = indexReplaceDocument
-            };
-
-            var replicationRequest = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-            replicationRequest.Write(RavenJObject.FromObject(sideBySideReplicationInfo));
-            replicationRequest.ExecuteRequest();
-        }
-
-        private void ReplicateSingleTransformer(ReplicationStrategy destination, TransformerDefinition definition)
-        {
-            try
-            {
-                var clonedTransformer = definition.Clone();
-                clonedTransformer.TransfomerId = 0;
-
-                var url = destination.ConnectionStringOptions.Url + "/transformers/" + Uri.EscapeUriString(definition.Name) + "?" + GetDebugInformation();
-                var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-                replicationRequest.Write(RavenJObject.FromObject(clonedTransformer));
-                replicationRequest.ExecuteRequest();
-            }
-            catch (Exception e)
-            {
-                HandleRequestBufferingErrors(e, destination);
-
-                log.WarnException("Could not replicate transformer " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
-            }
-        }
-
-        private void ReplicateSingleIndex(ReplicationStrategy destination, IndexDefinition definition)
-        {
-            try
-            {
-                var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(definition.Name), GetDebugInformation());
-
-                var replicationRequest = httpRavenRequestFactory.Create(url, "PUT", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-                replicationRequest.Write(RavenJObject.FromObject(definition));
-                replicationRequest.ExecuteRequest();
-            }
-            catch (Exception e)
-            {
-                HandleRequestBufferingErrors(e, destination);
-
-                log.WarnException("Could not replicate index " + definition.Name + " to " + destination.ConnectionStringOptions.Url, e);
-            }
-        }*/
-
-
-
-
         public void HandleRequestBufferingErrors(Exception e, ReplicationStrategy destination)
         {
             if (destination.ConnectionStringOptions.Credentials != null && string.Equals(e.Message, "This request requires buffering data to succeed.", StringComparison.OrdinalIgnoreCase))
                 destinationForceBuffering.AddOrUpdate(destination.ConnectionStringOptions.Url, true, (s, b) => true);
         }
-
-        /*private string GetDebugInformation()
-        {
-            return Constants.IsIndexReplicatedUrlParamName + "=true&from=" + Uri.EscapeDataString(docDb.ServerUrl);
-        }
-
-        private void ReplicateIndexDeletionIfNeeded(List<JsonDocument> indexTombstones, 
-            ReplicationStrategy destination, 
-            Dictionary<string, int> replicatedIndexTombstones)
-        {
-            if (indexTombstones.Count == 0)
-                return;
-
-            foreach (var tombstone in indexTombstones)
-            {
-                try
-                {
-                    int value;
-                    if (docDb.IndexStorage.HasIndex(tombstone.Key)) //if in the meantime the index was recreated under the same name
-                    {
-                        replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
-                        replicatedIndexTombstones[tombstone.Key] = value + 1;
-                        continue;
-                    }
-
-                    var url = string.Format("{0}/indexes/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInformation());
-                    var replicationRequest = httpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-                    replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
-                    replicationRequest.ExecuteRequest();
-                    log.Info("Replicated index deletion (index name = {0})", tombstone.Key);
-                    
-                    replicatedIndexTombstones.TryGetValue(tombstone.Key, out value);
-                    replicatedIndexTombstones[tombstone.Key] = value + 1;
-                }
-                catch (Exception e)
-                {
-                    HandleRequestBufferingErrors(e, destination);
-
-                    log.ErrorException(string.Format("Failed to replicate index deletion (index name = {0})", tombstone.Key), e);
-                }
-            }
-        }
-
-        private void ReplicateTransformerDeletionIfNeeded(List<JsonDocument> transformerTombstones, 
-            ReplicationStrategy destination,
-            Dictionary<string, int> replicatedTransformerTombstones)
-        {
-            if (transformerTombstones.Count == 0)
-                return;
-
-            foreach (var tombstone in transformerTombstones)
-            {
-                try
-                {
-                    int value;
-                    if (docDb.Transformers.GetTransformerDefinition(tombstone.Key) != null) //if in the meantime the transformer was recreated under the same name
-                    {
-                        replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
-                        replicatedTransformerTombstones[tombstone.Key] = value + 1;
-                        continue;
-                    }
-
-                    var url = string.Format("{0}/transformers/{1}?{2}", destination.ConnectionStringOptions.Url, Uri.EscapeUriString(tombstone.Key), GetDebugInformation());
-                    var replicationRequest = httpRavenRequestFactory.Create(url, "DELETE", destination.ConnectionStringOptions, GetRequestBuffering(destination));
-                    replicationRequest.Write(RavenJObject.FromObject(emptyRequestBody));
-                    replicationRequest.ExecuteRequest();
-                    log.Info("Replicated transformer deletion (transformer name = {0})", tombstone.Key);
-                    replicatedTransformerTombstones.TryGetValue(tombstone.Key, out value);
-                    replicatedTransformerTombstones[tombstone.Key] = value + 1;
-                }
-                catch (Exception e)
-                {
-                    HandleRequestBufferingErrors(e, destination);
-
-                    log.ErrorException(string.Format("Failed to replicate transformer deletion (transformer name = {0})", tombstone.Key), e);
-                }
-            }
-        }
-
-
-        private List<JsonDocument> GetIndexAndTransformersTombstones(string tombstoneListName, int start, int take)
-        {
-            var now = SystemTime.UtcNow;
-            List<JsonDocument> tombstones = null;
-            docDb.TransactionalStorage.Batch(actions =>
-            {
-                tombstones = actions
-                    .Lists
-                    .Read(tombstoneListName, start, take)
-                    // we don't send out deletions immediately, we wait for a bit
-                    // to make sure that the user didn't reset the index or delete / create
-                    // things manually
-                    .Where(x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfIndexesToSiblings)
-                    .Select(x => new JsonDocument
-                    {
-                        Etag = x.Etag,
-                        Key = x.Key,
-                        Metadata = x.Data,
-                        DataAsJson = new RavenJObject()
-                    })
-                    .ToList();
-            });
-            return tombstones ?? new List<JsonDocument>();
-        }
-*/
-        //public TimeSpan TimeToWaitBeforeSendingDeletesOfIndexesToSiblings { get; set; }
-
 
         private class JsonDocumentsToReplicate
         {
@@ -1855,11 +1455,6 @@ namespace Raven.Bundles.Replication.Tasks
 
         public void Dispose()
         {
-            /*if (_indexReplicationTaskTimer != null)
-                _indexReplicationTaskTimer.Dispose();
-            if (_lastQueriedTaskTimer != null)
-                _lastQueriedTaskTimer.Dispose();*/
-
             if (IndexReplication != null)
                 IndexReplication.Dispose();
 
