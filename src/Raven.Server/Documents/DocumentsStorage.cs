@@ -31,7 +31,7 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentDatabase _documentDatabase;
 
-        private static readonly TableSchema _docsSchema = new TableSchema();
+        private static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly TableSchema ConflictsSchema = new TableSchema();
         private static readonly TableSchema TombstonesSchema = new TableSchema();
 
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
             // The documents schema is as follows
             // 4 fields (lowered key, etag, lazy string key, document, change vector)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
-            _docsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1,
@@ -76,13 +76,13 @@ namespace Raven.Server.Documents
                 Name = "Docs"
             });
 
-            _docsSchema.DefineFixedSizeIndex("CollectionEtags", new TableSchema.FixedSizeSchemaIndexDef
+            DocsSchema.DefineFixedSizeIndex("CollectionEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = false
             });
 
-            _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
+            DocsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = true
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
-                    _docsSchema.Create(tx, Document.SystemDocumentsCollection);
+                    DocsSchema.Create(tx, Document.SystemDocumentsCollection);
                     ConflictsSchema.Create(tx, "Conflicts");
                     _lastEtag = ReadLastEtag(tx);
 
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string prefix, string matches, string exclude, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             var prefixSlice = GetSliceFromKey(context, prefix);
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -328,10 +328,10 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], long.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes["AllDocsEtags"], long.MaxValue))
             {
                 if (start > 0)
                 {
@@ -346,10 +346,10 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, int start, int take)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, "@" + collection);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, "@" + collection);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue))
             {
                 if (start > 0)
                 {
@@ -364,9 +364,9 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
             {
                 if (result.Id == etag)
                     continue;
@@ -387,10 +387,10 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
             {
                 if (result.Id == etag)
                     continue;
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             foreach (var id in ids)
             {
@@ -429,10 +429,10 @@ namespace Raven.Server.Documents
             if (context.Transaction.InnerTransaction.ReadTree(collectionName) == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
+            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes["CollectionEtags"], etag))
             {
                 if (result.Id == etag)
                     continue;
@@ -487,7 +487,7 @@ namespace Raven.Server.Documents
 
         public Document Get(DocumentsOperationContext context, Slice loweredKey)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
@@ -571,7 +571,7 @@ namespace Raven.Server.Documents
             }
 
             var result = table
-                        .SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
+                        .SeekBackwardFrom(DocsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
                         .FirstOrDefault();
 
             if (result == null)
@@ -826,7 +826,7 @@ namespace Raven.Server.Documents
             string originalCollectionName;
             bool isSystemDocument;
             var collectionName = GetCollectionName(loweredKey, doc.Data, out originalCollectionName, out isSystemDocument);
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
 
             int size;
             var ptr = table.DirectRead(doc.StorageId, out size);
@@ -928,7 +928,7 @@ namespace Raven.Server.Documents
                 //on the destination
                 if (doc != null)
                 {
-                    var docsTable = context.Transaction.InnerTransaction.OpenTable(_docsSchema, "@" + collectionName);
+                    var docsTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, "@" + collectionName);
                     docsTable.Delete(doc.StorageId);
                 }
 
@@ -1140,7 +1140,7 @@ namespace Raven.Server.Documents
                     var collectionName = Document.GetCollectionName(existingDoc.Data, out isSystemDocument);
 
                     //make sure that the relevant collection tree exists
-                    var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, "@"+collectionName);
+                    var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, "@"+collectionName);
 
                     table.Delete(existingDoc.StorageId);				    
                 }
@@ -1194,8 +1194,8 @@ namespace Raven.Server.Documents
             string originalCollectionName;
             bool isSystemDocument;
             var collectionName = GetCollectionName(key, document, out originalCollectionName, out isSystemDocument);
-            _docsSchema.Create(context.Transaction.InnerTransaction, collectionName);
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
+            DocsSchema.Create(context.Transaction.InnerTransaction, collectionName);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
 
             if (string.IsNullOrWhiteSpace(key))
                 key = Guid.NewGuid().ToString();
@@ -1469,7 +1469,7 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocuments(DocumentsOperationContext context)
         {
-            var fstIndex = _docsSchema.FixedSizeIndexes["AllDocsEtags"];
+            var fstIndex = DocsSchema.FixedSizeIndexes["AllDocsEtags"];
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.NameAsSlice, sizeof(long));
             return fst.NumberOfEntries;
         }
@@ -1508,7 +1508,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                var collectionTable = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
+                var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
 
                 return new CollectionStat
                 {
