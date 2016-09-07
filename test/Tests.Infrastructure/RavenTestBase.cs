@@ -22,6 +22,7 @@ using Raven.Server.Utils;
 
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Xunit;
 
 namespace FastTests
 {
@@ -30,7 +31,9 @@ namespace FastTests
         public const string ServerName = "Raven.Tests.Core.Server";
 
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
-        protected static readonly ConcurrentSet<string> PathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        protected static readonly ConcurrentSet<string> PathsToDelete =
+            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
         private static readonly object ServerLocker = new object();
@@ -43,7 +46,9 @@ namespace FastTests
         private int NonReusedTcpServerPort { get; set; }
         private const int MaxParallelServer = 79;
         private static readonly List<int> _usedServerPorts = new List<int>();
-        private static readonly List<int> _availableServerPorts = Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
+
+        private static readonly List<int> _availableServerPorts =
+            Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
@@ -160,8 +165,9 @@ namespace FastTests
 
         private static int _counter;
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null, string path = null,
-           Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
+        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null,
+            string dbSuffixIdentifier = null, string path = null,
+            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
@@ -238,11 +244,11 @@ namespace FastTests
             }
 
             timeout = timeout ?? (Debugger.IsAttached
-                ? TimeSpan.FromMinutes(5)
-                : TimeSpan.FromSeconds(20));
+                          ? TimeSpan.FromMinutes(5)
+                          : TimeSpan.FromSeconds(20));
 
             var spinUntil = SpinWait.SpinUntil(() =>
-                databaseCommands.GetStatistics().Indexes.All(x=>x.IsStale == false),
+                        databaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false),
                 timeout.Value);
 
             if (spinUntil)
@@ -259,7 +265,8 @@ namespace FastTests
             string url = documentStore.Url;
 
             var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase);
-            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded +
+                                "&withStop=true";
 
             Process.Start(documentsPage); // start the server
 
@@ -269,7 +276,8 @@ namespace FastTests
             } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
         }
 
-        protected string NewDataPath([CallerMemberName]string prefix = null, string suffix = null, bool forceCreateDir = false)
+        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null,
+            bool forceCreateDir = false)
         {
             if (suffix != null)
                 prefix += suffix;
@@ -303,9 +311,9 @@ namespace FastTests
                         RemoveUsedPort(NonReusedTcpServerPort);
                     });
                 }
-            }
 
-            exceptionAggregator.ThrowIfNeeded();
+                exceptionAggregator.ThrowIfNeeded();
+            }
         }
     }
 }

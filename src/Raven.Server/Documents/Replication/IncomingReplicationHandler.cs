@@ -10,14 +10,16 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using System.Text;
 using Raven.Client.Replication.Messages;
-using Raven.Server.Documents.TcpHandlers;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
     public class IncomingReplicationHandler : IDisposable
     {
-        public readonly TcpConnectionOptions TcpConnection;
+        private readonly JsonOperationContext.MultiDocumentParser _multiDocumentParser;
+        private readonly DocumentDatabase _database;
+        private readonly TcpClient _tcpClient;
+        private readonly NetworkStream _stream;
         private readonly DocumentsOperationContext _context;
         private Thread _incomingThread;
         private readonly CancellationTokenSource _cts;
@@ -27,16 +29,19 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
 
-        public IncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ReplicationLatestEtagRequest replicatedLastEtag)
+        public IncomingReplicationHandler(JsonOperationContext.MultiDocumentParser multiDocumentParser, DocumentDatabase database, TcpClient tcpClient, NetworkStream stream, ReplicationLatestEtagRequest replicatedLastEtag)
         {
-            TcpConnection = tcpConnectionOptions;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
-            _contextDisposable = TcpConnection.DocumentDatabase.DocumentsStorage
+            _multiDocumentParser = multiDocumentParser;
+            _database = database;
+            _tcpClient = tcpClient;
+            _stream = stream;
+            _contextDisposable = _database.DocumentsStorage
                                           .ContextPool
                                           .AllocateOperationContext(out _context);
 
-            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(TcpConnection.DocumentDatabase.Name);
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
+            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
         public void Start()
@@ -52,8 +57,6 @@ namespace Raven.Server.Documents.Replication
 
         }
 
-        long _prevRecievedEtag = -1;
-
         [ThreadStatic]
         public static bool IsIncomingReplicationThread;
 
@@ -65,17 +68,16 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 using (_contextDisposable)
-                using (TcpConnection.Stream)
-                using (var writer = new BlittableJsonTextWriter(_context, TcpConnection.Stream))
-                using (TcpConnection.MultiDocumentParser)
+                using (_stream)
+                using (var writer = new BlittableJsonTextWriter(_context, _stream))
+                using (_multiDocumentParser)
                 {
                     while (!_cts.IsCancellationRequested)
                     {
                         _context.Reset();
 
-                        using (var message = TcpConnection.MultiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
+                        using (var message = _multiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
                         {
-                            TcpConnection.RegisterBytesReceived(message.Size);
                             //note: at this point, the valid messages are heartbeat and replication batch.
                             _cts.Token.ThrowIfCancellationRequested();
 
@@ -91,10 +93,12 @@ namespace Raven.Server.Documents.Replication
                                 if (!message.TryGet("Documents", out replicatedDocsCount))
                                     throw new InvalidDataException($"Expected the 'Documents' field, but had no numeric field of this value, this is likely a bug");
 
-                                ReceiveSingleBatch(replicatedDocsCount, lastEtag);
-
-                                OnDocumentsReceived(this);
-
+                                //replicatedDocsCount == 0 --> this is heartbeat message
+                                if (replicatedDocsCount > 0)
+                                {
+                                    ReceiveSingleBatch(replicatedDocsCount, lastEtag);
+                                    OnDocumentsReceived(this);
+                                }
                                 //return positive ack
                                 SendStatusToSource(writer, lastEtag);
                             }
@@ -143,19 +147,18 @@ namespace Raven.Server.Documents.Replication
                 // this will read the documents to memory from the network
                 // without holding the write tx open
                 ReadDocumentsFromSource(writeBuffer, replicatedDocsCount);
-                
                 byte* buffer;
-                int _;
-                writeBuffer.EnsureSingleChunk(out buffer, out _);
+                int totalSize;
+                writeBuffer.EnsureSingleChunk(out buffer, out totalSize);
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Replication connection {FromToString}: received {replicatedDocsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        $"Replication connection {FromToString}: received {replicatedDocsCount:#,#;;0} documents with size {totalSize/1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
                 using (_context.OpenWriteTransaction())
                 {
                     var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                    foreach (var changeVectorEntry in TcpConnection.DocumentDatabase.DocumentsStorage.GetDatabaseChangeVector(_context))
+                    foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(_context))
                     {
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
                     }
@@ -163,35 +166,50 @@ namespace Raven.Server.Documents.Replication
                     foreach (var doc in _replicatedDocs)
                     {
                         ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);
-                        var json = new BlittableJsonReaderObject(
-                            buffer + doc.Position + (doc.ChangeVectorCount * sizeof(ChangeVectorEntry))
-                            , doc.DocumentSize, _context);
 
-                        switch (GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector))
+                        BlittableJsonReaderObject json = null;
+                        if (doc.DocumentSize >= 0) //no need to load document data for tombstones
+                            // document size == -1 --> doc is a tombstone
+                        {
+                            json = new BlittableJsonReaderObject(
+                                buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
+                                doc.DocumentSize, _context);
+                        }
+
+                        var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector);
+                        switch (conflictStatus)
                         {
                             case ConflictStatus.Update:
-                                TcpConnection.DocumentDatabase.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+                                if (json != null)
+                                {
+                                    _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+                                }
+                                else
+                                {									
+                                    _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+                                        _context,doc.Id,										
+                                        _tempReplicatedChangeVector,
+                                        doc.Collection);
+                                }
                                 break;
                             case ConflictStatus.ShouldResolveConflict:
-
                                 _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
                                 goto case ConflictStatus.Update;
                             case ConflictStatus.Conflict:
-                                TcpConnection.DocumentDatabase.DocumentsStorage.AddConflict(_context, doc.Id, json, _tempReplicatedChangeVector);
+                                _database.DocumentsStorage.AddConflict(_context, doc.Id, json, _tempReplicatedChangeVector);
                                 break;
                             case ConflictStatus.AlreadyMerged:
                                 //nothing to do
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException("Invalid ConflictStatus");
+                                throw new ArgumentOutOfRangeException(nameof(conflictStatus), "Invalid ConflictStatus: " + conflictStatus);
                         }
                     }
-                    TcpConnection.DocumentDatabase.DocumentsStorage.SetDatabaseChangeVector(_context,
+                    _database.DocumentsStorage.SetDatabaseChangeVector(_context,
                         maxReceivedChangeVectorByDatabase);
 
-                    TcpConnection.DocumentDatabase.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId,
+                    _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId,
                         lastEtag);
-                    _prevRecievedEtag = lastEtag;
                     _context.Transaction.Commit();
                 }
                 sw.Stop();
@@ -230,7 +248,7 @@ namespace Raven.Server.Documents.Replication
 
             using (_context.OpenReadTransaction())
             {
-                databaseChangeVector = TcpConnection.DocumentDatabase.DocumentsStorage.GetDatabaseChangeVector(_context);
+                databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(_context);
             }
 
             foreach (var changeVectorEntry in databaseChangeVector)
@@ -246,7 +264,6 @@ namespace Raven.Server.Documents.Replication
                 _log.Info(
                     $"Sending ok => {FromToString} with last etag {lastEtag} and change vector: {databaseChangeVector.Format()}");
             }
-            var posBeforeWrite = writer.Position;
             _context.Write(writer, new DynamicJsonValue
             {
                 ["Type"] = "Ok",
@@ -254,9 +271,8 @@ namespace Raven.Server.Documents.Replication
                 ["Error"] = null,
                 ["CurrentChangeVector"] = changeVector
             });
-            var posAfterWrite = writer.Position;
+
             writer.Flush();
-            TcpConnection.RegisterBytesSent(posAfterWrite - posBeforeWrite);
         }
 
         private static void ValidateReplicationBatchAndGetDocsCount(BlittableJsonReaderObject message)
@@ -267,12 +283,9 @@ namespace Raven.Server.Documents.Replication
 
             if (!messageType.Equals("ReplicationBatch", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Expected the message 'Type = ReplicationBatch' field, but has 'Type={messageType}'. This is likely a bug.");
-
-
-
         }
 
-        public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {TcpConnection.DocumentDatabase.Name})";
+        public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
         public IncomingConnectionInfo ConnectionInfo { get; }
 
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
@@ -285,6 +298,7 @@ namespace Raven.Server.Documents.Replication
             public int Position;
             public int ChangeVectorCount;
             public int DocumentSize;
+            public string Collection;
         }
 
         private unsafe void ReadDocumentsFromSource(UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
@@ -299,36 +313,38 @@ namespace Raven.Server.Documents.Replication
                     {
                         Position = writeBuffer.SizeInBytes
                     };
-                    TcpConnection.MultiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     curDoc.ChangeVectorCount = *(int*)pTemp;
 
-                    var changeVecorSize = sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount;
-                    TcpConnection.MultiDocumentParser.ReadExactly(_tempBuffer, 0, changeVecorSize);
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
+                    writeBuffer.Write(_tempBuffer, 0, sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
 
-                    TcpConnection.RegisterBytesReceived(changeVecorSize);
-
-                    writeBuffer.Write(_tempBuffer, 0, changeVecorSize);
-
-                    TcpConnection.MultiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var keySize = *(int*)pTemp;
-                    TcpConnection.MultiDocumentParser.ReadExactly(_tempBuffer, 0, keySize);
-
-                    TcpConnection.RegisterBytesReceived(keySize);
-
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, keySize);
                     curDoc.Id = Encoding.UTF8.GetString(_tempBuffer, 0, keySize);
 
-                    TcpConnection.MultiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var documentSize = curDoc.DocumentSize = *(int*)pTemp;
-                    while (documentSize > 0)
+                    if (documentSize != -1) //if -1, then this is a tombstone
                     {
-                        var read = TcpConnection.MultiDocumentParser.Read(_tempBuffer, 0, Math.Min(_tempBuffer.Length, documentSize));
-                        if (read == 0)
-                            throw new EndOfStreamException();
-                        TcpConnection.RegisterBytesReceived(read);
-                        writeBuffer.Write(pTemp, read);
-                        documentSize -= read;
+                        while (documentSize > 0)
+                        {
+                            var read = _multiDocumentParser.Read(_tempBuffer, 0, Math.Min(_tempBuffer.Length, documentSize));
+                            if (read == 0)
+                                throw new EndOfStreamException();
+                            writeBuffer.Write(pTemp, read);
+                            documentSize -= read;
+                        }
                     }
-
+                    else
+                    {
+                        //read the collection of the tombstone
+                        _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
+                        var collectionSize = *(int*)pTemp;
+                        _multiDocumentParser.ReadExactly(_tempBuffer, 0, collectionSize);
+                        curDoc.Collection = Encoding.UTF8.GetString(_tempBuffer, 0, collectionSize);
+                    }
                     _replicatedDocs.Add(curDoc);
                 }
             }
@@ -339,22 +355,14 @@ namespace Raven.Server.Documents.Replication
             _cts.Cancel();
             try
             {
-                TcpConnection.Stream.Dispose();
+                _stream.Dispose();
             }
             catch (Exception)
             {
             }
             try
             {
-                TcpConnection.Stream.Dispose();
-            }
-            catch (Exception)
-            {
-            }
-
-            try
-            {
-                TcpConnection.Dispose();
+                _tcpClient.Dispose();
             }
             catch (Exception)
             {
@@ -392,7 +400,8 @@ namespace Raven.Server.Documents.Replication
                 local = result.Item1.ChangeVector;
             else if (result.Item2 != null)
                 local = result.Item2.ChangeVector;
-            else return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
+            else
+                return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
 
             return GetConflictStatus(remote, local);
         }

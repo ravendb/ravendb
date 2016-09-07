@@ -252,7 +252,11 @@ namespace FastTests.Server.Documents
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var putResult = _documentDatabase.DocumentsStorage.Put(ctx, "users/2", null, doc);
-                    Assert.Equal(2, putResult.ETag);
+
+                    //this should be 3 because in the use-case of this test,
+                    //the tombstone that was created when users/1 was deleted, will have etag == 2
+                    //thus, next document that is created will have etag == 3
+                    Assert.Equal(3, putResult.ETag);
                 }
 
                 ctx.Transaction.Commit();

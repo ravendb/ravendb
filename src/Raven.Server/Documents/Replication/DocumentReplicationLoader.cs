@@ -104,7 +104,8 @@ namespace Raven.Server.Documents.Replication
             var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
             {
                 //TODO: fix the disposable of the passed context and all the params cleanly
-                var newIncoming = new IncomingReplicationHandler(tcpConnectionOptions,getLatestEtagMessage);
+                var newIncoming = new IncomingReplicationHandler(tcpConnectionOptions.MultiDocumentParser, _database,
+                    tcpConnectionOptions.TcpClient, tcpConnectionOptions.Stream, getLatestEtagMessage);
                 newIncoming.Failed += OnIncomingReceiveFailed;
                 newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
                 if (_log.IsInfoEnabled)
