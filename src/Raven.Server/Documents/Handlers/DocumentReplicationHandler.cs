@@ -24,32 +24,22 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
-                try
+                var tombstones =
+                    context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take).ToList();
+                var array = new DynamicJsonArray();
+                foreach (var tombstone in tombstones)
                 {
-                    var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take).ToList();
-                    var array = new DynamicJsonArray();
-                    foreach (var tombstone in tombstones)
+                    array.Add(new DynamicJsonValue
                     {
-                        array.Add(new DynamicJsonValue
-                        {
-                            ["Key"] = tombstone.Key.ToString(),
-                            ["Collection"] = tombstone.Collection.ToString(),
-                            ["Etag"] = tombstone.Etag,
-                            ["DeletedEtag"] = tombstone.DeletedEtag,
-                            ["ChangeVector"] = tombstone.ChangeVector.ToJson()
-                        });
-                    }
-
-                    context.Write(writer, array);
-                }
-                catch (Exception e)
-                {
-                    HttpContext.Response.StatusCode = 500;
-                    context.Write(writer,new DynamicJsonValue
-                    {
-                        ["Error"] = e.ToString()
+                        ["Key"] = tombstone.Key.ToString(),
+                        ["Collection"] = tombstone.Collection.ToString(),
+                        ["Etag"] = tombstone.Etag,
+                        ["DeletedEtag"] = tombstone.DeletedEtag,
+                        ["ChangeVector"] = tombstone.ChangeVector.ToJson()
                     });
                 }
+
+                context.Write(writer, array);
             }
 
             return Task.CompletedTask;
