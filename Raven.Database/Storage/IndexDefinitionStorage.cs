@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -423,7 +424,18 @@ namespace Raven.Database.Storage
         {
             var currentIndexDefinition = GetIndexDefinition(newIndexDef.Name);
             if (currentIndexDefinition == null)
+            {
+                if (CheckIfIndexHasBeenDeleted(newIndexDef))
+                {
+                    // index has been deleted, ignoring this index
+                    return IndexCreationOptions.Noop;
+                }
+
+                if (newIndexDef.IndexVersion == null)
+                    newIndexDef.IndexVersion = 0;
+
                 return IndexCreationOptions.Create;
+            }
 
             if (currentIndexDefinition.IsTestIndex) // always update test indexes
                 return IndexCreationOptions.Update;
@@ -431,11 +443,76 @@ namespace Raven.Database.Storage
             newIndexDef.IndexId = currentIndexDefinition.IndexId;
             var result = currentIndexDefinition.Equals(newIndexDef);
             if (result)
+            {
+                // index definitions are equal, nothing to do
                 return IndexCreationOptions.Noop;
+            }
 
             // try to compare to find changes which doesn't require removing compiled index
             return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
                 ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
+        }
+
+        private bool CheckIfIndexHasBeenDeleted(IndexDefinition definition)
+        {
+            if (definition.IndexVersion == null)
+                return false;
+
+            var currentIndexVersion = definition.IndexVersion.Value;
+
+            int _;
+            return CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones, definition.Name, currentIndexVersion, definition.Name, out _) ||
+                   CheckIfIndexVersionIsEqualOrSmaller("Raven/Indexes/PendingDeletion", definition.IndexId.ToString(CultureInfo.InvariantCulture), currentIndexVersion, definition.Name, out _);
+        }
+
+        private bool CheckIfIndexVersionIsEqualOrSmaller(string listName, string listKey,
+            int currentIndexVersion, string indexName, out int oldIndexVersion)
+        {
+            var res = false;
+            var version = 0;
+
+            transactionalStorage.Batch(action =>
+            {
+                var li = action.Lists.Read(listName, listKey);
+                if (li == null)
+                    return;
+
+                var versionStr = li.Data.Value<string>("IndexVersion");
+                //the index that we are trying to add is deleted
+                if (int.TryParse(versionStr, out version))
+                {
+                    if (version >= currentIndexVersion)
+                    {
+                        if (version > currentIndexVersion)
+                            logger.Error("Trying to add an index ({0}) with a version smaller " +
+                                         "than the deleted version, this should not happen", indexName);
+
+                        res = true;
+                    }
+                }
+                else
+                {
+                    logger.Error("Failed to parse index version of index {0}", indexName);
+                }
+            });
+
+            oldIndexVersion = version;
+            return res;
+        }
+
+        public int GetDeletedIndexVersion(IndexDefinition definition)
+        {
+            var currentIndexVersion = definition.IndexVersion ?? 0;
+            int indexVersionFromTombstones;
+            CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones,
+                definition.Name, currentIndexVersion, definition.Name, out indexVersionFromTombstones);
+
+            int indexVersionFromPendingDeletions;
+            CheckIfIndexVersionIsEqualOrSmaller("Raven/Indexes/PendingDeletion",
+                definition.IndexId.ToString(CultureInfo.InvariantCulture),
+                currentIndexVersion, definition.Name, out indexVersionFromPendingDeletions);
+
+            return Math.Max(indexVersionFromTombstones, indexVersionFromPendingDeletions);
         }
 
         public bool Contains(string indexName)
@@ -509,10 +586,13 @@ namespace Raven.Database.Storage
             int ignoredId;
             if (transformCache.TryRemove(id, out ignoredViewGenerator))
                 transformNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
-            TransformerDefinition ignoredIndexDefinition;
-            transformDefinitions.TryRemove(id, out ignoredIndexDefinition);
+
+            TransformerDefinition _;
+            transformDefinitions.TryRemove(id, out _);
+
             if (configuration.RunInMemory)
                 return;
+
             File.Delete(GetIndexSourcePath(id) + ".transform");
             UpdateTransformerMappingFile();
         }
@@ -546,7 +626,23 @@ namespace Raven.Database.Storage
             index.IsSideBySideIndex = false;
 
             var indexToReplace = GetIndexDefinition(indexToSwapName);
-            index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;
+            if (indexToReplace != null)
+            {
+                // keep the index version of the replaced index
+                index.IndexVersion = (indexToReplace.IndexVersion ?? 0) + 1;
+                index.Name = indexToReplace.Name;
+            }
+            else
+            {
+                index.Name = indexToSwapName;
+
+                int indexVersionFromTombstones;
+                CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones,
+                    indexToSwapName, 0, indexToSwapName, out indexVersionFromTombstones);
+
+                index.IndexVersion = indexVersionFromTombstones + 1;
+            }
+
             CreateAndPersistIndex(index);
             AddIndex(index.IndexId, index);
 

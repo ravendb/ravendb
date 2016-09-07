@@ -427,6 +427,7 @@
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
     <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
+    <Compile Include="Util\InterlockedLock.cs" />
     <Compile Include="Util\AssemblyHelper.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
     <Compile Include="Util\AsyncHelpers.cs" />
