@@ -7,6 +7,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Linq;
 using System.Linq;
+using Raven.Client.Data;
 
 namespace Raven.Client.Shard
 {
@@ -26,7 +27,7 @@ namespace Raven.Client.Shard
             this.asyncShardDbCommands = asyncShardDbCommands;
         }
 
-        public override FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
+        public override FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize)
         {
             var indexQuery = GetIndexQuery(false);
             var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
@@ -39,7 +40,7 @@ namespace Raven.Client.Shard
             return MergeFacets(results);
         }
 
-        public override FacetResults GetFacets(List<Facet> facets, int start, int? pageSize)
+        public override FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize)
         {
             var indexQuery = GetIndexQuery(false);
             var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
@@ -52,7 +53,7 @@ namespace Raven.Client.Shard
             return MergeFacets(results);
         }
 
-        public override async Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        public override async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var indexQuery = GetIndexQuery(true);
             var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
@@ -65,7 +66,7 @@ namespace Raven.Client.Shard
             return MergeFacets(results);
         }
 
-        public override async Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        public override async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var indexQuery = GetIndexQuery(true);
             var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
@@ -78,7 +79,7 @@ namespace Raven.Client.Shard
             return MergeFacets(results);
         }
 
-        private FacetResults MergeFacets(FacetResults[] results)
+        private FacetedQueryResult MergeFacets(FacetedQueryResult[] results)
         {
             if (results == null)
                 return null;
@@ -87,7 +88,7 @@ namespace Raven.Client.Shard
             if (results.Length == 1)
                 return results[0];
 
-            var finalResult = new FacetResults();
+            var finalResult = new FacetedQueryResult();
 
             var avgs = new Dictionary<FacetValue, List<double>>();
 

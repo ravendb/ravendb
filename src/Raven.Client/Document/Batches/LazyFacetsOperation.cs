@@ -98,16 +98,16 @@ namespace Raven.Client.Document.Batches
             }
 
             var result = (RavenJObject)response.Result;
-            Result = result.JsonDeserialization<FacetResults>();
+            Result = result.JsonDeserialization<FacetedQueryResult>();
         }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var result = new FacetResults();
+            var result = new FacetedQueryResult();
 
             foreach (var response in responses.Select(response => (RavenJObject)response.Result))
             {
-                var facet = response.JsonDeserialization<FacetResults>();
+                var facet = response.JsonDeserialization<FacetedQueryResult>();
                 foreach (var facetResult in facet.Results)
                 {
                     if (!result.Results.ContainsKey(facetResult.Key))

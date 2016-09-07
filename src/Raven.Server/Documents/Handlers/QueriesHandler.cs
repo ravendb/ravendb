@@ -44,8 +44,26 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
+                if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
+                {
+                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
+                    return;
+                }
+
                 await Query(context, indexName, token).ConfigureAwait(false);
             }
+        }
+
+        private Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        {
+            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var facetDoc = GetStringQueryString("facetDoc", required: false);
+
+            var runner = new QueryRunner(Database, context);
+
+            var result = runner.ExecuteFacetedQuery(indexName, query, facetDoc, token);
+
+            return Task.CompletedTask;
         }
 
         private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token)

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
@@ -127,7 +128,7 @@ namespace Raven.Client
         ///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
         /// </summary>
         /// <param name="queries">Array of the faceted queries that will be executed on the server-side</param>
-        FacetResults[] MultiFacetedSearch(params FacetQuery[] queries);
+        FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries);
 
         /// <summary>
         ///     Updates entity with latest changes from server

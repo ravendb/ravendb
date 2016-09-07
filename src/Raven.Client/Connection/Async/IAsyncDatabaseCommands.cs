@@ -200,7 +200,7 @@ namespace Raven.Client.Connection.Async
         ///     Facet.MaxResults
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default(CancellationToken));
+        Task<FacetedQueryResult> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -214,7 +214,7 @@ namespace Raven.Client.Connection.Async
         ///     Facet.MaxResults
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default(CancellationToken));
+        Task<FacetedQueryResult> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Retrieves an index definition from a database.
@@ -265,7 +265,7 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="facetedQueries">List of the faceted queries that will be executed on the server-side</param>
         /// <param name="token">The cancellation token.</param>
-        Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries, CancellationToken token = default(CancellationToken));
+        Task<FacetedQueryResult[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Retrieve the statistics for the database

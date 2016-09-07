@@ -5,10 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
-using Raven.Client.Data;
-
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class FacetQuery
     {

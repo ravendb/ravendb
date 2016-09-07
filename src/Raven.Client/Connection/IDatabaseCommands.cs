@@ -182,7 +182,7 @@ namespace Raven.Client.Connection
         ///     maximum number of results that will be retrieved. Default: null. If set, overrides
         ///     Facet.MaxResults
         /// </param>
-        FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null);
+        FacetedQueryResult GetFacets(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null);
 
         /// <summary>
         ///     Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -195,7 +195,7 @@ namespace Raven.Client.Connection
         ///     maximum number of results that will be retrieved. Default: null. If set, overrides
         ///     Facet.MaxResults
         /// </param>
-        FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
+        FacetedQueryResult GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
 
         /// <summary>
         ///     Retrieves an index definition from a database.
@@ -241,7 +241,7 @@ namespace Raven.Client.Connection
         ///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
         /// </summary>
         /// <param name="facetedQueries">List of the faceted queries that will be executed on the server-side</param>
-        FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries);
+        FacetedQueryResult[] GetMultiFacets(FacetQuery[] facetedQueries);
 
         /// <summary>
         ///     Retrieve the statistics for the database

@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
-    public class FacetResults
+    public class FacetedQueryResult
     {
         /// <summary>
         /// A list of results for the facet.  One entry for each term/range as specified in the facet setup document.
@@ -17,7 +18,7 @@ namespace Raven.Abstractions.Data
 
         public long? IndexStateEtag { get; set; }
 
-        public FacetResults()
+        public FacetedQueryResult()
         {
             Results = new Dictionary<string, FacetResult>();
         }

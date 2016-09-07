@@ -838,6 +838,31 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public FacetedQueryResult FacetedQuery(IndexQueryServerSide query, List<Facet> facets, OperationCancelToken token)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
+                SetPriority(IndexingPriority.Normal);
+
+            MarkQueried(SystemTime.UtcNow);
+
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
+
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            {
+                using (var indexTx = indexContext.OpenReadTransaction())
+                {
+                    using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
+                    {
+                        return reader.FacetedQuery(query, facets, token.Token);
+                    }
+                }
+            }
+        }
+
         public TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             TransactionOperationContext indexContext;

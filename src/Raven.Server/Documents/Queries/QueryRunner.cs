@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
-
+using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
+using Raven.Client.Exceptions;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -51,6 +53,24 @@ namespace Raven.Server.Documents.Queries
             }
 
             return result;
+        }
+
+        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, string facetSetupId, OperationCancelToken token)
+        {
+            var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, facetSetupId);
+            if (facetSetupAsJson == null)
+                throw new DocumentDoesNotExistException(facetSetupId);
+
+            var facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+
+            return ExecuteFacetedQuery(indexName, query, facetSetup.Facets, token);
+        }
+
+        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, List<Facet> facets, OperationCancelToken token)
+        {
+            var index = GetIndex(indexName);
+
+            return index.FacetedQuery(query, facets, token);
         }
 
         public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)

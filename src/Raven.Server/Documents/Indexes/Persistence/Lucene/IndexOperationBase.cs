@@ -6,10 +6,12 @@ using System.Reflection;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-
+using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Queries;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -17,7 +19,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private static readonly ConcurrentDictionary<Type, bool> NotForQuerying = new ConcurrentDictionary<Type, bool>();
 
-        protected RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, Dictionary<string, IndexField> fields, bool forQuerying = false)
+        protected readonly string _indexName;
+
+        protected readonly Logger _logger;
+
+        protected IndexOperationBase(string indexName, Logger logger)
+        {
+            _indexName = indexName;
+            _logger = logger;
+        }
+        
+        protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, Dictionary<string, IndexField> fields, bool forQuerying = false)
         {
             if (fields.ContainsKey(Constants.Indexing.Fields.AllFields))
                 throw new InvalidOperationException($"Detected '{Constants.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
@@ -78,6 +90,50 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             return analyzerInstance;
+        }
+
+        protected Query GetLuceneQuery(string q, IndexQueryServerSide query, Analyzer analyzer)
+        {
+            Query documentQuery;
+
+            if (string.IsNullOrEmpty(q))
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Issuing query on index {_indexName} for all documents");
+
+                documentQuery = new MatchAllDocsQuery();
+            }
+            else
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Issuing query on index {_indexName} for: {q}");
+
+                // RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
+                try
+                {
+                    //_persistance._a
+                    //searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
+                    //searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
+                    //{
+                    //    Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.PublicName, query.Query, currentAnalyzer);
+                    //    if (newAnalyzer != currentAnalyzer)
+                    //    {
+                    //        DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
+                    //    }
+                    //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
+                    //});
+
+                    documentQuery = QueryBuilder.BuildQuery(q, query, analyzer);
+                }
+                finally
+                {
+                    //DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
+                }
+            }
+
+            //var afterTriggers = ApplyIndexTriggers(documentQuery);
+
+            return documentQuery;
         }
     }
 }

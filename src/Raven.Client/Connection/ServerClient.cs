@@ -428,17 +428,17 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetTermsAsync(index, field, fromValue, pageSize));
         }
 
-        public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
+        public FacetedQueryResult GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize));
         }
 
-        public FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries)
+        public FacetedQueryResult[] GetMultiFacets(FacetQuery[] facetedQueries)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetMultiFacetsAsync(facetedQueries));
         }
 
-        public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
+        public FacetedQueryResult GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize));
         }

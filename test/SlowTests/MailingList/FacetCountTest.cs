@@ -99,7 +99,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void TestFacetsCount()
         {
             using (var store = GetDocumentStore())
@@ -119,12 +119,14 @@ namespace SlowTests.MailingList
                     {
                         RavenQueryStatistics stats;
                         var query = session.Advanced.DocumentQuery<WodsProjection, Wod_Search>()
-                                            .SetResultTransformer(wodSearchTransformer.TransformerName)
-                                           .WaitForNonStaleResults()
-                                           .Statistics(out stats)
-                                           .SelectFields<WodsProjection>();
+                            .SetResultTransformer(wodSearchTransformer.TransformerName)
+                            .WaitForNonStaleResults()
+                            .Statistics(out stats)
+                            .SelectFields<WodsProjection>();
 
-                        query.AndAlso().WhereEquals("ExerciseList", "Pull-ups");
+                        query
+                            .AndAlso()
+                            .WhereEquals("ExerciseList", "Pull-ups");
 
                         var wods = query.ToList();
 
