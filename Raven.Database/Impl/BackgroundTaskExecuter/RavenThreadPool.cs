@@ -536,7 +536,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
         }
 
-        public void ExecuteBatch<T>(IList<T> src, Action<T> action, DocumentDatabase database, string description = null,
+        public void ExecuteBatch<T>(IList<T> src, Action<T> action, DocumentDatabase database = null, string description = null,
             bool allowPartialBatchResumption = false)
         {
             //, int completedMultiplier = 2, int freeThreadsMultiplier = 2, int maxWaitMultiplier = 1
@@ -577,7 +577,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     {
                         try
                         {
-                            database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+                            database?.WorkContext.CancellationToken.ThrowIfCancellationRequested();
                             action(src[copy]);
                         }
                         catch (Exception e)
