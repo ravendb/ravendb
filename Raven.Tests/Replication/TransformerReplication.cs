@@ -538,6 +538,7 @@ namespace Raven.Tests.Replication
 
                 for (var i = 0; i < 30; i++)
                 {
+                    //just for starting the initial index and transformer replication
                     source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
                     destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
                 }
@@ -596,6 +597,7 @@ namespace Raven.Tests.Replication
 
                 for (var i = 0; i < 30; i++)
                 {
+                    //just for starting the initial index and transformer replication
                     source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
                     destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
                 }

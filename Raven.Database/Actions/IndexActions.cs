@@ -250,34 +250,21 @@ namespace Raven.Database.Actions
                     return null;
                 }
 
-                if (isReplication)
-                {
-                    // we need to update the lock mode only if it was updated by another server
-                    existingIndex.LockMode = definition.LockMode;
-                }
-
                 // whether we update the index definition or not,
                 // we need to update the index version
                 existingIndex.IndexVersion = definition.IndexVersion =
                     Math.Max(existingIndex.IndexVersion ?? 0, definition.IndexVersion ?? 0);
 
-                switch (existingIndex.LockMode)
+                switch (isReplication)
                 {
-                    case IndexLockMode.SideBySide:
-                        if (isUpdateBySideSide == false)
-                        {
-                            Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
-                            throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
-                        }
-
-                        //keep the SideBySide lock mode from the replaced index
-                        definition.LockMode = IndexLockMode.SideBySide;
+                    case true:
+                        // we need to update the lock mode only if it was updated by another server
+                        existingIndex.LockMode = definition.LockMode;
                         break;
-                    case IndexLockMode.LockedIgnore:
-                        Log.Info("Index {0} not saved because it was lock (with ignore)", name);
-                        return null;
-                    case IndexLockMode.LockedError:
-                        throw new InvalidOperationException("Can not overwrite locked index: " + name);
+                    default:
+                        if (CanUpdateIndex(name, definition, isUpdateBySideSide, existingIndex) == false)
+                            return null;
+                        break;
                 }
             }
 
@@ -327,6 +314,30 @@ namespace Raven.Database.Actions
             }));
 
             return name;
+        }
+
+        private bool CanUpdateIndex(string name, IndexDefinition definition, bool isUpdateBySideSide, IndexDefinition existingIndex)
+        {
+            switch (existingIndex.LockMode)
+            {
+                case IndexLockMode.SideBySide:
+                    if (isUpdateBySideSide == false)
+                    {
+                        Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
+                        throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
+                    }
+
+                    //keep the SideBySide lock mode from the replaced index
+                    definition.LockMode = IndexLockMode.SideBySide;
+                    break;
+                case IndexLockMode.LockedIgnore:
+                    Log.Info("Index {0} not saved because it was lock (with ignore)", name);
+                    return false;
+                case IndexLockMode.LockedError:
+                    throw new InvalidOperationException("Can not overwrite locked index: " + name);
+            }
+
+            return true;
         }
 
         private int GetOriginalIndexVersion(string name)

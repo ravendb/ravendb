@@ -104,32 +104,34 @@ namespace Raven.Database.Actions
                     return null;
                 }
 
-                if (isReplication)
-                {
-                    // we need to update the lock mode only if it was updated by another server
-                    existingDefinition.LockMode = definition.LockMode;
-                }
-
                 // whether we update the transformer definition or not,
                 // we need to update the transformer version
                 existingDefinition.TransformerVersion = definition.TransformerVersion =
                     Math.Max(existingDefinition.TransformerVersion ?? 0, definition.TransformerVersion ?? 0);
 
-                switch (existingDefinition.LockMode)
+                switch (isReplication)
                 {
-                    case TransformerLockMode.Unlock:
-                        if (existingDefinition.Equals(definition))
-                            return name; // no op for the same transformer
-
-                        if (isReplication == false)
-                            definition.TransformerVersion++;
-                            
+                    case true:
+                        // we need to update the lock mode only if it was updated by another server
+                        existingDefinition.LockMode = definition.LockMode;
                         break;
-                    case TransformerLockMode.LockedIgnore:
-                        Log.Info("Transformer {0} not saved because it was lock (with ignore)", name);
-                        return name;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        switch (existingDefinition.LockMode)
+                        {
+                            case TransformerLockMode.Unlock:
+                                if (existingDefinition.Equals(definition))
+                                    return name; // no op for the same transformer
+
+                                definition.TransformerVersion++;
+
+                                break;
+                            case TransformerLockMode.LockedIgnore:
+                                Log.Info("Transformer {0} not saved because it was lock (with ignore)", name);
+                                return name;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                        break;
                 }
             }
             else if (isReplication == false)

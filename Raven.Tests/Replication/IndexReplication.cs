@@ -704,6 +704,7 @@ namespace Raven.Tests.Replication
 
                 for (var i = 0; i < 30; i++)
                 {
+                    //just for starting the initial index and transformer replication
                     source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
                     destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
                 }
@@ -762,6 +763,7 @@ namespace Raven.Tests.Replication
 
                 for (var i = 0; i < 30; i++)
                 {
+                    //just for starting the initial index and transformer replication
                     source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
                     destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
                 }
@@ -800,6 +802,124 @@ namespace Raven.Tests.Replication
                 index = destination.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
                 Assert.Equal(index.LockMode, IndexLockMode.Unlock);
                 Assert.True(updatedUserIndex.CreateIndexDefinition().Map.Equals(index.Map));
+            }
+        }
+
+        [Fact]
+        public void can_replicate_index_when_lock_mode_is_error()
+        {
+            var requestFactory = new HttpRavenRequestFactory();
+            using (var sourceServer = GetNewServer(8077))
+            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+            using (var destinationServer = GetNewServer(8078))
+            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer, fiddler: true))
+            {
+                CreateDatabaseWithReplication(source, "testDB");
+                CreateDatabaseWithReplication(destination, "testDB");
+
+                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+                destination.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                SetupReplication(source, "testDB", store => false, destination);
+                SetupReplication(destination, "testDB", store => false, source);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    //just for starting the initial index and transformer replication
+                    source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
+                    destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
+                }
+
+                WaitForDocument(destination.DatabaseCommands.ForDatabase("testDB"), "test29");
+                WaitForDocument(source.DatabaseCommands.ForDatabase("testDB"), "test79");
+
+                var userIndex = new UserIndex();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+
+                //replicating indexes from the source
+                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                //only Raven/ByEntityName
+                Assert.Equal(2, destination.DatabaseCommands.GetStatistics().Indexes.Length);
+
+                source.DatabaseCommands.ForDatabase("testDB").SetIndexLock(userIndex.IndexName, IndexLockMode.LockedError);
+
+                var userIndex2 = new AnotherUserIndex();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex2.IndexName, userIndex2.CreateIndexDefinition());
+
+                //replicating indexes from the source
+                replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                //the new index should be replicated
+                Assert.Equal(3, destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Length);
+            }
+        }
+
+        [Fact]
+        public void can_replicate_index_when_lock_mode_is_side_by_side()
+        {
+            var requestFactory = new HttpRavenRequestFactory();
+            using (var sourceServer = GetNewServer(8077))
+            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+            using (var destinationServer = GetNewServer(8078))
+            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer, fiddler: true))
+            {
+                CreateDatabaseWithReplication(source, "testDB");
+                CreateDatabaseWithReplication(destination, "testDB");
+
+                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+                destination.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                SetupReplication(source, "testDB", store => false, destination);
+                SetupReplication(destination, "testDB", store => false, source);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    //just for starting the initial index and transformer replication
+                    source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
+                    destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
+                }
+
+                WaitForDocument(destination.DatabaseCommands.ForDatabase("testDB"), "test29");
+                WaitForDocument(source.DatabaseCommands.ForDatabase("testDB"), "test79");
+
+                var userIndex = new UserIndex();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+
+                //replicating indexes from the source
+                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                //only Raven/ByEntityName
+                Assert.Equal(2, destination.DatabaseCommands.GetStatistics().Indexes.Length);
+
+                source.DatabaseCommands.ForDatabase("testDB").SetIndexLock(userIndex.IndexName, IndexLockMode.SideBySide);
+
+                var userIndex2 = new AnotherUserIndex();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex2.IndexName, userIndex2.CreateIndexDefinition());
+
+                //replicating indexes from the source
+                replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                //the new index should be replicated
+                Assert.Equal(3, destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Length);
             }
         }
 
