@@ -40,7 +40,20 @@ namespace Raven.Tests.Issues
                         new[] { document1Id, document1Id, document2Id, document1Id, document2Id });
                     for (int i = 0; i < docs.Length; i++)
                     {
-                        Assert.NotNull(docs[i]);
+                        var output = docs[i];
+                        Assert.NotNull(output);
+                        switch (i)
+                        {
+                            case 0:
+                            case 1:
+                            case 3:
+                                Assert.Equal(1, output.Value);
+                                break;
+                            case 2:
+                            case 4:
+                                Assert.Equal(2, output.Value);
+                                break;
+                        }
                     }
                 }
             }
@@ -74,13 +87,27 @@ namespace Raven.Tests.Issues
                         new[] { document1Id, document1Id, "no_document", document2Id, document1Id, document2Id });
                     for (int i = 0; i < docs.Length; i++)
                     {
+                        var output = docs[i];
                         if (i == 2)
                         {
-                            Assert.Null(docs[i]);
+                            Assert.Null(output);
                             continue;
                         }
 
-                        Assert.NotNull(docs[i]);
+                        Assert.NotNull(output);
+
+                        switch (i)
+                        {
+                            case 0:
+                            case 1:
+                            case 4:
+                                Assert.Equal(1, output.Value);
+                                break;
+                            case 3:
+                            case 5:
+                                Assert.Equal(2, output.Value);
+                                break;
+                        }
                     }
                 }
             }
@@ -96,7 +123,7 @@ namespace Raven.Tests.Issues
         {
             public class Output
             {
-                public string ValueFormatted { get; set; }
+                public int Value { get; set; }
             }
 
             public TestDocumentTransformer()
@@ -105,7 +132,7 @@ namespace Raven.Tests.Issues
                     from result in results
                     select new Output
                     {
-                        ValueFormatted = string.Format("Formatted Value is {0}", result)
+                        Value = result.Value
                     };
             }
         }
