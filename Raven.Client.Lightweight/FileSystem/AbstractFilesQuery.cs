@@ -493,7 +493,7 @@ namespace Raven.Client.FileSystem
                 }
                 if (first == false)
                 {
-                    queryText.Append(",");
+                    queryText.Append(" , ");
                 }
                 first = false;
                 var nestedWhereParams = new WhereParams
