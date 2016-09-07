@@ -423,7 +423,21 @@ namespace Raven.Database.Storage
         {
             var currentIndexDefinition = GetIndexDefinition(newIndexDef.Name);
             if (currentIndexDefinition == null)
+            {
+                if (CheckIfIndexIsBeenDeleted(newIndexDef))
+                {
+                    //index is been deleted ignoring this index
+                    return IndexCreationOptions.Noop;
+                }
+
+                if (newIndexDef.IndexVersion == null)
+                    newIndexDef.IndexVersion = 0;
+
                 return IndexCreationOptions.Create;
+            }
+
+            if (newIndexDef.IndexVersion == null)
+                newIndexDef.IndexVersion = currentIndexDefinition.IndexVersion + 1;
 
             if (currentIndexDefinition.IsTestIndex) // always update test indexes
                 return IndexCreationOptions.Update;
@@ -436,6 +450,34 @@ namespace Raven.Database.Storage
             // try to compare to find changes which doesn't require removing compiled index
             return currentIndexDefinition.Equals(newIndexDef, ignoreFormatting: true, ignoreMaxIndexOutput: true)
                 ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex : IndexCreationOptions.Update;
+        }
+
+        private bool CheckIfIndexIsBeenDeleted(IndexDefinition definition)
+        {
+            return CheckIfIndexVersionIsEqual(definition, Constants.RavenReplicationIndexesTombstones)
+                || CheckIfIndexVersionIsEqual(definition, "Raven/Indexes/PendingDeletion");
+        }
+
+        private bool CheckIfIndexVersionIsEqual(IndexDefinition definition, string listName)
+        {
+            bool res = false;
+            if (definition.IndexVersion == null) return false;
+            transactionalStorage.Batch(action =>
+            {
+                var li = action.Lists.Read(listName, definition.Name);
+                if (li == null) return;
+                int version;
+                string versionStr = li.Data.Value<string>("IndexVersion");
+                // The index that we are trying to add is deleted
+                if (int.TryParse(versionStr, out version))
+                {
+                    if (version == definition.IndexVersion.Value)
+                    {
+                        res = true;
+                    }
+                }
+            });
+            return res;
         }
 
         public bool Contains(string indexName)

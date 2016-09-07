@@ -160,18 +160,32 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 case IndexChangeTypes.IndexAdded:
                     //if created index with the same name as deleted one, we should prevent its deletion replication
-                    docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name));
+                    docDb.TransactionalStorage.Batch(
+                        accessor =>
+                        {
+                            var li = accessor.Lists.Read(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
+                            if (li == null) return;
+                            int version;
+                            string versionStr = li.Data.Value<string>("IndexVersion");
+                            if (int.TryParse(versionStr, out version))
+                            {
+                                if (eventArgs.Version.HasValue && version < eventArgs.Version.Value)
+                                {
+                                    accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, eventArgs.Name);
+                                }
+                            }
+                        });
                     break;
                 case IndexChangeTypes.IndexRemoved:
                     var metadata = new RavenJObject
                     {
                         {Constants.RavenIndexDeleteMarker, true},
                         {Constants.RavenReplicationSource, docDb.TransactionalStorage.Id.ToString()},
-                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)}
+                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(docDb)},
+                        {"IndexVersion", eventArgs.Version }
                     };
 
                     docDb.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationIndexesTombstones, eventArgs.Name, metadata, UuidType.Indexing));
-
                     break;
             }
         }

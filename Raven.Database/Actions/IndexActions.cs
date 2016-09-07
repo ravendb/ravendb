@@ -292,6 +292,7 @@ namespace Raven.Database.Actions
             {
                 Name = name,
                 Type = IndexChangeTypes.IndexAdded,
+                Version = definition.IndexVersion
             }));
 
             return name;
@@ -965,7 +966,8 @@ namespace Raven.Database.Actions
                 {
                     TimeOfOriginalDeletion = SystemTime.UtcNow,
                     instance.IndexId,
-                    IndexName = instance.Name
+                    IndexName = instance.Name,
+                    instance.IndexVersion
                 })), UuidType.Tasks));
 
                 // Delete the main record synchronously
@@ -991,6 +993,7 @@ namespace Raven.Database.Actions
                     {
                         Name = instance.Name,
                         Type = indexChangeType,
+                        Version = instance.IndexVersion
                     })
                 );
             }
