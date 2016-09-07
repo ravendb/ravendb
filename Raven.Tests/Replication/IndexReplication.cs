@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
@@ -737,6 +738,67 @@ namespace Raven.Tests.Replication
 
                 //the new index shouldn't be overwritten
                 index = source.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
+                Assert.True(updatedUserIndex.CreateIndexDefinition().Map.Equals(index.Map));
+            }
+        }
+
+        [Fact]
+        public void can_update_index_lock_mode()
+        {
+            var requestFactory = new HttpRavenRequestFactory();
+            using (var sourceServer = GetNewServer(8077))
+            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+            using (var destinationServer = GetNewServer(8078))
+            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer, fiddler: true))
+            {
+                CreateDatabaseWithReplication(source, "testDB");
+                CreateDatabaseWithReplication(destination, "testDB");
+
+                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+                destination.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                SetupReplication(source, "testDB", store => false, destination);
+                SetupReplication(destination, "testDB", store => false, source);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
+                    destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
+                }
+
+                WaitForDocument(destination.DatabaseCommands.ForDatabase("testDB"), "test29");
+                WaitForDocument(source.DatabaseCommands.ForDatabase("testDB"), "test79");
+
+                var userIndex = new UserIndex();
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+                source.DatabaseCommands.ForDatabase("testDB").SetIndexLock(userIndex.IndexName, IndexLockMode.LockedIgnore);
+
+                //replicating index from the source
+                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                var updatedUserIndex = new UserIndex_Extended();
+                source.DatabaseCommands.ForDatabase("testDB").SetIndexLock(updatedUserIndex.IndexName, IndexLockMode.Unlock);
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(updatedUserIndex.IndexName, updatedUserIndex.CreateIndexDefinition(), true);
+
+                var index = source.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
+                Assert.True(updatedUserIndex.CreateIndexDefinition().Map.Equals(index.Map));
+
+                //replicating index from the source
+                replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
+                replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                //the index lock mode should change
+                index = destination.DatabaseCommands.ForDatabase("testDB").GetIndex(userIndex.IndexName);
+                Assert.Equal(index.LockMode, IndexLockMode.Unlock);
                 Assert.True(updatedUserIndex.CreateIndexDefinition().Map.Equals(index.Map));
             }
         }

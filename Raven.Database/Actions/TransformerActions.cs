@@ -104,6 +104,12 @@ namespace Raven.Database.Actions
                     return null;
                 }
 
+                if (isReplication)
+                {
+                    // we need to update the lock mode only if it was updated by another server
+                    existingDefinition.LockMode = definition.LockMode;
+                }
+
                 // whether we update the transformer definition or not,
                 // we need to update the transformer version
                 existingDefinition.TransformerVersion = definition.TransformerVersion =
@@ -131,7 +137,7 @@ namespace Raven.Database.Actions
                 // we're creating a new transformer,
                 // we need to take the transformer version of the deleted transformer (if exists)
                 definition.TransformerVersion = GetDeletedTransformerId(definition.Name);
-                definition.TransformerVersion++;
+                definition.TransformerVersion = (definition.TransformerVersion ?? 0) + 1;
             }
 
             if (definition.TransformerVersion == null)

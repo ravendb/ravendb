@@ -250,6 +250,12 @@ namespace Raven.Database.Actions
                     return null;
                 }
 
+                if (isReplication)
+                {
+                    // we need to update the lock mode only if it was updated by another server
+                    existingIndex.LockMode = definition.LockMode;
+                }
+
                 // whether we update the index definition or not,
                 // we need to update the index version
                 existingIndex.IndexVersion = definition.IndexVersion =
@@ -286,14 +292,14 @@ namespace Raven.Database.Actions
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
                     if (isReplication == false)
-                        definition.IndexVersion = definition.IndexVersion != null ? definition.IndexVersion + 1 : 0;
+                        definition.IndexVersion = (definition.IndexVersion ?? 0) + 1;
                     return null;
                 case IndexCreationOptions.Update:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     DeleteIndex(name);
                     if (isReplication == false)
-                        definition.IndexVersion = definition.IndexVersion != null ? definition.IndexVersion + 1 : 0;
+                        definition.IndexVersion = (definition.IndexVersion ?? 0) + 1;
                     break;
                 case IndexCreationOptions.Create:
                     if (isReplication == false)
