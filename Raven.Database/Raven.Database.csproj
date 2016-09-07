@@ -244,6 +244,9 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Bundles\PeriodicExports\Controllers\NonAdminPeriodicBackupConfigurationController.cs" />
     <Compile Include="Bundles\Replication\Controllers\ReplicationTopologyController.cs" />
+    <Compile Include="Bundles\Replication\Tasks\TransformerReplicationTask.cs" />
+    <Compile Include="Bundles\Replication\Tasks\ReplicationTaskBase.cs" />
+    <Compile Include="Bundles\Replication\Tasks\IndexReplicationTask.cs" />
     <Compile Include="Bundles\Replication\Triggers\RenameConflictDocumentIdIndexTrigger.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationClassifier.cs" />
     <Compile Include="Bundles\Versioning\Data\FileVersioningConfiguration.cs" />

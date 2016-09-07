@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -19,12 +15,12 @@ namespace Raven.Tests.Issues
             {
                 store.ExecuteTransformer(new SimpleTransformer());
                 //Checking that we can lock transformer
-                store.DatabaseCommands.SetTransformerLock("SimpleTransformer",TransformerLockMode.LockedIgnore);
+                store.DatabaseCommands.SetTransformerLock("SimpleTransformer", TransformerLockMode.LockedIgnore);
                 var transformerDefinition = store.DatabaseCommands.GetTransformer("SimpleTransformer");
                 var oldTransformResults = transformerDefinition.TransformResults;
                 Assert.Equal(transformerDefinition.LockMode, TransformerLockMode.LockedIgnore);
                 //Checking that we can't change a locked transformer
-                transformerDefinition.TransformResults = newTransformResults;
+                transformerDefinition.TransformResults = NewTransformResults;
                 store.DatabaseCommands.PutTransformer("SimpleTransformer", transformerDefinition);
                 transformerDefinition = store.DatabaseCommands.GetTransformer("SimpleTransformer");
                 Assert.Equal(transformerDefinition.TransformResults, oldTransformResults);
@@ -33,14 +29,42 @@ namespace Raven.Tests.Issues
                 transformerDefinition = store.DatabaseCommands.GetTransformer("SimpleTransformer");
                 Assert.Equal(transformerDefinition.LockMode, TransformerLockMode.Unlock);
                 //checking that the transformer is indeed overridden
-                transformerDefinition.TransformResults = newTransformResults;
+                transformerDefinition.TransformResults = NewTransformResults;
                 store.DatabaseCommands.PutTransformer("SimpleTransformer", transformerDefinition);
                 transformerDefinition = store.DatabaseCommands.GetTransformer("SimpleTransformer");
-                Assert.Equal(transformerDefinition.TransformResults, newTransformResults);
+                Assert.Equal(NewTransformResults, transformerDefinition.TransformResults);
             }
         }
 
-        private const string newTransformResults = "from result in results  select new { Number = result.Number + int.MaxValue };";
+        [Fact]
+        public void CanLockIndexes()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.ExecuteIndex(new SimpleIndex());
+                //Checking that we can lock index
+                store.DatabaseCommands.SetIndexLock("SimpleIndex", IndexLockMode.LockedIgnore);
+                var indexDefinition = store.DatabaseCommands.GetIndex("SimpleIndex");
+                var map = indexDefinition.Map;
+                Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);
+                //Checking that we can't change a locked index
+                indexDefinition.Map = NewMap;
+                store.DatabaseCommands.PutIndex("SimpleIndex", indexDefinition, true);
+                indexDefinition = store.DatabaseCommands.GetIndex("SimpleIndex");
+                Assert.Equal(indexDefinition.Map, map);
+                //Checking that we can unlock a index
+                store.DatabaseCommands.SetIndexLock("SimpleIndex", IndexLockMode.Unlock);
+                indexDefinition = store.DatabaseCommands.GetIndex("SimpleIndex");
+                Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
+                //checking that the index is indeed overridden
+                indexDefinition.Map = NewMap;
+                store.DatabaseCommands.PutIndex("SimpleIndex", indexDefinition, true);
+                indexDefinition = store.DatabaseCommands.GetIndex("SimpleIndex");
+                Assert.Equal(NewMap, indexDefinition.Map);
+            }
+        }
+
+        private const string NewTransformResults = "from result in results  select new { Number = result.Number + int.MaxValue };";
 
         public class SimpleTransformer : AbstractTransformerCreationTask<SimpleData>
         {
@@ -50,9 +74,26 @@ namespace Raven.Tests.Issues
                                               select new { Number = result.Number ^ int.MaxValue };
             }
         }
+
         public class SimpleData
         {
+            public string Id { get; set; }
+
             public int Number { get; set; }
+        }
+
+        private const string NewMap = "from doc in docs.SimpleDatas select new { Id = doc.Id, Number = doc.Number };";
+
+        public class SimpleIndex : AbstractIndexCreationTask<SimpleData>
+        {
+            public SimpleIndex()
+            {
+                Map = docs => from doc in docs
+                              select new
+                              {
+                                  doc.Number
+                              };
+            }
         }
     }
 }

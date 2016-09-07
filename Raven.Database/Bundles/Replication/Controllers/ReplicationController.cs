@@ -613,7 +613,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
                 return InternalPutIndex(sideBySideReplicationInfo.Index.Name,
                     sideBySideReplicationInfo.SideBySideIndex,
-                    string.Format("Index with the name {0} wasn't found, so we created it with side-by-side index definition. (Perhaps it was deleted?)", sideBySideReplicationInfo.Index.Name));
+                    string.Format("Index with the name {0} wasn't found, so we created it with side-by-side index definition. " +
+                                  "(Perhaps it was deleted?)", sideBySideReplicationInfo.Index.Name));
             }
 
             if (index.Equals(sideBySideReplicationInfo.SideBySideIndex, false))
@@ -682,7 +683,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             try
             {
-                Database.Indexes.PutIndex(indexName, indexToUpdate);
+                Database.Indexes.PutIndex(indexName, indexToUpdate, isReplication: true);
                 return GetMessageWithObject(new
                 {
                     Index = indexToUpdate.Name,
@@ -716,11 +717,19 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
             {
-                replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, true, false);
+                replicationTask.IndexReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
                 return GetEmptyMessage();
             }
 
-            replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes:true, replicateTransformers:false);
+            var indexName = GetQueryStringValue("indexName");
+
+            if (string.IsNullOrEmpty(indexName) == false)
+            {
+                replicationTask.IndexReplication.Execute(indexName);
+                return GetEmptyMessage();
+            }
+
+            replicationTask.IndexReplication.Execute();
             return GetEmptyMessage();
         }
 
@@ -737,11 +746,19 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
             {
-                replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, false);
+                replicationTask.TransformerReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
                 return GetEmptyMessage();
             }
 
-            replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes: false);
+            var transformerName = GetQueryStringValue("transformerName");
+
+            if (string.IsNullOrEmpty(transformerName) == false)
+            {
+                replicationTask.TransformerReplication.Execute(transformerName);
+                return GetEmptyMessage();
+            }
+
+            replicationTask.TransformerReplication.Execute();
             return GetEmptyMessage();
         }
 

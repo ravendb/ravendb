@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task Index_replication_with_index_delete_should_propagate_as_usual()
         {
-            using(var source = CreateStore())
+            using (var source = CreateStore())
             using (var destination = CreateStore())
             {
                 var testIndex = new RavenDB_3232.TestIndex();
@@ -56,17 +56,17 @@ namespace Raven.Tests.Issues
 
                 var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
                 sourceReplicationTask.Pause();
-                sourceReplicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
+                sourceReplicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
 
                 SetupReplication(source.DatabaseCommands, destination);
 
                 WaitForIndexing(source);
-                sourceReplicationTask.ReplicateIndexesAndTransformersTask(null); //replicate index create
+                sourceReplicationTask.IndexReplication.Execute(); //replicate index create
 
                 source.DatabaseCommands.DeleteIndex(testIndex.IndexName);
 
                 shouldRecordRequests = true;
-                sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+                sourceReplicationTask.IndexReplication.Execute();
 
 
                 Assert.Equal(1, requestLog.Count(x => x.Method.Method == "DELETE"));
@@ -75,10 +75,10 @@ namespace Raven.Tests.Issues
 
         [Fact]
         public async Task Index_replication_with_side_by_side_indexes_should_not_propagate_replaced_index_tombstones()
-        {				
-            using(var source = CreateStore())
-            using(var destination = CreateStore())			
-            {				
+        {
+            using (var source = CreateStore())
+            using (var destination = CreateStore())
+            {
                 var oldIndexDef = new IndexDefinition
                 {
                     Map = "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}"
@@ -96,14 +96,14 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
                 var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
-                sourceReplicationTask.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
+                sourceReplicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromSeconds(0);
 
                 sourceReplicationTask.Pause(); //pause replciation task _before_ setting up replication
 
                 SetupReplication(source.DatabaseCommands, destination);
 
                 var mre = new ManualResetEventSlim();
-                
+
                 sourceDatabase.Notifications.OnIndexChange += (database, notification) =>
                 {
                     if (notification.Type == IndexChangeTypes.SideBySideReplace)
@@ -116,10 +116,10 @@ namespace Raven.Tests.Issues
                 sourceDatabase.SpinBackgroundWorkers();
                 WaitForIndexing(source); //now old index should be a tombstone and side-by-side replaced it.
                 mre.Wait();
-                sourceReplicationTask.ReplicateIndexesAndTransformersTask(null);
+                sourceReplicationTask.IndexReplication.Execute();
 
-                Assert.Equal(0,requestLog.Count(x => x.Method.Method == "DELETE"));
+                Assert.Equal(0, requestLog.Count(x => x.Method.Method == "DELETE"));
             }
-        }		
+        }
     }
 }
