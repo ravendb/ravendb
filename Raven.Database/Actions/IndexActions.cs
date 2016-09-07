@@ -243,21 +243,24 @@ namespace Raven.Database.Actions
             var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
             if (existingIndex != null)
             {
-                if (definition.IndexVersion != null && existingIndex.IndexVersion != null &&
-                    definition.IndexVersion <= existingIndex.IndexVersion)
-                {
-                    //this new index is an older version of the current one
-                    return null;
-                }
+                var newIndexVersion = definition.IndexVersion;
+                var currentIndexVersion = existingIndex.IndexVersion;
 
                 // whether we update the index definition or not,
                 // we need to update the index version
                 existingIndex.IndexVersion = definition.IndexVersion =
-                    Math.Max(existingIndex.IndexVersion ?? 0, definition.IndexVersion ?? 0);
+                    Math.Max(currentIndexVersion ?? 0, newIndexVersion ?? 0);
 
                 switch (isReplication)
                 {
                     case true:
+                        if (newIndexVersion != null && currentIndexVersion != null &&
+                            newIndexVersion <= currentIndexVersion)
+                        {
+                            //this new index is an older version of the current one
+                            return null;
+                        }
+
                         // we need to update the lock mode only if it was updated by another server
                         existingIndex.LockMode = definition.LockMode;
                         break;
