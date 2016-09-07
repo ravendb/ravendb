@@ -888,11 +888,10 @@ namespace Raven.Server.Documents
 		    int keySize;
 		    GetLowerKeySliceAndStorageKey(context,key,out lowerKey,out lowerSize,out keyPtr, out keySize);
 		    var loweredKey = Slice.External(context.Allocator, lowerKey, lowerSize);
-
 			var result = GetDocumentOrTombstone(context, loweredKey);
 		    if (result.Item2 != null) //already have a tombstone -> need to update the change vector
 		    {
-			    UpdateTombstoneChangeVector(context, changeVector, result.Item2, loweredKey);
+			    UpdateTombstoneChangeVector(context, changeVector, result.Item2,lowerKey,lowerSize,keyPtr,keySize);
 		    }
 		    else
 		    {
@@ -948,8 +947,9 @@ namespace Raven.Server.Documents
 	    private void UpdateTombstoneChangeVector(
 			DocumentsOperationContext context, 
 			ChangeVectorEntry[] changeVector,
-		    DocumentTombstone tombstone, 
-			Slice loweredKey)
+		    DocumentTombstone tombstone,
+			byte* lowerKey, int lowerSize,
+			byte* keyPtr, int keySize)
 	    {
 		    tombstone.ChangeVector = changeVector;		    
 			var tombstoneTables = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, "#" + tombstone.Collection);
@@ -963,10 +963,10 @@ namespace Raven.Server.Documents
 			    //update change vector and etag of the tombstone, other values are unchanged
 			    var tbv = new TableValueBuilder
 			    {
-				    {loweredKey.Content.Ptr, loweredKey.Content.Length},
+				    {lowerKey, lowerSize},
 				    {(byte*) &newEtagBigEndian, sizeof(long)},
 				    {(byte*) &documentEtagBigEndian, sizeof(long)},
-				    {tombstone.Key.Buffer, tombstone.Key.Length},
+				    {keyPtr, keySize},
 				    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
 				    {tombstone.Collection.Buffer, tombstone.Collection.Size}
 			    };

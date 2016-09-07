@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -18,27 +19,37 @@ namespace Raven.Server.Documents.Handlers
 			var take = GetIntValueQueryString("take", false) ?? 1024;
 
 			HttpContext.Response.StatusCode = 200;
-
 			DocumentsOperationContext context;
 			using (ContextPool.AllocateOperationContext(out context))
 			using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
 			using (context.OpenReadTransaction())
 			{
-				var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take).ToList();
-				var array = new DynamicJsonArray();
-				foreach (var tombstone in tombstones)
+				try
 				{
-					array.Add(new DynamicJsonValue
+					var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take).ToList();
+					var array = new DynamicJsonArray();
+					foreach (var tombstone in tombstones)
 					{
-						["Key"] = tombstone.Key,
-						["Collection"] = tombstone.Collection,
-						["Etag"] = tombstone.Etag,
-						["DeletedEtag"] = tombstone.DeletedEtag,
-						["ChangeVector"] = tombstone.ChangeVector.ToJson()
+						array.Add(new DynamicJsonValue
+						{
+							["Key"] = tombstone.Key.ToString(),
+							["Collection"] = tombstone.Collection.ToString(),
+							["Etag"] = tombstone.Etag,
+							["DeletedEtag"] = tombstone.DeletedEtag,
+							["ChangeVector"] = tombstone.ChangeVector.ToJson()
+						});
+					}
+
+					context.Write(writer, array);
+				}
+				catch (Exception e)
+				{
+					HttpContext.Response.StatusCode = 500;
+					context.Write(writer,new DynamicJsonValue
+					{
+						["Error"] = e.ToString()
 					});
 				}
-
-				context.Write(writer,array);
 			}
 
 			return Task.CompletedTask;
