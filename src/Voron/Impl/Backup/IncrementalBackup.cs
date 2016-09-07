@@ -281,7 +281,11 @@ namespace Voron.Impl.Backup
                                 }
                             }
 
+                            if (lastTxHeader == null)
+                                return; // there was no valid transactions, nothing to do
+
                             env.Options.DataPager.Sync();
+
 
                             var root = Tree.Open(txw, null, &lastTxHeader->Root);
                             root.Name = Constants.RootTreeName;

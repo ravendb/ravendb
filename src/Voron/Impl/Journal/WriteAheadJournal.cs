@@ -459,44 +459,24 @@ namespace Voron.Impl.Journal
 
                     long lastFlushedTransactionId = -1;
 
-                    foreach (var journalFile in jrnls.Where(x => x.Number >= _lastSyncedJournal))
+                    foreach (var journalFile in jrnls)
                     {
+                        if(journalFile.Number < _lastSyncedJournal)
+                            continue;
                         var currentJournalMaxTransactionId = -1L;
 
-                        var iterateLatestAsOf = journalFile.LastTransaction;
+                        var maxTransactionId = journalFile.LastTransaction;
+                        if (oldestActiveTransaction != 0)
+                            maxTransactionId = Math.Min(oldestActiveTransaction-1, maxTransactionId);
 
                         if (forcedFlushOfOldPages && forcedIterateJournalsAsOf.HasValue)
-                            iterateLatestAsOf = Math.Min(journalFile.LastTransaction, forcedIterateJournalsAsOf.Value);
+                            maxTransactionId = Math.Min(journalFile.LastTransaction, forcedIterateJournalsAsOf.Value);
 
-                        foreach (var pagePosition in journalFile.PageTranslationTable.IterateLatestAsOf(iterateLatestAsOf))
+                        foreach (var pagePosition in journalFile.PageTranslationTable.Iterate(_lastSyncedTransactionId, maxTransactionId))
                         {
-                            if (oldestActiveTransaction != 0 &&
-                                pagePosition.Value.TransactionId >= oldestActiveTransaction)
-                            {
-                                if (pagePosition.Value.IsFreedPageMarker)
-                                    continue;
-
-                                // we cannot write this yet, there is a read transaction that might be looking at this
-                                // however, we _aren't_ going to be writing this to the data file, since that would be a 
-                                // waste, we would just overwrite that value in the next flush anyway
-                                PagePosition existingPagePosition;
-                                if (pagesToWrite.TryGetValue(pagePosition.Key, out existingPagePosition) &&
-                                    pagePosition.Value.JournalNumber == existingPagePosition.JournalNumber)
-                                {
-                                    // remove the page only when it comes from the same journal
-                                    // otherwise we can damage the journal's page translation table (PTT)
-                                    // because the existing overwrite in a next journal can be filtered out
-                                    // so we wouldn't write any page to the data file
-                                    pagesToWrite.Remove(pagePosition.Key);
-                                }
-
-                                continue;
-                            }
-
                             if (pagePosition.Value.IsFreedPageMarker)
                             {
-                                // to ensure that we won't overwrite data by a page from the older journal where it wasn't marked as free 
-                                // while now it not being considered to be applied to the data file
+                                // Avoid the case where an older journal file had written a page that was freed in a different journal
                                 pagesToWrite.Remove(pagePosition.Key);
                                 continue;
                             }
@@ -642,8 +622,6 @@ namespace Voron.Impl.Journal
                 _lastDataFileSyncTime = DateTime.UtcNow;
             }
 
-            public Dictionary<long, int> writtenPages = new Dictionary<long, int>(NumericEqualityComparer.Instance);
-
             private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, LowLevelTransaction transaction, bool alreadyInWriteTx)
             {
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
@@ -652,26 +630,29 @@ namespace Voron.Impl.Journal
                 try
                 {
                     var totalPages = 0L;
-                    var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-                                                    .Select(x =>
-                                                    {
-                                                        var scratchNumber = x.Value.ScratchNumber;
-                                                        PagerState pagerState;
-                                                        if (scratchPagerStates.TryGetValue(scratchNumber, out pagerState) == false)
-                                                        {
-                                                            pagerState = scratchBufferPool.GetPagerState(scratchNumber);
-                                                            pagerState.AddRef();
+                    Page last = null;
+                    var sortedPages = new List<Page>();
+                    foreach (var pagePosition in pagesToWrite.Values)
+                    {
+                        var scratchNumber = pagePosition.ScratchNumber;
+                        PagerState pagerState;
+                        if (scratchPagerStates.TryGetValue(scratchNumber, out pagerState) == false)
+                        {
+                            pagerState = scratchBufferPool.GetPagerState(scratchNumber);
+                            pagerState.AddRef();
 
-                                                            scratchPagerStates.Add(scratchNumber, pagerState);
-                                                        }
+                            scratchPagerStates.Add(scratchNumber, pagerState);
+                        }
 
-                                                        var readPage = scratchBufferPool.ReadPage(transaction, scratchNumber, x.Value.ScratchPos, pagerState);
-                                                        totalPages += _waj._dataPager.GetNumberOfPages(readPage);
-                                                        return readPage;
-                                                    })
-                                                    .ToList();
-
-                    var last = sortedPages.Last();
+                        var readPage = scratchBufferPool.ReadPage(transaction, scratchNumber, pagePosition.ScratchPos, pagerState);
+                        totalPages += _waj._dataPager.GetNumberOfPages(readPage);
+                        sortedPages.Add(readPage);
+                        if (last == null)
+                            last = readPage;
+                        if (last.PageNumber < readPage.PageNumber)
+                            last = readPage;
+                    }
+                    Debug.Assert(last != null);
 
                     var numberOfPagesInLastPage = last.IsOverflow == false ? 1 :
                         _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
@@ -979,7 +960,7 @@ namespace Voron.Impl.Journal
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(outputBuffer + totalLength, 0, pageSize - remainder);
+                UnmanagedMemory.Set(compressionBuffer + totalLength, 0, pageSize - remainder);
             }
 
             var txHeaderPage = tx.GetTransactionHeaderPage();

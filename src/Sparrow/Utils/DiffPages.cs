@@ -41,7 +41,7 @@ namespace Sparrow.Utils
                     if (start != i)
                     {
                         if (WriteDiff(start, i - start) == false)
-                            return ;
+                            return;
                     }
                     start = i + 1;
                     _allZeros = true;
@@ -49,7 +49,7 @@ namespace Sparrow.Utils
             }
             if (start != len)
             {
-                WriteDiff(start, Size/sizeof(long) - start);
+                WriteDiff(start, Size / sizeof(long) - start);
             }
         }
 
@@ -71,7 +71,7 @@ namespace Sparrow.Utils
                     if (start != i)
                     {
                         if (WriteDiff(start, i - start) == false)
-                            return ;
+                            return;
                     }
                     start = i + 1;
                     _allZeros = true;
@@ -79,18 +79,21 @@ namespace Sparrow.Utils
             }
             if (start != len)
             {
-                WriteDiff(start, Size/ sizeof(long) - start);
+                WriteDiff(start, Size / sizeof(long) - start);
             }
         }
 
         private bool WriteDiff(int start, int count)
         {
             start *= sizeof(long);
-            count *= sizeof (long);
+            count *= sizeof(long);
             if (_allZeros)
             {
-                if (OutputSize + sizeof (int)*2 > Size)
+                if (OutputSize + sizeof(int) * 2 > Size)
+                {
+                    CopyFullBuffer();
                     return false;
+                }
 
                 ((int*)(Output + OutputSize))[0] = start;
                 ((int*)(Output + OutputSize))[1] = -count;
@@ -99,19 +102,24 @@ namespace Sparrow.Utils
             }
             if (OutputSize + count + sizeof(int) * 2 > Size)
             {
-                // too big, no saving, just use the full modification
-                OutputSize = Size;
-                Memory.BulkCopy(Output, Modified, Size);
-                IsDiff = false;
+                CopyFullBuffer();
                 return false;
             }
-           
+
             ((int*)(Output + OutputSize))[0] = start;
             ((int*)(Output + OutputSize))[1] = count;
             OutputSize += sizeof(int) * 2;
-            Memory.Copy(Output + OutputSize, Modified + start, count );
+            Memory.Copy(Output + OutputSize, Modified + start, count);
             OutputSize += count;
             return true;
+        }
+
+        private void CopyFullBuffer()
+        {
+            // too big, no saving, just use the full modification
+            OutputSize = Size;
+            Memory.BulkCopy(Output, Modified, Size);
+            IsDiff = false;
         }
     }
 
@@ -132,13 +140,13 @@ namespace Sparrow.Utils
 
         public void Apply()
         {
-            
+
             var pos = 0;
             while (pos < DiffSize)
             {
-                int start = ((int*) (Diff + pos))[0];
+                int start = ((int*)(Diff + pos))[0];
                 int count = ((int*)(Diff + pos))[1];
-                pos += sizeof (int)*2;
+                pos += sizeof(int) * 2;
 
                 if (count < 0)
                 {
