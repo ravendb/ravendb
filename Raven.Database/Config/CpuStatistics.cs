@@ -88,9 +88,6 @@ namespace Raven.Database.Config
             }.Start();
         }
 
-        private static int HighCPUMeasuredRow = 0;
-        private static int LowCpuMeasuredInARow = 0;
-
         public static void HandleCpuUsage(float usageInPercents)
         {
 
@@ -117,37 +114,22 @@ namespace Raven.Database.Config
 
             if (average >= HighNotificationThreshold)
             {
-                if (HighCPUMeasuredRow < 5)
+                if (cpuUsage?.Reason != CpuUsageLevel.HighCpuUsage)
                 {
-                    HighCPUMeasuredRow++;
+                    stats.Reason = CpuUsageLevel.HighCpuUsage;
+                    CpuUsageCallsRecordsQueue.Enqueue(stats);
                 }
-                else
-                {
-                    LowCpuMeasuredInARow = 0;
-                    if (cpuUsage?.Reason != CpuUsageLevel.HighCpuUsage)
-                    {
-                        stats.Reason = CpuUsageLevel.HighCpuUsage;
-                        CpuUsageCallsRecordsQueue.Enqueue(stats);
-                    }
-                    RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
-                }
+                RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
+             
             }
             else if (average < LowNotificationThreshold)
             {
-                if (LowCpuMeasuredInARow < 5)
+                if (cpuUsage?.Reason != CpuUsageLevel.LowCpuUsage)
                 {
-                    LowCpuMeasuredInARow++;
+                    stats.Reason = CpuUsageLevel.LowCpuUsage;
+                    CpuUsageCallsRecordsQueue.Enqueue(stats);
                 }
-                else
-                {
-                    HighCPUMeasuredRow = 0;
-                    if (cpuUsage?.Reason != CpuUsageLevel.LowCpuUsage)
-                    {
-                        stats.Reason = CpuUsageLevel.LowCpuUsage;
-                        CpuUsageCallsRecordsQueue.Enqueue(stats);
-                    }
-                    RunCpuUsageHandlers(handler => handler.HandleLowCpuUsage());
-                }
+                RunCpuUsageHandlers(handler => handler.HandleLowCpuUsage());
             }
             //Normal CPU usage
             else if (cpuUsage?.Reason != CpuUsageLevel.NormalCpuUsage)
