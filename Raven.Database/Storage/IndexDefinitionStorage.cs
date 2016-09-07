@@ -467,10 +467,6 @@ namespace Raven.Database.Storage
                 return IndexCreationOptions.Create;
             }
             
-            //index exists
-            if (newIndexDef.IndexVersion == null)
-                newIndexDef.IndexVersion = currentIndexDefinition.IndexVersion + 1;
-
             if (currentIndexDefinition.IsTestIndex) //always update test indexes
                 return IndexCreationOptions.Update;
 
@@ -679,7 +675,18 @@ namespace Raven.Database.Storage
             if (indexToReplace != null)
             {
                 // keep the index version of the replaced index
-                index.IndexVersion = indexToReplace.IndexVersion + 1;
+                index.IndexVersion = (indexToReplace.IndexVersion ?? 0) + 1;
+                index.Name = indexToReplace.Name;
+            }
+            else
+            {
+                index.Name = indexToSwapName;
+
+                int indexVersionFromTombstones;
+                CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones,
+                    indexToSwapName, 0, indexToSwapName, out indexVersionFromTombstones);
+
+                index.IndexVersion = indexVersionFromTombstones + 1;
             }
 
             index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;

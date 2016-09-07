@@ -97,21 +97,24 @@ namespace Raven.Database.Actions
             var existingDefinition = IndexDefinitionStorage.GetTransformerDefinition(name);
             if (existingDefinition != null)
             {
-                if (definition.TransformerVersion != null && existingDefinition.TransformerVersion != null &&
-                    definition.TransformerVersion <= existingDefinition.TransformerVersion)
-                {
-                    //this new transformer is an older version of the current one
-                    return null;
-                }
+                var newTransformerVersion = definition.TransformerVersion;
+                var currentTransformerVersion = existingDefinition.TransformerVersion;
 
                 // whether we update the transformer definition or not,
                 // we need to update the transformer version
                 existingDefinition.TransformerVersion = definition.TransformerVersion =
-                    Math.Max(existingDefinition.TransformerVersion ?? 0, definition.TransformerVersion ?? 0);
+                    Math.Max(currentTransformerVersion ?? 0, newTransformerVersion ?? 0);
 
                 switch (isReplication)
                 {
                     case true:
+                        if (newTransformerVersion != null && currentTransformerVersion != null &&
+                            newTransformerVersion <= currentTransformerVersion)
+                        {
+                            //this new transformer is an older version of the current one
+                            return null;
+                        }
+
                         // we need to update the lock mode only if it was updated by another server
                         existingDefinition.LockMode = definition.LockMode;
                         break;
