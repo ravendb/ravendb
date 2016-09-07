@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -25,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
 			using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
 			using (context.OpenReadTransaction())
 			{
-				var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take);
+				var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take).ToList();
 				var array = new DynamicJsonArray();
 				foreach (var tombstone in tombstones)
 				{

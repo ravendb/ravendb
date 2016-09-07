@@ -346,7 +346,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, int start, int take)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, "@" + collection);
+            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, "@" + collection);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue))
@@ -429,7 +429,7 @@ namespace Raven.Server.Documents
             if (context.Transaction.InnerTransaction.ReadTree(collectionName) == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
+            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
@@ -506,10 +506,10 @@ namespace Raven.Server.Documents
 			int start,
 			int take)
 		{
-			var table = new Table(_tombstonesSchema, context.Transaction.InnerTransaction);
+			var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
 			// ReSharper disable once LoopCanBeConvertedToQuery
-			foreach (var result in table.SeekForwardFrom(_tombstonesSchema.FixedSizeIndexes["AllTombstonesEtags"], etag))
+			foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes["AllTombstonesEtags"], etag))
 			{
 				if (start > 0)
 				{
@@ -771,10 +771,10 @@ namespace Raven.Server.Documents
             };
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKeyAndCollection method
-            byte offset;
             var ptr = tvr.Read(0, out size);
             result.LoweredKey = new LazyStringValue(null, ptr, size, context);
 
+	        byte offset;
             ptr = tvr.Read(3, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
@@ -826,9 +826,27 @@ namespace Raven.Server.Documents
             string originalCollectionName;
             bool isSystemDocument;
             var collectionName = GetCollectionName(loweredKey, doc.Data, out originalCollectionName, out isSystemDocument);
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
+            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
 
-            CreateTombstone(context, table, doc, originalCollectionName, changeVector);
+			int size;
+			var ptr = table.DirectRead(doc.StorageId, out size);
+			var tvr = new TableValueReader(ptr, size);
+
+			int lowerSize;
+			var lowerKey = tvr.Read(0, out lowerSize);
+
+			int keySize;
+			var keyPtr = tvr.Read(2, out keySize);
+
+			CreateTombstone(context,
+				lowerKey,
+				lowerSize,
+				keyPtr,
+				keySize, 
+				doc.Etag, 
+				originalCollectionName, 
+				doc.ChangeVector, 
+				changeVector);
 
             if (isSystemDocument == false)
             {
@@ -861,9 +879,15 @@ namespace Raven.Server.Documents
 	    public void AddTombstoneOnReplicationIfRelevant(
 			DocumentsOperationContext context, 
 			string key, 
-			ChangeVectorEntry[] changeVector)
+			ChangeVectorEntry[] changeVector, 
+			string collectionName)
 	    {
-		    var loweredKey = GetSliceFromKey(context, key);
+		    byte* lowerKey;
+		    int lowerSize;
+		    byte* keyPtr;
+		    int keySize;
+		    GetLowerKeySliceAndStorageKey(context,key,out lowerKey,out lowerSize,out keyPtr, out keySize);
+		    var loweredKey = Slice.External(context.Allocator, lowerKey, lowerSize);
 
 			var result = GetDocumentOrTombstone(context, loweredKey);
 		    if (result.Item2 != null) //already have a tombstone -> need to update the change vector
@@ -873,18 +897,26 @@ namespace Raven.Server.Documents
 		    else
 		    {
 			    var doc = result.Item1;
-			    if (doc == null) //precaution, this is not supposed to happen
-			    {				  
-					throw new InvalidDataException(@"Received tombstone via replication and didn't find either tombstone or a document
-										with relevant Id. This is not supposed to happen and is likely a bug.");
-			    }
+				var newEtag = ++_lastEtag;
 
-			    string originalCollectionName;
-			    bool isSystemDocument;
-			    var collectionName = GetCollectionName(loweredKey, doc.Data, out originalCollectionName, out isSystemDocument);
-			    var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+				if (changeVector == null)
+				{
+					changeVector = GetMergedConflictChangeVectorsAndDeleteConflicts(
+							context,
+							loweredKey,
+							newEtag,
+							doc?.ChangeVector);
+				}
 
-			    var tombstoneEtag = CreateTombstone(context, table, doc, originalCollectionName, changeVector);
+				CreateTombstone(context,
+					lowerKey,
+					lowerSize,
+					keyPtr,
+					keySize,
+					doc?.Etag ?? -1, //if doc == null, this means the tombstone does not have a document etag to point to
+					collectionName,
+					doc?.ChangeVector,
+					changeVector);
 
 				// not sure if this needs to be done. 
 				// see http://issues.hibernatingrhinos.com/issue/RavenDB-5226
@@ -893,16 +925,22 @@ namespace Raven.Server.Documents
 				// _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, originalCollectionName, loweredKey);
 				//}
 
-				table.Delete(doc.StorageId);
+				//it is possible that tombstones will be replicated and no document will be there 
+				//on the destination
+				if (doc != null)
+				{
+					var docsTable = context.Transaction.InnerTransaction.OpenTable(_docsSchema, "@" + collectionName);
+					docsTable.Delete(doc.StorageId);
+			    }
 
-				context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+			    context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.DeleteOnTombstoneReplication,
-					Etag = tombstoneEtag,
+					Etag = _lastEtag,
 					MaterializeKey = state => ((Slice)state).ToString(),
 					MaterializeKeyState = loweredKey,
-					CollectionName = originalCollectionName,
-					IsSystemDocument = isSystemDocument,
+					CollectionName = collectionName,
+					IsSystemDocument = false, //tombstone is not a system document...
 				});
 			}
 	    }
@@ -913,10 +951,9 @@ namespace Raven.Server.Documents
 		    DocumentTombstone tombstone, 
 			Slice loweredKey)
 	    {
-		    tombstone.ChangeVector = changeVector;
-		    var collectionWithPrefix = $"#{tombstone.Collection}";
-		    var tombstoneTables = new Table(_tombstonesSchema, collectionWithPrefix, context.Transaction.InnerTransaction);
-		    var newEtag = ++_lastEtag;
+		    tombstone.ChangeVector = changeVector;		    
+			var tombstoneTables = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, "#" + tombstone.Collection);
+			var newEtag = ++_lastEtag;
 		    var newEtagBigEndian = Bits.SwapBytes(newEtag);
 		    var documentEtag = tombstone.DeletedEtag;
 		    var documentEtagBigEndian = Bits.SwapBytes(documentEtag);
@@ -937,25 +974,18 @@ namespace Raven.Server.Documents
 		    }
 	    }
 
-	    private long CreateTombstone(DocumentsOperationContext context, 
-            Table collectionDocsTable, 
-            Document doc, 
-            string collectionName, 
-            ChangeVectorEntry[] changeVector)
-        {
-            int size;
-            var ptr = collectionDocsTable.DirectRead(doc.StorageId, out size);
-            var tvr = new TableValueReader(ptr, size);
-
-            int lowerSize;
-            var lowerKey = tvr.Read(0, out lowerSize);
-
-            int keySize;
-            var keyPtr = tvr.Read(2, out keySize);
-
+	    private void CreateTombstone(
+			DocumentsOperationContext context, 
+			byte* lowerKey, int lowerSize, 
+			byte* keyPtr, int keySize,
+			long etag,
+			string collectionName, 
+			ChangeVectorEntry[] docChangeVector,
+			ChangeVectorEntry[] changeVector)
+        {         
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
-            var documentEtagBigEndian = Bits.SwapBytes(doc.Etag);
+            var documentEtagBigEndian = Bits.SwapBytes(etag);
 
             if (changeVector == null)
             {
@@ -963,7 +993,7 @@ namespace Raven.Server.Documents
                         context,
                         Slice.External(context.Allocator, lowerKey, lowerSize), 
                         newEtag,
-                        doc.ChangeVector);
+                        docChangeVector);
             }
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -976,7 +1006,7 @@ namespace Raven.Server.Documents
                     {(byte*) &documentEtagBigEndian, sizeof (long)},
                     {keyPtr, keySize},
                     {(byte*)pChangeVector, sizeof (ChangeVectorEntry)*changeVector.Length},
-                    {collectionSlice}
+                    collectionSlice
                 };
 
                 var col = "#" + collectionName; // TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
@@ -986,8 +1016,7 @@ namespace Raven.Server.Documents
                 table.Insert(tbv);
             }
 
-	        return newEtag;
-
+	        return;
         }
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)
@@ -1111,7 +1140,7 @@ namespace Raven.Server.Documents
                     var collectionName = Document.GetCollectionName(existingDoc.Data, out isSystemDocument);
 
                     //make sure that the relevant collection tree exists
-                    var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, "@"+collectionName);
+                    var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, "@"+collectionName);
 
                     table.Delete(existingDoc.StorageId);				    
                 }
@@ -1165,8 +1194,8 @@ namespace Raven.Server.Documents
             string originalCollectionName;
             bool isSystemDocument;
             var collectionName = GetCollectionName(key, document, out originalCollectionName, out isSystemDocument);
-            DocsSchema.Create(context.Transaction.InnerTransaction, collectionName);
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
+            _docsSchema.Create(context.Transaction.InnerTransaction, collectionName);
+            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
 
             if (string.IsNullOrWhiteSpace(key))
                 key = Guid.NewGuid().ToString();
@@ -1182,9 +1211,6 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            var col = "#" + originalCollectionName;// TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
-            TombstonesSchema.Create(context.Transaction.InnerTransaction, col);
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, col);
 			// delete a tombstone if it exists
 			DeleteTombstoneIfNeeded(context, originalCollectionName, lowerKey, lowerSize);
 
@@ -1268,12 +1294,10 @@ namespace Raven.Server.Documents
 	    private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, string originalCollectionName,
 		    byte* lowerKey, int lowerSize)
 	    {
-		    var col = "#" + originalCollectionName;
-			    
-			// TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
-		    _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
-		    var tombstoneTable = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
-		    tombstoneTable.DeleteByKey(Slice.From(context.Allocator, lowerKey, lowerSize));
+			var col = "#" + originalCollectionName;// TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
+			TombstonesSchema.Create(context.Transaction.InnerTransaction, col);
+			var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, col);
+			tombstoneTable.DeleteByKey(Slice.From(context.Allocator, lowerKey, lowerSize));
 	    }
 
 	    private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(
@@ -1484,7 +1508,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
+                var collectionTable = context.Transaction.InnerTransaction.OpenTable(_docsSchema, collectionName);
 
                 return new CollectionStat
                 {

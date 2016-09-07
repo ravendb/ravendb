@@ -40,8 +40,8 @@ namespace Raven.Server.Documents.Replication
                                           .ContextPool
                                           .AllocateOperationContext(out _context);
 
-            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(TcpConnection.DocumentDatabase.Name);
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
+            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
         public void Start()
@@ -93,10 +93,12 @@ namespace Raven.Server.Documents.Replication
                                 if (!message.TryGet("Documents", out replicatedDocsCount))
                                     throw new InvalidDataException($"Expected the 'Documents' field, but had no numeric field of this value, this is likely a bug");
 
-                                ReceiveSingleBatch(replicatedDocsCount, lastEtag);
-
-                                OnDocumentsReceived(this);
-
+								//replicatedDocsCount == 0 --> this is heartbeat message
+								if (replicatedDocsCount > 0)
+								{
+									ReceiveSingleBatch(replicatedDocsCount, lastEtag);
+									OnDocumentsReceived(this);
+								}
                                 //return positive ack
                                 SendStatusToSource(writer, lastEtag);
                             }
@@ -184,7 +186,10 @@ namespace Raven.Server.Documents.Replication
 				                }
 				                else
 				                {									
-					                _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(_context,doc.Id,_tempReplicatedChangeVector);
+					                _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+										_context,doc.Id,										
+										_tempReplicatedChangeVector,
+										doc.Collection);
 				                }
 				                break;
 			                case ConflictStatus.ShouldResolveConflict:
@@ -293,6 +298,7 @@ namespace Raven.Server.Documents.Replication
             public int Position;
             public int ChangeVectorCount;
             public int DocumentSize;
+	        public string Collection;
         }
 
         private unsafe void ReadDocumentsFromSource(UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
@@ -331,6 +337,14 @@ namespace Raven.Server.Documents.Replication
 			                documentSize -= read;
 		                }
 	                }
+	                else
+	                {
+						//read the collection of the tombstone
+						_multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
+						var collectionSize = *(int*)pTemp;
+						_multiDocumentParser.ReadExactly(_tempBuffer, 0, collectionSize);
+						curDoc.Collection = Encoding.UTF8.GetString(_tempBuffer, 0, collectionSize);
+					}
 					_replicatedDocs.Add(curDoc);
                 }
             }

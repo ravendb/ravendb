@@ -26,286 +26,294 @@ using Xunit;
 
 namespace FastTests
 {
-    public class RavenTestBase : LinuxRaceConditionWorkAround, IDisposable
-    {
-        public const string ServerName = "Raven.Tests.Core.Server";
+	public class RavenTestBase : LinuxRaceConditionWorkAround, IDisposable
+	{
+		public const string ServerName = "Raven.Tests.Core.Server";
 
-        protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
-        protected static readonly ConcurrentSet<string> PathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+		protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
-        private static RavenServer _globalServer;
-        private static readonly object ServerLocker = new object();
-        private static readonly object AvailableServerPortsLocker = new object();
-        private RavenServer _localServer;
+		protected static readonly ConcurrentSet<string> PathsToDelete =
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public void DoNotReuseServer() => _doNotReuseServer = true;
-        private bool _doNotReuseServer;
-        private int NonReusedServerPort { get; set; }
-        private int NonReusedTcpServerPort { get; set; }
-        private const int MaxParallelServer = 79;
-        private static readonly List<int> _usedServerPorts = new List<int>();
-        private static readonly List<int> _availableServerPorts = Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
+		private static RavenServer _globalServer;
+		private static readonly object ServerLocker = new object();
+		private static readonly object AvailableServerPortsLocker = new object();
+		private RavenServer _localServer;
 
-        public async Task<DocumentDatabase> GetDatabase(string databaseName)
-        {
-            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            return database;
-        }
+		public void DoNotReuseServer() => _doNotReuseServer = true;
+		private bool _doNotReuseServer;
+		private int NonReusedServerPort { get; set; }
+		private int NonReusedTcpServerPort { get; set; }
+		private const int MaxParallelServer = 79;
+		private static readonly List<int> _usedServerPorts = new List<int>();
 
-        public RavenServer Server
-        {
-            get
-            {
-                if (_localServer != null)
-                    return _localServer;
+		private static readonly List<int> _availableServerPorts =
+			Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
 
-                if (_doNotReuseServer)
-                {
-                    NonReusedServerPort = GetAvailablePort();
-                    NonReusedTcpServerPort = GetAvailablePort();
-                    _localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
-                    return _localServer;
-                }
+		public async Task<DocumentDatabase> GetDatabase(string databaseName)
+		{
+			var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+			return database;
+		}
 
-                if (_globalServer != null)
-                {
-                    _localServer = _globalServer;
-                    return _localServer;
-                }
-                lock (ServerLocker)
-                {
-                    if (_globalServer == null)
-                    {
-                        Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
-                        var globalServer = CreateServer(GetAvailablePort(), GetAvailablePort());
-                        AssemblyLoadContext.Default.Unloading += context =>
-                        {
-                            globalServer.Dispose();
+		public RavenServer Server
+		{
+			get
+			{
+				if (_localServer != null)
+					return _localServer;
 
-                            GC.Collect(2);
-                            GC.WaitForPendingFinalizers();
+				if (_doNotReuseServer)
+				{
+					NonReusedServerPort = GetAvailablePort();
+					NonReusedTcpServerPort = GetAvailablePort();
+					_localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
+					return _localServer;
+				}
 
-                            var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
+				if (_globalServer != null)
+				{
+					_localServer = _globalServer;
+					return _localServer;
+				}
+				lock (ServerLocker)
+				{
+					if (_globalServer == null)
+					{
+						Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
+						var globalServer = CreateServer(GetAvailablePort(), GetAvailablePort());
+						AssemblyLoadContext.Default.Unloading += context =>
+						{
+							globalServer.Dispose();
 
-                            RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
+							GC.Collect(2);
+							GC.WaitForPendingFinalizers();
 
-                            exceptionAggregator.ThrowIfNeeded();
-                        };
-                        _globalServer = globalServer;
-                    }
-                    _localServer = _globalServer;
-                }
-                return _globalServer;
-            }
-        }
+							var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
 
-        private static int GetAvailablePort()
-        {
-            int available;
-            lock (AvailableServerPortsLocker)
-            {
-                if (_availableServerPorts.Count != 0)
-                {
-                    available = _availableServerPorts[0];
-                    _usedServerPorts.Add(available);
-                    _availableServerPorts.RemoveAt(0);
-                }
-                else
-                {
-                    throw new InvalidOperationException(
-                        $"Maximum allowed parallel servers pool in test is exhausted (max={MaxParallelServer}");
-                }
-            }
-            return available;
-        }
+							RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
 
-        private static void RemoveUsedPort(int port)
-        {
-            lock (AvailableServerPortsLocker)
-            {
-                _availableServerPorts.Add(port);
-                _usedServerPorts.Remove(port);
-            }
-        }
+							exceptionAggregator.ThrowIfNeeded();
+						};
+						_globalServer = globalServer;
+					}
+					_localServer = _globalServer;
+				}
+				return _globalServer;
+			}
+		}
 
-        private static RavenServer CreateServer(int port, int tcpPort)
-        {
-            var configuration = new RavenConfiguration();
-            configuration.Initialize();
-            configuration.DebugLog.LogMode = LogMode.None;
-            configuration.Core.ServerUrl = $"http://localhost:{port}";
-            configuration.Core.TcpServerUrl = $"tcp://localhost:{tcpPort}";
-            configuration.Server.Name = ServerName;
-            configuration.Core.RunInMemory = true;
-            string postfix = port == 8080 ? "" : "_" + port;
-            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{postfix}");
-            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
-            configuration.Storage.AllowOn32Bits = true;
+		private static int GetAvailablePort()
+		{
+			int available;
+			lock (AvailableServerPortsLocker)
+			{
+				if (_availableServerPorts.Count != 0)
+				{
+					available = _availableServerPorts[0];
+					_usedServerPorts.Add(available);
+					_availableServerPorts.RemoveAt(0);
+				}
+				else
+				{
+					throw new InvalidOperationException(
+						$"Maximum allowed parallel servers pool in test is exhausted (max={MaxParallelServer}");
+				}
+			}
+			return available;
+		}
 
-            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
+		private static void RemoveUsedPort(int port)
+		{
+			lock (AvailableServerPortsLocker)
+			{
+				_availableServerPorts.Add(port);
+				_usedServerPorts.Remove(port);
+			}
+		}
 
-            var server = new RavenServer(configuration);
-            server.Initialize();
+		private static RavenServer CreateServer(int port, int tcpPort)
+		{
+			var configuration = new RavenConfiguration();
+			configuration.Initialize();
+			configuration.DebugLog.LogMode = LogMode.None;
+			configuration.Core.ServerUrl = $"http://localhost:{port}";
+			configuration.Core.TcpServerUrl = $"tcp://localhost:{tcpPort}";
+			configuration.Server.Name = ServerName;
+			configuration.Core.RunInMemory = true;
+			string postfix = port == 8080 ? "" : "_" + port;
+			configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{postfix}");
+			configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
+			configuration.Storage.AllowOn32Bits = true;
 
-            // TODO: Make sure to properly handle this when this is resolved:
-            // TODO: https://github.com/dotnet/corefx/issues/5205
-            // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
+			IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 
-            return server;
-        }
+			var server = new RavenServer(configuration);
+			server.Initialize();
 
-        protected Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(DocumentStore store)
-        {
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-        }
+			// TODO: Make sure to properly handle this when this is resolved:
+			// TODO: https://github.com/dotnet/corefx/issues/5205
+			// TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
 
-        private static int _counter;
+			return server;
+		}
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null, string path = null,
-           Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
-        {
-            var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
+		protected Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(DocumentStore store)
+		{
+			return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+		}
 
-            if (dbSuffixIdentifier != null)
-                name = $"{name}_{dbSuffixIdentifier}";
+		private static int _counter;
 
-            var hardDelete = true;
-            var runInMemory = true;
+		protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null,
+			string dbSuffixIdentifier = null, string path = null,
+			Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
+		{
+			var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
-            if (path == null)
-                path = NewDataPath(name);
-            else
-            {
-                hardDelete = false;
-                runInMemory = false;
-            }
+			if (dbSuffixIdentifier != null)
+				name = $"{name}_{dbSuffixIdentifier}";
 
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
-            doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
-            modifyDatabaseDocument?.Invoke(doc);
+			var hardDelete = true;
+			var runInMemory = true;
 
-            TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-                if (Server.ServerStore.Read(context, Constants.Database.Prefix + name) != null)
-                    throw new InvalidOperationException($"Database '{name}' already exists");
-            }
+			if (path == null)
+				path = NewDataPath(name);
+			else
+			{
+				hardDelete = false;
+				runInMemory = false;
+			}
 
-            var store = new DocumentStore
-            {
-                Url = UseFiddler(Server.Configuration.Core.ServerUrl),
-                DefaultDatabase = name,
-                ApiKey = apiKey
-            };
-            ModifyStore(store);
-            store.Initialize();
+			var doc = MultiDatabase.CreateDatabaseDocument(name);
+			doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
+			doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
+			doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
+			modifyDatabaseDocument?.Invoke(doc);
 
-            store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
-            store.AfterDispose += (sender, args) =>
-            {
-                var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-                if (databaseTask != null && databaseTask.IsCompleted == false)
-                    databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
+			TransactionOperationContext context;
+			using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+			{
+				context.OpenReadTransaction();
+				if (Server.ServerStore.Read(context, Constants.Database.Prefix + name) != null)
+					throw new InvalidOperationException($"Database '{name}' already exists");
+			}
 
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
-                CreatedStores.TryRemove(store);
-            };
-            CreatedStores.Add(store);
-            return store;
-        }
+			var store = new DocumentStore
+			{
+				Url = UseFiddler(Server.Configuration.Core.ServerUrl),
+				DefaultDatabase = name,
+				ApiKey = apiKey
+			};
+			ModifyStore(store);
+			store.Initialize();
 
-        protected virtual void ModifyStore(DocumentStore store)
-        {
+			store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
+			store.AfterDispose += (sender, args) =>
+			{
+				var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+				if (databaseTask != null && databaseTask.IsCompleted == false)
+					databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
-        }
+				store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
+				CreatedStores.TryRemove(store);
+			};
+			CreatedStores.Add(store);
+			return store;
+		}
 
-        private static string UseFiddler(string url)
-        {
-            if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
-                return url.Replace("localhost", "localhost.fiddler");
+		protected virtual void ModifyStore(DocumentStore store)
+		{
 
-            return url;
-        }
+		}
 
-        public static void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
-        {
-            var databaseCommands = store.DatabaseCommands;
-            if (database != null)
-            {
-                databaseCommands = databaseCommands.ForDatabase(database);
-            }
+		private static string UseFiddler(string url)
+		{
+			if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
+				return url.Replace("localhost", "localhost.fiddler");
 
-            timeout = timeout ?? (Debugger.IsAttached
-                ? TimeSpan.FromMinutes(5)
-                : TimeSpan.FromSeconds(20));
+			return url;
+		}
 
-            var spinUntil = SpinWait.SpinUntil(() =>
-                databaseCommands.GetStatistics().Indexes.All(x=>x.IsStale == false),
-                timeout.Value);
+		public static void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
+		{
+			var databaseCommands = store.DatabaseCommands;
+			if (database != null)
+			{
+				databaseCommands = databaseCommands.ForDatabase(database);
+			}
 
-            if (spinUntil)
-                return;
+			timeout = timeout ?? (Debugger.IsAttached
+				          ? TimeSpan.FromMinutes(5)
+				          : TimeSpan.FromSeconds(20));
 
-            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value);
-        }
+			var spinUntil = SpinWait.SpinUntil(() =>
+						databaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false),
+				timeout.Value);
 
-        public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
-        {
-            if (debug && Debugger.IsAttached == false)
-                return;
+			if (spinUntil)
+				return;
 
-            string url = documentStore.Url;
+			throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value);
+		}
 
-            var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase);
-            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+		public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
+		{
+			if (debug && Debugger.IsAttached == false)
+				return;
 
-            Process.Start(documentsPage); // start the server
+			string url = documentStore.Url;
 
-            do
-            {
-                Thread.Sleep(100);
-            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
-        }
+			var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase);
+			var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded +
+			                    "&withStop=true";
 
-        protected string NewDataPath([CallerMemberName]string prefix = null, string suffix = null, bool forceCreateDir = false)
-        {
-            if (suffix != null)
-                prefix += suffix;
-            var path = RavenTestHelper.NewDataPath(prefix, NonReusedServerPort, forceCreateDir);
+			Process.Start(documentsPage); // start the server
 
-            PathsToDelete.Add(path);
-            return path;
-        }
+			do
+			{
+				Thread.Sleep(100);
+			} while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+		}
 
-        public virtual void Dispose()
-        {
-            GC.SuppressFinalize(this);
+		protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null,
+			bool forceCreateDir = false)
+		{
+			if (suffix != null)
+				prefix += suffix;
+			var path = RavenTestHelper.NewDataPath(prefix, NonReusedServerPort, forceCreateDir);
 
-            SystemTime.UtcDateTime = null;
+			PathsToDelete.Add(path);
+			return path;
+		}
 
-            var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
+		public virtual void Dispose()
+		{
+			GC.SuppressFinalize(this);
 
-            foreach (var store in CreatedStores)
-                exceptionAggregator.Execute(store.Dispose);
-            CreatedStores.Clear();
+			SystemTime.UtcDateTime = null;
 
-            if (_localServer != null)
-            {
-                if (_doNotReuseServer)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _localServer.Dispose();
-                        _localServer = null;
-                        RemoveUsedPort(NonReusedServerPort);
-                        RemoveUsedPort(NonReusedTcpServerPort);
-                    });
-                }
-				
-            exceptionAggregator.ThrowIfNeeded();
-        }
-    }
+			var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
+
+			foreach (var store in CreatedStores)
+				exceptionAggregator.Execute(store.Dispose);
+			CreatedStores.Clear();
+
+			if (_localServer != null)
+			{
+				if (_doNotReuseServer)
+				{
+					exceptionAggregator.Execute(() =>
+					{
+						_localServer.Dispose();
+						_localServer = null;
+						RemoveUsedPort(NonReusedServerPort);
+						RemoveUsedPort(NonReusedTcpServerPort);
+					});
+				}
+
+				exceptionAggregator.ThrowIfNeeded();
+			}
+		}
+	}
 }

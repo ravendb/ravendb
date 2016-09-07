@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim(false);
         private readonly CancellationTokenSource _cts;
-        private readonly TimeSpan _minimalHeartbeatInterval = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan _minimalHeartbeatInterval = TimeSpan.FromSeconds(15);
         private Thread _sendingThread;
 
         private long _lastSentEtag;
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.Replication
         {
             _database = database;
             _destination = destination;
-            _log = LoggerSetup.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
+            _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _database.Notifications.OnDocumentChange += OnDocumentChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
@@ -269,7 +270,7 @@ namespace Raven.Server.Documents.Replication
 				var readTx = _context.OpenReadTransaction();
 				try
 				{
-					_lastEtag = _parent._lastSentEtag;
+
 					// we scan through the documents to send to the other side, we need to be careful about
 					// filtering a lot of documents, because we need to let the other side know about this, and 
 					// at the same time, we need to send a heartbeat to keep the tcp connection alive
@@ -277,11 +278,13 @@ namespace Raven.Server.Documents.Replication
 					var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
 					while (sp.ElapsedMilliseconds < timeout)
 					{
+						_lastEtag = _parent._lastSentEtag;
+
 						_parent._cts.Token.ThrowIfCancellationRequested();
 
-						var docs = _parent._database.DocumentsStorage.GetDocumentsAfter(_context, _lastEtag, 0, 1024)
+						var docs = _parent._database.DocumentsStorage.GetDocumentsAfter(_context, _lastEtag + 1, 0, 1024)
 							.ToList();
-						var tombstones = _parent._database.DocumentsStorage.GetTombstonesAfter(_context, _lastEtag, 0, 1024)
+						var tombstones = _parent._database.DocumentsStorage.GetTombstonesAfter(_context, _lastEtag + 1, 0, 1024)
 							.ToList();
 						
 						long maxEtag;
@@ -402,7 +405,7 @@ namespace Raven.Server.Documents.Replication
 
 				foreach (var item in _orderedReplicaItems)
 				{
-					WriteDocumentToServer(item.Value.Key, item.Value.ChangeVector, item.Value.Data);
+					WriteDocumentToServer(item.Value.Key, item.Value.ChangeVector, item.Value.Data, item.Value.Collection);
 				}
 
 				// we can release the read transaction while we are waiting for 
@@ -427,7 +430,8 @@ namespace Raven.Server.Documents.Replication
 			private unsafe void WriteDocumentToServer(
 				LazyStringValue key,
 				ChangeVectorEntry[] changeVector,
-				BlittableJsonReaderObject data)
+				BlittableJsonReaderObject data,
+				LazyStringValue collection)
 			{
 				var changeVectorSize = changeVector.Length * sizeof(ChangeVectorEntry);
 				var requiredSize = changeVectorSize +
@@ -481,15 +485,15 @@ namespace Raven.Server.Documents.Replication
 						*(int*) (pTemp + tempBufferPos) = -1;
 						tempBufferPos += sizeof(int);
 
-						//if (collection == null) //precaution
-						//{
-						//	throw new InvalidDataException("Cannot write tombstone with empty collection name...");
-						//}
+						if (collection == null) //precaution
+						{
+							throw new InvalidDataException("Cannot write tombstone with empty collection name...");
+						}
 
-						//*(int*)(pTemp + tempBufferPos) = collection.Size;
-						//tempBufferPos += sizeof(int);
-						//Memory.Copy(pTemp + tempBufferPos, collection.Buffer, collection.Size);
-						//tempBufferPos += collection.Size;
+						*(int*)(pTemp + tempBufferPos) = collection.Size;
+						tempBufferPos += sizeof(int);
+						Memory.Copy(pTemp + tempBufferPos, collection.Buffer, collection.Size);
+						tempBufferPos += collection.Size;
 					}
 					_stream.Write(_tempBuffer, 0, tempBufferPos);
 				}
@@ -563,11 +567,11 @@ namespace Raven.Server.Documents.Replication
                 throw;
             }
         }
-
+		
         private void OnDocumentChange(DocumentChangeNotification notification)
         {
-            if (IncomingReplicationHandler.IsIncomingReplicationThread &&
-				notification.Type != DocumentChangeTypes.DeleteOnTombstoneReplication)
+            if (IncomingReplicationHandler.IsIncomingReplicationThread 
+				&& notification.Type != DocumentChangeTypes.DeleteOnTombstoneReplication)
                 return;
             _waitForChanges.Set();
         }
