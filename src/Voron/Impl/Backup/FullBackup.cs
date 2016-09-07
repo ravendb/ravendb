@@ -44,7 +44,7 @@ namespace Voron.Impl.Backup
                 {
                     infoNotify("Voron backup started");
                     var dataPager = env.Options.DataPager;
-                    var copier = new DataCopier(env.Options.PageSize*16);
+                    var copier = new DataCopier(env.Options.PageSize * 16);
                     Backup(env, compression, infoNotify, backupStarted, dataPager, package, string.Empty,
                         copier);
 
@@ -94,7 +94,7 @@ namespace Voron.Impl.Backup
             var usedJournals = new List<JournalFile>();
             long lastWrittenLogPage = -1;
             long lastWrittenLogFile = -1;
-            LowLevelTransaction txr = null; 
+            LowLevelTransaction txr = null;
             try
             {
                 long allocatedPages;
@@ -144,7 +144,7 @@ namespace Voron.Impl.Backup
                 backupStarted?.Invoke();
 
                 // data file backup
-                var dataPart = package.CreateEntry(Path.Combine(basePath,Constants.DatabaseFilename), compression);
+                var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename), compression);
                 Debug.Assert(dataPart != null);
 
                 if (allocatedPages > 0) //only true if dataPager is still empty at backup start
@@ -202,13 +202,19 @@ namespace Voron.Impl.Backup
             if (Directory.Exists(journalDir) == false)
                 Directory.CreateDirectory(journalDir);
 
-            using (var zip = ZipFile.Open(backupPath,ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             {
                 foreach (var entry in zip.Entries)
                 {
                     var dst = Path.GetExtension(entry.Name) == ".journal" ? journalDir : voronDataDir;
+
+                    var folder = Path.Combine(dst, Path.GetDirectoryName(entry.FullName));
+                    if (Directory.Exists(folder) == false)
+                    {
+                        Directory.CreateDirectory(folder);
+                    }
                     using (var input = entry.Open())
-                    using (var output = new FileStream(Path.Combine(dst, entry.Name), FileMode.CreateNew))
+                    using (var output = new FileStream(Path.Combine(folder, entry.Name), FileMode.CreateNew))
                     {
                         input.CopyTo(output);
                     }
