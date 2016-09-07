@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
@@ -332,10 +333,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private static List<StatementSyntax> HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
-            if (string.IsNullOrWhiteSpace(mapRewriter.CollectionName))
-                throw new InvalidOperationException("Could not extract collection name from expression");
 
-            var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(mapRewriter.CollectionName));
+            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Indexing.AllDocumentsCollection : mapRewriter.CollectionName;
+
+            var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
 
             var results = new List<StatementSyntax>();

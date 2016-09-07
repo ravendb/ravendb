@@ -101,6 +101,8 @@ namespace Raven.Server.Documents.Indexes
 
         private int _numberOfQueries;
 
+        private bool _handleAllDocs = false;
+
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
@@ -111,6 +113,9 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             IndexPersistence = new LuceneIndexPersistence(this);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
+
+            if (Collections.Contains(Constants.Indexing.AllDocumentsCollection))
+                _handleAllDocs = true;
         }
 
         public static Index Open(int indexId, DocumentDatabase documentDatabase)
@@ -356,7 +361,12 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in Collections)
             {
-                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                long lastDocEtag;
+                if (collection == Constants.Indexing.AllDocumentsCollection)
+                    lastDocEtag = DocumentsStorage.ReadLastEtag(databaseContext.Transaction.InnerTransaction);
+                else
+                    lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+
                 var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                 if (cutoff == null)
@@ -615,7 +625,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
         {
-            if (Collections.Contains(notification.CollectionName) == false)
+            if (_handleAllDocs == false && Collections.Contains(notification.CollectionName) == false)
                 return;
 
             _mre.Set();

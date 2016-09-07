@@ -26,7 +26,7 @@ namespace SlowTests.MailingList
             {
                 return new IndexDefinition
                 {
-                    Maps = { "from foo in docs.Foos select new { Name = foo.Name }" },
+                    Maps = { "from foo in docs select new { Name = foo.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         {
@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
             {
                 store.DatabaseCommands.Put("FOO", null, new RavenJObject { { "Name", "Ayende" } }, new RavenJObject { { Constants.Headers.RavenEntityName, "Foos" } });
 
-                var result = store.DatabaseCommands.Query("dynamic/Foos", new IndexQuery
+                var result = store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {
                     FieldsToFetch = new[] { "Name" },
                     Query = "Name:Ayende"

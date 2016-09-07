@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -63,7 +65,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     using (databaseContext.OpenReadTransaction())
                     {
-                        var documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize);
+                        IEnumerable<Document> documents;
+
+                        if (collection == Constants.Indexing.AllDocumentsCollection)
+                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, pageSize);
+                        else
+                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize);
 
                         using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                         {
@@ -71,8 +78,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             while (docsEnumerator.MoveNext(out mapResults))
                             {
-                                //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
-                                //TODO: we flush the index
                                 token.ThrowIfCancellationRequested();
 
                                 if (indexWriter == null)

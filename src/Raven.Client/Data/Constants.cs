@@ -60,6 +60,8 @@ namespace Raven.Abstractions.Data
 
                 public const string IndexFieldScoreName = "__field_score";
             }
+
+            public const string AllDocumentsCollection = "@all_docs";
         }
 
         public class Headers
