@@ -467,6 +467,7 @@ namespace Raven.Database.Storage
                 return IndexCreationOptions.Create;
             }
             
+            //index exists
             if (newIndexDef.IndexVersion == null)
                 newIndexDef.IndexVersion = currentIndexDefinition.IndexVersion + 1;
 
@@ -488,15 +489,21 @@ namespace Raven.Database.Storage
 
         private bool CheckIfIndexHasBeenDeleted(IndexDefinition definition)
         {
-            return CheckIfIndexVersionIsEqualOrSmaller(definition, Constants.RavenReplicationIndexesTombstones, definition.Name) ||
-                   CheckIfIndexVersionIsEqualOrSmaller(definition, "Raven/Indexes/PendingDeletion", definition.IndexId.ToString(CultureInfo.InvariantCulture));
-        }
-
-        private bool CheckIfIndexVersionIsEqualOrSmaller(IndexDefinition definition, string listName, string listKey)
-        {
-            var res = false;
             if (definition.IndexVersion == null)
                 return false;
+
+            var currentIndexVersion = definition.IndexVersion.Value;
+
+            int _;
+            return CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones, definition.Name, currentIndexVersion, definition.Name, out _) ||
+                   CheckIfIndexVersionIsEqualOrSmaller("Raven/Indexes/PendingDeletion", definition.IndexId.ToString(CultureInfo.InvariantCulture), currentIndexVersion, definition.Name, out _);
+        }
+
+        private bool CheckIfIndexVersionIsEqualOrSmaller(string listName, string listKey, 
+            int currentIndexVersion, string indexName, out int oldIndexVersion)
+        {
+            var res = false;
+            var version = 0;
 
             transactionalStorage.Batch(action =>
             {
@@ -504,26 +511,42 @@ namespace Raven.Database.Storage
                 if (li == null)
                     return;
 
-                int version;
                 var versionStr = li.Data.Value<string>("IndexVersion");
                 //the index that we are trying to add is deleted
                 if (int.TryParse(versionStr, out version))
                 {
-                    if (version >= definition.IndexVersion.Value)
+                    if (version >= currentIndexVersion)
                     {
-                        if (version > definition.IndexVersion.Value)
-                            logger.Error("Trying to add an index ({0}) with a version smaller than the deleted version, this should not happen", definition.Name);
+                        if (version > currentIndexVersion)
+                            logger.Error("Trying to add an index ({0}) with a version smaller " +
+                                         "than the deleted version, this should not happen", indexName);
 
                         res = true;
                     }
                 }
                 else
                 {
-                    logger.Error("Failed to parse index version of index {0}", definition.Name);
+                    logger.Error("Failed to parse index version of index {0}", indexName);
                 }
             });
 
+            oldIndexVersion = version;
             return res;
+        }
+
+        public int GetDeletedIndexVersion(IndexDefinition definition)
+        {
+            var currentIndexVersion = definition.IndexVersion ?? 0;
+            int indexVersionFromTombstones;
+            CheckIfIndexVersionIsEqualOrSmaller(Constants.RavenReplicationIndexesTombstones, 
+                definition.Name, currentIndexVersion, definition.Name, out indexVersionFromTombstones);
+
+            int indexVersionFromPendingDeletions;
+            CheckIfIndexVersionIsEqualOrSmaller("Raven/Indexes/PendingDeletion", 
+                definition.IndexId.ToString(CultureInfo.InvariantCulture), 
+                currentIndexVersion, definition.Name, out indexVersionFromPendingDeletions);
+
+            return Math.Max(indexVersionFromTombstones, indexVersionFromPendingDeletions);
         }
 
         public bool Contains(string indexName)
@@ -597,10 +620,13 @@ namespace Raven.Database.Storage
             int ignoredId;
             if (transformCache.TryRemove(id, out ignoredViewGenerator))
                 transformNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
-            TransformerDefinition ignoredIndexDefinition;
-            transformDefinitions.TryRemove(id, out ignoredIndexDefinition);
+
+            TransformerDefinition _;
+            transformDefinitions.TryRemove(id, out _);
+
             if (configuration.RunInMemory)
                 return;
+
             File.Delete(GetIndexSourcePath(id) + ".transform");
             UpdateTransformerMappingFile();
         }
@@ -650,6 +676,12 @@ namespace Raven.Database.Storage
 
             var indexToReplace = GetIndexDefinition(indexToSwapName);
             replaceIndexingErrors();
+            if (indexToReplace != null)
+            {
+                // keep the index version of the replaced index
+                index.IndexVersion = indexToReplace.IndexVersion + 1;
+            }
+
             index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;
             CreateAndPersistIndex(index);
             AddIndex(index.IndexId, index);

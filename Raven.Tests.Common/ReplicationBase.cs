@@ -601,9 +601,9 @@ namespace Raven.Tests.Common
                     {
                         mre.Set();
                         break;
-    }
+                    }
                     Thread.Sleep(25);
-}
+                }
             });
 
             var success = mre.Wait(timeoutInMilliseconds);

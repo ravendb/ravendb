@@ -115,9 +115,10 @@ namespace Raven.Abstractions.Data
         public string Name { get; set; }
 
         /// <summary>
-        /// The index version that changed
+        /// The index version that was changed
         /// </summary>
         public int? Version { get; set; }
+
         /// <summary>
         /// TODO [ppekrol]
         /// </summary>
@@ -145,6 +146,11 @@ namespace Raven.Abstractions.Data
         /// Name of transformer for which notification was created
         /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// The transformer version that was changed
+        /// </summary>
+        public int? Version { get; set; }
 
         public override string ToString()
         {
