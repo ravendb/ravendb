@@ -92,14 +92,17 @@ namespace Raven.Database
         private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
         public readonly FixedSizeConcurrentQueue<AutoTunerDecisionDescription> AutoTuningTrace = new FixedSizeConcurrentQueue<AutoTunerDecisionDescription>(100);
 
-        private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
-
         public class IndexFailDetails
         {
             public string IndexName;
             public string Reason;
             public Exception Ex;
         }
+
+
+        public RavenThreadPool ThreadPool { get; set; }
+
+
 
         public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
         {
@@ -109,8 +112,35 @@ namespace Raven.Database
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;
+
+            // initialize thread pool
+            if (systemDatabase == null)
+            {
+                ThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2);
+                ThreadPool.Start();
+                toDispose.Add(ThreadPool);
+                ThreadPool.ReportToAutoTuner = this.AutoTuningTrace.Enqueue;
+                ThreadPool.ReportAlert = this.AddAlert;
+            }
+            else
+            {
+                if (systemDatabase.ThreadPool == null)
+                {
+                    systemDatabase.ThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2);
+                    systemDatabase.ThreadPool.Start();
+                    systemDatabase.toDispose.Add(systemDatabase.ThreadPool);
+                    ThreadPool.ReportToAutoTuner = systemDatabase.AutoTuningTrace.Enqueue;
+                    ThreadPool.ReportAlert = systemDatabase.AddAlert;
+                }
+                ThreadPool = systemDatabase.ThreadPool;
+            }
+
+
             transportState = recievedTransportState ?? new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
+
+
+
 
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {
@@ -909,7 +939,7 @@ namespace Raven.Database
                 MemoryStatistics.StopPosixLowMemThread();
 
             EventHandler onDisposing = Disposing;
-            _tpCts.Cancel();
+
             if (onDisposing != null)
             {
                 try
@@ -966,15 +996,6 @@ namespace Raven.Database
             {
                 if (Tasks != null)
                     Tasks.Dispose(exceptionAggregator);
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                StopMappingThreadPool();
-            });
-            exceptionAggregator.Execute(() =>
-            {
-                StopReducingThreadPool();
             });
 
             exceptionAggregator.Execute(() =>
@@ -1121,9 +1142,6 @@ namespace Raven.Database
             }
         }
 
-        public RavenThreadPool MappingThreadPool;
-        public RavenThreadPool ReducingThreadPool;
-
         public void SpinBackgroundWorkers(bool manualStart = false)
         {
             if (manualStart == false && indexingWorkersStoppedManually)
@@ -1143,33 +1161,9 @@ namespace Raven.Database
             RaiseIndexingWiringComplete();
         }
 
-        private void StopMappingThreadPool()
-        {
-            var mappingThreadPool = MappingThreadPool;
-            if (mappingThreadPool == null)
-                return;
-
-            mappingThreadPool.DrainThePendingTasks();
-            mappingThreadPool.Dispose();
-            MappingThreadPool = null;
-        }
-
-        private void StopReducingThreadPool()
-        {
-            var reducingThreadPool = ReducingThreadPool;
-            if (reducingThreadPool == null)
-                return;
-
-            reducingThreadPool.DrainThePendingTasks();
-            reducingThreadPool.Dispose();
-            ReducingThreadPool = null;
-        }
-
         public void StopBackgroundWorkers()
         {
             workContext.StopWork();
-            StopMappingThreadPool();
-            StopReducingThreadPool();
         }
 
         public void StopIndexingWorkers(bool manualStop)
@@ -1178,24 +1172,6 @@ namespace Raven.Database
                 return;
 
             workContext.StopIndexing();
-            try
-            {
-                StopMappingThreadPool();
-            }
-            catch (Exception e)
-            {
-                Log.WarnException("Error while trying to stop background indexing", e);
-            }
-
-            try
-            {
-                StopReducingThreadPool();
-            }
-            catch (Exception e)
-            {
-                Log.WarnException("Error while trying to stop background reducing", e);
-            }
-
             indexingWorkersStoppedManually = manualStop;
         }
 
@@ -1556,6 +1532,9 @@ namespace Raven.Database
             if (onOnBackupComplete != null) onOnBackupComplete(this);
         }
 
+        public Task MappingTask { get; private set; }
+        public Task ReducingTask { get; private set; }
+
         private void SpinMappingWorker()
         {
             if (IsIndexingDisabled())
@@ -1563,15 +1542,40 @@ namespace Raven.Database
 
             workContext.StartMapping();
 
-            if (MappingThreadPool != null)
+            if (MappingTask != null)
                 return;
+            
+            MappingTask = new Task(RunMapIndexes, TaskCreationOptions.LongRunning);
+            MappingTask.Start();
+        }
 
-            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token,this, "Map Thread Pool", new[]
+        private void RunMapIndexes()
+        {
+            try
             {
-                new Action(() => indexingExecuter.Execute())
-            });
-
-            MappingThreadPool.Start();
+                indexingExecuter.Execute();
+            }
+            catch (Exception e)
+            {
+                if (disposed == false && workContext.RunIndexing)
+                {
+                    var errorMessage = $"Error from mapping task in database {Name}, task terminated, this is very bad";
+                    Log.FatalException(errorMessage, e);
+                    this.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = DateTime.UtcNow,
+                        Title = errorMessage,
+                        UniqueKey = errorMessage,
+                        Message = e.ToString(),
+                        Exception = e.Message
+                    });
+                }
+            }
+            finally
+            {
+                MappingTask = null;
+            }
         }
 
         public void SpinReduceWorker()
@@ -1581,29 +1585,45 @@ namespace Raven.Database
 
             workContext.StartReducing();
 
-            if (ReducingThreadPool != null)
+            if (ReducingTask != null)
                 return;
+            
+            ReducingTask = new Task(RunReduceIndexes, TaskCreationOptions.LongRunning);
+            ReducingTask.Start();
+        }
 
-            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token,this, "Reduce Thread Pool", new[]
+        private void RunReduceIndexes()
+        {
+            try
             {
-                new Action(() => ReducingExecuter.Execute())
-            });
-
-            ReducingThreadPool.Start();
+                ReducingExecuter.Execute();
+            }
+            catch (Exception ex)
+            {
+                if (disposed == false && workContext.RunReducing)
+                {
+                    var errorMessage = $"Error from reducing task in database {Name}, task terminated, this is very bad";
+                    Log.FatalException(errorMessage, ex);
+                    this.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = DateTime.UtcNow,
+                        Title = errorMessage,
+                        UniqueKey = errorMessage,
+                        Message = ex.ToString(),
+                        Exception = ex.Message
+                    });
+                }
+            }
+            finally
+            {
+                ReducingTask = null;
+            }
         }
 
         public void StopReduceWorkers()
         {
             workContext.StopReducing();
-
-            try
-            {
-                StopReducingThreadPool();
-            }
-            catch (Exception e)
-            {
-                Log.WarnException("Error while trying to stop background reducing", e);
-            }
         }
 
         public bool IsIndexingDisabled()

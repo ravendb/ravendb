@@ -153,10 +153,10 @@ namespace Raven.Database.Indexing
 
             var parallelProcessingStart = SystemTime.UtcNow;
 
-            if (context.Database.MappingThreadPool == null)
+            if (context.Database.ThreadPool == null || context.RunReducing==false)
                 throw new OperationCanceledException();
 
-            context.Database.MappingThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
+            context.Database.ThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
             {
                 token.ThrowIfCancellationRequested();
                 var parallelStats = new ParallelBatchStats
@@ -248,7 +248,7 @@ namespace Raven.Database.Indexing
                     allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
                     allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
                 }
-            }, description: $"Reducing index {PublicName} up to etag {batch.HighestEtagBeforeFiltering}, for {documentsWrapped.Count} documents");
+            }, description: $"Reducing index {PublicName} up to etag {batch.HighestEtagBeforeFiltering}, for {documentsWrapped.Count} documents", database:context.Database);
 
             performanceStats.Add(new ParallelPerformanceStats
             {
@@ -281,10 +281,10 @@ namespace Raven.Database.Indexing
                 reduceKeyToCount[reduceKey] = reduceKeyToCount.GetOrDefault(reduceKey) + singleDeleted.Value;
             }
 
-            if (context.Database.MappingThreadPool == null)
+            if (context.Database.ThreadPool== null || context.RunReducing == false)
                 throw new OperationCanceledException();
 
-            context.Database.MappingThreadPool.ExecuteBatch(reduceKeyStats, enumerator =>
+            context.Database.ThreadPool.ExecuteBatch(reduceKeyStats, enumerator =>
                 context.TransactionalStorage.Batch(accessor =>
                 {
                     while (enumerator.MoveNext())
@@ -304,7 +304,7 @@ namespace Raven.Database.Indexing
                     }
                 }), 
                 description: $"Incrementing reducing key counter fo index {PublicName} for operation " +
-                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}");
+                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}", database:context.Database);
 
             foreach (var keyValuePair in reduceKeyToCount)
             {
@@ -318,10 +318,10 @@ namespace Raven.Database.Indexing
             var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
             var parallelReductionStart = SystemTime.UtcNow;
 
-            if (context.Database.MappingThreadPool == null)
+            if (context.Database.ThreadPool == null|| context.RunReducing == false)
                 throw new OperationCanceledException();
 
-            context.Database.MappingThreadPool.ExecuteBatch(changed, enumerator =>
+            context.Database.ThreadPool.ExecuteBatch(changed, enumerator =>
                 context.TransactionalStorage.Batch(accessor =>
                 {
                     var parallelStats = new ParallelBatchStats
@@ -344,7 +344,7 @@ namespace Raven.Database.Indexing
                     parallelReductionOperations.Enqueue(parallelStats);
                 }),
                 description: $"Schedule reductions for index {PublicName} after operation " +
-                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}");
+                             $"from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}", database:context.Database);
 
             performanceStats.Add(new ParallelPerformanceStats
             {

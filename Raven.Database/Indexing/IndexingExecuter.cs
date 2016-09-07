@@ -457,10 +457,10 @@ namespace Raven.Database.Indexing
             {
                 context.MetricsCounters.IndexedPerSecond.Mark(indexBatchOperations.Keys.Count);
 
-                if (context.Database.MappingThreadPool == null)
+                if (context.Database.ThreadPool == null || context.RunIndexing==false)
                     throw new OperationCanceledException();
 
-                context.Database.MappingThreadPool.ExecuteBatch(indexBatchOperations.Keys.ToList(),
+                context.Database.ThreadPool.ExecuteBatch(indexBatchOperations.Keys.ToList(),
                     indexBatchOperation =>
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
@@ -474,7 +474,7 @@ namespace Raven.Database.Indexing
                             context.NotifyAboutWork();
                         }
                     }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5*context.Configuration.MemoryLimitForProcessingInMb,
-                    description: $"Performing indexing on index batches for a total of {indexBatchOperations.Count} indexes");
+                    description: $"Performing indexing on index batches for a total of {indexBatchOperations.Count} indexes", database:context.Database);
             }
             catch (OperationCanceledException)
             {
@@ -494,10 +494,10 @@ namespace Raven.Database.Indexing
         {
             bool operationWasCancelled = false;
 
-            if (context.Database.MappingThreadPool == null)
+            if (context.Database.ThreadPool == null || context.RunIndexing == false)
                 throw new OperationCanceledException();
 
-            context.Database.MappingThreadPool.ExecuteBatch(groupedIndexes,
+            context.Database.ThreadPool.ExecuteBatch(groupedIndexes,
                 indexingGroup =>
                 {
                     var operationAdded = false;
@@ -583,7 +583,7 @@ namespace Raven.Database.Indexing
                             });
                         }
                     }
-                }, description: $"Prefetching index groups for {groupedIndexes.Count} groups");
+                }, description: $"Prefetching index groups for {groupedIndexes.Count} groups",database:context.Database);
 
             return operationWasCancelled;
         }
@@ -964,10 +964,10 @@ namespace Raven.Database.Indexing
             var results = new ConcurrentQueue<IndexingBatchForIndex>();
             var actions = new ConcurrentQueue<Tuple<Action<IStorageActionsAccessor>, IndexToWorkOn>>();
 
-            if (context.Database.MappingThreadPool == null)
+            if (context.Database.ThreadPool == null || context.RunIndexing==false)
                 throw new OperationCanceledException();
 
-            context.Database.MappingThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
+            context.Database.ThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
             {
                 try
                 {
@@ -1049,7 +1049,7 @@ namespace Raven.Database.Indexing
                     Log.ErrorException("Failed to index because of data corruption. ", e);
                     context.AddError(indexToWorkOn.IndexId, indexToWorkOn.Index.PublicName, null, e, $"Failed to index because of data corruption. Reason: {e.Message}");
                 }
-            }, description: $"Filtering documents for {indexesToWorkOn.Count} indexes");
+            }, description: $"Filtering documents for {indexesToWorkOn.Count} indexes", database:context.Database);
 
             filteredOutIndexes = innerFilteredOutIndexes.ToList();
 
