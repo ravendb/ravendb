@@ -124,14 +124,6 @@ namespace Raven.Database
             }
             else
             {
-                if (systemDatabase.ThreadPool == null)
-                {
-                    systemDatabase.ThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2);
-                    systemDatabase.ThreadPool.Start();
-                    systemDatabase.toDispose.Add(systemDatabase.ThreadPool);
-                    ThreadPool.ReportToAutoTuner = systemDatabase.AutoTuningTrace.Enqueue;
-                    ThreadPool.ReportAlert = systemDatabase.AddAlert;
-                }
                 ThreadPool = systemDatabase.ThreadPool;
             }
 
