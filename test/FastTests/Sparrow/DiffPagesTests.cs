@@ -93,10 +93,10 @@ namespace FastTests.Sparrow
 
                 diffPages.ComputeDiff();
 
+                Memory.Copy(tri, one, 4096);
                 new DiffApplier
                 {
                     Destination = tri,
-                    Original = one,
                     Diff = tmp,
                     Size = 4096,
                     DiffSize = diffPages.OutputSize

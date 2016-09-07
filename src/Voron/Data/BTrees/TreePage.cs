@@ -437,13 +437,16 @@ namespace Voron.Data.BTrees
             return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + TreeFlags;
         }
 
-        public string Dump(LowLevelTransaction tx)
+        public string Dump()
         {
             var sb = new StringBuilder();
 
             for (var i = 0; i < NumberOfEntries; i++)
             {
-                sb.Append(GetNodeKey(tx, i)).Append(", ");
+
+                var node = GetNode(i);
+
+                sb.Append(TreeNodeHeader.ToDebugString(node)).Append(", ");
             }
             return sb.ToString();
         }

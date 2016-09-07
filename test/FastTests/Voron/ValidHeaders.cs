@@ -122,12 +122,10 @@ namespace FastTests.Voron
             ptr->Root.RootObjectType = RootObjectType.VariableSizeTree;
             ptr->Root.RootPageNumber = (long)rnd.NextDouble();
             ptr->TransactionId = (long)rnd.NextDouble();
-            ptr->Compressed = true;
             ptr->CompressedSize = rnd.Next();
             ptr->Hash = (ulong)rnd.Next();
             ptr->HeaderMarker = (ulong)rnd.NextDouble();
             ptr->NextPageNumber = (long)rnd.NextDouble();
-            ptr->OverflowPageCount = rnd.Next();
             ptr->TxMarker = TransactionMarker.Commit;
             ptr->UncompressedSize = rnd.Next();
             ptr->PageCount = rnd.Next();
@@ -145,12 +143,10 @@ namespace FastTests.Voron
             Assert.Equal(ptr->Root.RootObjectType, RootObjectType.VariableSizeTree);
             Assert.Equal(ptr->Root.RootPageNumber, (long)rnd.NextDouble());
             Assert.Equal(ptr->TransactionId, (long)rnd.NextDouble());
-            Assert.Equal(ptr->Compressed, true);
             Assert.Equal(ptr->CompressedSize, rnd.Next());
             Assert.Equal(ptr->Hash, (ulong)rnd.Next());
             Assert.Equal(ptr->HeaderMarker, (ulong)rnd.NextDouble());
             Assert.Equal(ptr->NextPageNumber, (long)rnd.NextDouble());
-            Assert.Equal(ptr->OverflowPageCount, rnd.Next());
             Assert.Equal(ptr->TxMarker, TransactionMarker.Commit);
             Assert.Equal(ptr->UncompressedSize, rnd.Next());
             Assert.Equal(ptr->PageCount, rnd.Next());

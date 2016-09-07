@@ -27,7 +27,7 @@ namespace Voron.Impl.Journal
             get { return _readingPage; }
         }
 
-        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager, 
+        public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager,
             long lastSyncedTransactionId, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
@@ -43,7 +43,7 @@ namespace Voron.Impl.Journal
 
         public long? MaxPageToRead { get; set; }
 
-        public bool ReadOneTransaction(StorageEnvironmentOptions options, bool checkCrc = true)
+        public bool ReadOneTransactionToDataFile(StorageEnvironmentOptions options, bool checkCrc = true)
         {
             if (_readingPage >= _journalPager.NumberOfAllocatedPages)
                 return false;
@@ -55,74 +55,64 @@ namespace Voron.Impl.Journal
             if (!TryReadAndValidateHeader(options, out current))
                 return false;
 
-            // Uncompressed transactions will respect boundaries between the TransactionHeader page and the data, so we move to the data page.
-            if (current->Compressed == false)                 
-                _readingPage++;
 
-            var transactionSize = GetNumberOfPagesFromSize(options, current->Compressed ? current->CompressedSize + sizeof(TransactionHeader) : current->UncompressedSize);
+            var transactionSize = GetNumberOfPagesFromSize(options, current->CompressedSize + sizeof(TransactionHeader));
 
             if (current->TransactionId <= _lastSyncedTransactionId)
             {
-                LastTransactionHeader = current;
                 _readingPage += transactionSize;
+                LastTransactionHeader = current;
                 return true; // skipping
             }
 
             if (checkCrc && !ValidatePagesHash(options, current))
                 return false;
 
-            byte* outputPage;
-            if (current->Compressed)
+            _readingPage += transactionSize;
+            var numberOfPages = _recoveryPager.GetNumberOfOverflowPages(current->UncompressedSize);
+            _recoveryPager.EnsureContinuous(0, numberOfPages);
+            var outputPage = _recoveryPager.AcquirePagePointer(null, 0);
+            UnmanagedMemory.Set(outputPage, 0, numberOfPages * options.PageSize);
+
+            try
             {
-                var numberOfPages = _recoveryPager.GetNumberOfOverflowPages(current->UncompressedSize);
-                _recoveryPager.EnsureContinuous(0, numberOfPages);
-                outputPage = _recoveryPager.AcquirePagePointer(null, 0);
-                UnmanagedMemory.Set(outputPage, 0, numberOfPages * options.PageSize);
-
-                try
-                {
-                    LZ4.Decode64(outputPage, current->CompressedSize, outputPage, current->UncompressedSize, true);
-                }
-                catch (Exception e)
-                {
-                    options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
-                    RequireHeaderUpdate = true;
-
-                    return false;
-                }
+                LZ4.Decode64((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
+                    current->UncompressedSize, true);
             }
-            else
+            catch (Exception e)
             {
-                options.InvokeRecoveryError(this, "Got an invalid uncompressed transaction", null);
+                options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
                 RequireHeaderUpdate = true;
+
                 return false;
             }
 
-            var pageInfoPtr = (TransactionHeaderPageInfo *)outputPage;
+
+            var pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
             var diffedDataPtr = (byte*)outputPage + sizeof(TransactionHeaderPageInfo) * current->PageCount;
             var diffApplier = new DiffApplier();
-            _dataPager.EnsureContinuous(current->NextPageNumber, 1);
 
             for (var i = 0; i < current->PageCount; i++)
             {
                 Debug.Assert(_journalPager.Disposed == false);
                 Debug.Assert(_recoveryPager.Disposed == false);
+                _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber,
+                    GetNumberOfPagesFromSize(options, pageInfoPtr[i].Size));
                 var pagePtr = _dataPager.AcquirePagePointer(null, pageInfoPtr[i].PageNumber);
-                switch (pageInfoPtr[i].Type)
+                if (pageInfoPtr[i].DiffSize == 0)
                 {
-                    case JournalPageType.Diff:
-                        diffApplier.Destination = pagePtr;
-                        diffApplier.Diff = diffedDataPtr;
-                        diffApplier.DiffSize = pageInfoPtr[i].Size;
-                        diffApplier.Apply();
-                        break;
-                    case JournalPageType.Full:
-                        Memory.Copy(pagePtr, diffedDataPtr, pageInfoPtr[i].Size);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException("Type","Could not understand page journal type " + pageInfoPtr[i].Type);
+                    Memory.Copy(pagePtr, diffedDataPtr, pageInfoPtr[i].Size);
+                    diffedDataPtr += pageInfoPtr[i].Size;
                 }
-                diffedDataPtr += pageInfoPtr[i].Size;
+                else
+                {
+                    diffApplier.Destination = pagePtr;
+                    diffApplier.Diff = diffedDataPtr;
+                    diffApplier.Size = pageInfoPtr[i].Size;
+                    diffApplier.DiffSize = pageInfoPtr[i].DiffSize;
+                    diffApplier.Apply();
+                    diffedDataPtr += pageInfoPtr[i].DiffSize;
+                }
             }
 
             LastTransactionHeader = current;
@@ -132,12 +122,12 @@ namespace Voron.Impl.Journal
 
         internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, int size)
         {
-            return (size/options.PageSize) + (size%options.PageSize == 0 ? 0 : 1);
+            return (size / options.PageSize) + (size % options.PageSize == 0 ? 0 : 1);
         }
 
         public void RecoverAndValidate(StorageEnvironmentOptions options)
         {
-            while (ReadOneTransaction(options))
+            while (ReadOneTransactionToDataFile(options))
             {
             }
         }
@@ -149,7 +139,7 @@ namespace Voron.Impl.Journal
 
         private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, out TransactionHeader* current)
         {
-            current = (TransactionHeader*) _journalPager.Read(null, _readingPage).Base;
+            current = (TransactionHeader*)_journalPager.Read(null, _readingPage).Base;
 
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
             {
@@ -184,16 +174,14 @@ namespace Voron.Impl.Journal
         private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
         {
             if (current->TransactionId < 0)
-                throw new InvalidDataException("Transaction id cannot be less than 0 (llt: " + current->TransactionId + " )");
+                throw new InvalidDataException("Transaction id cannot be less than 0 (llt: " + current->TransactionId +
+                                               " )");
             if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
                 throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
             if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Hash == 0)
                 throw new InvalidDataException("Committed and not empty transaction hash can't be equal to 0");
-            if (current->Compressed)
-            {
-                if (current->CompressedSize <= 0)
-                    throw new InvalidDataException("Compression error in transaction.");
-            }
+            if (current->CompressedSize <= 0)
+                throw new InvalidDataException("Compression error in transaction.");
 
             if (previous == null)
                 return;
@@ -201,15 +189,16 @@ namespace Voron.Impl.Journal
             if (current->TransactionId != 1 &&
                 // 1 is a first storage transaction which does not increment transaction counter after commit
                 current->TransactionId - previous->TransactionId != 1)
-                throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) + ", got:" + current->TransactionId);
+                throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
+                                               ", got:" + current->TransactionId);
         }
 
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
             // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
-            byte* dataPtr = _journalPager.AcquirePagePointer(null, _readingPage) + (current->Compressed ? sizeof(TransactionHeader) : 0);
+            byte* dataPtr = _journalPager.AcquirePagePointer(null, _readingPage) + sizeof(TransactionHeader);
 
-            ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->Compressed ? current->CompressedSize : current->UncompressedSize);
+            ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->CompressedSize);
             if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;

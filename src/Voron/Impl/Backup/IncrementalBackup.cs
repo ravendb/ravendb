@@ -240,7 +240,6 @@ namespace Voron.Impl.Backup
                         try
                         {
                             TransactionHeader* lastTxHeader = null;
-                            var pagesToWrite = new Dictionary<long, TreePage>();
 
                             long journalNumber = -1;
                             foreach (var entry in package.Entries)
@@ -269,56 +268,17 @@ namespace Voron.Impl.Backup
                                         var recoveryPager = env.Options.CreateScratchPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(journalNumber)));
                                         toDispose.Add(recoveryPager);
 
-                                        var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);
+                                        var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0, lastTxHeader);
 
-                                        while (reader.ReadOneTransaction(env.Options))
+                                        while (reader.ReadOneTransactionToDataFile(env.Options))
                                         {
                                             lastTxHeader = reader.LastTransactionHeader;
                                         }
-
-                                        foreach (var translation in reader.TransactionPageTranslation)
-                                        {
-                                            var pageInJournal = translation.Value.JournalPos;
-                                            var page = recoveryPager.Read(null, pageInJournal);
-                                            pagesToWrite[translation.Key] = page;
-
-                                            if (page.IsOverflow)
-                                            {
-                                                var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
-
-                                                for (int i = 1; i < numberOfOverflowPages; i++)
-                                                {
-                                                    pagesToWrite.Remove(translation.Key + i);
-                                                }
-                                            }
-                                        }
-
                                         break;
+
                                     default:
                                         throw new InvalidOperationException("Unknown file, cannot restore: " + entry);
                                 }
-                            }
-
-                            var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-                                .Select(x => x.Value)
-                                .ToList();
-
-                            if (sortedPages.Count == 0)
-                            {
-                                return;
-                            }
-                            var last = sortedPages.Last();
-
-                            var numberOfPages = last.IsOverflow
-                                ? env.Options.DataPager.GetNumberOfOverflowPages(
-                                    last.OverflowSize)
-                                : 1;
-                            var pagerState = env.Options.DataPager.EnsureContinuous(last.PageNumber, numberOfPages);
-                            txw.EnsurePagerStateReference(pagerState);
-
-                            foreach (var page in sortedPages)
-                            {
-                                env.Options.DataPager.Write(page);
                             }
 
                             env.Options.DataPager.Sync();

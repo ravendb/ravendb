@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow;
 using Voron.Global;
 using Voron.Impl;
@@ -33,7 +34,11 @@ namespace Voron.Data.BTrees
         {
             return _nodeTypeSize + KeySize  + (Flags == (TreeNodeFlags.PageRef) ? 0 : DataSize);
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string ToDebugString(TreeNodeHeader* node)
+        {
+            return Encoding.UTF8.GetString((byte*)node + Constants.NodeHeaderSize, node->KeySize);
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Slice ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type = ByteStringType.Mutable)
         {

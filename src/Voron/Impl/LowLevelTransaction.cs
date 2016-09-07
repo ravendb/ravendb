@@ -188,7 +188,6 @@ namespace Voron.Impl
             _txHeader->Hash = 0;
             _txHeader->TimeStampTicksUtc = DateTime.UtcNow.Ticks;
             _txHeader->TxMarker = TransactionMarker.None;
-            _txHeader->Compressed = false;
             _txHeader->CompressedSize = 0;
             _txHeader->UncompressedSize = 0;
 

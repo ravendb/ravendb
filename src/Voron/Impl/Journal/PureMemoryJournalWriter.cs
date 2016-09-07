@@ -60,10 +60,11 @@ namespace Voron.Impl.Journal
                     
                     continue;
                 }
-               
+                pos += current.SizeInPages;
                 var actualCount = Math.Min(count, (int)(current.SizeInPages*_options.PageSize));
                
                 Memory.Copy(buffer, current.Pointer, actualCount);
+                buffer += actualCount;
                 count -= actualCount;
                 pageNumber += current.SizeInPages;
                 if (count <= 0)

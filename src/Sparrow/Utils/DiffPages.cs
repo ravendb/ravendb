@@ -132,6 +132,7 @@ namespace Sparrow.Utils
 
         public void Apply()
         {
+            
             var pos = 0;
             while (pos < DiffSize)
             {
