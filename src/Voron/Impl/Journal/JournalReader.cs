@@ -18,6 +18,7 @@ namespace Voron.Impl.Journal
 
         private readonly long _lastSyncedTransactionId;
         private long _readingPage;
+        private DiffApplier _diffApplier = new DiffApplier();
 
 
         public bool RequireHeaderUpdate { get; private set; }
@@ -87,31 +88,36 @@ namespace Voron.Impl.Journal
                 return false;
             }
 
-
             var pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
-            var diffedDataPtr = (byte*)outputPage + sizeof(TransactionHeaderPageInfo) * current->PageCount;
-            var diffApplier = new DiffApplier();
-
+            
+            var totalRead = sizeof(TransactionHeaderPageInfo)*current->PageCount;
             for (var i = 0; i < current->PageCount; i++)
             {
+                if(totalRead > current->UncompressedSize)
+                    throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
                 Debug.Assert(_journalPager.Disposed == false);
                 Debug.Assert(_recoveryPager.Disposed == false);
                 _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber,
                     GetNumberOfPagesFromSize(options, pageInfoPtr[i].Size));
                 var pagePtr = _dataPager.AcquirePagePointer(null, pageInfoPtr[i].PageNumber);
+
+                var diffPageNumber = *(long*) (outputPage + totalRead);
+                if (pageInfoPtr[i].PageNumber != diffPageNumber)
+                    throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {diffPageNumber}");
+                totalRead += sizeof(long);
                 if (pageInfoPtr[i].DiffSize == 0)
                 {
-                    Memory.Copy(pagePtr, diffedDataPtr, pageInfoPtr[i].Size);
-                    diffedDataPtr += pageInfoPtr[i].Size;
+                    Memory.Copy(pagePtr, outputPage + totalRead, pageInfoPtr[i].Size);
+                    totalRead += pageInfoPtr[i].Size;
                 }
                 else
                 {
-                    diffApplier.Destination = pagePtr;
-                    diffApplier.Diff = diffedDataPtr;
-                    diffApplier.Size = pageInfoPtr[i].Size;
-                    diffApplier.DiffSize = pageInfoPtr[i].DiffSize;
-                    diffApplier.Apply();
-                    diffedDataPtr += pageInfoPtr[i].DiffSize;
+                    _diffApplier.Destination = pagePtr;
+                    _diffApplier.Diff = outputPage + totalRead;
+                    _diffApplier.Size = pageInfoPtr[i].Size;
+                    _diffApplier.DiffSize = pageInfoPtr[i].DiffSize;
+                    _diffApplier.Apply();
+                    totalRead += pageInfoPtr[i].DiffSize;
                 }
             }
 

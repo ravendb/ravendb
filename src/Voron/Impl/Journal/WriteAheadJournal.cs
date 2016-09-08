@@ -154,7 +154,7 @@ namespace Voron.Impl.Journal
                     var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId, transactionHeader);
                     journalReader.RecoverAndValidate(_env.Options);
 
-                   var lastReadHeaderPtr = journalReader.LastTransactionHeader;
+                    var lastReadHeaderPtr = journalReader.LastTransactionHeader;
 
                     if (lastReadHeaderPtr != null)
                     {
@@ -461,13 +461,13 @@ namespace Voron.Impl.Journal
 
                     foreach (var journalFile in jrnls)
                     {
-                        if(journalFile.Number < _lastSyncedJournal)
+                        if (journalFile.Number < _lastSyncedJournal)
                             continue;
                         var currentJournalMaxTransactionId = -1L;
 
                         var maxTransactionId = journalFile.LastTransaction;
                         if (oldestActiveTransaction != 0)
-                            maxTransactionId = Math.Min(oldestActiveTransaction-1, maxTransactionId);
+                            maxTransactionId = Math.Min(oldestActiveTransaction - 1, maxTransactionId);
 
                         if (forcedFlushOfOldPages && forcedIterateJournalsAsOf.HasValue)
                             maxTransactionId = Math.Min(journalFile.LastTransaction, forcedIterateJournalsAsOf.Value);
@@ -758,8 +758,8 @@ namespace Voron.Impl.Journal
                     var totalSize = readTxHeader->CompressedSize + sizeof(TransactionHeader);
 
 
-                    var totalPages = (totalSize/_waj._env.Options.PageSize) +
-                                     (totalSize%_waj._env.Options.PageSize == 0 ? 0 : 1);
+                    var totalPages = (totalSize / _waj._env.Options.PageSize) +
+                                     (totalSize % _waj._env.Options.PageSize == 0 ? 0 : 1);
 
                     // We skip to the next transaction header.
                     txPos += totalPages;
@@ -868,7 +868,7 @@ namespace Voron.Impl.Journal
 
         public void WriteToJournal(LowLevelTransaction tx, int pageCount)
         {
-            var pages = PrepreToWriteToJournal(tx,_compressionPager, pageCount);
+            var pages = PrepreToWriteToJournal(tx, _compressionPager, pageCount);
 
             if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
             {
@@ -899,10 +899,12 @@ namespace Voron.Impl.Journal
             var numberOfPages = txPages.Count;
 
             // We want to include the Transaction Header straight into the compression buffer.
-            var maxSizeRequiringCompression = pageCountIncludingAllOverflowPages *pageSize + (numberOfPages * sizeof(TransactionHeaderPageInfo));
+            var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
+            var maxSizeRequiringCompression = pageCountIncludingAllOverflowPages * pageSize + sizeOfPagesHeader
+                 + numberOfPages * sizeof(long);
             var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
-            var outputBufferInPages = (outputBufferSize+ sizeof(TransactionHeader) )/ pageSize +
-                                      ((outputBufferSize+ sizeof(TransactionHeader) )% pageSize == 0 ? 0 : 1);
+            var outputBufferInPages = (outputBufferSize + sizeof(TransactionHeader)) / pageSize +
+                                      ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1);
 
             // The pages required includes the intermediate pages and the required output pages. 
             var pagesRequired = (pageCountIncludingAllOverflowPages + outputBufferInPages);
@@ -911,16 +913,17 @@ namespace Voron.Impl.Journal
 
             var outputBuffer = compressionPager.AcquirePagePointer(tx, 0);
 
-            var totalSizeWritten = sizeof(TransactionHeaderPageInfo)* numberOfPages;
-            var pagesInfo = (TransactionHeaderPageInfo*) outputBuffer;
-            var write = outputBuffer + numberOfPages*sizeof(TransactionHeaderPageInfo);
+            var pagesInfo = (TransactionHeaderPageInfo*)outputBuffer;
+            var write = outputBuffer + sizeOfPagesHeader;
             var pageSequencialNumber = 0;
 
             foreach (var txPage in txPages)
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txPage.ScratchFileNumber,
                     txPage.PositionInScratchBuffer);
-
+                pagesInfo[pageSequencialNumber].PageNumber = ((PageHeader*) scratchPage)->PageNumber;
+                *(long*) write = ((PageHeader*) scratchPage)->PageNumber;
+                write += sizeof(long);
                 _diffPage.Output = write;
                 _diffPage.Modified = scratchPage;
                 _diffPage.Size = txPage.NumberOfPages*pageSize;
@@ -934,15 +937,13 @@ namespace Voron.Impl.Journal
                     _diffPage.Original = null;
                     _diffPage.ComputeNew();
                 }
-
                 write += _diffPage.OutputSize;
-                totalSizeWritten += _diffPage.OutputSize;
-                pagesInfo[pageSequencialNumber].PageNumber = ((PageHeader*) scratchPage)->PageNumber;
-                pagesInfo[pageSequencialNumber].Size = _diffPage.Size;
+                pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : _diffPage.Size;
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
-
                 ++pageSequencialNumber;
             }
+            var totalSizeWritten = (int)(write - outputBuffer + sizeOfPagesHeader);
+
 
             var compressionBuffer = outputBuffer + maxSizeRequiringCompression + sizeof(TransactionHeader);
 
@@ -954,8 +955,8 @@ namespace Voron.Impl.Journal
 
             // We need to account for the transaction header as part of the total length.
             var totalLength = compressedLen + sizeof(TransactionHeader);
-            var remainder = totalLength%pageSize;
-            var compressedPages = (totalLength/pageSize) + (remainder == 0 ? 0 : 1);
+            var remainder = totalLength % pageSize;
+            var compressedPages = (totalLength / pageSize) + (remainder == 0 ? 0 : 1);
 
             if (remainder != 0)
             {
@@ -966,10 +967,10 @@ namespace Voron.Impl.Journal
             var txHeaderPage = tx.GetTransactionHeaderPage();
             var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txHeaderPage.ScratchFileNumber,
                 txHeaderPage.PositionInScratchBuffer);
-            var txHeader = (TransactionHeader*) txHeaderBase;
+            var txHeader = (TransactionHeader*)txHeaderBase;
             txHeader->CompressedSize = compressedLen;
             txHeader->UncompressedSize = totalSizeWritten;
-            txHeader->PageCount = txPages.Count;
+            txHeader->PageCount = numberOfPages;
             txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, compressedLen);
 
             var prepreToWriteToJournal = new CompressedPagesResult
