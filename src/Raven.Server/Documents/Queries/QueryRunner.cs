@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -45,9 +44,12 @@ namespace Raven.Server.Documents.Queries
             else
             {
                 var index = GetIndex(indexName);
-                var etag = index.GetIndexEtag();
-                if (etag == existingResultEtag)
-                    return new DocumentQueryResult { NotModified = true };
+                if (existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag();
+                    if (etag == existingResultEtag)
+                        return DocumentQueryResult.NotModifiedResult;
+                }
 
                 return await index.Query(query, _documentsContext, token);
             }
@@ -55,22 +57,29 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, string facetSetupId, OperationCancelToken token)
+        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, string facetSetupId, long? existingResultEtag, OperationCancelToken token)
         {
-            var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, facetSetupId);
-            if (facetSetupAsJson == null)
-                throw new DocumentDoesNotExistException(facetSetupId);
+            FacetSetup facetSetup;
+            long facetSetupEtag;
+            using (_documentsContext.OpenReadTransaction())
+            {
+                var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, facetSetupId);
+                if (facetSetupAsJson == null)
+                    throw new DocumentDoesNotExistException(facetSetupId);
 
-            var facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+                facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+                facetSetupEtag = facetSetupAsJson.Etag;
+            }
 
-            return ExecuteFacetedQuery(indexName, query, facetSetup.Facets, token);
-        }
-
-        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, List<Facet> facets, OperationCancelToken token)
-        {
             var index = GetIndex(indexName);
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtagForFacets(facetSetupEtag);
+                if (etag == existingResultEtag)
+                    return FacetedQueryResult.NotModifiedResult;
+            }
 
-            return index.FacetedQuery(query, facets, token);
+            return index.FacetedQuery(query, facetSetup.Facets, facetSetupEtag, _documentsContext, token);
         }
 
         public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)

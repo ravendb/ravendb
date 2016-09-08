@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -11,7 +10,6 @@ using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
@@ -56,9 +54,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher, documentDatabase);
         }
 
-        public FacetedQueryResult FacetedQuery(IndexQueryServerSide query, List<Facet> facets, CancellationToken token)
+        public Dictionary<string, FacetResult> FacetedQuery(IndexQueryServerSide query, List<Facet> facets, CancellationToken token)
         {
-            var sp = Stopwatch.StartNew();
+            //var sp = Stopwatch.StartNew();
 
             Dictionary<string, Facet> defaultFacets;
             Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets;
@@ -89,8 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var readerFacetInfo in returnedReaders)
                 {
-                    //var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, Database.Name, Index);
-                    var termsForField = new Dictionary<string, int[]>();
+                    var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, _indexName);
 
                     Dictionary<string, FacetValue> facetValues;
 
@@ -149,8 +146,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var readerFacetInfo in returnedReaders)
                 {
-                    //var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, Database.Name, Index);
-                    var termsForField = new Dictionary<string, int[]>();
+                    var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, _indexName);
                     //if (isDistinct)
                     //{
                     //    if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)
@@ -160,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    }
                     //}
 
-                    var facetResult = results.Results[range.Key];
+                    var facetResult = results[range.Key];
                     var ranges = range.Value;
                     foreach (var kvp in termsForField)
                     {
@@ -201,10 +197,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 IntArraysPool.Instance.FreeArray(readerFacetInfo.Results.Array);
             }
 
+            //results.Duration = sp.Elapsed;
             return results;
         }
 
-        private void UpdateFacetResults(FacetedQueryResult results, IndexQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private void UpdateFacetResults(Dictionary<string, FacetResult> results, IndexQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
         {
             foreach (var facet in facets.Values)
             {
@@ -257,7 +254,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
 
-                results.Results[key] = new FacetResult
+                results[key] = new FacetResult
                 {
                     Values = values,
                     RemainingTermsCount = allTerms.Count - (query.Start + values.Count),
@@ -265,13 +262,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 };
 
                 if (facet.IncludeRemainingTerms)
-                    results.Results[key].RemainingTerms = allTerms.Skip(query.Start + values.Count).ToList();
+                    results[key].RemainingTerms = allTerms.Skip(query.Start + values.Count).ToList();
             }
         }
 
-        private static void CompleteFacetCalculationsStage(FacetedQueryResult results, Dictionary<string, Facet> facets)
+        private static void CompleteFacetCalculationsStage(Dictionary<string, FacetResult> results, Dictionary<string, Facet> facets)
         {
-            foreach (var facetResult in results.Results)
+            foreach (var facetResult in results)
             {
                 var key = facetResult.Key;
                 foreach (var facet in facets.Values.Where(f => f.DisplayName == key))

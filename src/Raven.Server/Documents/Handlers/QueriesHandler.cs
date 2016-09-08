@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
-                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
+                    FacetedQuery(context, indexName, token);
                     return;
                 }
 
@@ -54,16 +54,29 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        private void FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
             var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+
+            var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var facetDoc = GetStringQueryString("facetDoc", required: false);
 
             var runner = new QueryRunner(Database, context);
 
-            var result = runner.ExecuteFacetedQuery(indexName, query, facetDoc, token);
+            var result = runner.ExecuteFacetedQuery(indexName, query, facetDoc, existingResultEtag, token);
 
-            return Task.CompletedTask;
+            if (result.NotModified)
+            {
+                HttpContext.Response.StatusCode = 304;
+                return;
+            }
+
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteFacetedQueryResult(context, result);
+            }
         }
 
         private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token)

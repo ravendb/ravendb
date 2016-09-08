@@ -15,9 +15,9 @@ namespace Raven.Server.Documents.Queries.Faceted
     {
         private const string _Range = "_Range";
 
-        public static FacetedQueryResult Parse(List<Facet> facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
+        public static Dictionary<string, FacetResult> Parse(List<Facet> facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
         {
-            var results = new FacetedQueryResult();
+            var results = new Dictionary<string, FacetResult>();
             defaultFacets = new Dictionary<string, Facet>();
             rangeFacets = new Dictionary<string, List<ParsedRange>>();
             foreach (var facet in facets)
@@ -41,14 +41,14 @@ namespace Raven.Server.Documents.Queries.Faceted
                 switch (facet.Mode)
                 {
                     case FacetMode.Default:
-                        results.Results[key] = new FacetResult();
+                        results[key] = new FacetResult();
                         break;
                     case FacetMode.Ranges:
                         rangeFacets[key] = facet.Ranges
                             .Select(range => ParseRange(facet.Name, range))
                             .ToList();
 
-                        results.Results[key] = new FacetResult
+                        results[key] = new FacetResult
                         {
                             Values = facet.Ranges
                                 .Select(range => new FacetValue { Range = range })

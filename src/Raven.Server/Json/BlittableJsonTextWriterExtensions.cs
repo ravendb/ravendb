@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -55,6 +56,148 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(explanation.Reason)));
             writer.WriteString((explanation.Reason));
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteFacetedQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.IndexName));
+            writer.WriteString(result.IndexName);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.Results));
+            writer.WriteStartObject();
+            var isFirstInternal = true;
+            foreach (var kvp in result.Results)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteFacetResult(context, kvp.Value);
+            }
+            writer.WriteEndObject();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.IndexTimestamp));
+            writer.WriteString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.LastQueryTime));
+            writer.WriteString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.IsStale));
+            writer.WriteBool(result.IsStale);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.ResultEtag));
+            writer.WriteInteger(result.ResultEtag);
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteFacetResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetResult result)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.RemainingHits));
+            writer.WriteInteger(result.RemainingHits);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.RemainingTermsCount));
+            writer.WriteInteger(result.RemainingTermsCount);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.RemainingTerms));
+            writer.WriteStartArray();
+            var isFirstInternal = true;
+            foreach (var term in result.RemainingTerms)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WriteString(term);
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.Values));
+            writer.WriteStartArray();
+            isFirstInternal = true;
+            foreach (var value in result.Values)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(value.Average));
+                if (value.Average.HasValue)
+                {
+                    using (var lazyStringValue = context.GetLazyString(value.Average.ToInvariantString()))
+                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                }
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(value.Count));
+                if (value.Count.HasValue)
+                    writer.WriteInteger(value.Count.Value);
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(value.Hits));
+                writer.WriteInteger(value.Hits);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(value.Max));
+                if (value.Max.HasValue)
+                {
+                    using (var lazyStringValue = context.GetLazyString(value.Max.ToInvariantString()))
+                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                }
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(value.Min));
+                if (value.Min.HasValue)
+                {
+                    using (var lazyStringValue = context.GetLazyString(value.Min.ToInvariantString()))
+                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                }
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(value.Range));
+                writer.WriteString(value.Range);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(value.Sum));
+                if (value.Sum.HasValue)
+                {
+                    using (var lazyStringValue = context.GetLazyString(value.Sum.ToInvariantString()))
+                        writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
+                }
+                else
+                    writer.WriteNull();
+
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
 
             writer.WriteEndObject();
         }

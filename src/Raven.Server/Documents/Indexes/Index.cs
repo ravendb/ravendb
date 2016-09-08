@@ -11,7 +11,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -838,7 +837,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public FacetedQueryResult FacetedQuery(IndexQueryServerSide query, List<Facet> facets, OperationCancelToken token)
+        public FacetedQueryResult FacetedQuery(IndexQueryServerSide query, List<Facet> facets, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -857,7 +856,14 @@ namespace Raven.Server.Documents.Indexes
                 {
                     using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                     {
-                        return reader.FacetedQuery(query, facets, token.Token);
+                        var result = new FacetedQueryResult();
+
+                        using (documentsContext.OpenReadTransaction())
+                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext, query.CutoffEtag), facetSetupEtag, documentsContext, indexContext);
+
+                        result.Results = reader.FacetedQuery(query, facets, token.Token);
+
+                        return result;
                     }
                 }
             }
@@ -966,6 +972,15 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private void FillFacetedQueryResult(FacetedQueryResult result, bool isStale, long facetSetupEtag, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            result.IndexName = Name;
+            result.IsStale = isStale;
+            result.IndexTimestamp = _lastIndexingTime ?? DateTime.MinValue;
+            result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
+            result.ResultEtag = CalculateIndexEtagForFacets(result.IsStale, facetSetupEtag, documentsContext, indexContext);
+        }
+
         private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             result.IndexName = Name;
@@ -1001,6 +1016,27 @@ namespace Raven.Server.Documents.Indexes
                 return true;
 
             return false;
+        }
+
+        protected virtual unsafe long CalculateIndexEtagForFacets(bool isStale, long facetSetupEtag, DocumentsOperationContext documentContext, TransactionOperationContext indexContext)
+        {
+            var indexEtagBytes = new long[
+                1 + // definition hash
+                1 + // isStale
+                2 * Collections.Count + // last document etags and last mapped etags per collection
+                1 // facetSetupEtag
+                ];
+
+            var index = CalculateIndexEtagInternal(indexEtagBytes, isStale, documentContext, indexContext);
+            indexEtagBytes[index] = facetSetupEtag;
+
+            unchecked
+            {
+                fixed (long* buffer = indexEtagBytes)
+                {
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
+                }
+            }
         }
 
         protected virtual unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
@@ -1043,16 +1079,32 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetIndexEtag()
         {
-            DocumentsOperationContext documentContext;
+            DocumentsOperationContext documentsContext;
             TransactionOperationContext indexContext;
 
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentContext))
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
                 using (indexContext.OpenReadTransaction())
-                using (documentContext.OpenReadTransaction())
+                using (documentsContext.OpenReadTransaction())
                 {
-                    return CalculateIndexEtag(IsStale(documentContext, indexContext), documentContext, indexContext);
+                    return CalculateIndexEtag(IsStale(documentsContext, indexContext), documentsContext, indexContext);
+                }
+            }
+        }
+
+        public long GetIndexEtagForFacets(long facetSetupEtag)
+        {
+            DocumentsOperationContext documentsContext;
+            TransactionOperationContext indexContext;
+
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            {
+                using (indexContext.OpenReadTransaction())
+                using (documentsContext.OpenReadTransaction())
+                {
+                    return CalculateIndexEtagForFacets(IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
                 }
             }
         }

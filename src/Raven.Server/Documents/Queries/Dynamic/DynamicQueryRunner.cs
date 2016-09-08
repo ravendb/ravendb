@@ -109,10 +109,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (existingResultEtag == currentIndexEtag)
                 {
-                    return new CompletedTask<DocumentQueryResult>(new DocumentQueryResult
-                    {
-                        NotModified = true
-                    });
+                    return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
                 }
             }
 
