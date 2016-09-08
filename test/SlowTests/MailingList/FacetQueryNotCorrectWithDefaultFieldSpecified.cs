@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
         /// <summary>
         /// Works
         /// </summary>
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void ShouldWorkWithEmbeddedRaven()
         {
             //arrange
@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
         /// <summary>
         /// Should work but does not
         /// </summary>
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void ShouldWorkWithRavenServer()
         {
             //arrange

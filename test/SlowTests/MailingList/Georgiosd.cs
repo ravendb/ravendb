@@ -11,7 +11,7 @@ namespace SlowTests.MailingList
 {
     public class Georgiosd : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanGet304FromLazyFacets()
         {
             using (var store = GetDocumentStore())

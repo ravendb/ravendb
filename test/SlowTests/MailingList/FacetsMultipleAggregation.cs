@@ -12,7 +12,7 @@ namespace SlowTests.MailingList
 {
     public class FacetsMultipleAggregation : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanAggregateByMinAndMaxOnSameField()
         {
             using (var store = GetDocumentStore())

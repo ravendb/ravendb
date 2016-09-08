@@ -68,7 +68,15 @@ namespace Raven.Server.Documents.Queries
                 if (facetSetupAsJson == null)
                     throw new DocumentDoesNotExistException(facetSetupId);
 
-                facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+                try
+                {
+                    facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+                }
+                catch (Exception e)
+                {
+                    throw new DocumentParseException(facetSetupId, typeof(FacetSetup), e);
+                }
+                
                 facetSetupEtag = facetSetupAsJson.Etag;
             }
 

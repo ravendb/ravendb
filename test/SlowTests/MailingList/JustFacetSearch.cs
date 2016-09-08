@@ -156,7 +156,7 @@ namespace SlowTests.MailingList
             foreach (var article in articles) session.Store(article);
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void JustReturnFacets()
         {
             using (var store = GetDocumentStore())

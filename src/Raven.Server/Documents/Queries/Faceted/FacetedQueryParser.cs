@@ -126,17 +126,9 @@ namespace Raven.Server.Documents.Queries.Faceted
         private static string NumericStringToSortableNumeric(string value)
         {
             var number = NumberUtil.StringToNumber(value);
-            if (number is int)
-            {
-                return NumericUtils.IntToPrefixCoded((int)number);
-            }
             if (number is long)
             {
                 return NumericUtils.LongToPrefixCoded((long)number);
-            }
-            if (number is float)
-            {
-                return NumericUtils.FloatToPrefixCoded((float)number);
             }
             if (number is double)
             {

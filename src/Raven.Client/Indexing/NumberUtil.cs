@@ -26,7 +26,7 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         public static string NumberToString(double number)
         {
-            return "Dx" + number.ToString("G",CultureInfo.InvariantCulture);
+            return "Dx" + number.ToString("G", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -37,10 +37,10 @@ namespace Raven.Abstractions.Indexing
             if (number == null)
                 return null;
 
-            if ("NULL".Equals(number, StringComparison.OrdinalIgnoreCase) || 
-                "*".Equals(number,StringComparison.OrdinalIgnoreCase))
+            if ("NULL".Equals(number, StringComparison.OrdinalIgnoreCase) ||
+                "*".Equals(number, StringComparison.OrdinalIgnoreCase))
                 return null;
-            if(number.Length <= 2)
+            if (number.Length <= 2)
                 throw new ArgumentException("String must be greater than 2 characters");
             var num = number.Substring(2);
             var prefix = number.Substring(0, 2);
@@ -50,7 +50,7 @@ namespace Raven.Abstractions.Indexing
                     switch (num.Length)
                     {
                         case 8:
-                            return (long) int.Parse(num, NumberStyles.HexNumber);
+                            return (long)int.Parse(num, NumberStyles.HexNumber);
                         case 16:
                             return long.Parse(num, NumberStyles.HexNumber);
                     }
@@ -58,7 +58,7 @@ namespace Raven.Abstractions.Indexing
                 case "Lx":
                     return long.Parse(num, CultureInfo.InvariantCulture);
                 case "Dx":
-                    return  double.Parse(num, CultureInfo.InvariantCulture);
+                    return double.Parse(num, CultureInfo.InvariantCulture);
             }
 
             throw new ArgumentException(string.Format("Could not understand how to parse: '{0}'", number));
