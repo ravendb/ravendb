@@ -20,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
+using Voron.Impl.Backup;
 
 namespace Raven.Server.Documents
 {
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents
             IoMetrics = ioMetrics;
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
-            HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments, 
+            HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
 
         }
@@ -84,7 +85,7 @@ namespace Raven.Server.Documents
 
         public MetricsCountersManager Metrics { get; }
 
-        public IoMetrics IoMetrics { get;  }
+        public IoMetrics IoMetrics { get; }
 
         public IndexStore IndexStore { get; private set; }
 
@@ -137,7 +138,7 @@ namespace Raven.Server.Documents
             public void Dispose()
             {
                 Interlocked.Decrement(ref _parent._usages);
-                if(_parent._databaseShutdown.IsCancellationRequested)
+                if (_parent._databaseShutdown.IsCancellationRequested)
                     _parent._waitForUsagesOnDisposal.Set();
 
             }
@@ -308,7 +309,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     etag = document.Etag;
-                    var existingAlert = (BlittableJsonReaderObject)document.Data[alert.UniqueKey];
+                    var existingAlert = (BlittableJsonReaderObject) document.Data[alert.UniqueKey];
                     alerts = new DynamicJsonValue(document.Data)
                     {
                         [alert.UniqueKey] = new DynamicJsonValue
@@ -342,6 +343,44 @@ namespace Raven.Server.Documents
                 if (env != null)
                     yield return env;
             }
+        }
+
+        private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesEnvironmentInformation()
+        {
+            yield return (new FullBackup.StorageEnvironmentInformation()
+            {
+                Name = "",
+                Folder = "Subscriptions",
+                Env = SubscriptionStorage.Environment()
+            });
+            var i = 1;
+            foreach (var index in IndexStore.GetIndexes())
+            {
+                var env = index._indexStorage.Environment();
+                if (env != null)
+                    yield return (new FullBackup.StorageEnvironmentInformation()
+                    {
+                        Name = i++.ToString(),
+                        Folder = "Indexes",
+                        Env = env
+                    });
+            }
+            yield return (new FullBackup.StorageEnvironmentInformation()
+            {
+                Name = "",
+                Folder = "",
+                Env = DocumentsStorage.Environment
+            });
+        }
+
+        public void FullBackupTo(string backupPath)
+        {
+            BackupMethods.Full.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
+        }
+
+        public void IncrementalBackupTo(string backupPath)
+        {
+            BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
         }
     }
 }
