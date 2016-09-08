@@ -41,21 +41,15 @@ namespace Voron.Impl.Backup
             if (env.Options.IncrementalBackupEnabled == false)
                 throw new InvalidOperationException("Incremental backup is disabled for this storage");
 
-            long numberOfBackedUpPages = 0;
-
             var copier = new DataCopier(env.Options.PageSize * 16);
-            var backupSuccess = true;
-
-            long lastWrittenLogPage = -1;
-            long lastWrittenLogFile = -1;
 
             using (var file = new FileStream(backupPath, FileMode.Create))
             {
+                long numberOfBackedUpPages;
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
                     numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify, 
-                        backupStarted, lastWrittenLogFile, lastWrittenLogPage, package, string.Empty, copier, 
-                        numberOfBackedUpPages, backupSuccess);
+                        backupStarted,  package, string.Empty, copier);
                 }
                 file.Flush(true); // make sure that this is actually persisted fully to disk
                 return numberOfBackedUpPages;
@@ -71,7 +65,6 @@ namespace Voron.Impl.Backup
         {
             infoNotify = infoNotify ?? (s => { });
 
-            var backupSuccess = true;
             long totalNumberOfBackedUpPages = 0;
             using (var file = new FileStream(backupPath, FileMode.Create))
             {
@@ -79,31 +72,30 @@ namespace Voron.Impl.Backup
                 {
                     foreach (var e in envs)
                     {
-                        long numberOfBackedUpPages = 0;
-                        long lastWrittenLogPage = -1;
-                        long lastWrittenLogFile = -1;
                         if (e.Env.Options.IncrementalBackupEnabled == false)
                             throw new InvalidOperationException("Incremental backup is disabled for this storage");
                         infoNotify("Voron backup " + e.Name + "started");
                         var basePath = Path.Combine(e.Folder, e.Name);
                         var env = e.Env;
                         var copier = new DataCopier(env.Options.PageSize * 16);
-                        numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify,
-                                                backupStarted, lastWrittenLogFile, lastWrittenLogPage, 
-                                                package, basePath, copier, numberOfBackedUpPages, backupSuccess);
+                        var numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify,
+                                                backupStarted,  package, basePath, copier);
                         totalNumberOfBackedUpPages += numberOfBackedUpPages;
-                        file.Flush(true); // make sure that this is actually persisted fully to disk
                     }
                 }
+                file.Flush(true); // make sure that this is actually persisted fully to disk
 
                 return totalNumberOfBackedUpPages;
             }
         }
 
-        private static unsafe long Incremental_Backup(StorageEnvironment env, CompressionLevel compression, Action<string> infoNotify,
-            Action backupStarted, long lastWrittenLogFile, long lastWrittenLogPage, ZipArchive package, string basePath, DataCopier copier,
-            long numberOfBackedUpPages, bool backupSuccess)
+        private static long Incremental_Backup(StorageEnvironment env, CompressionLevel compression, Action<string> infoNotify,
+            Action backupStarted, ZipArchive package, string basePath, DataCopier copier)
         {
+            long numberOfBackedUpPages = 0;
+            long lastWrittenLogFile = -1;
+            long lastWrittenLogPage = -1;
+            bool backupSuccess = true;
             IncrementalBackupInfo backupInfo;
             using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
             {
@@ -256,14 +248,20 @@ namespace Voron.Impl.Backup
         {
             var ownsPagers = options.OwnsPagers;
             options.OwnsPagers = false;
-            using (var env = new StorageEnvironment(options))
+            try
             {
-                foreach (var backupPath in backupPaths)
+                using (var env = new StorageEnvironment(options))
                 {
-                    Restore(env, backupPath);
+                    foreach (var backupPath in backupPaths)
+                    {
+                        Restore(env, backupPath);
+                    }
                 }
             }
-            options.OwnsPagers = ownsPagers;
+            finally
+            {
+                options.OwnsPagers = ownsPagers;
+            }
         }
 
         public void Restore(string outPath, IEnumerable<string> backupPaths)
@@ -278,15 +276,10 @@ namespace Voron.Impl.Backup
                     {
                         using (var options = StorageEnvironmentOptions.ForPath(Path.Combine(outPath, dir.Key)))
                         {
-                            var ownsPagers = options.OwnsPagers;
-                            options.OwnsPagers = false;
                             using (var env = new StorageEnvironment(options))
                             {
                                 Restore(env, dir);
-
                             }
-                            options.OwnsPagers = ownsPagers;
-                            continue;
                         }
                     }
                 }
@@ -338,7 +331,7 @@ namespace Voron.Impl.Backup
                 }
             }
         }
-        private static unsafe void Restore(StorageEnvironment env, IEnumerable<ZipArchiveEntry> entries, string tempDir, List<IDisposable> toDispose,
+        private static void Restore(StorageEnvironment env, IEnumerable<ZipArchiveEntry> entries, string tempDir, List<IDisposable> toDispose,
             LowLevelTransaction txw)
         {
             try
