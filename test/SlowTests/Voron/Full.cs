@@ -26,7 +26,7 @@ namespace SlowTests.Voron
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                for (int i = 0; i < 500; i++)
+                for (int i = 0; i < 5000; i++)
                 {
                     tree.Add("items/" + i, new MemoryStream(buffer));
                 }
