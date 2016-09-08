@@ -11,7 +11,7 @@ namespace SlowTests.MailingList
 {
     public class FacetTest : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanFacetOnList()
         {
             using (var store = GetDocumentStore())

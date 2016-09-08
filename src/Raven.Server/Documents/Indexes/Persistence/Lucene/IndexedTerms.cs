@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static bool LowPrecisionNumber(string field, string val)
         {
-            if (field.EndsWith("Constants.Indexing.Fields.RangeFieldSuffix") == false)
+            if (field.EndsWith(Raven.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix) == false)
                 return false;
 
             if (string.IsNullOrEmpty(val))

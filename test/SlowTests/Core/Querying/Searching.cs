@@ -331,7 +331,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanPerformFacetedSearchAndLazyFacatedSearch()
         {
             using (var store = GetDocumentStore())
