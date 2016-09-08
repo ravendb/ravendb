@@ -144,26 +144,5 @@ namespace Raven.Tests.Issues
                 });
             }
         }
-
-        [Fact]
-        public void three_tasks_one_failing_with_allowPartialBatchResumption_shouldnt_throw()
-        {
-            using (var tp = new RTP(8))
-            {
-                tp.Start();
-                var range = Enumerable.Range(0, 3).ToList();
-                Assert.DoesNotThrow(() =>
-                {
-                    tp.ExecuteBatch(range, (int input) =>
-                    {
-                        const int number = 100;
-                        if (input == 0)
-                            Thread.Sleep(30000);
-
-                        var result = number / input;
-                    }, allowPartialBatchResumption: true, database: null);
-                });
-            }
-        }
     }
 }
