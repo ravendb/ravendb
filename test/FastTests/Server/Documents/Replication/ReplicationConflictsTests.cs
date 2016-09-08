@@ -243,7 +243,7 @@ namespace FastTests.Server.Documents.Replication
                 {
                     s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
-                }
+        }
 
                 var userIndex = new UserIndex();
                 store2.ExecuteIndex(userIndex);
@@ -617,3 +617,4 @@ namespace FastTests.Server.Documents.Replication
         }
     }
 }
+
