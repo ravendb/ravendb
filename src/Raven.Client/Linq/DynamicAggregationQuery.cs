@@ -37,7 +37,7 @@ namespace Raven.Client.Linq
             var propertyPath = path.ToPropertyPath('_');
             if (IsNumeric(path))
             {
-                var tmp = propertyPath + "_Range";
+                var tmp = propertyPath + Constants.Indexing.Fields.RangeFieldSuffix;
                 renames[propertyPath] = tmp;
                 propertyPath = tmp;
             }

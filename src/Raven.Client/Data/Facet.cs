@@ -133,7 +133,7 @@ namespace Raven.Abstractions.Data
                     type == typeof(short) ||
                     type == typeof(float) ||
                     type == typeof(decimal))
-                    name += "_Range";
+                    name += Constants.Indexing.Fields.RangeFieldSuffix;
             }
 
             return new Facet

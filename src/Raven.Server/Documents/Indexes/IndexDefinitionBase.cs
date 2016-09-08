@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool ContainsField(string field)
         {
-            if (field.EndsWith("_Range"))
+            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                 field = field.Substring(0, field.Length - 6);
 
             return MapFields.ContainsKey(field);
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexField GetField(string field)
         {
-            if (field.EndsWith("_Range"))
+            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                 field = field.Substring(0, field.Length - 6);
 
             return MapFields[field];
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool TryGetField(string field, out IndexField value)
         {
-            if (field.EndsWith("_Range"))
+            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                 field = field.Substring(0, field.Length - 6);
 
             return MapFields.TryGetValue(field, out value);

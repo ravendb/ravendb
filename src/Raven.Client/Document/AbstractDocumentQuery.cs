@@ -1217,7 +1217,7 @@ If you really want to do in memory filtering on the data returned from the query
                 {
                     DynamicMapReduceField renamedField;
 
-                    if (whereParams.FieldName.EndsWith("_Range"))
+                    if (whereParams.FieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                     {
                         var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - 6);
 
@@ -1225,7 +1225,7 @@ If you really want to do in memory filtering on the data returned from the query
 
                         if (renamedField != null)
                         {
-                            return whereParams.FieldName = renamedField.Name + "_Range";
+                            return whereParams.FieldName = renamedField.Name + Constants.Indexing.Fields.RangeFieldSuffix;
                         }
                     }
                     else
@@ -1439,8 +1439,8 @@ If you really want to do in memory filtering on the data returned from the query
                 return fieldName;
 
             var val = (start ?? end);
-            if (conventions.UsesRangeType(val) && !fieldName.EndsWith("_Range"))
-                fieldName = fieldName + "_Range";
+            if (conventions.UsesRangeType(val) && !fieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
+                fieldName = fieldName + Constants.Indexing.Fields.RangeFieldSuffix;
             return fieldName;
         }
 
@@ -2307,7 +2307,7 @@ If you really want to do in memory filtering on the data returned from the query
             var memberQueryPath = GetMemberQueryPath(expression);
             var memberExpression = linqPathProvider.GetMemberExpression(expression);
             if (DocumentConvention.UsesRangeType(memberExpression.Type))
-                return memberQueryPath + "_Range";
+                return memberQueryPath + Constants.Indexing.Fields.RangeFieldSuffix;
             return memberQueryPath;
         }
 

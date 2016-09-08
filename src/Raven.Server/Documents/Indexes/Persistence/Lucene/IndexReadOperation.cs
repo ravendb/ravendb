@@ -32,8 +32,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private static readonly string[] IntersectSeparators = { Constants.IntersectSeparator };
 
-        private const string _Range = "_Range";
-
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
         private readonly IndexType _indexType;
@@ -282,7 +280,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return new RandomSortField(customFieldName);
                 }
 
-                if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
+                if (InvariantCompare.IsSuffix(x.Field, Constants.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
                 {
                     sortOptions = SortOptions.NumericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
                 }

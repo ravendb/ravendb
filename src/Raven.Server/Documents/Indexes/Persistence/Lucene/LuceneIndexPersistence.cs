@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (field == Constants.Indexing.Fields.DocumentIdFieldName)
                 return _index.Type.IsMap();
 
-            if (field.EndsWith("_Range"))
+            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                 field = field.Substring(0, field.Length - 6);
 
             field = IndexField.ReplaceInvalidCharactersInFieldName(field);

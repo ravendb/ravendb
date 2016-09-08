@@ -1397,7 +1397,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             if (queryGenerator.Conventions.UsesRangeType(fieldType))
-                fieldName = fieldName + "_Range";
+                fieldName = fieldName + Constants.Indexing.Fields.RangeFieldSuffix;
             documentQuery.AddOrder(fieldName, descending, fieldType);
         }
 
@@ -1835,8 +1835,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
                 return Constants.Indexing.Fields.DocumentIdFieldName;
             }
-            if (documentQuery.DocumentConvention.UsesRangeType(value) && !expression.Path.EndsWith("_Range"))
-                return expression.Path + "_Range";
+            if (documentQuery.DocumentConvention.UsesRangeType(value) && !expression.Path.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
+                return expression.Path + Constants.Indexing.Fields.RangeFieldSuffix;
             return expression.Path;
         }
 

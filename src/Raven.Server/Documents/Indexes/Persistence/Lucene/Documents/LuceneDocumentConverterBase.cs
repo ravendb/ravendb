@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
         {
-            var fieldName = field.Name + "_Range";
+            var fieldName = field.Name + Constants.Indexing.Fields.RangeFieldSuffix;
 
             var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector, _multipleItemsSameFieldCount.ToArray());
 

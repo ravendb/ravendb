@@ -8,13 +8,12 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Server.Documents.Queries.Parse;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryParser
     {
-        private const string _Range = "_Range";
-
         public static Dictionary<string, FacetResult> Parse(List<Facet> facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
         {
             var results = new Dictionary<string, FacetResult>();
@@ -30,10 +29,10 @@ namespace Raven.Server.Documents.Queries.Faceted
                     if (string.IsNullOrEmpty(facet.AggregationField))
                         throw new InvalidOperationException($"Facet {facet.Name} cannot have aggregation set to {facet.Aggregation} without having a value in AggregationField");
 
-                    if (facet.AggregationField.EndsWith(_Range) == false)
+                    if (facet.AggregationField.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix) == false)
                     {
                         if (FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType))
-                            facet.AggregationField = facet.AggregationField + _Range;
+                            facet.AggregationField = facet.AggregationField + Constants.Indexing.Fields.RangeFieldSuffix;
                     }
 
                 }

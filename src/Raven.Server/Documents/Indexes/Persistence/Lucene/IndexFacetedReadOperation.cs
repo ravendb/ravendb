@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -118,7 +116,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             facetValue = new FacetValue
                             {
-                                Range = GetRangeName(facet.Name, kvp.Key)
+                                Range = FacetedQueryHelper.GetRangeName(facet.Name, kvp.Key, _fields)
                             };
                             facetValues.Add(kvp.Key, facetValue);
                         }
@@ -289,14 +287,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void ApplyAggregation(Facet facet, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase)
         {
-            var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
+            var sortOptionsForFacet = FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields);
             switch (sortOptionsForFacet)
             {
                 case SortOptions.String:
                 case SortOptions.StringVal:
                 //case SortOptions.Custom: // TODO arek
                 case SortOptions.None:
-                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", TryTrimRangeSuffix(facet.AggregationField)));
+                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FacetedQueryHelper.TryTrimRangeSuffix(facet.AggregationField)));
                 case SortOptions.NumericDefault:
                     var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
                     for (int index = 0; index < docsInQuery.Count; index++)
@@ -356,39 +354,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 default:
                     throw new ArgumentOutOfRangeException("Cannot understand " + sortOptionsForFacet);
             }
-        }
-
-        private string GetRangeName(string field, string text)
-        {
-            var sortOptions = GetSortOptionsForFacet(field);
-            switch (sortOptions)
-            {
-                case SortOptions.None:
-                case SortOptions.String:
-                case SortOptions.StringVal:
-                    //case SortOptions.Custom: // TODO [arek]
-                    return text;
-                case SortOptions.NumericDefault:
-                    if (IsStringNumber(text))
-                        return text;
-                    return NumericUtils.PrefixCodedToInt(text).ToString(CultureInfo.InvariantCulture);
-                case SortOptions.NumericDouble:
-                    if (IsStringNumber(text))
-                        return text;
-                    return NumericUtils.PrefixCodedToDouble(text).ToString(CultureInfo.InvariantCulture);
-                default:
-                    throw new ArgumentException("Can't get range name from sort option" + sortOptions);
-            }
-        }
-
-        private static string TryTrimRangeSuffix(string fieldName)
-        {
-            return fieldName.EndsWith("_Range") ? fieldName.Substring(0, fieldName.Length - "_Range".Length) : fieldName;
-        }
-
-        private static bool IsStringNumber(string value)
-        {
-            return string.IsNullOrEmpty(value) == false && char.IsDigit(value[0]);
         }
 
         private static List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery)
@@ -493,21 +458,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             foreach (var facet in facets)
             {
-                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType) && GetSortOptionsForFacet(facet.AggregationField) == SortOptions.None)
+                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType) && FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields) == SortOptions.None)
                     throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", _indexName, facet.AggregationField));
             }
-        }
-
-        private SortOptions GetSortOptionsForFacet(string field)
-        {
-            if (field.EndsWith("_Range"))
-                field = field.Substring(0, field.Length - 6);
-
-            IndexField value;
-            if (_fields.TryGetValue(field, out value) == false || value.SortOption.HasValue == false)
-                return SortOptions.None;
-
-            return value.SortOption.Value;
         }
 
         public override void Dispose()
