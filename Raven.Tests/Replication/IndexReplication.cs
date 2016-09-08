@@ -447,8 +447,8 @@ namespace Raven.Tests.Replication
                 var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
                 Assert.Equal(expectedIndexNames, indexStatsAfterReplication1);
 
-                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-                Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication3));
+                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
 
                 //since destination2 has disabled flag - indexes should not replicate to here
                 var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
