@@ -97,6 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.Boolean:
                 case ValueType.Double:
                 case ValueType.Null:
+                case ValueType.DynamicNull:
                 case ValueType.EmptyString:
                 case ValueType.Numeric:
                 case ValueType.BlittableJsonObject:
@@ -115,6 +116,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.Null)
             {
                 yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield break;
+            }
+
+            if (valueType == ValueType.DynamicNull)
+            {
+                var dynamicNull = (DynamicNullObject)value;
+                if (dynamicNull.IsExplicitNull)
+                {
+                    var sort = field.SortOption;
+                    if (sort == null
+                        || sort.Value == SortOptions.None
+                        || sort.Value == SortOptions.String
+                        || sort.Value == SortOptions.StringVal
+                        //|| sort.Value == SortOptions.Custom // TODO arek
+                        )
+                    {
+                        yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                    }
+
+                    foreach (var numericField in GetOrCreateNumericField(field, GetNullValueForSorting(sort), storage))
+                        yield return numericField;
+                }
+
                 yield break;
             }
 
@@ -262,7 +286,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static ValueType GetValueType(object value)
         {
-            if (value == null || value is DynamicNullObject) return ValueType.Null;
+            if (value == null)
+                return ValueType.Null;
+
+            if (value is DynamicNullObject)
+                return ValueType.DynamicNull;
 
             var lazyStringValue = value as LazyStringValue;
             if (lazyStringValue != null)
@@ -299,6 +327,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is BlittableJsonReaderObject) return ValueType.BlittableJsonObject;
 
             return ValueType.Numeric;
+        }
+
+        private static object GetNullValueForSorting(SortOptions? sortOptions)
+        {
+            switch (sortOptions)
+            {
+                case SortOptions.NumericDouble:
+                    return double.MinValue;
+                default:
+                    return long.MinValue;
+            }
         }
 
         protected Field GetOrCreateKeyField(LazyStringValue key)
@@ -447,6 +486,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private enum ValueType
         {
             Null,
+
+            DynamicNull,
 
             EmptyString,
 

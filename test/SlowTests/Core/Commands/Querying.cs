@@ -128,7 +128,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanGetFacets()
         {
             using (var store = GetDocumentStore())

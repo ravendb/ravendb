@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int _numberOfQueries;
 
-        private bool _handleAllDocs = false;
+        protected readonly bool _handleAllDocs;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
