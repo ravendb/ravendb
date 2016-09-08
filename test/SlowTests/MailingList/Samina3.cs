@@ -20,7 +20,7 @@ namespace SlowTests.MailingList
     public class Samina3 : RavenTestBase
     {
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void Querying_a_sub_collection_in_an_index()
         {
             DateTime startDate1 = DateTime.Now;

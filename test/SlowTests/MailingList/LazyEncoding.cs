@@ -31,7 +31,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void ShouldNotMatterForFacets()
         {
             using (var store = GetDocumentStore())

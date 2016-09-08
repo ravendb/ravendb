@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
+using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -71,15 +72,20 @@ namespace Raven.Server.Documents.Queries
                 facetSetupEtag = facetSetupAsJson.Etag;
             }
 
+            return ExecuteFacetedQuery(indexName, query, facetSetup.Facets, facetSetupEtag, existingResultEtag, token);
+        }
+
+        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, List<Facet> facets, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        {
             var index = GetIndex(indexName);
             if (existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtagForFacets(facetSetupEtag);
+                var etag = index.GetIndexEtagForFacets(facetsEtag);
                 if (etag == existingResultEtag)
                     return FacetedQueryResult.NotModifiedResult;
             }
 
-            return index.FacetedQuery(query, facetSetup.Facets, facetSetupEtag, _documentsContext, token);
+            return index.FacetedQuery(query, facets, facetsEtag, _documentsContext, token);
         }
 
         public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
@@ -88,7 +94,7 @@ namespace Raven.Server.Documents.Queries
 
             var etag = index.GetIndexEtag();
             if (etag == existingResultEtag)
-                return new TermsQueryResult { NotModified = true };
+                return TermsQueryResult.NotModifiedResult;
 
             return index.GetTerms(field, fromValue, pageSize, context, token);
         }
@@ -105,7 +111,7 @@ namespace Raven.Server.Documents.Queries
 
             var etag = index.GetIndexEtag();
             if (etag == existingResultEtag)
-                return new MoreLikeThisQueryResultServerSide { NotModified = true };
+                return MoreLikeThisQueryResultServerSide.NotModifiedResult;
 
             context.OpenReadTransaction();
 

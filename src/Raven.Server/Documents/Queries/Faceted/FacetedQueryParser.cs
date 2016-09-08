@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Server.Documents.Queries.Parse;
+using Raven.Server.Json;
+using Sparrow;
+using Sparrow.Json;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
@@ -188,6 +194,21 @@ namespace Raven.Server.Documents.Queries.Faceted
             public override string ToString()
             {
                 return string.Format("{0}:{1}", Field, RangeText);
+            }
+        }
+
+        public static async Task<KeyValuePair<List<Facet>, long>> ParseFromStringAsync(string facetsArrayAsString, JsonOperationContext context)
+        {
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(facetsArrayAsString)))
+            {
+                var facetsArray = await context.ParseArrayToMemoryAsync(stream, "facets", BlittableJsonDocumentBuilder.UsageMode.None);
+
+                var results = new List<Facet>();
+
+                foreach (BlittableJsonReaderObject facetAsJson in facetsArray)
+                    results.Add(JsonDeserializationServer.Facet(facetAsJson));
+
+                return new KeyValuePair<List<Facet>, long>(results, (long)Hashing.XXHash64.CalculateRaw(facetsArrayAsString));
             }
         }
     }

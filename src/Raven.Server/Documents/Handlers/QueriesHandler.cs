@@ -8,6 +8,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -46,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
-                    FacetedQuery(context, indexName, token);
+                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
                     return;
                 }
 
@@ -54,16 +55,27 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
             var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var facetDoc = GetStringQueryString("facetDoc", required: false);
+            KeyValuePair<List<Facet>, long> facets;
+            if (facetDoc == null)
+            {
+                var f = GetStringQueryString("facets");
+                if (string.IsNullOrWhiteSpace(f))
+                    throw new InvalidOperationException($"One of the required parameters (facetDoc or facets) was not specified.");
+
+                facets = await FacetedQueryParser.ParseFromStringAsync(f, context);
+            }
 
             var runner = new QueryRunner(Database, context);
 
-            var result = runner.ExecuteFacetedQuery(indexName, query, facetDoc, existingResultEtag, token);
+            var result = facetDoc != null 
+                ? runner.ExecuteFacetedQuery(indexName, query, facetDoc, existingResultEtag, token) 
+                : runner.ExecuteFacetedQuery(indexName, query, facets.Key, facets.Value, existingResultEtag, token);
 
             if (result.NotModified)
             {

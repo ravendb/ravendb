@@ -9,7 +9,7 @@ namespace SlowTests.MailingList
 {
     public class TomCabanski : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanEscapeGetFacets()
         {
             using (var store = GetDocumentStore())

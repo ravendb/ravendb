@@ -986,41 +986,30 @@ namespace Raven.Client.Connection.Async
         {
             var multiGetReuestItems = facetedQueries.Select(x =>
             {
-                string addition;
                 if (x.FacetSetupDoc != null)
                 {
-                    addition = "facetDoc=" + x.FacetSetupDoc;
-                    return new GetRequest()
+                    return new GetRequest
                     {
-                        Url = "/facets/" + x.IndexName,
-                        Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
-                            x.Query.GetQueryString(),
-                            x.PageStart,
-                            x.PageSize,
-                            addition)
+                        Url = "/queries/" + x.IndexName,
+                        Query = $"{x.Query.GetMinimalQueryString()}&start={x.PageStart}&pageSize={x.PageSize}&facetDoc={x.FacetSetupDoc}&op=facets"
                     };
                 }
 
                 var serializedFacets = SerializeFacetsToFacetsJsonString(x.Facets);
-                if (serializedFacets.Length < (32 * 1024) - 1)
+                if (serializedFacets.Length < 32 * 1024 - 1)
                 {
-                    addition = "facets=" + Uri.EscapeDataString(serializedFacets);
-                    return new GetRequest()
+                    return new GetRequest
                     {
-                        Url = "/facets/" + x.IndexName,
-                        Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
-                            x.Query.GetQueryString(),
-                            x.PageStart,
-                            x.PageSize,
-                            addition)
+                        Url = "/queries/" + x.IndexName,
+                        Query = $"{x.Query.GetMinimalQueryString()}&start={x.PageStart}&pageSize={x.PageSize}&facets={Uri.EscapeDataString(serializedFacets)}&op=facets"
                     };
                 }
 
-                return new GetRequest()
+                return new GetRequest
                 {
-                    Url = "/facets/" + x.IndexName,
-                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}",
-                            x.Query.GetQueryString(),
+                    Url = "/queries/" + x.IndexName,
+                    Query = string.Format("{0}&start={1}&pageSize={2}",
+                            x.Query.GetMinimalQueryString(),
                             x.PageStart,
                             x.PageSize),
                     Method = "POST",
@@ -1074,11 +1063,7 @@ namespace Raven.Client.Connection.Async
             }
             return ExecuteWithReplication(method, async operationMetadata =>
             {
-                var requestUri = operationMetadata.Url + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
-                                                                Uri.EscapeUriString(index),
-                                                                query.GetQueryString(),
-                                                                start,
-                                                                pageSize);
+                var requestUri = operationMetadata.Url + $"/queries/{Uri.EscapeUriString(index)}?{query.GetMinimalQueryString()}&start={start}&pageSize={pageSize}&op=facets";
 
                 if (method == HttpMethod.Get)
                     requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
