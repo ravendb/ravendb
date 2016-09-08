@@ -308,7 +308,8 @@ namespace Raven.Client.Connection.Async
                     responseException = e;
                 }
                 var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false);
-                if (error == null) throw responseException;
+                if (error == null)
+                    throw responseException;
 
                 throw new IndexCompilationException(error.Message) { IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText };
             }
@@ -355,11 +356,8 @@ namespace Raven.Client.Connection.Async
                         throw;
                     responseException = e;
                 }
-                var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false);
-                if (error == null)
-                    throw responseException;
 
-                throw new IndexCompilationException(error.Message) { IndexDefinitionProperty = error.IndexDefinitionProperty, ProblematicText = error.ProblematicText };
+                throw new InvalidOperationException(responseException.Message, responseException);
             }
         }
 
