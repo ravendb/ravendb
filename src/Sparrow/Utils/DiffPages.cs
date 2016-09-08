@@ -85,6 +85,8 @@ namespace Sparrow.Utils
 
         private bool WriteDiff(int start, int count)
         {
+            Debug.Assert(start < Size);
+            Debug.Assert(count != 0);
             start *= sizeof(long);
             count *= sizeof(long);
             if (_allZeros)
@@ -140,33 +142,47 @@ namespace Sparrow.Utils
 
         public void Apply()
         {
-
             var pos = 0;
             while (pos < DiffSize)
             {
+                if (pos + (sizeof(int) * 2) > DiffSize)
+                    AssertInvalidDiffSize(pos, sizeof(int) * 2);
+
                 int start = ((int*)(Diff + pos))[0];
                 int count = ((int*)(Diff + pos))[1];
                 pos += sizeof(int) * 2;
 
+                
                 if (count < 0)
                 {
-                    // zero length run
+                    // run of only zeroes
                     count *= -1;
-                    AssertValidSize(start, count);
+                    if (start + count > Size)
+                        AssertInvalidSize(start, count);
                     Memory.Set(Destination + start, 0, count);
                     continue;
                 }
-                AssertValidSize(start, count);
+
+                if (start + count > Size)
+                    AssertInvalidSize(start, count);
+                if (pos + count > DiffSize)
+                    AssertInvalidDiffSize(pos, count);
+
                 Memory.Copy(Destination + start, Diff + pos, count);
                 pos += count;
             }
         }
 
-        private void AssertValidSize(int start, int count)
+        private void AssertInvalidSize(int start, int count)
         {
-            if (start + count > Size)
-                throw new ArgumentOutOfRangeException(nameof(Size),
-                    $"Cannot apply zero diff to {start + count} because it is bigger than {Size}");
+            throw new ArgumentOutOfRangeException(nameof(Size),
+                $"Cannot apply diff to position {start + count} because it is bigger than {Size}");
+        }
+
+        private void AssertInvalidDiffSize(int pos, int count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Size),
+                $"Cannot apply diff because pos {pos} & count {count} are beyond the diff size: {DiffSize}");
         }
     }
 }
