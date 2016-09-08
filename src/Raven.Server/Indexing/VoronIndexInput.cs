@@ -1,20 +1,21 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
 using Raven.Abstractions.Extensions;
+using Raven.Server.Utils;
 using Sparrow;
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing
 {
     public unsafe class VoronIndexInput : IndexInput
     {
-
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private MmapStream _stream;
         private bool _isOriginal = true;
 
         private readonly long _originalTransactionId;
@@ -22,8 +23,10 @@ namespace Raven.Server.Indexing
 
         private readonly string _name;
 
-        private byte* _basePtr;
-        private int _size;
+        private MmapStream[] _streams;
+        private byte*[] _basePtrs;
+        private int[] _chunkSizes;
+        private CombinedReadingStream _stream;
 
         public VoronIndexInput(ThreadLocal<Transaction> transaction, string name)
         {
@@ -41,13 +44,35 @@ namespace Raven.Server.Indexing
             if (fileTree == null)
                 throw new FileNotFoundException("Could not find index input", _name);
 
-            var readResult = fileTree.Read(VoronIndexOutput.DataKey);
-            if (readResult == null)
-                throw new InvalidDataException($"Could not find data of file {_name}");
+            var numberOfChunks = fileTree.State.NumberOfEntries;
 
-            _basePtr = readResult.Reader.Base;
-            _size = readResult.Reader.Length;
-            _stream = new MmapStream(readResult.Reader.Base, readResult.Reader.Length);
+            _basePtrs = new byte*[numberOfChunks];
+            _chunkSizes = new int[numberOfChunks];
+            _streams = new MmapStream[numberOfChunks];
+
+            int index = 0;
+
+            using (var it = fileTree.Iterate(prefetch: true)) // TODO arek - true?
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    throw new InvalidDataException("Could not seek to any chunk of this file");
+
+                do
+                {
+                    var readResult = fileTree.Read(it.CurrentKey);
+
+                    _basePtrs[index] = readResult.Reader.Base;
+                    _chunkSizes[index] = readResult.Reader.Length;
+                    _streams[index] = new MmapStream(readResult.Reader.Base, readResult.Reader.Length);
+
+                    index++;
+                } while (it.MoveNext());
+            }
+            
+            if (numberOfChunks != index)
+                throw new InvalidDataException($"Read invalid number of file chunks. Expected {numberOfChunks}, read {index}.");
+
+            _stream = new CombinedReadingStream(_streams);
         }
 
         public override object Clone()
@@ -62,10 +87,15 @@ namespace Raven.Server.Indexing
                 clone.OpenInternal();
             else
             {
-                clone._stream = new MmapStream(clone._basePtr, clone._size)
+                for (int i = 0; i < _streams.Length; i++)
                 {
-                    Position = _stream.Position
-                };
+                    clone._streams[i] = new MmapStream(clone._basePtrs[i], clone._chunkSizes[i])
+                    {
+                        Position = _streams[i].Position
+                    };
+                }
+
+                clone._stream = new CombinedReadingStream(clone._streams);
             }
 
             return clone;
@@ -125,94 +155,6 @@ namespace Raven.Server.Indexing
         {
             if (_cts.IsCancellationRequested)
                 throw new ObjectDisposedException("VoronIndexInput");
-        }
-
-        private class MmapStream : Stream
-        {
-            private readonly byte* ptr;
-            private readonly long len;
-            private long pos;
-
-            public MmapStream(byte* ptr, long len)
-            {
-                this.ptr = ptr;
-                this.len = len;
-            }
-
-            public override void Flush()
-            {
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                switch (origin)
-                {
-                    case SeekOrigin.Begin:
-                        Position = offset;
-                        break;
-                    case SeekOrigin.Current:
-                        Position += offset;
-                        break;
-                    case SeekOrigin.End:
-                        Position = len + offset;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException("origin", origin, null);
-                }
-                return Position;
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override int ReadByte()
-            {
-                if (Position == len)
-                    return -1;
-                return ptr[pos++];
-
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                if (pos == len)
-                    return 0;
-                if (count > len - pos)
-                {
-                    count = (int)(len - pos);
-                }
-                fixed (byte* dst = buffer)
-                {
-                    Memory.CopyInline(dst + offset, ptr + pos, count);
-                }
-                pos += count;
-                return count;
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override bool CanRead
-            {
-                get { return true; }
-            }
-            public override bool CanSeek
-            {
-                get { return true; }
-            }
-            public override bool CanWrite
-            {
-                get { return false; }
-            }
-            public override long Length
-            {
-                get { return len; }
-            }
-            public override long Position { get { return pos; } set { pos = value; } }
         }
     }
 }

@@ -133,16 +133,24 @@ namespace Voron.Data.BTrees
             return true;
         }
 
-        public void Add(Slice key, Stream value, ushort? version = null)
+        public void Add(Slice key, Stream value, ushort? version = null, int? count = null)
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
             if (value.Length > int.MaxValue)
                 throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
 
             State.IsModified = true;
-            var pos = DirectAdd(key, (int)value.Length, version: version);
 
-            CopyStreamToPointer(_llt, value, pos);
+            int length;
+
+            if (count != null)
+                length = Math.Min(count.Value, (int) value.Length);
+            else
+                length = (int) value.Length;
+
+            var pos = DirectAdd(key, length, version: version);
+
+            CopyStreamToPointer(_llt, value, length, pos);
         }
 
         public void Add(Slice key, byte[] value, ushort? version = null)
@@ -169,14 +177,16 @@ namespace Voron.Data.BTrees
             value.CopyTo(pos);
         }
 
-        private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, byte* pos)
+        private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, int length, byte* pos)
         {
             TemporaryPage tmp;
             using (tx.Environment.GetTemporaryPage(tx, out tmp))
             {
                 var tempPageBuffer = tmp.TempPageBuffer;
                 var tempPagePointer = tmp.TempPagePointer;
-                while (true)
+                int copied = 0;
+
+                while (copied < length)
                 {
                     var read = value.Read(tempPageBuffer, 0, tempPageBuffer.Length);
                     if (read == 0)
@@ -184,6 +194,7 @@ namespace Voron.Data.BTrees
 
                     Memory.CopyInline(pos, tempPagePointer, read);
                     pos += read;
+                    copied += read;
 
                     if (read != tempPageBuffer.Length)
                         break;
