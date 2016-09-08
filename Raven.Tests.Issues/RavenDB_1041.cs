@@ -139,7 +139,7 @@ namespace Raven.Tests.Issues
 
             try
             {
-                await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
+                await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(5), replicas: 2);
             }
             catch (TimeoutException ex)
             {
