@@ -813,7 +813,7 @@ namespace Raven.Client.Connection.Async
             ErrorResponseException responseException;
             try
             {
-                var uniqueKeys = new HashSet<string>(keys);
+                var uniqueKeys = new HashSet<string>(keys).ToArray();
 
                 var results = result
                     .Value<RavenJArray>("Results")
@@ -824,11 +824,11 @@ namespace Raven.Client.Connection.Async
                     .Where(x => x != null && x.ContainsKey("@metadata") && x["@metadata"].Value<string>("@id") != null)
                     .ToDictionary(x => x["@metadata"].Value<string>("@id"), x => x, StringComparer.OrdinalIgnoreCase);
 
-                if (results.Count >= uniqueKeys.Count)
+                if (results.Count >= uniqueKeys.Length)
                 {
-                    for (var i = 0; i < uniqueKeys.Count; i++)
+                    for (var i = 0; i < uniqueKeys.Length; i++)
                     {
-                        var key = keys[i];
+                        var key = uniqueKeys[i];
                         if (documents.ContainsKey(key))
                             continue;
 
