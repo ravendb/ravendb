@@ -110,23 +110,7 @@ namespace Raven.SlowTests.RavenThreadPool
 
                 threadPoolStats = tp.GetThreadPoolStats();
                 Assert.Equal(8, threadPoolStats.ConcurrentWorkingThreadsAmount);
-
-                for (var i = 0; i < 7; i++)
-                {
-                    tp.HandleHighCpuUsage();
-                    threadPoolStats = tp.GetThreadPoolStats();
-
-                    Assert.Equal(7 - i, threadPoolStats.ConcurrentWorkingThreadsAmount);
-                }
-
-                for (var i = 1; i < 8; i++)
-                {
-                    tp.HandleLowCpuUsage();
-                    threadPoolStats = tp.GetThreadPoolStats();
-
-                    Assert.Equal(i + 1, threadPoolStats.ConcurrentWorkingThreadsAmount);
-                }
-
+                
                 for (var i = 1; i <= 8; i++)
                 {
                     tp.HandleLowCpuUsage();
