@@ -21,14 +21,13 @@ namespace Voron.Data.Tables
         public static readonly Slice InactiveSection = Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable);
         public static readonly Slice ActiveCandidateSection = Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable);
         public static readonly Slice Stats = Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable);
-
+        public static readonly Slice Schemas = Slice.From(StorageEnvironment.LabelsContext, "Schema", ByteStringType.Immutable);
         public SchemaIndexDef Key => _pk;
-
-        public bool AllowNoIndexesOrPrimaryKey { get; set; }
 
         public Dictionary<string, SchemaIndexDef> Indexes => _indexes;
         public Dictionary<string, FixedSizeSchemaIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
 
+        // TODO: see how to serialize
         public class SchemaIndexDef
         {
             public TableIndexType Type = TableIndexType.Default;
@@ -142,13 +141,21 @@ namespace Voron.Data.Tables
         /// </summary>
         public void Create(Transaction tx, string name)
         {
-            if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0 && AllowNoIndexesOrPrimaryKey == false)
+            if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
             var tableTree = tx.CreateTree(name);
+
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
 
+            // Set the root object type to Table. This will help us compact later on.
+            // TODO: add test to ensure every table has this rootobjecttype
+            Slice key = Slice.From(tx.Allocator, name, ByteStringType.Immutable);
+            RootHeader *header = (RootHeader*)tableTree.Llt.RootObjects.DirectRead(key);
+            header->RootObjectType = RootObjectType.Table;
+
+            // Create raw data. This is where we will actually store the documents
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
 
             Slice pageNumber = Slice.From(tx.Allocator, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber), ByteStringType.Immutable);
