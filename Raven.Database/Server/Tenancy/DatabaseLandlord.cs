@@ -356,6 +356,14 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
+            string boolAsString;
+            bool isHotSpare;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("hotSpare", out boolAsString) &&
+                bool.TryParse(boolAsString, out isHotSpare) && isHotSpare)
+            {
+                throw new InvalidOperationException("You can use a Hot Spare license only in RavenDB v3.5 and above!");
+            }
+
             foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
             {
                 string value;
