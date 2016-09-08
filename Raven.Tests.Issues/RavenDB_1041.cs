@@ -125,6 +125,35 @@ namespace Raven.Tests.Issues
 
       
         [Fact]
+        public async Task ShouldThrowTimeoutException()
+        {
+            var store1 = CreateStore(requestedStorageType: "esent");
+            var store2 = CreateStore(requestedStorageType: "esent");
+
+            SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
+
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new ReplicatedItem { Id = "Replicated/1" });
+                session.SaveChanges();
+            }
+
+            TimeoutException timeoutException = null;
+
+            try
+            {
+                await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(5), replicas: 2);
+            }
+            catch (TimeoutException ex)
+            {
+                timeoutException = ex;
+            }
+
+            Assert.NotNull(timeoutException);
+            Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
+        }
+
+        [Fact]
         public async Task ShouldThrowIfCannotReachEnoughDestinationServers()
         {
             var store1 = CreateStore();
