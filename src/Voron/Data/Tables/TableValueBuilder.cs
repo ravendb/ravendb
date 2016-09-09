@@ -29,24 +29,29 @@ namespace Voron.Data.Tables
             Add(slice.Content.Ptr, slice.Size);
         }
 
-        public void Add(ulong value)
+        public void Add(ulong *value)
         {
-            Add((byte*)&value, sizeof(ulong));
+            Add((byte*)value, sizeof(ulong));
         }
 
-        public void Add(long value)
+        public void Add(long *value)
         {
-            Add((byte*)&value, sizeof(long));
+            Add((byte*)value, sizeof(long));
         }
 
-        public void Add(int value)
+        public void Add(int *value)
         {
-            Add((byte*)&value, sizeof(int));
+            Add((byte*)value, sizeof(int));
         }
 
-        public void Add(uint value)
+        public void Add(uint *value)
         {
-            Add((byte*)&value, sizeof(uint));
+            Add((byte*)value, sizeof(uint));
+        }
+
+        public void Add(bool *value)
+        {
+            Add((byte*)value, sizeof(bool));
         }
 
         public void Add(byte* ptr, int size)

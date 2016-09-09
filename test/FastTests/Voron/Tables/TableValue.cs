@@ -4,10 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Text;
 using Xunit;
 
-using Voron;
 using Voron.Data.Tables;
 
 namespace FastTests.Voron.Tables
@@ -81,6 +81,82 @@ namespace FastTests.Voron.Tables
                         }
 
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSerializeBool()
+        {
+            var v1 = true;
+            var v2 = false;
+
+            var tableValue = new TableValueBuilder { &v1, &v2 };
+
+            fixed (byte* buffer = new byte[tableValue.Size])
+            {
+                tableValue.CopyTo(buffer);
+
+                var reader = new TableValueReader(buffer, tableValue.Size);
+
+                int size;
+                var p = reader.Read(0, out size);
+                var value = Convert.ToBoolean(*p);
+
+                Assert.Equal(1, size);
+                Assert.Equal(true, value);
+
+                p = reader.Read(1, out size);
+                value = Convert.ToBoolean(*p);
+
+                Assert.Equal(1, size);
+                Assert.Equal(false, value);
+            }
+        }
+
+        [Fact]
+        public void CanSerializeRecursively()
+        {
+            var v1 = 0L;
+            var v2 = 1L;
+            var innerTableValue = new TableValueBuilder { &v1, &v2 };
+
+            byte[] temporary = new byte[innerTableValue.Size];
+
+            fixed (byte* ptr = temporary)
+            {
+                innerTableValue.CopyTo(ptr);
+
+                var tableValue = new TableValueBuilder { &v1, { ptr, innerTableValue.Size } };
+
+                fixed (byte* buffer = new byte[tableValue.Size])
+                {
+                    tableValue.CopyTo(buffer);
+
+                    var reader = new TableValueReader(buffer, tableValue.Size);
+
+                    int size;
+                    var p = reader.Read(0, out size);
+                    var hello = *(long*) p;
+
+                    Assert.Equal(0L, hello);
+
+                    p = reader.Read(1, out size);
+
+                    // Get into reading the inner Table Value Reader
+                    var innerReader = new TableValueReader(p, size);
+
+                    p = innerReader.Read(0, out size);
+                    var value = *(long*)p;
+
+                    Assert.Equal(sizeof(long), size);
+                    Assert.Equal(0L, value);
+
+                    p = innerReader.Read(1, out size);
+                    Assert.Equal(sizeof(long), size);
+                    value = *(long*)p;
+
+                    Assert.Equal(1L, value);
                 }
             }
         }

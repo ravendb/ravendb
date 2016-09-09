@@ -104,11 +104,11 @@ namespace Raven.Server.Documents
 
                 table.Insert(new TableValueBuilder
                 {
-                    bigEndianId,
+                    &bigEndianId,
                     {criteria.BasePointer, criteria.Size},
-                    ackEtag,
-                    timeOfSendingLastBatch,
-                    timeOfLastClientActivity
+                    &ackEtag,
+                    &timeOfSendingLastBatch,
+                    &timeOfLastClientActivity
                 });
                 tx.Commit();
                 if (_logger.IsInfoEnabled)
