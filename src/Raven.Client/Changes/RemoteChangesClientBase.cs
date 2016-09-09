@@ -202,7 +202,7 @@ namespace Raven.Client.Changes
             stream.TryGetBuffer(out bytes);
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
 
-            await tcs.Task;
+            await tcs.Task.ConfigureAwait(false);
         }
 
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
