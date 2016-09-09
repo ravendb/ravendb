@@ -59,7 +59,7 @@ namespace Raven.Client.Document.SessionOperations
                     sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout;
         }
 
-        public T[] Complete<T>()
+        public T[] Complete<T>(bool skipRegisterMissingIds = false)
         {
             for (var i = 0; i < includeResults.Length; i++)
             {
@@ -70,11 +70,15 @@ namespace Raven.Client.Document.SessionOperations
             var finalResults = ids != null ?
                 ReturnResultsById<T>() :
                 ReturnResults<T>();
-            for (var i = 0; i < finalResults.Length; i++)
+
+            if (skipRegisterMissingIds == false)
             {
-                var finalResult = finalResults[i];
-                if (ReferenceEquals(finalResult, null))
-                    sessionOperations.RegisterMissing(ids[i]);
+                for (var i = 0; i < finalResults.Length; i++)
+                {
+                    var finalResult = finalResults[i];
+                    if (ReferenceEquals(finalResult, null))
+                        sessionOperations.RegisterMissing(ids[i]);
+                }
             }
 
             var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;

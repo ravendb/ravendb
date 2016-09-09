@@ -351,7 +351,7 @@ namespace Raven.Client.Shard
             var includePaths = includes != null && includes.Length > 0 ? includes.Select(x => x.Key).ToArray() : null;
             var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null).ToList();
 
-            if (idsToLoad.Count>0)
+            if (idsToLoad.Count > 0)
                 IncrementRequestCount();
 
             foreach (var shard in idsToLoad)
@@ -375,14 +375,22 @@ namespace Raven.Client.Shard
                     } while (multiLoadOperation.SetResult(multiLoadResult));
                     return multiLoadOperation;
                 });
+
+                var missingIds = new HashSet<string>();
+                var loadedIds = new HashSet<string>();
                 foreach (var multiLoadOperation in multiLoadOperations)
                 {
-                    var loadResults = multiLoadOperation.Complete<T>();
+                    var loadResults = multiLoadOperation.Complete<T>(skipRegisterMissingIds: true);
                     for (int i = 0; i < loadResults.Length; i++)
                     {
-                        if (ReferenceEquals(loadResults[i], null))
-                            continue;
                         var id = currentShardIds[i];
+                        if (ReferenceEquals(loadResults[i], null))
+                        {
+                            missingIds.Add(id);
+                            continue;
+                        }
+
+                        loadedIds.Add(id);
                         var itemPosition = Array.IndexOf(ids, id);
                         if (ReferenceEquals(results[itemPosition], default(T)) == false)
                         {
@@ -391,6 +399,14 @@ namespace Raven.Client.Shard
                         }
                         results[itemPosition] = loadResults[i];
                     }
+                }
+
+                foreach (var id in missingIds)
+                {
+                    if (loadedIds.Contains(id))
+                        continue;
+
+                    RegisterMissing(id);
                 }
             }
             return ids.Select(id => // so we get items that were skipped because they are already in the session cache
