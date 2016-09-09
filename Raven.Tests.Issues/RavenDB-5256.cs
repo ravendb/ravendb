@@ -333,8 +333,8 @@ namespace Raven.Tests.Issues
 
             var shards = new List<IDocumentStore>
             {
-                new DocumentStore {Identifier = "ShardA", Url = "http://localhost.fiddler:8079/"},
-                new DocumentStore {Identifier = "ShardB", Url = "http://localhost.fiddler:8078/"}
+                new DocumentStore {Identifier = "ShardA", Url = server1.Configuration.ServerUrl},
+                new DocumentStore {Identifier = "ShardB", Url = server2.Configuration.ServerUrl}
             }.ToDictionary(x => x.Identifier, x => x);
 
             using (var documentStore = new ShardedDocumentStore(new ShardStrategy(shards)
