@@ -159,7 +159,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     case LegacyIndexDefinition.LegacySortOptions.Long:
                     case LegacyIndexDefinition.LegacySortOptions.Int:
                     case LegacyIndexDefinition.LegacySortOptions.Byte:
-                        sortOptions = SortOptions.NumericDefault;
+                        sortOptions = SortOptions.NumericLong;
                         break;
                     case LegacyIndexDefinition.LegacySortOptions.Float:
                     case LegacyIndexDefinition.LegacySortOptions.Double:

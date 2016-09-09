@@ -446,7 +446,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             switch (BlittableNumber.Parse(value, out doubleValue, out longValue))
             {
                 case NumberParseResult.Double:
-                    yield return numericField.SetDoubleValue(doubleValue);
+                    if (field.SortOption == SortOptions.NumericLong)
+                        yield return numericField.SetLongValue((long)doubleValue);
+                    else
+                        yield return numericField.SetDoubleValue(doubleValue);
                     break;
                 case NumberParseResult.Long:
                     if (field.SortOption == SortOptions.NumericDouble)

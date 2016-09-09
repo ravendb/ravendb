@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 //case SortOptions.Custom: // TODO arek
                 case SortOptions.None:
                     throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FacetedQueryHelper.TryTrimRangeSuffix(facet.AggregationField)));
-                case SortOptions.NumericDefault:
+                case SortOptions.NumericLong:
                     var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
                     for (int index = 0; index < docsInQuery.Count; index++)
                     {
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("Cannot understand " + sortOptionsForFacet);
+                    throw new ArgumentOutOfRangeException($"Not supported sort option for aggregation: {sortOptionsForFacet}");
             }
         }
 

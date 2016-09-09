@@ -4,6 +4,7 @@ using System.Globalization;
 using Lucene.Net.Util;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Constants = Raven.Abstractions.Data.Constants;
 
@@ -57,16 +58,16 @@ namespace Raven.Server.Documents.Queries.Faceted
                 case SortOptions.StringVal:
                     //case SortOptions.Custom: // TODO [arek]
                     return text;
-                case SortOptions.NumericDefault:
+                case SortOptions.NumericLong:
                     if (IsStringNumber(text))
                         return text;
-                    return NumericUtils.PrefixCodedToInt(text).ToString(CultureInfo.InvariantCulture);
+                    return NumericUtils.PrefixCodedToLong(text).ToInvariantString();
                 case SortOptions.NumericDouble:
                     if (IsStringNumber(text))
                         return text;
-                    return NumericUtils.PrefixCodedToDouble(text).ToString(CultureInfo.InvariantCulture);
+                    return NumericUtils.PrefixCodedToDouble(text).ToInvariantString();
                 default:
-                    throw new ArgumentException("Can't get range name from sort option" + sortOptions);
+                    throw new ArgumentException($"Can't get range name from '{sortOptions}' sort option");
             }
         }
 

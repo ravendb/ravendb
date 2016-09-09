@@ -9,10 +9,23 @@ namespace Sparrow.Json
         public readonly LazyStringValue Inner;
         private double? _val;
         private decimal? _decimalVal;
+        private long? _longVal;
 
         public LazyDoubleValue(LazyStringValue inner)
         {
             Inner = inner;
+        }
+
+        public static implicit operator long(LazyDoubleValue self)
+        {
+            if (self._longVal != null)
+                return self._longVal.Value;
+
+            var doubleVal = (double)self;
+            var val = (long)doubleVal;
+            self._longVal = val;
+
+            return val;
         }
 
         public static implicit operator double(LazyDoubleValue self)
