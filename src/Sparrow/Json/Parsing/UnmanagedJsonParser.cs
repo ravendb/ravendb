@@ -115,7 +115,7 @@ namespace Sparrow.Json.Parsing
                 switch (b)
                 {
                     case (byte)'\r':
-                        if (_pos >= _bufSize)
+                        if (_pos >= _initialPos + _bufSize)
                             return false;
                         if (_inputBuffer[_pos] == (byte)'\n')
                             continue;
@@ -349,7 +349,7 @@ namespace Sparrow.Json.Parsing
         {
             while (true)
             {
-                if (_pos >= _bufSize)
+                if (_pos >= _initialPos + _bufSize)
                     return false;
                 _charPos++;
                 var b = _inputBuffer[_pos++];
@@ -424,7 +424,7 @@ namespace Sparrow.Json.Parsing
         {
             for (int i = _expectedTokenBufferPosition; i < _expectedTokenBuffer.Length; i++)
             {
-                if (_pos >= _bufSize)
+                if (_pos >= _initialPos + _bufSize)
                     return false;
                 if (_inputBuffer[_pos++] != _expectedTokenBuffer[i])
                     throw CreateException("Invalid token found, expected: " + _expectedTokenString);
@@ -441,7 +441,7 @@ namespace Sparrow.Json.Parsing
                 while (true)
                 {
                     _currentStrStart = _pos;
-                    while (_pos < _bufSize)
+                    while (_pos < _initialPos + _bufSize)
                     {
                         var b = inputBufferPtr[_pos++];
                         _charPos++;
@@ -496,12 +496,12 @@ namespace Sparrow.Json.Parsing
                                     break;
                                 case (byte)'\r':// line continuation, skip
                                                 // flush the buffer, but skip the \,\r chars
-                                    if (_pos >= _bufSize)
+                                    if (_pos >= _initialPos + _bufSize)
                                         return false;
 
                                     _line++;
                                     _charPos = 1;
-                                    if (_pos >= _bufSize)
+                                    if (_pos >= _initialPos + _bufSize)
                                         return false;
 
                                     if (inputBufferPtr[_pos] == (byte)'\n')
@@ -523,7 +523,7 @@ namespace Sparrow.Json.Parsing
                     }
                     // copy the buffer to the native code, then refill
                     _stringBuffer.Write(inputBufferPtr + _currentStrStart, _pos - _currentStrStart);
-                    if (_pos >= _bufSize)
+                    if (_pos >= _initialPos + _bufSize)
                         return false;
                 }
             }
@@ -536,7 +536,7 @@ namespace Sparrow.Json.Parsing
             int val = 0;
             for (int i = 0; i < 4; i++)
             {
-                if (_pos >= _bufSize)
+                if (_pos >= _initialPos + _bufSize)
                     return false;
 
                 b = _inputBuffer[_pos++];
@@ -617,7 +617,7 @@ namespace Sparrow.Json.Parsing
         protected InvalidDataException CreateException(string message, Exception inner = null)
         {
             var start = Math.Max(0, _pos - 25);
-            var count = Math.Min(_pos, _bufSize) - start;
+            var count = Math.Min(_pos, _bufSize) - start;  
             var s = Encoding.UTF8.GetString(_inputBuffer, start, count);
             return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " + s, inner);
         }
