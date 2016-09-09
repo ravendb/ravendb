@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -9,6 +10,8 @@ using Raven.Client.Document;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Notifications;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Documents.Notifications
@@ -102,6 +105,41 @@ namespace FastTests.Server.Documents.Notifications
                 Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
 
                 ((RemoteDatabaseChanges)taskObservable).DisposeAsync().Wait();
+            }
+        }
+
+        [Fact]
+        public async Task CanCreateMultipleNotificationsOnSingleConnection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var list = new BlockingCollection<DocumentChangeNotification>();
+                var taskObservable = store.Changes();
+                await taskObservable.ConnectionTask;
+                var observableWithTask = taskObservable.ForDocument("users/1");
+                await observableWithTask.Task;
+                observableWithTask.Subscribe(list.Add);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                DocumentChangeNotification documentChangeNotification;
+                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+
+                observableWithTask = taskObservable.ForDocument("users/2");
+                await observableWithTask.Task;
+                observableWithTask.Subscribe(list.Add);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
             }
         }
 
