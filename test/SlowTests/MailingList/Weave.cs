@@ -17,10 +17,9 @@ namespace SlowTests.MailingList
         [Fact]
         public void Main()
         {
-            using (var Store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-
-                using (var session = Store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     foreach (var sys in session.Query<CalcSystem>())
                     {
@@ -29,7 +28,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                using (var session = Store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new CalcSystem
                     {
@@ -55,7 +54,7 @@ namespace SlowTests.MailingList
 
                     session.SaveChanges();
                 }
-                using (var session = Store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var allSystems = session.Query<CalcSystem>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow())

@@ -342,9 +342,9 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(5, result.GetFields().Count);
-            Assert.Equal(@"{""City"":""New York City""}", result.GetField("Address").ReaderValue.ReadToEnd());
+            Assert.Equal(@"{""City"":""New York City""}", result.GetField("Address").StringValue);
             Assert.Equal("true", result.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-            Assert.Equal(@"{""City"":""San Francisco""}", result.GetField("ResidenceAddress").ReaderValue.ReadToEnd());
+            Assert.Equal(@"{""City"":""San Francisco""}", result.GetField("ResidenceAddress").StringValue);
             Assert.Equal("true", result.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
             Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
 
@@ -363,9 +363,9 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(5, result.GetFields().Count);
-            Assert.Equal(@"{""City"":""NYC""}", result.GetField("Address").ReaderValue.ReadToEnd());
+            Assert.Equal(@"{""City"":""NYC""}", result.GetField("Address").StringValue);
             Assert.Equal("true", result.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-            Assert.Equal(@"{""City"":""Washington""}", result.GetField("ResidenceAddress").ReaderValue.ReadToEnd());
+            Assert.Equal(@"{""City"":""Washington""}", result.GetField("ResidenceAddress").StringValue);
             Assert.Equal("true", result.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
             Assert.Equal("users/2", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
         }
@@ -432,8 +432,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(5, result.GetFields().Count);
-            Assert.Equal(@"{""City"":""New York City""}", result.GetFields("Addresses")[0].ReaderValue.ReadToEnd());
-            Assert.Equal(@"{""City"":""NYC""}", result.GetFields("Addresses")[1].ReaderValue.ReadToEnd());
+            Assert.Equal(@"{""City"":""New York City""}", result.GetFields("Addresses")[0].StringValue);
+            Assert.Equal(@"{""City"":""NYC""}", result.GetFields("Addresses")[1].StringValue);
             Assert.Equal("true", result.GetField("Addresses" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
             Assert.Equal("true", result.GetField("Addresses" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue);
             Assert.Equal("users/1", result.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
@@ -448,7 +448,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             return new Document
             {
                 Data = data,
-                Key = _ctx.GetLazyString(id)
+                Key = _ctx.GetLazyString(id),
+                LoweredKey = _ctx.GetLazyString(id.ToLowerInvariant())
             };
         }
 

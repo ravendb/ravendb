@@ -8,7 +8,7 @@ namespace FastTests.Server.Documents.Replication
     {
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public int Age { get; set; }

@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using QUT.GplexBuffers;
-using QUT.Gppg;
 
-namespace Raven.Database.Indexing
+namespace Raven.Server.Documents.Queries.Parse
 {
     internal partial class LuceneQueryScanner
     {

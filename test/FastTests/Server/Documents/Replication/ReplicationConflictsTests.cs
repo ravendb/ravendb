@@ -5,6 +5,7 @@ using System.Net;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
@@ -260,7 +261,7 @@ namespace FastTests.Server.Documents.Replication
 
                 Assert.Equal(3, conflicts["foo/bar"].Count);
             }
-        }
+        }	
 
         private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
                 DocumentStore store,
@@ -308,19 +309,6 @@ namespace FastTests.Server.Documents.Replication
                 }).GroupBy(x => x.Key).ToDictionary(x => x.Key, x => x.Select(i => i.ChangeVector).ToList());
 
                 return conflicts;
-            }
-        }
-
-
-        private async Task<bool> HasConflicts(DocumentStore store, string dbName, string docId)
-        {
-            var url = $"{store.Url}/databases/{dbName}/replication/conflicts?docId={docId}";
-            using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
-            {
-                request.ExecuteRequest();
-                var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
-                return conflictsJson.Length > 0;
             }
         }
     }

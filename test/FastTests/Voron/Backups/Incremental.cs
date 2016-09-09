@@ -42,7 +42,7 @@ namespace FastTests.Voron.Backups
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 500; i++)
                 {
-                    tree.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -87,7 +87,7 @@ namespace FastTests.Voron.Backups
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 300; i++)
                 {
-                    tree.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -100,7 +100,7 @@ namespace FastTests.Voron.Backups
                 var tree = tx.CreateTree("foo");
                 for (int i = 300; i < 600; i++)
                 {
-                    tree.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -113,7 +113,7 @@ namespace FastTests.Voron.Backups
                 var tree = tx.CreateTree("foo");
                 for (int i = 600; i < 1000; i++)
                 {
-                    tree.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -163,7 +163,7 @@ namespace FastTests.Voron.Backups
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 5; i++)
                 {
-                    tree.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -176,13 +176,13 @@ namespace FastTests.Voron.Backups
             Assert.Equal(usedPagesInJournal, backedUpPages);
 
             var writePos = Env.Journal.CurrentFile.WritePagePosition;
-        
+
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
                 for (int i = 5; i < 10; i++)
                 {
-                    tree.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -233,7 +233,7 @@ namespace FastTests.Voron.Backups
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 5; i++)
                 {
-                    tree.Add			("items/" + i, new MemoryStream(buffer));
+                    tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
                 tx.Commit();
@@ -295,7 +295,7 @@ namespace FastTests.Voron.Backups
 
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.CreateTree( "test");
+                var tree = tx.CreateTree("test");
 
                 var itemBytes = new byte[16000];
 
@@ -353,7 +353,7 @@ namespace FastTests.Voron.Backups
 
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.CreateTree( "test");
+                var tree = tx.CreateTree("test");
 
                 var itemBytes = new byte[2000];
 
@@ -370,7 +370,7 @@ namespace FastTests.Voron.Backups
 
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.CreateTree( "test");
+                var tree = tx.CreateTree("test");
                 tree.Delete("items/1");
                 tree.Delete("items/2");
 
@@ -418,7 +418,7 @@ namespace FastTests.Voron.Backups
 
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.CreateTree(  "test");
+                var tree = tx.CreateTree("test");
 
                 var itemBytes = new byte[30000];
 
@@ -475,6 +475,6 @@ namespace FastTests.Voron.Backups
         {
             base.Dispose();
             IncrementalBackupTestUtils.Clean();
-        }	
+        }
     }
 }

@@ -1,30 +1,18 @@
-﻿using System;
+﻿using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Sorting
 {
     public static class SortFieldHelper
     {
-        public static Field CustomField(string field)
+        private static readonly char[] Separators = { ';' };
+
+        public static StringSegment ExtractName(StringSegment field)
         {
-            var parts = field.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-            return parts.Length == 1 ? new Field(parts[0]) : new Field(parts[0], parts[1]);
-        }
+            var indexOfSeparator = field.IndexOfAny(Separators, 0);
+            if (indexOfSeparator == -1)
+                return field;
 
-        public class Field
-        {
-            public Field(string type)
-            {
-                Type = type;
-            }
-
-            public Field(string type, string name)
-            {
-                Type = type;
-                Name = name;
-            }
-
-            public string Type { get; private set; }
-            public string Name { get; private set; }
+            return field.SubSegment(indexOfSeparator + 1);
         }
     }
 }

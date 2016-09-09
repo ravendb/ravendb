@@ -11,6 +11,7 @@ using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -18,6 +19,12 @@ namespace Raven.Server.Utils
 {
     internal class TypeConverter
     {
+        private const string TypePropertyName = "$type";
+
+        private const string ValuesPropertyName = "$values";
+
+        private static readonly string TypeList = typeof(List<>).FullName;
+
         private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 
         public static object ConvertType(object value, JsonOperationContext context)
@@ -42,7 +49,7 @@ namespace Raven.Server.Utils
             if (value is bool)
                 return value;
 
-            if (value is int || value is long || value is double)
+            if (value is int || value is long || value is double || value is decimal)
                 return value;
 
             if (value is LazyDoubleValue)
@@ -115,6 +122,28 @@ namespace Raven.Server.Utils
         {
             if (value == null)
                 return null;
+
+            var blittableJsonObject = value as BlittableJsonReaderObject;
+            if (blittableJsonObject != null)
+            {
+                string type;
+                if (blittableJsonObject.TryGet(TypePropertyName, out type) == false)
+                    return blittableJsonObject;
+
+                if (type == null)
+                    return blittableJsonObject;
+
+                if (type.StartsWith(TypeList) == false)
+                    return blittableJsonObject;
+
+                // TODO [ppekrol] probably we will have to support many more cases here
+
+                BlittableJsonReaderArray values;
+                if (blittableJsonObject.TryGet(ValuesPropertyName, out values))
+                    return values;
+
+                throw new NotSupportedException($"Detected list type '{type}' but could not extract '{values}'.");
+            }
 
             var lazyString = value as LazyStringValue;
             if (lazyString == null)
@@ -231,7 +260,7 @@ namespace Raven.Server.Utils
 
             var lsv = value as LazyStringValue;
             if (lsv != null)
-                value = (string) lsv;
+                value = (string)lsv;
 
             try
             {

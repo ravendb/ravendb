@@ -465,7 +465,7 @@ namespace Voron.Data.BTrees
             }
 
             if (p.IsLeaf == false)
-                throw new InvalidDataException("Index points to a non leaf page");
+                throw new InvalidDataException("Index points to a non leaf page " + p.PageNumber);
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 

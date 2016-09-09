@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                         try
                                         {
-                                            _index.HandleMap(current.Key, mapResults, indexWriter, indexContext, collectionStats);
+                                            _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
                                         }
                                         catch (Exception e)
                                         {
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var tombstoneKeySlice = Slice.External(indexContext.Transaction.InnerTransaction.Allocator, tombstone.Key.Buffer, tombstone.Key.Size);
+            var tombstoneKeySlice = Slice.External(indexContext.Transaction.InnerTransaction.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Size);
             _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 

@@ -220,19 +220,19 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
-        public class Comment
+        private class Comment
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
-        public class Product
+        private class Product
         {
             public string Id { get; set; }
             public string Description { get; set; }

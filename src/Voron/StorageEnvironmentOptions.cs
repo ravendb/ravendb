@@ -81,8 +81,6 @@ namespace Voron
 
         public long MaxScratchBufferSize { get; set; }
 
-        public long MaxNumberOfPagesInMergedTransaction { get; set; }
-
         public bool OwnsPagers { get; set; }
 
         public bool ManualFlushing { get; set; }
@@ -118,16 +116,16 @@ namespace Voron
 
             ShouldUseKeyPrefix = name => false;            
 
-            MaxLogFileSize = 64 * Constants.Size.Megabyte;
+            MaxLogFileSize = 256 * Constants.Size.Megabyte;
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
             MaxScratchBufferSize = 512 * Constants.Size.Megabyte;
 
-            MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB when 4Kb             
-            MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB when 4Kb
+            MaxNumberOfPagesInJournalBeforeFlush = 8192; // 32 MB when 4Kb             
 
             IdleFlushTimeout = 5000; // 5 seconds
+
             ScratchBufferOverflowTimeout = 5000; // 5 seconds
 
             OwnsPagers = true;

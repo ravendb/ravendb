@@ -92,18 +92,6 @@ namespace SlowTests.MailingList
             }
         }
 
-        private static void PrintOutMapReduceResults(
-            IEnumerable<CountByDateAndMediaSourceAndVersion_MapReduceResult> mapReduceResults)
-        {
-            foreach (var mapReduceResult in mapReduceResults)
-            {
-                Console.WriteLine(string.Format("Date: {0}-{1}-{2}, MediaSource: {3}, Version: {4}, Count: {5}",
-                                                mapReduceResult.Year, mapReduceResult.Month, mapReduceResult.Day,
-                                                mapReduceResult.MediaSource, mapReduceResult.Version,
-                                                mapReduceResult.Count));
-            }
-        }
-
         private int Aggregate(IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable)
         {
             return queryable

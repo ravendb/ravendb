@@ -369,11 +369,16 @@ namespace Sparrow.Json.Parsing
                 if (current is decimal)
                 {
                     var d = (decimal)current;
-                    if (DecimalHelper.Instance.IsDouble(ref d))
-                        current = (double)d;
-                    else
-                        current = (long)d;
 
+                    if (DecimalHelper.Instance.IsDouble(ref d))
+                    {
+                        var s = EnsureDecimalPlace((double)d, d.ToString(CultureInfo.InvariantCulture));
+                        SetStringBuffer(s);
+                        _state.CurrentTokenType = JsonParserToken.Float;
+                        return;
+                    }
+
+                    current = (long)d;
                     continue;
                 }
 

@@ -10,14 +10,11 @@
 
 // options: no-lines gplex
 
-using System;
-using System.Collections.Generic;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
-using QUT.Gppg;
 
-namespace Raven.Database.Indexing
+namespace Raven.Server.Documents.Queries.Parse
 {
 internal enum Token {error=2,EOF=3,NOT=4,OR=5,AND=6,
     INTERSECT=7,PLUS=8,MINUS=9,OPEN_CURLY_BRACKET=10,CLOSE_CURLY_BRACKET=11,OPEN_SQUARE_BRACKET=12,
@@ -41,7 +38,7 @@ internal partial struct ValueType
             public LuceneASTNodeBase.PrefixOperator npo;
        }
 // Abstract base class for GPLEX scanners
-[GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
+[GeneratedCode( "Gardens Point Parser Generator", "1.5.2")]
 internal abstract class ScanBase : AbstractScanner<ValueType,LexLocation> {
   private LexLocation __yylloc = new LexLocation();
   public override LexLocation yylloc { get { return __yylloc; } set { __yylloc = value; } }
@@ -49,7 +46,7 @@ internal abstract class ScanBase : AbstractScanner<ValueType,LexLocation> {
 }
 
 // Utility class for encapsulating token information
-[GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
+[GeneratedCode( "Gardens Point Parser Generator", "1.5.2")]
 internal class ScanObj {
   public int token;
   public ValueType yylval;
@@ -59,7 +56,7 @@ internal class ScanObj {
   }
 }
 
-[GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
+[GeneratedCode( "Gardens Point Parser Generator", "1.5.2")]
 internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocation>
 {
   // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 8/2/2015 9:25:05 AM

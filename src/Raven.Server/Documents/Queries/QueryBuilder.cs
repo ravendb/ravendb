@@ -11,10 +11,9 @@ using Lucene.Net.Search;
 
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
-using Raven.Database.Indexing;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parse;
-
+using Raven.Server.Utils;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries
@@ -53,8 +52,7 @@ namespace Raven.Server.Documents.Queries
 
         public static Query BuildQuery(string query, IndexQueryServerSide indexQuery, Analyzer analyzer)
         {
-            var originalQuery = query;
-            try
+            using (CultureHelper.EnsureInvariantCulture())
             {
                 if (UseLuceneASTParser)
                 {
@@ -78,28 +76,31 @@ namespace Raven.Server.Documents.Queries
                         throw new ParseException("Could not parse: '" + query + "'", pe);
                     }
                 }
-                var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+                var originalQuery = query;
+                try
                 {
-                    DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
-                                        ? QueryParser.Operator.OR
-                                        : QueryParser.Operator.AND,
-                    AllowLeadingWildcard = true
-                };
-                query = PreProcessComments(query);
-                query = PreProcessMixedInclusiveExclusiveRangeQueries(query);
-                query = PreProcessUntokenizedTerms(query, queryParser);
-                query = PreProcessSearchTerms(query);
-                query = PreProcessDateTerms(query, queryParser);
-                var generatedQuery = queryParser.Parse(query);
-                generatedQuery = HandleMethods(generatedQuery, analyzer);
-                return generatedQuery;
-            }
-            catch (ParseException pe)
-            {
-                if (originalQuery == query)
-                    throw new ParseException("Could not parse: '" + query + "'", pe);
-                throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
-
+                    var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+                    {
+                        DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
+                            ? QueryParser.Operator.OR
+                            : QueryParser.Operator.AND,
+                        AllowLeadingWildcard = true
+                    };
+                    query = PreProcessComments(query);
+                    query = PreProcessMixedInclusiveExclusiveRangeQueries(query);
+                    query = PreProcessUntokenizedTerms(query, queryParser);
+                    query = PreProcessSearchTerms(query);
+                    query = PreProcessDateTerms(query, queryParser);
+                    var generatedQuery = queryParser.Parse(query);
+                    generatedQuery = HandleMethods(generatedQuery, analyzer);
+                    return generatedQuery;
+                }
+                catch (ParseException pe)
+                {
+                    if (originalQuery == query)
+                        throw new ParseException("Could not parse: '" + query + "'", pe);
+                    throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
+                }
             }
         }
 

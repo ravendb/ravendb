@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.IO;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -41,8 +42,8 @@ namespace Raven.Server.Documents.Indexes
 
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.Delete(tombstone.Key, stats);
-            _indexedDocs.Delete(Slice.External(indexContext.Allocator, tombstone.Key.Buffer, tombstone.Key.Size));
+            writer.Delete(tombstone.LoweredKey, stats);
+            _indexedDocs.Delete(Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Size));
         }
 
         public override unsafe void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
