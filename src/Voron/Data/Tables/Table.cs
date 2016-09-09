@@ -173,6 +173,8 @@ namespace Voron.Data.Tables
 
         public long Update(long id, TableValueBuilder builder)
         {
+            // The ids returned from this function MUST NOT be stored outside of the transaction.
+            // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             int size = builder.Size;
 
             // first, try to fit in place, either in small or large sections
@@ -314,8 +316,11 @@ namespace Voron.Data.Tables
             }
         }
 
+
         public long Insert(TableValueBuilder builder)
         {
+            // The ids returned from this function MUST NOT be stored outside of the transaction.
+            // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.Stats, sizeof(TableSchemaStats));
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
@@ -645,6 +650,8 @@ namespace Voron.Data.Tables
 
         public long Set(TableValueBuilder builder)
         {
+            // The ids returned from this function MUST NOT be stored outside of the transaction.
+            // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             int size;
             var read = builder.Read(_schema.Key.StartIndex, out size);
 
