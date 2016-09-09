@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexing;
 
 namespace SlowTests
@@ -53,9 +54,7 @@ namespace SlowTests
 
                 session.SaveChanges();
 
-                session.Query<Camera>(new CameraCostIndex().IndexName)
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .ToList();
+                WaitForIndexing(store);
             }
         }
 

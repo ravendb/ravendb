@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -22,6 +24,28 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/queries/$", "POST")]
+        public async Task Post()
+        {
+            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            DocumentsOperationContext context;
+            using (TrackRequestTime())
+            using (var token = CreateTimeLimitedOperationToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var operation = GetStringQueryString("op", required: false);
+
+                if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
+                {
+                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
+                    return;
+                }
+
+                throw new NotSupportedException($"Operation '{operation}' is not supported.");
+            }
+        }
+
         [RavenAction("/databases/*/queries/$", "GET")]
         public async Task Get()
         {
@@ -64,7 +88,20 @@ namespace Raven.Server.Documents.Handlers
             KeyValuePair<List<Facet>, long> facets;
             if (facetDoc == null)
             {
-                var f = GetStringQueryString("facets");
+                string f;
+                if (HttpContext.Request.Method == HttpMethod.Post.Method)
+                {
+                    // TODO [ppekrol] fix me: how to calculate XXHash from blittable array?
+                    using (var reader = new StreamReader(RequestBodyStream()))
+                        f = reader.ReadToEnd();
+                }
+                else if (HttpContext.Request.Method == HttpMethod.Get.Method)
+                {
+                    f = GetStringQueryString("facets");
+                }
+                else
+                    throw new NotSupportedException($"Unsupported HTTP method '{HttpContext.Request.Method}' for Faceted Query.");
+
                 if (string.IsNullOrWhiteSpace(f))
                     throw new InvalidOperationException($"One of the required parameters (facetDoc or facets) was not specified.");
 
@@ -73,8 +110,8 @@ namespace Raven.Server.Documents.Handlers
 
             var runner = new QueryRunner(Database, context);
 
-            var result = facetDoc != null 
-                ? runner.ExecuteFacetedQuery(indexName, query, facetDoc, existingResultEtag, token) 
+            var result = facetDoc != null
+                ? runner.ExecuteFacetedQuery(indexName, query, facetDoc, existingResultEtag, token)
                 : runner.ExecuteFacetedQuery(indexName, query, facets.Key, facets.Value, existingResultEtag, token);
 
             if (result.NotModified)
@@ -173,7 +210,7 @@ namespace Raven.Server.Documents.Handlers
                 context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByIndex);
             return Task.CompletedTask;
             
-        }
+            }
 
         [RavenAction("/databases/*/queries/$", "PATCH")]
         public Task Patch()
@@ -181,13 +218,13 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
             
-            var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
-            var patch = PatchRequest.Parse(reader);
+                var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                var patch = PatchRequest.Parse(reader);
 
             ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token), 
                 context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
             return Task.CompletedTask;
-        }
+            }
 
         private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
         {
@@ -197,7 +234,7 @@ namespace Raven.Server.Documents.Handlers
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
-            var queryRunner = new QueryRunner(Database, context);
+                var queryRunner = new QueryRunner(Database, context);
 
             long operationId = GetLongQueryString("operationId").Value;
 
@@ -205,7 +242,7 @@ namespace Raven.Server.Documents.Handlers
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
-        }
+            }
 
         private QueryOperationOptions GetQueryOperationOptions()
         {

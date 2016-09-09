@@ -1008,7 +1008,7 @@ namespace Raven.Client.Connection.Async
                 return new GetRequest
                 {
                     Url = "/queries/" + x.IndexName,
-                    Query = string.Format("{0}&start={1}&pageSize={2}",
+                    Query = string.Format("{0}&start={1}&pageSize={2}&op=facets",
                             x.Query.GetMinimalQueryString(),
                             x.PageStart,
                             x.PageSize),

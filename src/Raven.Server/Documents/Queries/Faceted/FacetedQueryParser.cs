@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                 foreach (BlittableJsonReaderObject facetAsJson in facetsArray)
                     results.Add(JsonDeserializationServer.Facet(facetAsJson));
 
-                return new KeyValuePair<List<Facet>, long>(results, (long)Hashing.XXHash64.CalculateRaw(facetsArrayAsString));
+                return new KeyValuePair<List<Facet>, long>(results, Hashing.XXHash32.CalculateRaw(facetsArrayAsString));
             }
         }
     }

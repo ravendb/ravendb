@@ -6,6 +6,8 @@
 
 using System;
 using System.IO;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
@@ -49,12 +51,17 @@ namespace Raven.Server.Documents.Handlers
                             writer.WriteComma();
                         writer.WriteStartObject();
 
-                        string method = "GET", url, query;
-                        if (request.TryGet(nameof(GetRequest.Url), out url) == false ||
-                            request.TryGet(nameof(GetRequest.Query), out query) == false)
+                        string method, url, query;
+                        if (request.TryGet(nameof(GetRequest.Url), out url) == false || request.TryGet(nameof(GetRequest.Query), out query) == false)
+                        {
+                            writer.WriteEndObject();
                             continue;
+                        }
 
-                        RouteMatch localMatch;
+                        if (request.TryGet(nameof(GetRequest.Method), out method) == false)
+                            method = HttpMethod.Get.Method;
+
+                            RouteMatch localMatch;
                         var routeInformation = Server.Router.GetRoute(method, url, out localMatch);
                         if (routeInformation == null)
                         {
@@ -92,6 +99,14 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
 
+                        string content;
+                        if (method == HttpMethod.Post.Method && request.TryGet(nameof(GetRequest.Content), out content))
+                        {
+                            var requestBody = GetRequestBody(content);
+                            HttpContext.Response.RegisterForDispose(requestBody);
+                            httpContext.Request.Body = requestBody;
+                        }
+
                         await requestHandler(new RequestHandlerContext
                         {
                             Database = Database,
@@ -127,6 +142,12 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndArray();
                 }
             }
+        }
+
+        private static MemoryStream GetRequestBody(string content)
+        {
+            var requestBody = new MemoryStream(Encoding.UTF8.GetBytes(content));
+            return requestBody;
         }
 
         private class MultiGetHttpResponseFeature : IHttpResponseFeature

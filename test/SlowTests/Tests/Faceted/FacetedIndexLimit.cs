@@ -3,19 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Client.Linq;
-using Raven.Tests.Common.Attributes;
-using Raven.Tests.Common.Dto.Faceted;
-
 using Xunit;
-using Raven.Abstractions.Indexing;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
     public class FacetedIndexLimit : FacetTestBase
     {
@@ -32,7 +31,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer" }, new Facet { Name = "Model" } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -86,7 +85,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -128,7 +127,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -171,7 +170,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -186,9 +185,9 @@ namespace Raven.Tests.Faceted
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer
                                            into result
-                                           select new { Manufacturer = result.Key, Count = result.Count() };
+                                       select new { Manufacturer = result.Key, Count = result.Count() };
                     var camerasByHits = cameraCounts.OrderBy(x => x.Count)
-                        .ThenBy(x=>x.Manufacturer).Select(x => x.Manufacturer.ToLower()).ToList();
+                        .ThenBy(x => x.Manufacturer).Select(x => x.Manufacturer.ToLower()).ToList();
 
                     var manufacturer = facetResults.Results["Manufacturer"];
                     Assert.Equal(2, manufacturer.Values.Count());
@@ -234,7 +233,7 @@ namespace Raven.Tests.Faceted
             //also specify more results than we have
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 20, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -249,7 +248,7 @@ namespace Raven.Tests.Faceted
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer
                                            into result
-                                           select new { Manufacturer = result.Key, Count = result.Count() };
+                                       select new { Manufacturer = result.Key, Count = result.Count() };
                     var camerasByHits = cameraCounts.OrderByDescending(x => x.Count).ThenBy(x => x.Manufacturer.ToLower()).Select(x => x.Manufacturer.ToLower()).ToList();
 
                     Assert.Equal(5, facetResults.Results["Manufacturer"].Values.Count());
@@ -279,7 +278,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer" }, new Facet { Name = "Model" } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -333,7 +332,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -375,7 +374,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -418,7 +417,7 @@ namespace Raven.Tests.Faceted
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -433,7 +432,7 @@ namespace Raven.Tests.Faceted
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer
                                            into result
-                                           select new { Manufacturer = result.Key, Count = result.Count() };
+                                       select new { Manufacturer = result.Key, Count = result.Count() };
                     var camerasByHits = cameraCounts.OrderBy(x => x.Count).ThenBy(x => x.Manufacturer)
                         .Select(x => x.Manufacturer.ToLower()).ToList();
 
@@ -467,7 +466,7 @@ namespace Raven.Tests.Faceted
             //also specify more results than we have
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 20, TermSortMode = FacetTermSortMode.HitsDesc, IncludeRemainingTerms = true } };
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Setup(store);
 
@@ -482,7 +481,7 @@ namespace Raven.Tests.Faceted
                     var cameraCounts = from d in _data
                                        group d by d.Manufacturer
                                            into result
-                                           select new { Manufacturer = result.Key, Count = result.Count() };
+                                       select new { Manufacturer = result.Key, Count = result.Count() };
                     var camerasByHits = cameraCounts.OrderByDescending(x => x.Count).ThenBy(x => x.Manufacturer.ToLower()).Select(x => x.Manufacturer.ToLower()).ToList();
 
                     Assert.Equal(5, facetResults.Results["Manufacturer"].Values.Count());
@@ -512,19 +511,21 @@ namespace Raven.Tests.Faceted
             using (var s = store.OpenSession())
             {
                 store.DatabaseCommands.PutIndex("CameraCost",
-                                                new IndexDefinition
-                                                {
-                                                    Map =
-                                                        @"from camera in docs 
-                                                        select new 
-                                                        { 
-                                                            camera.Manufacturer, 
-                                                            camera.Model, 
-                                                            camera.Cost,
-                                                            camera.DateOfListing,
-                                                            camera.Megapixels
-                                                        }"
-                                                });
+                    new IndexDefinition
+                    {
+                        Maps =
+                        {
+                          @"from camera in docs 
+                            select new 
+                            { 
+                                camera.Manufacturer, 
+                                camera.Model, 
+                                camera.Cost,
+                                camera.DateOfListing,
+                                camera.Megapixels
+                            }"
+                        }
+                    });
 
                 var counter = 0;
                 foreach (var camera in _data)
@@ -537,9 +538,7 @@ namespace Raven.Tests.Faceted
                 }
                 s.SaveChanges();
 
-                s.Query<Camera>("CameraCost")
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .ToList();
+                WaitForIndexing(store);
             }
         }
     }

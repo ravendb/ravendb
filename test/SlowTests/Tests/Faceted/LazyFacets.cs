@@ -3,23 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
+using FastTests;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
-    public class LazyFacets : RavenTest
+    public class LazyFacets : RavenTestBase
     {
         [Fact]
         public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var facetSetup = new FacetSetup
                 {
@@ -38,13 +38,13 @@ namespace Raven.Tests.Faceted
                     }
 
                     session.Store(facetSetup);
-                    session.Store(new Foo() {Facet1 = "term1"});
-                    session.Store(new Foo() {Facet1 = "term2"});
+                    session.Store(new Foo() { Facet1 = "term1" });
+                    session.Store(new Foo() { Facet1 = "term2" });
                     session.SaveChanges();
                 }
 
                 new Foos().Execute(store);
-                
+
                 WaitForIndexing(store);
 
 
@@ -73,7 +73,7 @@ namespace Raven.Tests.Faceted
             }
         }
 
-        public class Foos : AbstractIndexCreationTask<Foo>
+        private class Foos : AbstractIndexCreationTask<Foo>
         {
             public Foos()
             {
@@ -82,7 +82,7 @@ namespace Raven.Tests.Faceted
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public string Facet1 { get; set; }

@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Xunit;
 

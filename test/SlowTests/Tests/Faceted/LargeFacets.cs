@@ -3,38 +3,42 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Abstractions.Data;
+using FastTests;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
     public class LargeFacets : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public string Category;
             public bool Active;
             public int Age;
         }
 
-        public class Index : AbstractIndexCreationTask<Item>
+        private class Index : AbstractIndexCreationTask<Item>
         {
             public Index()
             {
                 Map = items =>
                     from item in items
                     select new { item.Active, item.Category, item.Age };
+
+                Sort(x => x.Age, SortOptions.NumericLong);
             }
         }
 
         [Fact]
         public void CanGetSameResult()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Index().Execute(store);
 
@@ -56,7 +60,7 @@ namespace Raven.Tests.Faceted
 
                 using (var s = store.OpenSession())
                 {
-                    var facetResultsA = s.Query<Item,Index>()
+                    var facetResultsA = s.Query<Item, Index>()
                         .Where(x => x.Active)
                         .ToFacets(new Facet[]
                         {
@@ -75,10 +79,10 @@ namespace Raven.Tests.Faceted
                                 Name = "Category"
                             },
                             new Facet
-                        {
-                            Name = "Age",
-                            Ranges = Enumerable.Range(0,2048).Select(x=> "[Dx"+ x + " TO Dx" + (x+1)+"]").ToList()
-                        }
+                            {
+                                Name = "Age",
+                                Ranges = Enumerable.Range(0,2048).Select(x=> "[Dx"+ x + " TO Dx" + (x+1)+"]").ToList()
+                            }
                         });
 
                     Assert.Equal(facetResultsA.Results["Category"].Values.Count, facetResultsB.Results["Category"].Values.Count);
@@ -92,10 +96,10 @@ namespace Raven.Tests.Faceted
                                 Name = "Category"
                             },
                             new Facet
-                        {
-                            Name = "Age",
-                            Ranges = Enumerable.Range(0,2048).Select(x=> "[Dx"+ x + " TO Dx" + (x+1)+"]").ToList()
-                        }
+                            {
+                                Name = "Age",
+                                Ranges = Enumerable.Range(0,2048).Select(x=> "[Dx"+ x + " TO Dx" + (x+1)+"]").ToList()
+                            }
                         }).Value;
                     Assert.Equal(facetResultsA.Results["Category"].Values.Count, facetResultsC.Results["Category"].Values.Count);
                 }
