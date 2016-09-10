@@ -232,7 +232,7 @@ namespace Voron.Impl.Journal
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 
-        public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId, bool forceToFreeAllPages = false)
+        public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId)
         {
             if (tx == null) throw new ArgumentNullException(nameof(tx));
             var unusedPages = new List<PagePosition>();
@@ -244,8 +244,7 @@ namespace Voron.Impl.Journal
                 unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
                 _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
-                var keysToRemove = forceToFreeAllPages ? 
-                    _pageTranslationTable.KeysWhereSomePagesOlderThan(lastSyncedTransactionId) :
+                var keysToRemove = 
                     _pageTranslationTable.KeysWhereAllPagesOlderThan(lastSyncedTransactionId);
 
                 _pageTranslationTable.Remove(keysToRemove, lastSyncedTransactionId, unusedPages);

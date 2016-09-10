@@ -110,11 +110,6 @@ namespace Voron.Util
             }).Select(x => x.Key).ToList();
         }
 
-        public List<long> KeysWhereSomePagesOlderThan(long lastSyncedTransactionId)
-        {
-            return _values.Where(x => x.Value.Any(p => p.TransactionId <= lastSyncedTransactionId)).Select(x => x.Key).ToList();
-        }
-
         public long GetLastSeenTransactionId()
         {
             return Volatile.Read(ref _maxSeenTransaction);
