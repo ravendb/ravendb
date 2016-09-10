@@ -238,17 +238,15 @@ namespace Voron.Impl.Journal
             var unusedPages = new List<PagePosition>();
 
             List<PagePosition> unusedAndFree;
-            List<long> keysToRemove;
 
             lock (_locker)
             {
                 unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
                 _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
-                if (forceToFreeAllPages)
-                    keysToRemove = _pageTranslationTable.KeysWhereSomePagesOlderThan(lastSyncedTransactionId);
-                else
-                    keysToRemove = _pageTranslationTable.KeysWhereAllPagesOlderThan(lastSyncedTransactionId);
+                var keysToRemove = forceToFreeAllPages ? 
+                    _pageTranslationTable.KeysWhereSomePagesOlderThan(lastSyncedTransactionId) :
+                    _pageTranslationTable.KeysWhereAllPagesOlderThan(lastSyncedTransactionId);
 
                 _pageTranslationTable.Remove(keysToRemove, lastSyncedTransactionId, unusedPages);
             }
