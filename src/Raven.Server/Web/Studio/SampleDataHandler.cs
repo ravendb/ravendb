@@ -36,7 +36,6 @@ namespace Raven.Server.Studio.Handlers
                     using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
                     {
                         var importer = new SmugglerImporter(Database);
-                        importer.OperateOnTypes = DatabaseItemType.Documents; //TODO: remove this line after we get support for indexing
 
                         await importer.Import(context, stream);
                     }
