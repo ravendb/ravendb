@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                         return text;
                     return NumericUtils.PrefixCodedToDouble(text).ToInvariantString();
                 default:
-                    throw new ArgumentException($"Can't get range name from '{sortOptions}' sort option");
+                    throw new ArgumentException($"Can't get range name from '{sortOptions}' sort option for '{field}' field.");
             }
         }
 

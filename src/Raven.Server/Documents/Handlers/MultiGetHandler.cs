@@ -61,7 +61,9 @@ namespace Raven.Server.Documents.Handlers
                         if (request.TryGet(nameof(GetRequest.Method), out method) == false)
                             method = HttpMethod.Get.Method;
 
-                            RouteMatch localMatch;
+                        httpContext.Request.Method = method;
+
+                        RouteMatch localMatch;
                         var routeInformation = Server.Router.GetRoute(method, url, out localMatch);
                         if (routeInformation == null)
                         {
