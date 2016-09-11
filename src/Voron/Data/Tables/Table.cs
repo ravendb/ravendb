@@ -177,7 +177,7 @@ namespace Voron.Data.Tables
 
             // first, try to fit in place, either in small or large sections
             var prevIsSmall = id % _pageSize != 0;
-            if (size < ActiveDataSmallSection.MaxItemSize)
+            if (size + sizeof(RawDataSection.RawDataEntrySizes) < ActiveDataSmallSection.MaxItemSize)
             {
                 // We must read before we call TryWriteDirect, because it will modify the size
                 int oldDataSize;

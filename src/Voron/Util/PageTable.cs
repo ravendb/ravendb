@@ -26,7 +26,10 @@ namespace Voron.Util
         public void SetItems(LowLevelTransaction tx, Dictionary<long, PagePosition> items)
         {
             UpdateMaxSeenTxId(tx);
-            _transactionPages.Add(tx.Id, items);
+            lock (_transactionPages)
+            {
+                _transactionPages.Add(tx.Id, items);
+            }
 
             foreach (var item in items)
             {
@@ -107,11 +110,6 @@ namespace Voron.Util
             }).Select(x => x.Key).ToList();
         }
 
-        public List<long> KeysWhereSomePagesOlderThan(long lastSyncedTransactionId)
-        {
-            return _values.Where(x => x.Value.Any(p => p.TransactionId <= lastSyncedTransactionId)).Select(x => x.Key).ToList();
-        }
-
         public long GetLastSeenTransactionId()
         {
             return Volatile.Read(ref _maxSeenTransaction);
@@ -119,27 +117,36 @@ namespace Voron.Util
 
         public IEnumerable<KeyValuePair<long, PagePosition>> Iterate(long minTxInclusive, long maxTxInclusive)
         {
-            var start = _transactionPages.IndexOfKey(minTxInclusive);
-            if (start == -1)
+            var list = new List<Dictionary<long, PagePosition>>();
+            lock (_transactionPages)
             {
-                for (long i = minTxInclusive+1; i <= maxTxInclusive; i++)
-                {
-                    start = _transactionPages.IndexOfKey(i);
-                    if (start != -1)
-                        break;
-                }
+                var start = _transactionPages.IndexOfKey(minTxInclusive);
                 if (start == -1)
-                    yield break;
-            }
-            for (int i = start; i < _transactionPages.Count; i++)
-            {
-                if (_transactionPages.Keys[i] > maxTxInclusive)
-                    yield break;
-
-                var val = _transactionPages.Values[i];
-                foreach (var position in val)
                 {
-                    yield return position;
+                    for (long i = minTxInclusive + 1; i <= maxTxInclusive; i++)
+                    {
+                        start = _transactionPages.IndexOfKey(i);
+                        if (start != -1)
+                            break;
+                    }
+                }
+                if (start != -1)
+                {
+                    for (int i = start; i < _transactionPages.Count; i++)
+                    {
+                        if (_transactionPages.Keys[i] > maxTxInclusive)
+                            break;
+
+                        var val = _transactionPages.Values[i];
+                        list.Add(val);
+                    }
+                }
+            }
+            foreach (var dic in list)
+            {
+                foreach (var kvp in dic)
+                {
+                    yield return kvp;
                 }
             }
 

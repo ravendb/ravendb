@@ -112,56 +112,57 @@ namespace Raven.Client.Document
                 Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
             }).ToString());
             streamNetworkBuffer.Write(header, 0, header.Length);
-            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
+
+            while (_documents.IsCompleted == false)
             {
-                while (_documents.IsCompleted == false)
+                _cts.Token.ThrowIfCancellationRequested();
+
+                MemoryStream jsonBuffer;
+
+                try
                 {
-                    _cts.Token.ThrowIfCancellationRequested();
-
-                    MemoryStream jsonBuffer;
-
-                    try
-                    {
-                        jsonBuffer = _documents.Take();
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        break;
-                    }
-
-                    var needToThrottle = _throttlingEvent.Wait(0) == false;
-
-                    using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
-                        jsonParser, jsonParserState))
-                    {
-                        _jsonOperationContext.CachedProperties.NewDocument();
-                        builder.ReadObject();
-                        while (true)
-                        {
-                            var read = jsonBuffer.Read(buffer, 0, buffer.Length);
-                            if (read == 0)
-                                throw new EndOfStreamException("Stream ended without reaching end of json content");
-                            jsonParser.SetBuffer(buffer, read);
-                            if (builder.Read())
-                                break;
-                        }
-                        _buffers.Add(jsonBuffer);
-                        builder.FinalizeDocument();
-                        WriteVariableSizeInt(streamNetworkBuffer, builder.SizeInBytes);
-                        WriteToStream(streamNetworkBuffer, builder, writeToStreamBuffer);
-                    }
-
-                    if (needToThrottle)
-                    {
-                        streamNetworkBuffer.Flush();
-                        _throttlingEvent.Wait(500);
-                    }
+                    jsonBuffer = _documents.Take();
                 }
-                streamNetworkBuffer.WriteByte(0);//done
-                streamNetworkBuffer.Flush();
+                catch (InvalidOperationException)
+                {
+                    break;
+                }
+
+                var needToThrottle = _throttlingEvent.Wait(0) == false;
+
+                _jsonOperationContext.Reset();
+                using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
+                using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
+                    jsonParser, jsonParserState))
+                {
+                    _jsonOperationContext.CachedProperties.NewDocument();
+                    builder.ReadObject();
+                    while (true)
+                    {
+                        var read = jsonBuffer.Read(buffer, 0, buffer.Length);
+                        if (read == 0)
+                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                        jsonParser.SetBuffer(buffer, read);
+                        if (builder.Read())
+                            break;
+                    }
+                    _buffers.Add(jsonBuffer);
+                    builder.FinalizeDocument();
+                    WriteVariableSizeInt(streamNetworkBuffer, builder.SizeInBytes);
+                    WriteToStream(streamNetworkBuffer, builder, writeToStreamBuffer);
+                }
+
+                if (needToThrottle)
+                {
+                    streamNetworkBuffer.Flush();
+                    _throttlingEvent.Wait(500);
+                }
             }
+            streamNetworkBuffer.WriteByte(0);//done
+            streamNetworkBuffer.Flush();
         }
+
 
         private static unsafe void WriteToStream(BufferedStream networkBufferedStream, BlittableJsonDocumentBuilder builder,
             byte[] buffer)
