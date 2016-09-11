@@ -151,7 +151,8 @@ namespace FastTests.Server.Documents.Replication
                         new ReplicationDestination
                         {
                             Database = store.DefaultDatabase,
-                            Url = store.Url
+                            Url = store.Url,
+                            
                         });
                 session.Store(new ReplicationDocument
                 {
