@@ -65,7 +65,7 @@ namespace Raven.Tests.Issues
 
                 var expectedCountOfDocs = master.DatabaseCommands.GetStatistics().CountOfDocuments;
 
-                for (int i = 0; i < RetriesCount; i++)
+                for (int i = 0; i < RetriesCount * 10; i++)
                 {
                     if (slave.DatabaseCommands.GetStatistics().CountOfDocuments <= expectedCountOfDocs)
                         break;

@@ -170,8 +170,8 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            var exception = await AssertAsync.Throws<AggregateException>(async () => await store1.Replication.WaitAsync(timeout:TimeSpan.FromSeconds(15),replicas: 3));
-            Assert.Contains("Could not verify that etag", exception.InnerExceptions.First()?.Message);
+            var exception = await AssertAsync.Throws<TimeoutException>(async () => await store1.Replication.WaitAsync(timeout:TimeSpan.FromSeconds(15),replicas: 3));
+            Assert.Contains("Could not verify that etag", exception.Message);
         }
 
         [Fact]
