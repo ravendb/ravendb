@@ -66,6 +66,31 @@ namespace FastTests.Sparrow
         }
 
         [Fact]
+        public void CanComputeSmallDifferenceFromNew()
+        {
+            var fst = new byte[4096];
+
+
+            fst[12]++;
+            fst[433]++;
+
+            fixed (byte* one = fst)
+            fixed (byte* tmp = new byte[4096])
+            {
+                var diffPages = new DiffPages
+                {
+                    Size = 4096,
+                    Modified = one,
+                    Output = tmp,
+                };
+
+                diffPages.ComputeNew();
+
+                Assert.Equal(32, diffPages.OutputSize);
+            }
+        }
+
+        [Fact]
         public void CanComputeSmallDifference_AndThenApplyit()
         {
             var fst = new byte[4096];
