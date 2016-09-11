@@ -226,7 +226,40 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
+        [Fact]
+        public async Task Conflict_then_load_by_id_will_return_409_and_conflict_data()
+        {
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "foo/bar");
+                    s1.SaveChanges();
+                }
 
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User(), "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                SetupReplication(store1, store2);
+
+                await WaitUntilHasConflict(store2, "foo/bar");
+
+                //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
+                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
+                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                {
+                    var ex = Assert.Throws<ErrorResponseException>(() => request.ExecuteRequest());
+                    Assert.Equal(HttpStatusCode.Conflict,ex.StatusCode);
+                    var responseJson = RavenJObject.Parse(ex.ResponseString);
+                    Assert.Equal("foo/bar",responseJson.Value<string>("DocId"));
+                }
+            }
+        }
 
         [Fact]
         public async Task Conflict_should_work_on_master_slave_slave()
