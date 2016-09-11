@@ -203,9 +203,14 @@ namespace Raven.Tests.Common
             return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication, databaseName: databaseName);
         }
 
-        protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, string username = null, string password = null, string domain = null, string authenticationScheme = null)
+        protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, 
+            string username = null, 
+            string password = null, 
+            string domain = null, 
+            string authenticationScheme = null, 
+            bool skipIndexReplication = false)
         {
-            TellInstanceToReplicateToAnotherInstance(0, 1, apiKey, username, password, domain, authenticationScheme);
+            TellInstanceToReplicateToAnotherInstance(0, 1, apiKey, username, password, domain, authenticationScheme, skipIndexReplication);
         }
 
         protected void TellSecondInstanceToReplicateToFirstInstance(string apiKey = null, string username = null, string password = null, string domain = null, string authenticationScheme = null)
@@ -213,9 +218,16 @@ namespace Raven.Tests.Common
             TellInstanceToReplicateToAnotherInstance(1, 0, apiKey, username, password, domain);
         }
 
-        protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null, string username = null, string password = null, string domain = null, string authenticationScheme = null)
+        protected void TellInstanceToReplicateToAnotherInstance(int src, 
+            int dest, 
+            string apiKey = null, 
+            string username = null, 
+            string password = null, 
+            string domain = null, 
+            string authenticationScheme = null, 
+            bool skipIndexReplication = false)
         {
-            RunReplication(stores[src], stores[dest], apiKey: apiKey, username: username, password: password, domain: domain, authenticationScheme: authenticationScheme);
+            RunReplication(stores[src], stores[dest], apiKey: apiKey, username: username, password: password, domain: domain, authenticationScheme: authenticationScheme, skipIndexReplication: skipIndexReplication);
         }
 
         protected void RunReplication(IDocumentStore source, IDocumentStore destination,
@@ -228,7 +240,8 @@ namespace Raven.Tests.Common
             string password = null,
             string domain = null,
             ReplicationClientConfiguration clientConfiguration = null,
-            string authenticationScheme = null)
+            string authenticationScheme = null,
+            bool skipIndexReplication = false)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
 
@@ -243,7 +256,7 @@ namespace Raven.Tests.Common
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
                     IgnoredClient = ignoredClient,
-                    SkipIndexReplication = false, //precaution
+                    SkipIndexReplication = skipIndexReplication,
                     AuthenticationScheme = authenticationScheme
                 };
                 if (db != null)
