@@ -55,16 +55,8 @@ namespace Sparrow.Json
             var propOffsetStart = _size - 2;
             var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out offset);
             // init document level properties
-            if (_cachedProperties == null)
-            {
-                SetupPropertiesAccess(mem, propsOffset);
-            }
-            else
-            {
-                if (_cachedProperties.Version != propsOffset)
-                    throw new InvalidOperationException(
-                        $"This object requires an external properties cache with version {propsOffset}, but got one with {_cachedProperties.Version}");
-            }
+            SetupPropertiesAccess(mem, propsOffset);
+            
             // get pointer to property names array on document level
 
             // init root level object properties
