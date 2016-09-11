@@ -40,7 +40,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.CreateTree( "tree");
+                tx.CreateTree("tree");
 
                 tx.Commit();
             }
@@ -96,7 +96,7 @@ namespace SlowTests.Voron
         {
             using (var tx = Env.WriteTransaction())
             {
-                tx.CreateTree( "tree");
+                tx.CreateTree("tree");
 
                 tx.Commit();
             }
@@ -107,7 +107,7 @@ namespace SlowTests.Voron
                 {
                     tx.CreateTree("tree").Add("a" + i, new MemoryStream(new byte[100]));
                 }
-                tx.Commit(); 
+                tx.Commit();
             }
 
             var currentJournalInfo = Env.Journal.GetCurrentJournalInfo();
@@ -133,7 +133,7 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
-            Assert.Equal(currentJournalInfo.CurrentJournal +1, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
+            Assert.Equal(currentJournalInfo.CurrentJournal + 1, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
         }
 
         [Fact]
@@ -149,17 +149,20 @@ namespace SlowTests.Voron
 
             using (var tx = Env.WriteTransaction())
             {
+                var random = new Random();
                 for (var i = 0; i < 1000; i++)
                 {
-                    tx.CreateTree("tree").Add("a" + i, new MemoryStream(new byte[100]));
+                    var buffer = new byte[100];
+                    random.NextBytes(buffer);
+                    tx.CreateTree("tree").Add("a" + i, new MemoryStream(buffer));
                 }
                 tx.Commit();
             }
 
             var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
-            
+
             StopDatabase();
-            
+
             CorruptPage(lastJournal, page: 6, pos: 3);
 
             StartDatabase();
@@ -171,7 +174,7 @@ namespace SlowTests.Voron
                 Assert.Null(tree.Read("a100"));
                 Assert.Null(tree.Read("a500"));
                 Assert.Null(tree.Read("a1000"));
-                
+
                 tx.Commit();
             }
         }
@@ -182,7 +185,7 @@ namespace SlowTests.Voron
             RequireFileBasedPager();
             using (var tx = Env.WriteTransaction())
             {
-                tx.CreateTree( "tree");
+                tx.CreateTree("tree");
 
                 tx.Commit();
             }
@@ -194,7 +197,7 @@ namespace SlowTests.Voron
             using (var tx = Env.WriteTransaction())
             {
                 for (var i = 0; i < 1000; i++)
-                {                   
+                {
                     tx.CreateTree("tree").Add("a" + i, new MemoryStream(buffer));
                 }
                 tx.Commit();
@@ -229,7 +232,7 @@ namespace SlowTests.Voron
             RequireFileBasedPager();
             using (var tx = Env.WriteTransaction())
             {
-                tx.CreateTree( "tree");
+                tx.CreateTree("tree");
 
                 tx.Commit();
             }
@@ -272,12 +275,12 @@ namespace SlowTests.Voron
             _options = StorageEnvironmentOptions.ForPath(DataDir);
             Configure(_options);
             using (var fileStream = new FileStream(
-                Path.Combine(DataDir, StorageEnvironmentOptions.JournalName(journal)), 
+                Path.Combine(DataDir, StorageEnvironmentOptions.JournalName(journal)),
                 FileMode.Open,
-                FileAccess.ReadWrite, 
+                FileAccess.ReadWrite,
                 FileShare.ReadWrite | FileShare.Delete))
             {
-                fileStream.Position = page*_options.PageSize;
+                fileStream.Position = page * _options.PageSize;
 
                 var buffer = new byte[_options.PageSize];
 
@@ -307,7 +310,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptPage(currentJournal, page: 2, pos: 3);
+            CorruptPage(currentJournal, page: 0, pos: 150);
 
             Assert.Throws<VoronUnrecoverableErrorException>(() => StartDatabase());
         }

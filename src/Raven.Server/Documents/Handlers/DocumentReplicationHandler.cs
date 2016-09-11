@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿using System;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -9,38 +9,72 @@ using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class DocumentReplicationtHandler : DatabaseRequestHandler
+    public class DocumentReplicationHandler : DatabaseRequestHandler
     {
-		//get conflicts for specified document
-		[RavenAction("/databases/*/replication/conflicts", "GET", 
-			"/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
-		public Task GetReplicationConflictsByDocument()
-		{
-			var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
-			DocumentsOperationContext context;
-			using (ContextPool.AllocateOperationContext(out context))
-			using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-			using (context.OpenReadTransaction())
-			{
-				var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
-				var array = new DynamicJsonArray();
-				foreach (var conflict in conflicts)
-				{
-					array.Add(new DynamicJsonValue
-					{
-						["Key"] = conflict.Key.String,
-						["ChangeVector"] = conflict.ChangeVector.ToJson(),
-					});					
-				}
+        [RavenAction("/databases/*/replication/tombstones", "GET",
+            "/databases/{databaseName:string}/replication/tombstones?start={start:int}&take={take:int}")]
+        public Task GetAllTombstones()
+        {
+            var start = GetIntValueQueryString("start", false) ?? 0;
+            var take = GetIntValueQueryString("take", false) ?? 1024;
 
-				context.Write(writer,array);
+            HttpContext.Response.StatusCode = 200;
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var tombstones =
+                    context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take).ToList();
+                var array = new DynamicJsonArray();
+                foreach (var tombstone in tombstones)
+                {
+                    array.Add(new DynamicJsonValue
+                    {
+                        ["Key"] = tombstone.Key.ToString(),
+                        ["Collection"] = tombstone.Collection.ToString(),
+                        ["Etag"] = tombstone.Etag,
+                        ["DeletedEtag"] = tombstone.DeletedEtag,
+                        ["ChangeVector"] = tombstone.ChangeVector.ToJson()
+                    });
+                }
 
-				HttpContext.Response.StatusCode = 200;
-				return Task.CompletedTask;
-			}
-		}
+                context.Write(writer, array);
+            }
 
-		[RavenAction("/databases/*/replication/topology", "GET")]
+            return Task.CompletedTask;
+        }
+
+        //get conflicts for specified document
+        [RavenAction("/databases/*/replication/conflicts", "GET", 
+            "/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
+        public Task GetReplicationConflictsByDocument()
+        {
+            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+                var array = new DynamicJsonArray();
+                foreach (var conflict in conflicts)
+                {
+                    array.Add(new DynamicJsonValue
+                    {
+                        ["Key"] = conflict.Key.String,
+                        ["ChangeVector"] = conflict.ChangeVector.ToJson(),
+                    });					
+                }
+
+                context.Write(writer,array);
+
+                HttpContext.Response.StatusCode = 200;
+                return Task.CompletedTask;
+            }
+        }
+
+        [RavenAction("/databases/*/replication/topology", "GET")]
         public Task GetReplicationTopology()
         {
             // TODO: Remove this, use "/databases/*/topology" isntead

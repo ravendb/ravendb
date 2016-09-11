@@ -84,6 +84,7 @@ namespace Raven.Abstractions.Data
         BulkInsertStarted = 4,
         BulkInsertEnded = 8,
         BulkInsertError = 16,
+        DeleteOnTombstoneReplication = 32,
         Common = Put | Delete
     }
 

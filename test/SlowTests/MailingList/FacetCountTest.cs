@@ -132,16 +132,8 @@ namespace SlowTests.MailingList
 
                         var pullupsCount = facets.Results["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
 
-                        try
-                        {
-                            Assert.Equal(11, wods.Count);
-                            Assert.Equal(11, pullupsCount);
-                        }
-                        catch (Exception)
-                        {
-                            Console.WriteLine("Failed on iteration #" + i);
-                            throw;
-                        }
+                        Assert.Equal(11, wods.Count);
+                        Assert.Equal(11, pullupsCount);
                     }
                 }
             }

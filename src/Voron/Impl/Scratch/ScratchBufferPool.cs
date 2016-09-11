@@ -143,7 +143,7 @@ namespace Voron.Impl.Scratch
                         {
                             try
                             {
-                                tx.Environment.ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages: true);
+                                tx.Environment.ForceLogFlushToDataFile(tx);
                                 current.OldestTransactionWhenFlushWasForced = oldestActiveTransaction;
                             }
                             catch (TimeoutException)

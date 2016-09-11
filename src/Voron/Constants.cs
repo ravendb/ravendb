@@ -43,7 +43,7 @@ namespace Voron.Global
 
         public const ushort SizeOfUInt = sizeof(uint);
 
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
 
         public const string RootTreeName = "$Root";
 

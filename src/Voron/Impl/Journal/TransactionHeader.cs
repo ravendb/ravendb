@@ -11,6 +11,19 @@ using Voron.Global;
 
 namespace Voron.Impl.Journal
 {
+    [StructLayout(LayoutKind.Explicit)]
+    public struct TransactionHeaderPageInfo
+    {
+        [FieldOffset(0)]
+        public long PageNumber; 
+
+        [FieldOffset(8)]
+        public int Size;
+
+        [FieldOffset(12)]
+        public int DiffSize;
+    }
+
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct TransactionHeader
     {
@@ -30,7 +43,7 @@ namespace Voron.Impl.Journal
         public int PageCount;
 
         [FieldOffset(36)]
-        public int OverflowPageCount;
+        public int Reserved1;
 
         [FieldOffset(40)]
         public ulong Hash;
@@ -42,7 +55,7 @@ namespace Voron.Impl.Journal
         public TransactionMarker TxMarker;
 
         [FieldOffset(111)]
-        public bool Compressed;
+        public bool Reserved2;
 
         [FieldOffset(112)]
         public int CompressedSize;
@@ -57,7 +70,9 @@ namespace Voron.Impl.Journal
         {
             var validMarker = (HeaderMarker == Constants.TransactionHeaderMarker ? "Valid" : "Invalid");
             var timestamp = new DateTime(TimeStampTicksUtc).ToString("g");
-            return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, PageCount: {PageCount}, OverflowPageCount: {OverflowPageCount}, Hash: {Hash}, Root: {Root}, TxMarker: {TxMarker}, Compressed: {Compressed}, CompressedSize: {CompressedSize}, UncompressedSize: {UncompressedSize}, TimeStamp: {timestamp}";
+            return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, " +
+                   $"PageCount: {PageCount}, Hash: {Hash}, Root: {Root}, TxMarker: {TxMarker}, CompressedSize: {CompressedSize}," +
+                   $" UncompressedSize: {UncompressedSize}, TimeStamp: {timestamp}";
         }
     }
 }

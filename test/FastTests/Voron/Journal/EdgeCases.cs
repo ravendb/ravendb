@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
 using Xunit;
 using Voron;
@@ -27,6 +28,7 @@ namespace FastTests.Voron.Journal
             {
                 var tree = tx.CreateTree("foo");
                 var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                new Random().NextBytes(bytes);
                 tree.Add("items/0", new MemoryStream(bytes));
                 tx.Commit();
             }
@@ -35,14 +37,7 @@ namespace FastTests.Voron.Journal
             {
                 var tree = tx.CreateTree("foo");
                 var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
-              tree.Add("items/1", new MemoryStream(bytes));
-                tx.Commit();
-            }
-
-            using (var tx = Env.WriteTransaction())
-            {
-                var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
             }
@@ -51,6 +46,16 @@ namespace FastTests.Voron.Journal
             {
                 var tree = tx.CreateTree("foo");
                 var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                new Random().NextBytes(bytes);
+                tree.Add("items/1", new MemoryStream(bytes));
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("foo");
+                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
             }

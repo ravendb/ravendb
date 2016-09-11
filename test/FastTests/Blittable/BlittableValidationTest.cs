@@ -527,6 +527,55 @@ namespace FastTests.Blittable
         }
 
         [Fact]
+        public void Valid_object_read_from_non_zero_offset()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var jsonParserState = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(context, jsonParserState, "changes/1"))
+                {
+
+                    byte[] buffer = new byte[4096];
+                    var bufferOffset = 128; //non-zero offset
+
+                    var allTokens = new AllTokensTypes
+                    {
+                        Bool = true,
+                        Float = 123.4567F,
+                        Int = 45679123,
+                        IntArray = new[] { 1, 2, 3 },
+                        Null = null,
+                        Object = new Empty(),
+                        String = "qwertyuio"
+                    };
+                    var obj = RavenJObject.FromObject(allTokens);
+                    var objString = obj.ToString(Formatting.None);
+
+                    var data = Encoding.UTF8.GetBytes(objString);
+
+                    data.CopyTo(buffer, bufferOffset);
+
+                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "order/1", parser, jsonParserState))
+                    {
+                        parser.SetBuffer(new ArraySegment<byte>(buffer, bufferOffset, data.Length));
+
+                        builder.ReadObject();
+
+                        Assert.True(builder.Read());
+
+                        builder.FinalizeDocument();
+
+                        using (var reader = builder.CreateReader())
+                        {
+                            var value = reader.ToString();
+                            Assert.NotNull(value);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void Valid_String()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())

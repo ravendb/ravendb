@@ -46,7 +46,9 @@ namespace Voron.Util
                     var pageCount = Math.Min(maxNumOfPagesToCopyAtOnce, pagesToCopy);
                     var bytesCount = (int)(pageCount * env.Options.PageSize);
 
-                    journal.JournalWriter.Read(page, ptr, bytesCount);
+                    if (journal.JournalWriter.Read(page, ptr, bytesCount) == false)
+                         throw new InvalidOperationException("Could not read from journal #" + journal.Number + " " +
+                                    +bytesCount + " bytes.");
                     output.Write(_buffer, 0, bytesCount);
                     page += pageCount;
                     pagesToCopy -= pageCount;

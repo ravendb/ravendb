@@ -113,7 +113,7 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            if (pageNumber > NumberOfAllocatedPages)
+            if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
                 ThrowOnInvalidPageNumber(pageNumber);
 
             var state = pagerState ?? _pagerState;
