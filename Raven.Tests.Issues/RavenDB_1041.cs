@@ -15,6 +15,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -123,34 +124,35 @@ namespace Raven.Tests.Issues
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
         }
 
-      
-        [Fact]
-        public async Task ShouldThrowTimeoutException()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task ShouldThrowTimeoutException(string storageName)
         {
-            var store1 = CreateStore(requestedStorageType: "esent");
-            var store2 = CreateStore(requestedStorageType: "esent");
-
-            SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
-
-            using (var session = store1.OpenSession())
+            using (var store1 = CreateStore(requestedStorageType: storageName))
+            using (var store2 = CreateStore(requestedStorageType: storageName))
             {
-                session.Store(new ReplicatedItem { Id = "Replicated/1" });
-                session.SaveChanges();
-            }
+                SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
-            TimeoutException timeoutException = null;
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new ReplicatedItem {Id = "Replicated/1"});
+                    session.SaveChanges();
+                }
 
-            try
-            {
-                await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(5), replicas: 2);
-            }
-            catch (TimeoutException ex)
-            {
-                timeoutException = ex;
-            }
+                TimeoutException timeoutException = null;
 
-            Assert.NotNull(timeoutException);
-            Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
+                try
+                {
+                    await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(5), replicas: 2);
+                }
+                catch (TimeoutException ex)
+                {
+                    timeoutException = ex;
+                }
+
+                Assert.NotNull(timeoutException);
+                Assert.Contains("So far, it only replicated to 1", timeoutException.Message);
+            }
         }
 
         [Fact]
