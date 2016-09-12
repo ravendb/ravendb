@@ -45,7 +45,10 @@ namespace Raven.Tests.Core.BulkInsert
                         });
                     }
                 }
+
+                SpinWait.SpinUntil(() => bulkInsertStartsCounter == 20, 5000);
                 Assert.Equal(20, bulkInsertStartsCounter);
+
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
