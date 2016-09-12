@@ -36,6 +36,28 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
+        public void WhenQueryContainsAsterisk()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Country = "Israel*"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var collection = session.Query<User>().Where(x => x.Country.In("Israel*")).ToList();
+                    Assert.NotEmpty(collection);
+                }
+            }
+        }
+
+        [Fact]
         public void WhenQueryContainsOneElement()
         {
             using (var store = NewRemoteDocumentStore())
