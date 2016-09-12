@@ -4,6 +4,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using System.Linq;
+using Raven.Client.Data;
 
 namespace Raven.Client.Shard
 {
@@ -116,6 +117,18 @@ namespace Raven.Client.Shard
         {
             var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDataSubscription(id)).ToArray();
             return new ShardedObservableWithTask<DataSubscriptionChangeNotification>(observableWithTasks);
+        }
+
+        public IObservableWithTask<OperationStatusChangeNotification> ForOperationId(long id)
+        {
+            var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForOperationId(id)).ToArray();
+            return new ShardedObservableWithTask<OperationStatusChangeNotification>(observableWithTasks);
+        }
+
+        public IObservableWithTask<OperationStatusChangeNotification> ForAllOperations()
+        {
+            var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForAllOperations()).ToArray();
+            return new ShardedObservableWithTask<OperationStatusChangeNotification>(observableWithTasks);
         }
 
         public void WaitForAllPendingSubscriptions()

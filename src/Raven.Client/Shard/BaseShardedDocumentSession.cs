@@ -6,6 +6,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Http;
@@ -280,22 +281,22 @@ namespace Raven.Client.Shard
         internal class ShardsOperation : Operation
         {
             private Operation[] shardsOperations;
-            internal ShardsOperation(Operation[] shardsOperations) : base(-1, null)
+            internal ShardsOperation(Operation[] shardsOperations) : base(-1)
             {
                 this.shardsOperations = shardsOperations;
             }
 
-            public override RavenJToken WaitForCompletion()
+            public override IOperationResult WaitForCompletion()
             {
-                RavenJToken rc = null;
+                IOperationResult rc = null;
                 foreach (var op in shardsOperations)
                     rc = op.WaitForCompletion();
                 return rc;
             }
 
-            public override async Task<RavenJToken> WaitForCompletionAsync()
+            public override async Task<IOperationResult> WaitForCompletionAsync()
             {
-                RavenJToken rc = null;
+                IOperationResult rc = null;
                 foreach (var op in shardsOperations)
                 {
                     rc = await op.WaitForCompletionAsync().ConfigureAwait(false);

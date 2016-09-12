@@ -24,17 +24,14 @@ namespace Raven.Server.Documents
     public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
         public event Action<string> OnDatabaseLoaded = delegate { };
-        private readonly HttpJsonRequestFactory _httpJsonRequestFactory = new HttpJsonRequestFactory(64);
-        private readonly DocumentConvention _convention = new DocumentConvention();
+
 
         public override Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName)
         {
-            if (Locks.Contains(DisposingLock))
-                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
-            
-            if (Locks.Contains(databaseName))
-                throw new InvalidOperationException($"Database '{databaseName}' is currently locked and cannot be accessed.");
-
+            if (HasLocks != 0)
+            {
+                AssertLocks(databaseName);
+            }
             Task<DocumentDatabase> database;
             if (ResourcesStoresCache.TryGetValue(databaseName, out database))
             {
@@ -51,6 +48,11 @@ namespace Raven.Server.Documents
                 }
             }
 
+            return CreateDatabase(databaseName);
+        }
+
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName)
+        {
             var config = CreateDatabaseConfiguration(databaseName);
             if (config == null)
                 return null;
@@ -59,12 +61,13 @@ namespace Raven.Server.Documents
             try
             {
                 if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
-                    throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
+                    throw new ConcurrentLoadTimeoutException(
+                        "Too much databases loading concurrently, timed out waiting for them to load.");
 
                 hasAcquired = true;
 
                 var task = new Task<DocumentDatabase>(() => CreateDocumentsStorage(databaseName, config));
-                database = ResourcesStoresCache.GetOrAdd(databaseName, task);
+                var database = ResourcesStoresCache.GetOrAdd(databaseName, task);
                 if (database == task)
                     task.Start();
 
@@ -89,6 +92,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void AssertLocks(string databaseName)
+        {
+            if (Locks.Contains(DisposingLock))
+                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
+
+            if (Locks.Contains(databaseName))
+                throw new InvalidOperationException($"Database '{databaseName}' is currently locked and cannot be accessed.");
+
+        }
+
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config)
         {
             try
@@ -97,8 +110,8 @@ namespace Raven.Server.Documents
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore.IoMetrics);
                 documentDatabase.Initialize();
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
                 OnDatabaseLoaded(config.DatabaseName);
 
@@ -108,8 +121,8 @@ namespace Raven.Server.Documents
             }
             catch(Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to start database {config.DatabaseName}", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to start database {config.DatabaseName}", e);
                 throw;
             }
         }
@@ -174,8 +187,8 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
                     databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
                 }
             }

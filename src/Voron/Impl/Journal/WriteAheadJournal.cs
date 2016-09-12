@@ -912,7 +912,9 @@ namespace Voron.Impl.Journal
             var totalSizeWritten = (int)(write - outputBuffer + sizeOfPagesHeader);
 
 
-            var compressionBuffer = outputBuffer + maxSizeRequiringCompression + sizeof(TransactionHeader);
+            var fullTxBuffer = outputBuffer + pageCountIncludingAllOverflowPages * pageSize;
+
+            var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
             var compressedLen = _lz4.Encode64(
                 outputBuffer,
@@ -942,12 +944,12 @@ namespace Voron.Impl.Journal
 
             var prepreToWriteToJournal = new CompressedPagesResult
             {
-                Base = outputBuffer + maxSizeRequiringCompression,
+                Base = fullTxBuffer,
                 NumberOfPages = compressedPages
             };
             // Copy the transaction header to the output buffer. 
-            Memory.Copy(prepreToWriteToJournal.Base, txHeaderBase, sizeof(TransactionHeader));
-
+            Memory.Copy(fullTxBuffer, txHeaderBase, sizeof(TransactionHeader));
+            Debug.Assert(((long)fullTxBuffer % pageSize) == 0, "Memory must be page aligned");
             return prepreToWriteToJournal;
         }
 

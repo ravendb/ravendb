@@ -6,13 +6,6 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
 {
     public class MakeStudioWorkForNowHandler : RequestHandler
     {
-        [RavenAction("/databases/*/operations/status", "GET")]
-        public Task FakeOperations()
-        {
-            HttpContext.Response.StatusCode = 404;
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/configuration/document$", "GET")]
         public Task FakeResponseForConfigurationDocument()
         {
