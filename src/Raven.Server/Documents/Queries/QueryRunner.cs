@@ -96,17 +96,18 @@ namespace Raven.Server.Documents.Queries
             return runner.ExplainIndexSelection(indexName, indexQuery);
         }
 
-        public Task ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)
+        public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, key => _database.DocumentsStorage.Delete(context, key, null), token);
+            return ExecuteOperation(indexName, query, options, context, onProgress, key => _database.DocumentsStorage.Delete(context, key, null), token);
         }
 
-        public Task ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, key => _database.Patch.Apply(context, key, null, patch, null), token);
+            return ExecuteOperation(indexName, query, options, context, onProgress, key => _database.Patch.Apply(context, key, null, patch, null), token);
         }
 
-        private async Task ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<string> action, OperationCancelToken token)
+        private async Task<IOperationResult> ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
+            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
 
@@ -118,12 +119,20 @@ namespace Raven.Server.Documents.Queries
             const int BatchSize = 1024;
 
             RavenTransaction tx = null;
-            var operations = 0;
+            var operationsInCurrentBatch = 0;
             var results = await index.Query(query, context, token).ConfigureAwait(false);
             context.CloseTransaction();
 
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
+
+            var progress = new DeterminateProgress
+            {
+                Total = results.Results.Count,
+                Processed = 0
+            };
+
+            onProgress(progress);
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
@@ -143,14 +152,20 @@ namespace Raven.Server.Documents.Queries
 
                     if (tx == null)
                     {
-                        operations = 0;
+                        operationsInCurrentBatch = 0;
                         tx = context.OpenWriteTransaction();
                     }
 
                     action(document.Key);
-                    operations++;
+                    operationsInCurrentBatch++;
+                    progress.Processed++;
 
-                    if (operations < BatchSize)
+                    if (progress.Processed % 128 == 0)
+                    {
+                        onProgress(progress);
+                    }
+
+                    if (operationsInCurrentBatch < BatchSize)
                         continue;
 
                     using (tx)
@@ -166,6 +181,11 @@ namespace Raven.Server.Documents.Queries
             {
                 tx?.Commit();
             }
+
+            return new BulkOperationResult
+            {
+                Total = progress.Total
+            };
         }
 
         private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)
