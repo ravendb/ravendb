@@ -19,7 +19,7 @@ namespace Sparrow.Json.Parsing
         private readonly JsonParserState _state;
         private int _pos;
         private int _bufSize;
-        private int _line;
+        private int _line = 1;
         private int _charPos = 1;
 
         private byte[] _inputBuffer;
@@ -35,6 +35,7 @@ namespace Sparrow.Json.Parsing
         private bool _isExponent;
         private bool _escapeMode;
         private int _initialPos;
+        private bool _maybeBeforePreamble = true;
 
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
         {
@@ -72,6 +73,10 @@ namespace Sparrow.Json.Parsing
             _pos = segment.Offset;
         }
 
+        public void NewDocument()
+        {
+            _maybeBeforePreamble = true;
+        }
 
         public bool Read()
         {
@@ -83,14 +88,13 @@ namespace Sparrow.Json.Parsing
             }
             
             _state.Continuation = JsonParserTokenContinuation.None;
-            if (_line == 0)
+            if (_maybeBeforePreamble)
             {
-                // first time, need to check preamble
-                _line++;
                 if (_pos >= _initialPos + _bufSize)
                 {
                     return false;
                 }
+
                 if (_inputBuffer[_pos] == Utf8Preamble[0])
                 {
                     _pos++;
@@ -102,6 +106,10 @@ namespace Sparrow.Json.Parsing
                         _state.Continuation = JsonParserTokenContinuation.PartialPreamble;
                         return false;
                     }
+                }
+                else
+                {
+                    _maybeBeforePreamble = false;
                 }
             }
 
@@ -246,6 +254,9 @@ namespace Sparrow.Json.Parsing
                         if (_state.CurrentTokenType == JsonParserToken.Float)
                             _stringBuffer.EnsureSingleChunk(_state);
                         return true;
+
+                    default:
+                        throw CreateException("Cannot have a '" + (char)b + "' in this position");
                 }
             }
         }

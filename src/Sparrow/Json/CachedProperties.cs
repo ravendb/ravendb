@@ -124,7 +124,6 @@ namespace Sparrow.Json
         }
 
         private bool _hasDuplicates;
-        public int Version;
 
         int IComparer<BlittableJsonDocumentBuilder.PropertyTag>.Compare(BlittableJsonDocumentBuilder.PropertyTag x, BlittableJsonDocumentBuilder.PropertyTag y)
         {

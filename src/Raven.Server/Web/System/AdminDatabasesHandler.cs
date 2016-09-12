@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Routing;
@@ -125,11 +126,25 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task Delete()
+        public Task DeleteQueryString()
         {
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
+            return DeleteDatabases(names);
+        }
+
+        [RavenAction("/admin/databases/$", "DELETE", "/admin/databases/{databaseName:string}?hard-delete={isHardDelete:bool|optional(false)}")]
+        public Task Delete()
+        {
+            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+            if (string.IsNullOrWhiteSpace(name))
+                throw new InvalidOperationException("Database name was not provided");
+            return DeleteDatabases(new StringValues(name));
+        }
+
+        private Task DeleteDatabases(StringValues names)
+        {
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
 
             TransactionOperationContext context;
