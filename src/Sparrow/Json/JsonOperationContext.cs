@@ -565,29 +565,6 @@ namespace Sparrow.Json
             }
         }
 
-        public BlittableJsonReaderObject ReadObjectWithExternalProperties(DynamicJsonValue obj, string debugTag)
-        {
-            var state = new JsonParserState();
-            using (var parser = new ObjectJsonParser(state, obj, this))
-            {
-                var writer = new BlittableJsonDocumentBuilder(this, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, state);
-                try
-                {
-                    writer.ReadObject();
-                    if (writer.Read() == false)
-                        throw new InvalidOperationException("Partial json content in object json parser shouldn't happen");
-                    writer.FinalizeDocumentWithoutProperties(CachedProperties.Version);
-                    _disposables.Add(writer);
-                    return writer.CreateReader(CachedProperties);
-                }
-                catch (Exception)
-                {
-                    writer.Dispose();
-                    throw;
-                }
-            }
-        }
-
         public unsafe void WriteObject(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
         {
             if (state.CurrentTokenType != JsonParserToken.StartObject)

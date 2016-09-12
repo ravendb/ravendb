@@ -541,20 +541,6 @@ namespace Sparrow.Json
             WriteNumber((int)token, sizeof(byte));
         }
 
-
-        public void FinalizeDocumentWithoutProperties(int propertiesChemaVersion)
-        {
-            if (propertiesChemaVersion <= 0)
-                throw new ArgumentException("Properties schema version must be a positive number", nameof(propertiesChemaVersion));
-
-            var token = _writeToken.WrittenToken;
-            var rootOffset = _writeToken.ValuePos;
-
-            WriteVariableSizeIntInReverse(rootOffset);
-            WriteVariableSizeIntInReverse(propertiesChemaVersion);
-            WriteNumber((int)token, sizeof(byte));
-        }
-
         public unsafe int WriteString(LazyStringValue str, out BlittableJsonToken token, UsageMode state)
         {
             var startPos = _position;
