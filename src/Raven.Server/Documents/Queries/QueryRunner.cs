@@ -58,32 +58,36 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, string facetSetupId, long? existingResultEtag, OperationCancelToken token)
+        public FacetedQueryResult ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
-            FacetSetup facetSetup;
-            long facetSetupEtag;
-            using (_documentsContext.OpenReadTransaction())
+            if (query.FacetSetupDoc != null)
             {
-                var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, facetSetupId);
-                if (facetSetupAsJson == null)
-                    throw new DocumentDoesNotExistException(facetSetupId);
+                FacetSetup facetSetup;
+                using (_documentsContext.OpenReadTransaction())
+                {
+                    var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, query.FacetSetupDoc);
+                    if (facetSetupAsJson == null)
+                        throw new DocumentDoesNotExistException(query.FacetSetupDoc);
 
-                try
-                {
-                    facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+                    try
+                    {
+                        facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new DocumentParseException(query.FacetSetupDoc, typeof(FacetSetup), e);
+                    }
+
+                    facetsEtag = facetSetupAsJson.Etag;
                 }
-                catch (Exception e)
-                {
-                    throw new DocumentParseException(facetSetupId, typeof(FacetSetup), e);
-                }
-                
-                facetSetupEtag = facetSetupAsJson.Etag;
+
+                query.Facets = facetSetup.Facets;
             }
 
-            return ExecuteFacetedQuery(indexName, query, facetSetup.Facets, facetSetupEtag, existingResultEtag, token);
+            return ExecuteFacetedQuery(indexName, query, facetsEtag.Value, existingResultEtag, token);
         }
 
-        public FacetedQueryResult ExecuteFacetedQuery(string indexName, IndexQueryServerSide query, List<Facet> facets, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        private FacetedQueryResult ExecuteFacetedQuery(string indexName, FacetQuery query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
             if (existingResultEtag.HasValue)
@@ -93,7 +97,7 @@ namespace Raven.Server.Documents.Queries
                     return FacetedQueryResult.NotModifiedResult;
             }
 
-            return index.FacetedQuery(query, facets, facetsEtag, _documentsContext, token);
+            return index.FacetedQuery(query, facetsEtag, _documentsContext, token);
         }
 
         public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)

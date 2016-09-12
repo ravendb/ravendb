@@ -130,7 +130,12 @@ namespace SlowTests.MailingList
 
                         var wods = query.ToList();
 
-                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets("Wod/Search", new IndexQuery { Query = query.ToString() }, "Facets/WodFacets");
+                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets(new FacetQuery
+                        {
+                            IndexName = "Wod/Search",
+                            Query = query.ToString(),
+                            FacetSetupDoc = "Facets/WodFacets"
+                        });
 
                         var pullupsCount = facets.Results["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
 

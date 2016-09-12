@@ -17,7 +17,7 @@ namespace SlowTests.Tests.DistinctFacets
 {
     public class FromUser : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Facets (distinct)")]
+        [Fact]
         public void ShouldFacetsWork()
         {
             using (var documentStore = GetDocumentStore())

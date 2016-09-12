@@ -35,7 +35,25 @@ namespace Raven.Client.Shard
                 IndexName = IndexQueried,
                 EntityType = typeof (T),
                 Query = indexQuery
-            }, (commands, i) => commands.GetFacets(IndexQueried, indexQuery, facetSetupDoc, start, pageSize));
+            }, (commands, i) =>
+            {
+                var query = new FacetQuery
+                {
+                    Query = indexQuery.Query,
+                    DefaultField = indexQuery.DefaultField,
+                    DefaultOperator = indexQuery.DefaultOperator,
+                    FacetSetupDoc = facetSetupDoc,
+                    IndexName = IndexQueried,
+                    IsDistinct = indexQuery.IsDistinct,
+                    Start = start,
+                    FieldsToFetch = indexQuery.FieldsToFetch
+                };
+
+                if (pageSize.HasValue)
+                    query.PageSize = pageSize.Value;
+
+                return commands.GetFacets(query);
+            });
 
             return MergeFacets(results);
         }
@@ -48,7 +66,25 @@ namespace Raven.Client.Shard
                 IndexName = IndexQueried,
                 EntityType = typeof(T),
                 Query = indexQuery
-            }, (commands, i) => commands.GetFacets(IndexQueried, indexQuery, facets, start, pageSize));
+            }, (commands, i) =>
+            {
+                var query = new FacetQuery
+                {
+                    Query = indexQuery.Query,
+                    DefaultField = indexQuery.DefaultField,
+                    DefaultOperator = indexQuery.DefaultOperator,
+                    Facets = facets,
+                    IndexName = IndexQueried,
+                    IsDistinct = indexQuery.IsDistinct,
+                    Start = start,
+                    FieldsToFetch = indexQuery.FieldsToFetch
+                };
+
+                if (pageSize.HasValue)
+                    query.PageSize = pageSize.Value;
+
+                return commands.GetFacets(query);
+            });
 
             return MergeFacets(results);
         }
@@ -61,7 +97,25 @@ namespace Raven.Client.Shard
                 IndexName = AsyncIndexQueried,
                 EntityType = typeof(T),
                 Query = indexQuery
-            }, (commands, i) => commands.GetFacetsAsync(AsyncIndexQueried, indexQuery, facets, start, pageSize, token)).ConfigureAwait(false);
+            }, (commands, i) =>
+            {
+                var query = new FacetQuery
+                {
+                    Query = indexQuery.Query,
+                    DefaultField = indexQuery.DefaultField,
+                    DefaultOperator = indexQuery.DefaultOperator,
+                    Facets = facets,
+                    IndexName = AsyncIndexQueried,
+                    IsDistinct = indexQuery.IsDistinct,
+                    Start = start,
+                    FieldsToFetch = indexQuery.FieldsToFetch
+                };
+
+                if (pageSize.HasValue)
+                    query.PageSize = pageSize.Value;
+
+                return commands.GetFacetsAsync(query, token);
+            }).ConfigureAwait(false);
         
             return MergeFacets(results);
         }
@@ -74,7 +128,25 @@ namespace Raven.Client.Shard
                 IndexName = AsyncIndexQueried,
                 EntityType = typeof(T),
                 Query = indexQuery
-            }, (commands, i) => commands.GetFacetsAsync(AsyncIndexQueried, indexQuery, facetSetupDoc, start, pageSize, token)).ConfigureAwait(false);
+            }, (commands, i) =>
+            {
+                var query = new FacetQuery
+                {
+                    Query = indexQuery.Query,
+                    DefaultField = indexQuery.DefaultField,
+                    DefaultOperator = indexQuery.DefaultOperator,
+                    FacetSetupDoc = facetSetupDoc,
+                    IndexName = AsyncIndexQueried,
+                    IsDistinct = indexQuery.IsDistinct,
+                    Start = start,
+                    FieldsToFetch = indexQuery.FieldsToFetch
+                };
+
+                if (pageSize.HasValue)
+                    query.PageSize = pageSize.Value;
+
+                return commands.GetFacetsAsync(query, token);
+            }).ConfigureAwait(false);
 
             return MergeFacets(results);
         }

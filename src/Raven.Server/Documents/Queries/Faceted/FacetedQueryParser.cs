@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryParser
     {
-        public static Dictionary<string, FacetResult> Parse(List<Facet> facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
+        public static Dictionary<string, FacetResult> Parse(IReadOnlyList<Facet> facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
         {
             var results = new Dictionary<string, FacetResult>();
             defaultFacets = new Dictionary<string, Facet>();

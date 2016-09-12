@@ -1,72 +1,33 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions;
+using System.Net.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Shard;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
     public class LazyFacetsOperation : ILazyOperation
     {
-        private readonly string index;
-        private readonly List<Facet> facets;
-        private readonly string facetSetupDoc;
-        private readonly IndexQuery query;
-        private readonly int start;
-        private readonly int? pageSize;
+        private readonly FacetQuery _query;
 
-        public LazyFacetsOperation(string index, string facetSetupDoc, IndexQuery query, int start = 0, int? pageSize = null)
+        public LazyFacetsOperation(FacetQuery query)
         {
-            this.index = index;
-            this.facetSetupDoc = facetSetupDoc;
-            this.query = query;
-            this.start = start;
-            this.pageSize = pageSize;
-        }
-
-        public LazyFacetsOperation(string index, List<Facet> facets, IndexQuery query, int start = 0, int? pageSize = null)
-        {
-            this.index = index;
-            this.facets = facets;
-            this.query = query;
-            this.start = start;
-            this.pageSize = pageSize;
+            _query = query;
         }
 
         public GetRequest CreateRequest()
         {
-            if (facetSetupDoc != null)
-            {
-                return new GetRequest
-                {
-                    Url = "/queries/" + index,
-                    Query = $"{query.GetMinimalQueryString()}&start={start}&pageSize={pageSize}&facetDoc={facetSetupDoc}&op=facets"
-                };
-            }
-            var unescapedFacetsJson = AsyncServerClient.SerializeFacetsToFacetsJsonString(facets);
-            if (unescapedFacetsJson.Length < 32 * 1024 - 1)
-            {
-                return new GetRequest
-                {
-                    Url = "/queries/" + index,
-                    Query = $"{query.GetMinimalQueryString()}&start={start}&pageSize={pageSize}&facets={Uri.EscapeDataString(unescapedFacetsJson)}&op=facets"
-                };
-            }
-
+            var method = _query.CalculateHttpMethod();
             return new GetRequest
             {
-                Url = "/queries/" + index,
-                Method = "POST",
-                Content = unescapedFacetsJson,
-                Query = $"{query.GetMinimalQueryString()}&start={start}&pageSize={pageSize}&op=facets"
+                Url = "/queries/" + _query.IndexName,
+                Query = _query.GetQueryString(method),
+                Method = method.Method,
+                Content = method == HttpMethod.Post ? _query.GetFacetsAsJson() : null
             };
         }
 

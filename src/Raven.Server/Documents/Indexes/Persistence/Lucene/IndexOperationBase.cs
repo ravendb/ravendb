@@ -9,6 +9,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
 using Sparrow.Logging;
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return analyzerInstance;
         }
 
-        protected Query GetLuceneQuery(string q, IndexQueryServerSide query, Analyzer analyzer)
+        protected Query GetLuceneQuery(string q, QueryOperator defaultOperator, string defaultField, Analyzer analyzer)
         {
             Query documentQuery;
 
@@ -123,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
 
-                    documentQuery = QueryBuilder.BuildQuery(q, query, analyzer);
+                    documentQuery = QueryBuilder.BuildQuery(q, defaultOperator, defaultField, analyzer);
                 }
                 finally
                 {

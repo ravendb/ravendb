@@ -623,25 +623,85 @@ namespace Raven.Client.Document
         public FacetedQueryResult GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
-            return DatabaseCommands.GetFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+            var query = new FacetQuery
+            {
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
+                FacetSetupDoc = facetSetupDoc,
+                IndexName = indexName,
+                IsDistinct = q.IsDistinct,
+                Query = q.Query,
+                Start = facetStart,
+                FieldsToFetch = q.FieldsToFetch
+            };
+
+            if (facetPageSize.HasValue)
+                query.PageSize = facetPageSize.Value;
+
+            return DatabaseCommands.GetFacets(query);
         }
 
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
-            return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
+            var query = new FacetQuery
+            {
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
+                Facets = facets,
+                IndexName = indexName,
+                IsDistinct = q.IsDistinct,
+                Query = q.Query,
+                Start = facetStart,
+                FieldsToFetch = q.FieldsToFetch
+            };
+
+            if (facetPageSize.HasValue)
+                query.PageSize = facetPageSize.Value;
+
+            return DatabaseCommands.GetFacets(query);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize, token);
+            var query = new FacetQuery
+            {
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
+                FacetSetupDoc = facetSetupDoc,
+                IndexName = indexName,
+                IsDistinct = q.IsDistinct,
+                Query = q.Query,
+                Start = facetStart,
+                FieldsToFetch = q.FieldsToFetch
+            };
+
+            if (facetPageSize.HasValue)
+                query.PageSize = facetPageSize.Value;
+
+            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize, token);
+            var query = new FacetQuery
+            {
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
+                Facets = facets,
+                IndexName = indexName,
+                IsDistinct = q.IsDistinct,
+                Query = q.Query,
+                Start = facetStart,
+                FieldsToFetch = q.FieldsToFetch
+            };
+
+            if (facetPageSize.HasValue)
+                query.PageSize = facetPageSize.Value;
+
+            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         /// <summary>

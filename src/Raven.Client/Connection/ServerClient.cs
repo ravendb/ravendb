@@ -72,7 +72,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key, metadataOnly));
         }
 
-        public IGlobalAdminDatabaseCommands GlobalAdmin => 
+        public IGlobalAdminDatabaseCommands GlobalAdmin =>
             new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient));
 
         public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
@@ -163,11 +163,11 @@ namespace Raven.Client.Connection
         {
             AsyncHelpers.RunSync(() => asyncServerClient.ResetIndexAsync(name));
         }
-        public void SetIndexLock(string name, IndexLockMode mode) 
+        public void SetIndexLock(string name, IndexLockMode mode)
         {
             AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, mode));
         }
-        public void SetIndexPriority(string name, IndexingPriority priority )
+        public void SetIndexPriority(string name, IndexingPriority priority)
         {
             AsyncHelpers.RunSync(() => asyncServerClient.SetIndexPriorityAsync(name, priority));
         }
@@ -303,7 +303,7 @@ namespace Raven.Client.Connection
         }
 
         public TcpBulkInsertOperation GetBulkInsertOperation()
-        {			
+        {
 
             return asyncServerClient.GetBulkInsertOperation();
         }
@@ -326,7 +326,7 @@ namespace Raven.Client.Connection
         public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
         {
             var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
-            if (asyncServerClient == newAsyncServerClient) 
+            if (asyncServerClient == newAsyncServerClient)
                 return this;
 
             return new ServerClient(newAsyncServerClient);
@@ -428,19 +428,14 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetTermsAsync(index, field, fromValue, pageSize));
         }
 
-        public FacetedQueryResult GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
+        public FacetedQueryResult GetFacets(FacetQuery query)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize));
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(query));
         }
 
         public FacetedQueryResult[] GetMultiFacets(FacetQuery[] facetedQueries)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetMultiFacetsAsync(facetedQueries));
-        }
-
-        public FacetedQueryResult GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
-        {
-            return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize));
         }
 
         public RavenJObject Patch(string key, PatchRequest patch)
@@ -478,7 +473,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata));
         }
 
-#endregion
+        #endregion
 
         public ProfilingInformation ProfilingInformation
         {

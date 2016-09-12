@@ -64,7 +64,12 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var facetResults = store.DatabaseCommands.GetFacets("PropertiesSearchIndex", new IndexQuery { Query = query.ToString() }, "facets/PropertySearchingFacets");
+                    var facetResults = store.DatabaseCommands.GetFacets(new FacetQuery
+                    {
+                        IndexName = "PropertiesSearchIndex",
+                        Query = query.ToString(),
+                        FacetSetupDoc = "facets/PropertySearchingFacets"
+                    });
                     var facetedCount = facetResults.Results["Feature"];
 
 

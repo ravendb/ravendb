@@ -98,17 +98,25 @@ namespace Raven.Client
         ///  <param name="queryable">The queryable interface for the function to be applied to</param>
         public static FacetQuery ToFacetQuery<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            return new FacetQuery
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
+            var q = ravenQueryInspector.GetIndexQuery(false);
+            var query = new FacetQuery
             {
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = ravenQueryInspector.GetIndexQuery(false),
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
                 FacetSetupDoc = facetSetupDoc,
-                PageStart = start,
-                PageSize = pageSize
+                IsDistinct = q.IsDistinct,
+                Start = start,
+                IndexName = ravenQueryInspector.IndexQueried,
+                Query = q.Query,
+                FieldsToFetch = q.FieldsToFetch
             };
-        }
 
+            if (pageSize.HasValue)
+                query.PageSize = pageSize.Value;
+
+            return query;
+        }
 
         /// <summary>
         /// Query the facets results for this query using the specified list of facets with the given start and pageSize
@@ -140,18 +148,28 @@ namespace Raven.Client
         {
             var facetsList = facets.ToList();
 
-            if (!facetsList.Any())
+            if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            return new FacetQuery
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
+            var q = ravenQueryInspector.GetIndexQuery(false);
+
+            var query = new FacetQuery
             {
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = ravenQueryInspector.GetIndexQuery(false),
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
                 Facets = facetsList,
-                PageStart = start,
-                PageSize = pageSize
+                IsDistinct = q.IsDistinct,
+                Start = start,
+                IndexName = ravenQueryInspector.IndexQueried,
+                Query = q.Query,
+                FieldsToFetch = q.FieldsToFetch
             };
+
+            if (pageSize.HasValue)
+                query.PageSize = pageSize.Value;
+
+            return query;
         }
 
         /// <summary>
@@ -196,9 +214,24 @@ namespace Raven.Client
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
+            var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
-            var lazyOperation = new LazyFacetsOperation( ravenQueryInspector.IndexQueried, facetSetupDoc, query, start, pageSize );
+            var query = new FacetQuery
+            {
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
+                FacetSetupDoc = facetSetupDoc,
+                IsDistinct = q.IsDistinct,
+                Start = start,
+                IndexName = ravenQueryInspector.IndexQueried,
+                Query = q.Query,
+                FieldsToFetch = q.FieldsToFetch
+            };
+
+            if (pageSize.HasValue)
+                query.PageSize = pageSize.Value;
+
+            var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -216,9 +249,24 @@ namespace Raven.Client
         public static Lazy<Task<FacetedQueryResult>> ToFacetsLazyAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(true);
+            var q = ravenQueryInspector.GetIndexQuery(true);
 
-            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.AsyncIndexQueried, facetSetupDoc, query, start, pageSize);
+            var query = new FacetQuery
+            {
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
+                FacetSetupDoc = facetSetupDoc,
+                IsDistinct = q.IsDistinct,
+                Start = start,
+                IndexName = ravenQueryInspector.AsyncIndexQueried,
+                Query = q.Query,
+                FieldsToFetch = q.FieldsToFetch
+            };
+
+            if (pageSize.HasValue)
+                query.PageSize = pageSize.Value;
+
+            var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -231,13 +279,28 @@ namespace Raven.Client
         {
             var facetsList = facets.ToList();
 
-            if (!facetsList.Any())
+            if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
+            var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
-            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetsList, query, start, pageSize);
+            var query = new FacetQuery
+            {
+                DefaultField = q.DefaultField,
+                DefaultOperator = q.DefaultOperator,
+                Facets = facetsList,
+                IsDistinct = q.IsDistinct,
+                Start = start,
+                IndexName = ravenQueryInspector.IndexQueried,
+                Query = q.Query,
+                FieldsToFetch = q.FieldsToFetch
+            };
+
+            if (pageSize.HasValue)
+                query.PageSize = pageSize.Value;
+
+            var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -255,7 +318,22 @@ namespace Raven.Client
             var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = ((DocumentQuery<T>)query);
 
-            var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetSetupDoc, indexQuery, start, pageSize);
+            var facetQuery = new FacetQuery
+            {
+                DefaultField = indexQuery.DefaultField,
+                DefaultOperator = indexQuery.DefaultOperator,
+                FacetSetupDoc = facetSetupDoc,
+                IsDistinct = indexQuery.IsDistinct,
+                Start = start,
+                IndexName = documentQuery.IndexQueried,
+                Query = indexQuery.Query,
+                FieldsToFetch = indexQuery.FieldsToFetch
+            };
+
+            if (pageSize.HasValue)
+                facetQuery.PageSize = pageSize.Value;
+
+            var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -272,13 +350,28 @@ namespace Raven.Client
         {
             var facetsList = facets.ToList();
 
-            if (!facetsList.Any())
+            if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
             var indexQuery = query.GetIndexQuery(isAsync: false);
-            var documentQuery = ((DocumentQuery<T>)query);
+            var documentQuery = (DocumentQuery<T>)query;
 
-            var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetsList, indexQuery, start, pageSize);
+            var facetQuery = new FacetQuery
+            {
+                DefaultField = indexQuery.DefaultField,
+                DefaultOperator = indexQuery.DefaultOperator,
+                Facets = facetsList,
+                IsDistinct = indexQuery.IsDistinct,
+                Start = start,
+                IndexName = documentQuery.IndexQueried,
+                Query = indexQuery.Query,
+                FieldsToFetch = indexQuery.FieldsToFetch
+            };
+
+            if (pageSize.HasValue)
+                facetQuery.PageSize = pageSize.Value;
+
+            var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);

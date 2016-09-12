@@ -12,7 +12,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Implementation;
@@ -962,11 +961,21 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<FacetedQueryResult> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default(CancellationToken))
+        public async Task<FacetedQueryResult> GetFacetsAsync(FacetQuery query, CancellationToken token = new CancellationToken())
         {
-            return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
+            if (string.IsNullOrWhiteSpace(query.FacetSetupDoc) == false && query.Facets != null && query.Facets.Count > 0)
+                throw new InvalidOperationException($"You cannot specify both '{nameof(FacetQuery.FacetSetupDoc)}' and '{nameof(FacetQuery.Facets)}'.");
+
+            var method = query.CalculateHttpMethod();
+            if (method == HttpMethod.Post)
             {
-                var requestUri = operationMetadata.Url + $"/queries/{Uri.EscapeUriString(index)}?facetDoc={Uri.EscapeDataString(facetSetupDoc)}{query.GetMinimalQueryString()}&start={start}&pageSize={pageSize}&op=facets";
+                var results = await GetMultiFacetsAsync(new[] { query }, token).ConfigureAwait(false);
+                return results.FirstOrDefault();
+            }
+
+            return await ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
+            {
+                var requestUri = operationMetadata.Url + $"/queries/{query.IndexName}?{query.GetQueryString(method)}";
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
@@ -986,34 +995,16 @@ namespace Raven.Client.Connection.Async
         {
             var multiGetReuestItems = facetedQueries.Select(x =>
             {
-                if (x.FacetSetupDoc != null)
-                {
-                    return new GetRequest
-                    {
-                        Url = "/queries/" + x.IndexName,
-                        Query = $"{x.Query.GetMinimalQueryString()}&start={x.PageStart}&pageSize={x.PageSize}&facetDoc={x.FacetSetupDoc}&op=facets"
-                    };
-                }
+                if (string.IsNullOrWhiteSpace(x.FacetSetupDoc) == false && x.Facets != null && x.Facets.Count > 0)
+                    throw new InvalidOperationException($"You cannot specify both '{nameof(FacetQuery.FacetSetupDoc)}' and '{nameof(FacetQuery.Facets)}'.");
 
-                var serializedFacets = SerializeFacetsToFacetsJsonString(x.Facets);
-                if (serializedFacets.Length < 32 * 1024 - 1)
-                {
-                    return new GetRequest
-                    {
-                        Url = "/queries/" + x.IndexName,
-                        Query = $"{x.Query.GetMinimalQueryString()}&start={x.PageStart}&pageSize={x.PageSize}&facets={Uri.EscapeDataString(serializedFacets)}&op=facets"
-                    };
-                }
-
+                var method = x.CalculateHttpMethod();
                 return new GetRequest
                 {
                     Url = "/queries/" + x.IndexName,
-                    Query = string.Format("{0}&start={1}&pageSize={2}&op=facets",
-                            x.Query.GetMinimalQueryString(),
-                            x.PageStart,
-                            x.PageSize),
-                    Method = "POST",
-                    Content = serializedFacets
+                    Query = x.GetQueryString(method),
+                    Method = method.Method,
+                    Content = method == HttpMethod.Post ? x.GetFacetsAsJson() : null
                 };
             }).ToArray();
 
@@ -1039,66 +1030,6 @@ namespace Raven.Client.Connection.Async
                 return facetResults;
             }, token);
             return results;
-        }
-
-        public Task<FacetedQueryResult> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0,
-                                                 int? pageSize = null,
-                                                 CancellationToken token = default(CancellationToken))
-        {
-            var facetsJson = SerializeFacetsToFacetsJsonString(facets);
-            var method = facetsJson.Length > 1024 ? HttpMethod.Post : HttpMethod.Get;
-            if (method == HttpMethod.Post)
-            {
-                return GetMultiFacetsAsync(new[]
-                {
-                    new FacetQuery
-                    {
-                        Facets =  facets,
-                        IndexName = index,
-                        Query = query,
-                        PageSize = pageSize,
-                        PageStart = start
-                    }
-                }).ContinueWith(x => x.Result.FirstOrDefault());
-            }
-            return ExecuteWithReplication(method, async operationMetadata =>
-            {
-                var requestUri = operationMetadata.Url + $"/queries/{Uri.EscapeUriString(index)}?{query.GetMinimalQueryString()}&start={start}&pageSize={pageSize}&op=facets";
-
-                if (method == HttpMethod.Get)
-                    requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
-                {
-                    if (method != HttpMethod.Get)
-                    {
-                        await request.WriteAsync(facetsJson).ConfigureAwait(false);
-                    }
-
-                    var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-
-                    return json.JsonDeserialization<FacetedQueryResult>();
-                }
-            });
-        }
-
-        internal static string SerializeFacetsToFacetsJsonString(List<Facet> facets)
-        {
-            var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-                DefaultValueHandling = DefaultValueHandling.Ignore,
-            });
-            foreach (var facet in ravenJArray)
-            {
-                var obj = (RavenJObject)facet;
-                if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
-                    obj.Remove("DisplayName");
-                var jArray = obj.Value<RavenJArray>("Ranges");
-                if (jArray != null && jArray.Length == 0)
-                    obj.Remove("Ranges");
-            }
-            string facetsJson = ravenJArray.ToString(Formatting.None);
-            return facetsJson;
         }
 
         public Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken))

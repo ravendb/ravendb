@@ -746,7 +746,7 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Query, query.DefaultOperator, query.DefaultField, query.SortedFields);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
@@ -837,7 +837,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public FacetedQueryResult FacetedQuery(IndexQueryServerSide query, List<Facet> facets, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public FacetedQueryResult FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -847,7 +847,7 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Query, query.DefaultOperator, query.DefaultField, null);
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -859,9 +859,9 @@ namespace Raven.Server.Documents.Indexes
                         var result = new FacetedQueryResult();
 
                         using (documentsContext.OpenReadTransaction())
-                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext, query.CutoffEtag), facetSetupEtag, documentsContext, indexContext);
+                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
 
-                        result.Results = reader.FacetedQuery(query, facets, token.Token);
+                        result.Results = reader.FacetedQuery(query, indexContext, token.Token);
 
                         return result;
                     }
@@ -934,11 +934,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryServerSide query)
+        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(string query, QueryOperator defaultOperator, string defaultField, SortedField[] sortedFields)
         {
-            if (string.IsNullOrWhiteSpace(query.Query) == false)
+            if (string.IsNullOrWhiteSpace(query) == false)
             {
-                var setOfFields = SimpleQueryParser.GetFields(query);
+                var setOfFields = SimpleQueryParser.GetFields(query, defaultOperator, defaultField);
                 foreach (var field in setOfFields)
                 {
                     var f = field;
@@ -948,9 +948,9 @@ namespace Raven.Server.Documents.Indexes
                         throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
                 }
             }
-            if (query.SortedFields != null)
+            if (sortedFields != null)
             {
-                foreach (var sortedField in query.SortedFields)
+                foreach (var sortedField in sortedFields)
                 {
                     var f = sortedField.Field;
                     if (f == Constants.Indexing.Fields.IndexFieldScoreName)

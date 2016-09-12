@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Sparrow.Logging;
 using Lucene.Net.Search;
-
-using Raven.Abstractions.Logging;
+using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -79,6 +82,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public volatile bool ShouldDispose;
             public int Usage;
             private readonly Lazy<ManualResetEvent> _disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
+            private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> _docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
             public IndexSearcherHoldingState(Func<IndexSearcher> recreateSearcher)
             {
@@ -106,6 +110,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 DisposeRudely();
             }
 
+            public StringCollectionValue GetFieldsValues(int docId, uint fieldsHash, string[] fields, JsonOperationContext context)
+            {
+                var key = Tuple.Create(docId, fieldsHash);
+
+                StringCollectionValue value;
+                if (_docsCache.TryGetValue(key, out value))
+                    return value;
+
+                return _docsCache.GetOrAdd(key, _ =>
+                {
+                    var doc = IndexSearcher.Value.Doc(docId);
+                    return new StringCollectionValue((from field in fields
+                                                      from fld in doc.GetFields(field)
+                                                      where fld.StringValue != null
+                                                      select fld.StringValue).ToList(), context);
+                });
+
+            }
+
             private void DisposeRudely()
             {
                 if (IndexSearcher.IsValueCreated)
@@ -116,7 +139,61 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (_disposed.IsValueCreated)
                     _disposed.Value.Set();
             }
+        }
 
+        public class StringCollectionValue
+        {
+            private readonly int _hashCode;
+            private readonly uint _hash;
+#if DEBUG
+            // ReSharper disable once NotAccessedField.Local
+            private List<string> _values;
+#endif
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                var other = obj as StringCollectionValue;
+                if (other == null) return false;
+
+                return _hash == other._hash;
+            }
+
+            public override int GetHashCode()
+            {
+                return _hashCode;
+            }
+
+            public unsafe StringCollectionValue(List<string> values, JsonOperationContext context)
+            {
+#if DEBUG
+                _values = values;
+#endif
+                if (values.Count == 0)
+                    throw new InvalidOperationException("Cannot apply distinct facet on empty fields, did you forget to store them in the index? ");
+
+                _hashCode = values.Count;
+                _hash = (uint)values.Count;
+
+                var size = values.Sum(x => x.Length);
+                var buffer = context.GetNativeTempBuffer(size);
+                var destChars = (char*)buffer;
+
+                var position = 0;
+                foreach (var value in values)
+                {
+                    for (var i = 0; i < value.Length; i++)
+                        destChars[position++] = value[i];
+
+                    unchecked
+                    {
+                        _hashCode = _hashCode * 397 ^ value.GetHashCode();
+                    }
+                }
+
+                _hash = Hashing.XXHash32.Calculate(buffer, size);
+            }
         }
     }
 }

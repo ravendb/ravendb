@@ -81,12 +81,11 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
-            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
-            var facetDoc = GetStringQueryString("facetDoc", required: false);
-            KeyValuePair<List<Facet>, long> facets;
-            if (facetDoc == null)
+            long? facetsEtag = null;
+            if (query.FacetSetupDoc == null)
             {
                 string f;
                 if (HttpContext.Request.Method == HttpMethod.Post.Method)
@@ -105,14 +104,14 @@ namespace Raven.Server.Documents.Handlers
                 if (string.IsNullOrWhiteSpace(f))
                     throw new InvalidOperationException($"One of the required parameters (facetDoc or facets) was not specified.");
 
-                facets = await FacetedQueryParser.ParseFromStringAsync(f, context);
+                var facets = await FacetedQueryParser.ParseFromStringAsync(f, context);
+                facetsEtag = facets.Value;
+                query.Facets = facets.Key;
             }
 
             var runner = new QueryRunner(Database, context);
 
-            var result = facetDoc != null
-                ? runner.ExecuteFacetedQuery(indexName, query, facetDoc, existingResultEtag, token)
-                : runner.ExecuteFacetedQuery(indexName, query, facets.Key, facets.Value, existingResultEtag, token);
+            var result = runner.ExecuteFacetedQuery(indexName, query, facetsEtag, existingResultEtag, token);
 
             if (result.NotModified)
             {

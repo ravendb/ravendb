@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Function;
 using Lucene.Net.Search.Spans;
-
-using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.LuceneIntegration;
@@ -21,10 +17,15 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public static HashSet<string> GetFields(IndexQueryServerSide query)
         {
+            return GetFields(query.Query, query.DefaultOperator, query.DefaultField);
+        }
+
+        public static HashSet<string> GetFields(string query, QueryOperator defaultOperator, string defaultField)
+        {
             var hashSet = new HashSet<string>();
-            if (string.IsNullOrWhiteSpace(query.Query))
+            if (string.IsNullOrWhiteSpace(query))
                 return hashSet;
-            var q = QueryBuilder.BuildQuery(query.Query, query, QueryAnalyzer);
+            var q = QueryBuilder.BuildQuery(query, defaultOperator, defaultField, QueryAnalyzer);
             PopulateFields(q, hashSet);
             hashSet.Remove(string.Empty);
             return hashSet;
