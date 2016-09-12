@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -448,7 +449,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key)
+        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
@@ -456,20 +457,29 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
             var loweredKey = GetSliceFromKey(context, key);
-            return GetDocumentOrTombstone(context,loweredKey);
+            return GetDocumentOrTombstone(context,loweredKey,throwOnConflict);
         }
 
-        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey)
+        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
-            var doc = Get(context, loweredKey);
-            if (doc != null)
-                return Tuple.Create<Document, DocumentTombstone>(doc, null);
+            try
+            {
+                var doc = Get(context, loweredKey);
+                if (doc != null)
+                    return Tuple.Create<Document, DocumentTombstone>(doc, null);
+            }
+            catch (DocumentConflictException)
+            {
+                if (throwOnConflict)
+                    throw;
+            }
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
             var tvr = tombstoneTable.ReadByKey(loweredKey);
+
             return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, tvr));
         }
 
@@ -491,7 +501,10 @@ namespace Raven.Server.Documents
 
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
+            {
+                ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
+            }
 
             var doc = TableValueToDocument(context, tvr);
 
@@ -812,6 +825,7 @@ namespace Raven.Server.Documents
                     throw new ConcurrencyException(
                         $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
+                ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return false;
             }
            
@@ -867,6 +881,19 @@ namespace Raven.Server.Documents
             return true;
         }
 
+        private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, string key)
+        {
+            var conflicts = GetConflictsFor(context, key);
+            if (conflicts.Count > 0)
+                throw new DocumentConflictException(key, conflicts);
+        }
+
+
+        private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
+        {
+            ThrowDocumentConflictIfNeeded(context,loweredKey.ToString());
+        }
+
         private void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
         {
             if (docEtag != _lastEtag)
@@ -888,6 +915,9 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context,key,out lowerKey,out lowerSize,out keyPtr, out keySize);
             var loweredKey = Slice.External(context.Allocator, lowerKey, lowerSize);
+
+            ThrowDocumentConflictIfNeeded(context, loweredKey);
+
             var result = GetDocumentOrTombstone(context, loweredKey);
             if (result.Item2 != null) //already have a tombstone -> need to update the change vector
             {
@@ -1119,7 +1149,8 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            var existing = GetDocumentOrTombstone(context, key);
+            // ReSharper disable once ArgumentsStyleLiteral
+            var existing = GetDocumentOrTombstone(context, key, throwOnConflict:false);
             if (existing.Item1 != null)
             {
                 var existingDoc = existing.Item1;
@@ -1210,6 +1241,8 @@ namespace Raven.Server.Documents
             byte* keyPtr;
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+
+            ThrowDocumentConflictIfNeeded(context, key);
 
             // delete a tombstone if it exists
             DeleteTombstoneIfNeeded(context, originalCollectionName, lowerKey, lowerSize);
