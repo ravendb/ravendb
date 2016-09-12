@@ -432,23 +432,34 @@ namespace Raven.Tests.Replication
                 source.DatabaseCommands.ForDatabase("testDB").PutIndex(anotherUserIndex.IndexName, anotherUserIndex.CreateIndexDefinition());
                 source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
 
-                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
-                var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
-                {
-                    Url = source.Url
-                });
-                replicationRequest.ExecuteRequest();
+                var indexesOnDestination = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
 
-                Assert.True(WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName));
-                Assert.True(WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName));
-                Assert.True(WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName));
+                SpinWait.SpinUntil(() =>
+                {
+                    indexesOnDestination = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
+                    if (indexesOnDestination.Length == 3)
+                        return true;
+
+                    var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?op=replicate-all", source.Url);
+                    var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+                    {
+                        Url = source.Url
+                    });
+                    replicationRequest.ExecuteRequest();
+                    return false;
+                }, 10000);
+
+                Assert.Equal(3, indexesOnDestination.Length);
+                Assert.True(indexesOnDestination.Any(x => x.Name == userIndex.IndexName));
+                Assert.True(indexesOnDestination.Any(x => x.Name == anotherUserIndex.IndexName));
+                Assert.True(indexesOnDestination.Any(x => x.Name == yetAnotherUserIndex.IndexName));
 
                 var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
-                var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
+                var indexStatsAfterReplication1 = indexesOnDestination.Select(x => x.Name).ToList();
                 Assert.Equal(expectedIndexNames, indexStatsAfterReplication1);
 
-                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-                Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication3));
+                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
+                Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
 
                 //since destination2 has disabled flag - indexes should not replicate to here
                 var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
