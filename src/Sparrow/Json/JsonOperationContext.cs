@@ -422,6 +422,7 @@ namespace Sparrow.Json
                 var writer = new BlittableJsonDocumentBuilder(_context, mode, debugTag, _parser, _state);
                 try
                 {
+                    _parser.NewDocument();
                     writer.ReadObject();
                     _context.CachedProperties.NewDocument();
                     while (true)
