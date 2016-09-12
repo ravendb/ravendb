@@ -1244,14 +1244,14 @@ namespace Raven.Client.Document
         public Lazy<FacetResults> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(true);
-            var lazyFacetsOperation = new LazyFacetsOperation(IndexQueried, facetSetupDoc, q, start, pageSize);
+            var lazyFacetsOperation = new LazyFacetsOperation(IndexQueried, facetSetupDoc, q, facetStart, facetPageSize);
             return ((DocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null);
         }
 
         public Lazy<FacetResults> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(true);
-            var lazyFacetsOperation = new LazyFacetsOperation(IndexQueried, facets, q, start, pageSize);
+            var lazyFacetsOperation = new LazyFacetsOperation(IndexQueried, facets, q, facetStart, facetPageSize);
             return ((DocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null);
         }
 
