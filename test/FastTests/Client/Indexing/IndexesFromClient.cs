@@ -471,9 +471,10 @@ namespace FastTests.Client.Indexing
                     .DeleteByIndexAsync(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false })
                     ;
 
-                await operation
-                    .WaitForCompletionAsync()
-                    ;
+                var deleteResult = await operation
+                    .WaitForCompletionAsync().ConfigureAwait(false) as BulkOperationResult;
+
+                Assert.Equal(2, deleteResult.Total);
 
                 var statistics = await store
                     .AsyncDatabaseCommands
@@ -495,9 +496,14 @@ namespace FastTests.Client.Indexing
                     await session.SaveChangesAsync();
                 }
 
-                var e = Assert.Throws<ErrorResponseException>(() => store
+                var deleteOperation = store
                     .DatabaseCommands
-                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions {AllowStale = false});
+
+                var e = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    deleteOperation.WaitForCompletion();
+                });
 
                 Assert.True(e.Message.Contains("Query is stale"));
             }

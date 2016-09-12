@@ -189,7 +189,7 @@ class exportDatabase extends viewModelBase {
         new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase())
             .execute()
             .done(() => {
-                var url = "/studio-tasks/exportDatabase";
+                var url = "/studio-tasks/exportDatabase"; //TODO: use endpoint
                 this.downloader.downloadByPost(db, url, smugglerOptions,
                     db.isExporting, db.exportStatus);
             })
