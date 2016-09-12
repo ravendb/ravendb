@@ -15,15 +15,15 @@ namespace Raven.Server.Documents
     public abstract class AbstractLandlord<TResource> : IDisposable 
         where TResource : IDisposable
     {
-        protected static Logger _logger;
+        protected static Logger Logger;
+        protected int HasLocks;
 
         protected readonly ServerStore ServerStore;
         protected readonly SemaphoreSlim ResourceSemaphore;
         protected readonly TimeSpan ConcurrentResourceLoadTimeout;
         protected static string DisposingLock = Guid.NewGuid().ToString();
 
-        public readonly ConcurrentDictionary<StringSegment, Task<TResource>> ResourcesStoresCache =
-            new ConcurrentDictionary<StringSegment, Task<TResource>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+        public readonly ResourceCache<TResource> ResourcesStoresCache = new ResourceCache<TResource>();
 
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents
             ServerStore = serverStore;
             ResourceSemaphore = new SemaphoreSlim(ServerStore.Configuration.Databases.MaxConcurrentResourceLoads);
             ConcurrentResourceLoadTimeout = ServerStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
-            _logger = LoggingSource.Instance.GetLogger<AbstractLandlord<TResource>>("Raven/Server");
+            Logger = LoggingSource.Instance.GetLogger<AbstractLandlord<TResource>>("Raven/Server");
         }
 
         public abstract Task<TResource> TryGetOrCreateResourceStore(StringSegment resourceName);
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents
         {
             Locks.TryAdd(DisposingLock);
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
+            var exceptionAggregator = new ExceptionAggregator(Logger, "Failure to dispose landlord");
 
             // shut down all databases in parallel, avoid having to wait for each one
             Parallel.ForEach(ResourcesStoresCache.Values, new ParallelOptions
@@ -69,8 +69,8 @@ namespace Raven.Server.Documents
                         }
                         catch (Exception e)
                         {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Failure in deferred disposal of a database", e);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Failure in deferred disposal of a database", e);
                         }
                     });
                 }
@@ -88,8 +88,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Failed to dispose resource semaphore", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to dispose resource semaphore", e);
             }
         }
 
@@ -121,8 +121,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not dispose database: " + resourceName, e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Could not dispose database: " + resourceName, e);
             }
 
             LastRecentlyUsed.TryRemove(resourceName, out time);
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents
         {
             if (Locks.TryAdd(resourceName) == false)
                 throw new InvalidOperationException(resourceName + "' is currently locked and cannot be accessed");
-
+            Interlocked.Increment(ref HasLocks);
             try
             {
                 UnloadResource(resourceName);
@@ -142,6 +142,7 @@ namespace Raven.Server.Documents
             finally
             {
                 Locks.TryRemove(resourceName);
+                Interlocked.Decrement(ref HasLocks);
             }
         }
     }
