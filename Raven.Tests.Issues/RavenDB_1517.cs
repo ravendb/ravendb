@@ -22,7 +22,11 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldNotThrowTooLongUri_LazyIn_FindDuplicates()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var server = GetNewServer(configureConfig: configuration =>
+            {
+                configuration.MaxClauseCount = 4000;
+            }))
+            using (var store = NewRemoteDocumentStore(ravenDbServer: server))
             {
                 new SampleDataIndex().Execute(store);
                 using (var session = store.OpenSession())
