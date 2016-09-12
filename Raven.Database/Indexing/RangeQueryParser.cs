@@ -48,15 +48,17 @@ namespace Raven.Database.Indexing
             for (var i = searchMatches.Count - 1; i >= 0; i--) 
             {
                 var searchMatch = searchMatches[i];
-                var replaceToken = Guid.NewGuid().ToString("n");
+                var keyOfTokenReplacment = Guid.NewGuid().ToString("n");
+                replacedTokens[Tuple.Create(fieldName, keyOfTokenReplacment)] = searchMatch.Value;
+
                 queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
-                queryStringBuilder.Insert(searchMatch.Index, replaceToken);
+                queryStringBuilder.Insert(searchMatch.Index, keyOfTokenReplacment);
             }
+
             var tokenReplacement = queryStringBuilder.ToString();
-            var keyOfTokenReplacment = queryStringBuilder.ToString(1, queryStringBuilder.Length - 2);
-            replacedTokens[Tuple.Create(fieldName, keyOfTokenReplacment)] = collection.Substring(1, collection.Length - 2);
             return tokenReplacement;
         }
+
         protected override Query GetPrefixQuery(string field, string termStr)
         {
             var fieldQuery = GetFieldQuery(field, termStr);
