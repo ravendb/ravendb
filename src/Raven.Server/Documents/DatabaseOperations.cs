@@ -156,11 +156,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-#if DEBUG
-                        pendingTaskAndState.Task.Wait(3000);
-#else
                         pendingTaskAndState.Task.Wait();
-#endif
                     }
                     catch (Exception)
                     {

@@ -124,10 +124,10 @@ namespace Raven.Server.Documents.Handlers
         public Task Delete()
         {
             DocumentsOperationContext context;
-            ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
             
             ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token), 
-                context, DatabaseOperations.PendingOperationType.DeleteByIndex);
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByIndex);
             return Task.CompletedTask;
             
         }
@@ -136,18 +136,17 @@ namespace Raven.Server.Documents.Handlers
         public Task Patch()
         {
             DocumentsOperationContext context;
-            ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
             
             var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
             var patch = PatchRequest.Parse(reader);
 
             ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token), 
-                context, DatabaseOperations.PendingOperationType.UpdateByIndex);
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
             return Task.CompletedTask;
         }
 
-        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context,
-            DatabaseOperations.PendingOperationType operationType)
+        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -162,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
             var task = Database.DatabaseOperations.AddOperation(indexName, operationType, onProgress => 
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
-            task.ContinueWith(_ => context.Dispose());
+            task.ContinueWith(_ => returnContextToPool.Dispose());
         }
 
         private QueryOperationOptions GetQueryOperationOptions()
