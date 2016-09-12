@@ -7,8 +7,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
@@ -245,7 +248,17 @@ namespace Raven.Tests.Bugs.MultiTenancy
             }.Initialize())
             {
                 await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync("Northwind");
-                var index = await store.AsyncDatabaseCommands.ForDatabase("Northwind").GetIndexAsync("Raven/DocumentsByEntityName");
+
+                IndexDefinition index = null;
+                for (var i = 0; i < 20; i++)
+                {
+                    index = await store.AsyncDatabaseCommands.ForDatabase("Northwind").GetIndexAsync("Raven/DocumentsByEntityName");
+                    if (index != null)
+                        break;
+
+                    Thread.Sleep(100);
+                }
+                
                 Assert.NotNull(index);
             }
         }
