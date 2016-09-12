@@ -84,7 +84,7 @@ namespace FastTests.Voron.Tables
                 }
             }
         }
-
+        
         [Fact]
         public void CanSerializeMultiIndexSchema()
         {
@@ -121,6 +121,6 @@ namespace FastTests.Voron.Tables
                 }
             }
         }
-
+        
     }
 }
