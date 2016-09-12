@@ -291,16 +291,39 @@ namespace FastTests.Server.Documents.Replication
                 SetupReplication(store1, store2);
 
                 await WaitUntilHasConflict(store2, "foo/bar");
-                // /indexes/Raven/DocumentsByEntityName
+                
+
                 //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}";
+                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}?operationId=123";
                 using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
                     new CreateHttpJsonRequestParams(null, url, HttpMethod.Delete, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
                 {
-                    var ex = Assert.Throws<ErrorResponseException>(() => request.ExecuteRequest());
-                    Assert409Response(ex);
+                    request.ExecuteRequest();
+                    await AssertOperationFaultsAsync(store2, 123);
                 }
             }
+        }
+
+        //TODO: this probably needs to be refactored when operations related functionality is finished
+        protected async Task AssertOperationFaultsAsync(DocumentStore store,int operationId)
+        {
+            var url = $"{store.Url}/databases/{store.DefaultDatabase}/operations/status?id={operationId}";
+            var sw = Stopwatch.StartNew();
+            RavenJToken response = null;
+            while (sw.ElapsedMilliseconds < 10000 || response?.Value<string>("Status") != "Faulted")
+            {
+                using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Get,
+                        new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                {
+                    response = await request.ReadResponseJsonAsync();
+                }
+            }            
+            Assert.NotNull(response); //precaution
+            Assert.Equal("Faulted", response.Value<string>("Status"));
+
+            var result = response.Value<RavenJToken>("Result");            
+            Assert.Contains("DocumentConflictException", result.Value<string>("StackTrace"));
         }
 
         [Fact]
@@ -329,16 +352,15 @@ namespace FastTests.Server.Documents.Replication
                 await WaitUntilHasConflict(store2, "foo/bar");
                 // /indexes/Raven/DocumentsByEntityName
                 //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}";
+                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}?operationId=123";
                 using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
                     new CreateHttpJsonRequestParams(null, url, new HttpMethod("PATCH"), new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
                 {
-                    var ex = Assert.Throws<AggregateException>(() => request.WriteWithObjectAsync(new PatchRequest
+                    await request.WriteWithObjectAsync(new PatchRequest
                     {
                         Script = String.Empty
-                    }).Wait());
-
-                    Assert409Response(ex.InnerException);
+                    });
+                    await AssertOperationFaultsAsync(store2, 123);
                 }
             }
         }
