@@ -978,7 +978,7 @@ namespace Raven.Server.Documents.Indexes
             result.IsStale = isStale;
             result.IndexTimestamp = _lastIndexingTime ?? DateTime.MinValue;
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
-            result.ResultEtag = CalculateIndexEtagForFacets(result.IsStale, facetSetupEtag, documentsContext, indexContext);
+            result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext) ^ facetSetupEtag;
         }
 
         private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
@@ -1016,27 +1016,6 @@ namespace Raven.Server.Documents.Indexes
                 return true;
 
             return false;
-        }
-
-        protected virtual unsafe long CalculateIndexEtagForFacets(bool isStale, long facetSetupEtag, DocumentsOperationContext documentContext, TransactionOperationContext indexContext)
-        {
-            var indexEtagBytes = new long[
-                1 + // definition hash
-                1 + // isStale
-                2 * Collections.Count + // last document etags and last mapped etags per collection
-                1 // facetSetupEtag
-                ];
-
-            var index = CalculateIndexEtagInternal(indexEtagBytes, isStale, documentContext, indexContext);
-            indexEtagBytes[index] = facetSetupEtag;
-
-            unchecked
-            {
-                fixed (long* buffer = indexEtagBytes)
-                {
-                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
-                }
-            }
         }
 
         protected virtual unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
@@ -1089,22 +1068,6 @@ namespace Raven.Server.Documents.Indexes
                 using (documentsContext.OpenReadTransaction())
                 {
                     return CalculateIndexEtag(IsStale(documentsContext, indexContext), documentsContext, indexContext);
-                }
-            }
-        }
-
-        public long GetIndexEtagForFacets(long facetSetupEtag)
-        {
-            DocumentsOperationContext documentsContext;
-            TransactionOperationContext indexContext;
-
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
-            using (_contextPool.AllocateOperationContext(out indexContext))
-            {
-                using (indexContext.OpenReadTransaction())
-                using (documentsContext.OpenReadTransaction())
-                {
-                    return CalculateIndexEtagForFacets(IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
                 }
             }
         }

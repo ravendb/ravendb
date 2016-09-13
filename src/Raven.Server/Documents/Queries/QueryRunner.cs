@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Queries
             var index = GetIndex(indexName);
             if (existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtagForFacets(facetsEtag);
+                var etag = index.GetIndexEtag() ^ facetsEtag;
                 if (etag == existingResultEtag)
                     return FacetedQueryResult.NotModifiedResult;
             }
