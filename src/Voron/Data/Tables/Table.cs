@@ -91,6 +91,12 @@ namespace Voron.Data.Tables
             InsertIndexValuesFor(newId, new TableValueReader(data, size));
         }
 
+        /// <summary>
+        /// Tables should not be loaded using this function. The proper way to
+        /// do this is to use the OpenTable method in the Transaction class.
+        /// Using this constructor WILL NOT register the Table for commit in
+        /// the Transaction, and hence changes WILL NOT be commited.
+        /// </summary>
         public Table(TableSchema schema, string name, Transaction tx, int tag)
         {
             Name = name;
@@ -99,7 +105,7 @@ namespace Voron.Data.Tables
             _tx = tx;
             _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
-            _tableTree = _tx.ReadTree(name);
+            _tableTree = _tx.ReadTree(name, RootObjectType.Table);
             if (_tableTree == null)
                 throw new InvalidDataException($"Cannot find collection name {name}");
 
@@ -319,6 +325,7 @@ namespace Voron.Data.Tables
 
         public long Insert(TableValueBuilder builder)
         {
+            // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.Stats, sizeof(TableSchemaStats));
@@ -337,7 +344,7 @@ namespace Voron.Data.Tables
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
                     throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
 
-                // MemoryCopy into final position.
+                // Memory Copy into final position.
                 builder.CopyTo(pos);
             }
             else
@@ -348,11 +355,50 @@ namespace Voron.Data.Tables
                 page.OverflowSize = size;
 
                 pos = page.Pointer + sizeof(PageHeader);
-
+                
                 builder.CopyTo(pos);
+                id = page.PageNumber * _pageSize;
+            }
+
+            InsertIndexValuesFor(id, new TableValueReader(pos, size));
+
+            return id;
+        }
+
+        internal long Insert(TableValueReader reader)
+        {
+            // The ids returned from this function MUST NOT be stored outside of the transaction.
+            // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
+            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.Stats, sizeof(TableSchemaStats));
+            NumberOfEntries++;
+            stats->NumberOfEntries = NumberOfEntries;
+
+
+            int size = reader.Size;
+
+            byte* pos;
+            long id;
+            if (size + sizeof(RawDataSection.RawDataEntrySizes) < ActiveDataSmallSection.MaxItemSize)
+            {
+                id = AllocateFromSmallActiveSection(size);
+
+                if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
+                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+            }
+            else
+            {
+                var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
+                var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
+                page.Flags = PageFlags.Overflow | PageFlags.RawData;
+                page.OverflowSize = size;
+
+                pos = page.Pointer + sizeof(PageHeader);
 
                 id = page.PageNumber * _pageSize;
             }
+
+            // Memory copy into final position.
+            Memory.Copy(pos, reader.Pointer, reader.Size);
 
             InsertIndexValuesFor(id, new TableValueReader(pos, size));
 

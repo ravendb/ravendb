@@ -8,8 +8,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
+using Lucene.Net.Search;
+using Raven.Client.Linq;
+using Sparrow;
 using Xunit;
 using Voron;
+using Voron.Data;
+using Voron.Data.Tables;
 using Voron.Impl.Compaction;
 
 namespace FastTests.Voron.Compaction
@@ -69,6 +75,124 @@ namespace FastTests.Voron.Compaction
             var newSize = GetDirSize(new DirectoryInfo(compactedData));
 
             Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
+        }
+
+        [Theory]
+        [InlineData(1000, 9786)]
+        [InlineData(1000, 454645)]
+        [InlineData(1000, 3558)]
+        public unsafe void ShouldPreserveTables(int entries, int seed)
+        {
+            // Create random docs to check everything is preserved
+            using (var allocator = new ByteStringContext())
+            {
+                var create = new Dictionary<Slice, long>();
+                var delete = new List<Slice>();
+                var r = new Random(seed);
+
+                for (var i = 0; i < entries; i++)
+                {
+                    var key = Slice.From(allocator, "test" + i);
+
+                    create.Add(key, r.Next());
+
+                    if (r.NextDouble() < 0.5)
+                    {
+                        delete.Add(key);
+                    }
+                }
+
+                // Create the schema
+                var schema = new TableSchema()
+                    .DefineKey(new TableSchema.SchemaIndexDef
+                    {
+                        StartIndex = 0,
+                        Count = 1,
+                        IsGlobal = false
+                    });
+
+                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+                {
+                    // Create table in the environment
+                    using (var tx = env.WriteTransaction())
+                    {
+                        schema.Create(tx, "test");
+                        var table = tx.OpenTable(schema, "test");
+
+                        foreach (var entry in create)
+                        {
+                            var value = entry.Value;
+
+                            table.Set(new TableValueBuilder
+                            {
+                                entry.Key,
+                                &value
+                            });
+                        }
+
+                        tx.Commit();
+                    }
+
+                    using (var tx = env.ReadTransaction())
+                    {
+                        var table = tx.OpenTable(schema, "test");
+                        Assert.Equal(table.NumberOfEntries, entries);
+                    }
+
+                    // Delete some of the entries (this is so that compaction makes sense)
+                    using (var tx = env.WriteTransaction())
+                    {
+                        var table = tx.OpenTable(schema, "test");
+
+                        foreach (var entry in delete)
+                        {
+                            table.DeleteByKey(entry);
+                        }
+
+                        tx.Commit();
+                    }
+                }
+
+                var compactedData = Path.Combine(DataDir, "Compacted");
+                StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
+                    (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                    StorageEnvironmentOptions.ForPath(compactedData));
+
+                using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+                {
+                    using (var tx = compacted.ReadTransaction())
+                    {
+                        var table = tx.OpenTable(schema, "test");
+
+                        foreach (var entry in create)
+                        {
+                            var value = table.ReadByKey(entry.Key);
+
+                            if (delete.Contains(entry.Key))
+                            {
+                                // This key should not be here
+                                Assert.Equal(null, value);
+                            }
+                            else
+                            {
+                                // This key should be there
+                                Assert.NotEqual(null, value);
+
+                                // Data should be the same
+                                int size;
+                                byte* ptr = value.Read(0, out size);
+                                Slice current = Slice.External(allocator, ptr, size);
+                                Assert.True(SliceComparer.Equals(current, entry.Key));
+
+                                ptr = value.Read(1, out size);
+                                Assert.Equal(entry.Value, *(long*) ptr);
+                            }
+                        }
+
+                        tx.Commit();
+                    }
+                }
+            }
         }
 
         [Fact]
