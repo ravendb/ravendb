@@ -18,17 +18,10 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Data
 {
-    public class FacetQuery
+    public class FacetQuery : IndexQueryBase
     {
         private IReadOnlyList<Facet> _facets;
         private string _facetsAsJson;
-        private int _pageSize = IndexQuery.DefaultPageSize;
-        private bool _pageSizeSet;
-
-        public FacetQuery()
-        {
-            
-        }
 
         /// <summary>
         /// Index name to run facet query on.
@@ -53,28 +46,6 @@ namespace Raven.Client.Data
             }
         }
 
-        public bool IsDistinct { get; set; }
-
-        public QueryOperator DefaultOperator { get; set; }
-
-        public string DefaultField { get; set; }
-
-        public string Query { get; set; }
-
-        public int Start { get; set; }
-
-        public int PageSize
-        {
-            get { return _pageSize; }
-            set
-            {
-                _pageSize = value;
-                _pageSizeSet = true;
-            }
-        }
-
-        public string[] FieldsToFetch { get; set; }
-
         public HttpMethod CalculateHttpMethod()
         {
             if (Facets == null || Facets.Count == 0)
@@ -98,7 +69,7 @@ namespace Raven.Client.Data
             if (Start != 0)
                 path.Append("&start=").Append(Start);
 
-            if (_pageSizeSet)
+            if (PageSizeSet)
                 path.Append("&pageSize=").Append(PageSize);
 
             if (string.IsNullOrEmpty(Query) == false)
@@ -114,6 +85,15 @@ namespace Raven.Client.Data
                 path.Append("&distinct=true");
 
             FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+
+            if (CutoffEtag != null)
+                path.Append("&cutOffEtag=").Append(CutoffEtag);
+
+            if (WaitForNonStaleResultsAsOfNow)
+                path.Append("&waitForNonStaleResultsAsOfNow=true");
+
+            if (WaitForNonStaleResultsTimeout != null)
+                path.AppendLine("&waitForNonStaleResultsTimeout=" + WaitForNonStaleResultsTimeout);
 
             if (string.IsNullOrWhiteSpace(FacetSetupDoc) == false)
                 path.Append("&facetDoc=").Append(FacetSetupDoc);
@@ -152,6 +132,40 @@ namespace Raven.Client.Data
 
             if (query.TryGetValue("fetch", out values))
                 result.FieldsToFetch = values.ToArray();
+
+            if (query.TryGetValue("cutOffEtag", out values))
+                result.CutoffEtag = long.Parse(values.First());
+
+            if (query.TryGetValue("waitForNonStaleResultsAsOfNow", out values))
+                result.WaitForNonStaleResultsAsOfNow = bool.Parse(values.First());
+
+            if (query.TryGetValue("waitForNonStaleResultsTimeout", out values))
+                result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(values.First());
+
+            return result;
+        }
+
+        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets,  int start, int? pageSize)
+        {
+            var result = new FacetQuery
+            {
+                IndexName = indexName,
+                CutoffEtag = query.CutoffEtag,
+                DefaultField = query.DefaultField,
+                DefaultOperator = query.DefaultOperator,
+                FieldsToFetch = query.FieldsToFetch,
+                IsDistinct = query.IsDistinct,
+                Query = query.Query,
+                WaitForNonStaleResults = query.WaitForNonStaleResults,
+                WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow,
+                WaitForNonStaleResultsTimeout = query.WaitForNonStaleResultsTimeout,
+                Start = start,
+                FacetSetupDoc = facetSetupDoc,
+                Facets = facets
+            };
+
+            if (pageSize.HasValue)
+                result.PageSize = pageSize.Value;
 
             return result;
         }

@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Handlers
 
             var runner = new QueryRunner(Database, context);
 
-            var result = runner.ExecuteFacetedQuery(indexName, query, facetsEtag, existingResultEtag, token);
+            var result = await runner.ExecuteFacetedQuery(indexName, query, facetsEtag, existingResultEtag, token);
 
             if (result.NotModified)
             {

@@ -93,7 +93,7 @@ namespace SlowTests.Tests.Faceted
                 Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, firstEtag, out firstEtag));
 
                 //change index etag by inserting new doc
-                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
+                InsertCameraData(store, GetCameras(1));
 
                 long? secondEtag;
 
@@ -163,6 +163,7 @@ namespace SlowTests.Tests.Faceted
                         var oldRequests = s.Advanced.NumberOfRequests;
 
                         var facetResults = s.Query<Camera>("CameraCost")
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)
                             .ToFacetsLazy("facets/CameraFacets");
 
@@ -198,6 +199,7 @@ namespace SlowTests.Tests.Faceted
                         var oldRequests = s.Advanced.NumberOfRequests;
                         var load = s.Advanced.Lazily.Load<Camera>(oldRequests);
                         var facetResults = s.Query<Camera>("CameraCost")
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)
                             .ToFacetsLazy("facets/CameraFacets");
 
@@ -230,6 +232,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var facetQueryTimer = Stopwatch.StartNew();
                     var facetResults = s.Query<Camera>("CameraCost")
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .ToFacets("facets/CameraFacets");
                     facetQueryTimer.Stop();
@@ -258,6 +261,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var facetQueryTimer = Stopwatch.StartNew();
                     var task = s.Query<Camera>("CameraCost")
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .ToFacetsAsync("facets/CameraFacets");
                     task.Wait();
@@ -280,7 +284,7 @@ namespace SlowTests.Tests.Faceted
 
             CreateCameraCostIndex(store);
 
-            InsertCameraDataAndWaitForNonStaleResults(store, _data);
+            InsertCameraData(store, _data, waitForIndexing: false);
         }
 
         private void PrintFacetResults(FacetedQueryResult facetResults)

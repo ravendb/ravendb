@@ -223,20 +223,7 @@ namespace Raven.Client.Linq
         public virtual FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                FacetSetupDoc = facetSetupDoc,
-                IndexName = indexName,
-                IsDistinct = q.IsDistinct,
-                Query = q.Query,
-                Start = start,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
 
             return databaseCommands.GetFacets(query);
         }
@@ -244,20 +231,7 @@ namespace Raven.Client.Linq
         public virtual FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                Facets = facets,
-                IndexName = indexName,
-                IsDistinct = q.IsDistinct,
-                Query = q.Query,
-                Start = start,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
+            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
 
             return databaseCommands.GetFacets(query);
         }
@@ -265,20 +239,7 @@ namespace Raven.Client.Linq
         public virtual Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                FacetSetupDoc = facetSetupDoc,
-                IndexName = indexName,
-                IsDistinct = q.IsDistinct,
-                Query = q.Query,
-                Start = start,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
 
             return asyncDatabaseCommands.GetFacetsAsync(query, token);
         }
@@ -286,20 +247,7 @@ namespace Raven.Client.Linq
         public virtual Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                Facets = facets,
-                IndexName = indexName,
-                IsDistinct = q.IsDistinct,
-                Query = q.Query,
-                Start = start,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
+            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
 
             return asyncDatabaseCommands.GetFacetsAsync(query, token);
         }

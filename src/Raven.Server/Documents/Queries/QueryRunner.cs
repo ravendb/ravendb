@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -58,7 +57,7 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public FacetedQueryResult ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        public Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             if (query.FacetSetupDoc != null)
             {
@@ -87,7 +86,7 @@ namespace Raven.Server.Documents.Queries
             return ExecuteFacetedQuery(indexName, query, facetsEtag.Value, existingResultEtag, token);
         }
 
-        private FacetedQueryResult ExecuteFacetedQuery(string indexName, FacetQuery query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
             if (existingResultEtag.HasValue)
@@ -97,7 +96,7 @@ namespace Raven.Server.Documents.Queries
                     return FacetedQueryResult.NotModifiedResult;
             }
 
-            return index.FacetedQuery(query, facetsEtag, _documentsContext, token);
+            return await index.FacetedQuery(query, facetsEtag, _documentsContext, token);
         }
 
         public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)

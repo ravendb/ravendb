@@ -100,20 +100,7 @@ namespace Raven.Client
         {
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                FacetSetupDoc = facetSetupDoc,
-                IsDistinct = q.IsDistinct,
-                Start = start,
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = q.Query,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize);
 
             return query;
         }
@@ -153,21 +140,7 @@ namespace Raven.Client
 
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                Facets = facetsList,
-                IsDistinct = q.IsDistinct,
-                Start = start,
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = q.Query,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize);
 
             return query;
         }
@@ -215,22 +188,7 @@ namespace Raven.Client
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                FacetSetupDoc = facetSetupDoc,
-                IsDistinct = q.IsDistinct,
-                Start = start,
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = q.Query,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
-
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize);
             var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
@@ -250,22 +208,7 @@ namespace Raven.Client
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(true);
-
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                FacetSetupDoc = facetSetupDoc,
-                IsDistinct = q.IsDistinct,
-                Start = start,
-                IndexName = ravenQueryInspector.AsyncIndexQueried,
-                Query = q.Query,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
-
+            var query = FacetQuery.Create(ravenQueryInspector.AsyncIndexQueried, q, facetSetupDoc, null, start, pageSize);
             var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
@@ -284,22 +227,7 @@ namespace Raven.Client
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-
-            var query = new FacetQuery
-            {
-                DefaultField = q.DefaultField,
-                DefaultOperator = q.DefaultOperator,
-                Facets = facetsList,
-                IsDistinct = q.IsDistinct,
-                Start = start,
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = q.Query,
-                FieldsToFetch = q.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                query.PageSize = pageSize.Value;
-
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize);
             var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
@@ -317,22 +245,7 @@ namespace Raven.Client
         {
             var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = ((DocumentQuery<T>)query);
-
-            var facetQuery = new FacetQuery
-            {
-                DefaultField = indexQuery.DefaultField,
-                DefaultOperator = indexQuery.DefaultOperator,
-                FacetSetupDoc = facetSetupDoc,
-                IsDistinct = indexQuery.IsDistinct,
-                Start = start,
-                IndexName = documentQuery.IndexQueried,
-                Query = indexQuery.Query,
-                FieldsToFetch = indexQuery.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                facetQuery.PageSize = pageSize.Value;
-
+            var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, facetSetupDoc, null, start, pageSize);
             var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
@@ -355,22 +268,7 @@ namespace Raven.Client
 
             var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = (DocumentQuery<T>)query;
-
-            var facetQuery = new FacetQuery
-            {
-                DefaultField = indexQuery.DefaultField,
-                DefaultOperator = indexQuery.DefaultOperator,
-                Facets = facetsList,
-                IsDistinct = indexQuery.IsDistinct,
-                Start = start,
-                IndexName = documentQuery.IndexQueried,
-                Query = indexQuery.Query,
-                FieldsToFetch = indexQuery.FieldsToFetch
-            };
-
-            if (pageSize.HasValue)
-                facetQuery.PageSize = pageSize.Value;
-
+            var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, null, facetsList, start, pageSize);
             var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);

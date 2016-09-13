@@ -37,21 +37,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = new FacetQuery
-                {
-                    Query = indexQuery.Query,
-                    DefaultField = indexQuery.DefaultField,
-                    DefaultOperator = indexQuery.DefaultOperator,
-                    FacetSetupDoc = facetSetupDoc,
-                    IndexName = IndexQueried,
-                    IsDistinct = indexQuery.IsDistinct,
-                    Start = start,
-                    FieldsToFetch = indexQuery.FieldsToFetch
-                };
-
-                if (pageSize.HasValue)
-                    query.PageSize = pageSize.Value;
-
+                var query = FacetQuery.Create(IndexQueried, indexQuery, facetSetupDoc, null, start, pageSize);
                 return commands.GetFacets(query);
             });
 
@@ -68,21 +54,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = new FacetQuery
-                {
-                    Query = indexQuery.Query,
-                    DefaultField = indexQuery.DefaultField,
-                    DefaultOperator = indexQuery.DefaultOperator,
-                    Facets = facets,
-                    IndexName = IndexQueried,
-                    IsDistinct = indexQuery.IsDistinct,
-                    Start = start,
-                    FieldsToFetch = indexQuery.FieldsToFetch
-                };
-
-                if (pageSize.HasValue)
-                    query.PageSize = pageSize.Value;
-
+                var query = FacetQuery.Create(IndexQueried, indexQuery, null, facets, start, pageSize);
                 return commands.GetFacets(query);
             });
 
@@ -99,21 +71,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = new FacetQuery
-                {
-                    Query = indexQuery.Query,
-                    DefaultField = indexQuery.DefaultField,
-                    DefaultOperator = indexQuery.DefaultOperator,
-                    Facets = facets,
-                    IndexName = AsyncIndexQueried,
-                    IsDistinct = indexQuery.IsDistinct,
-                    Start = start,
-                    FieldsToFetch = indexQuery.FieldsToFetch
-                };
-
-                if (pageSize.HasValue)
-                    query.PageSize = pageSize.Value;
-
+                var query = FacetQuery.Create(AsyncIndexQueried, indexQuery, null, facets, start, pageSize);
                 return commands.GetFacetsAsync(query, token);
             }).ConfigureAwait(false);
         
@@ -130,21 +88,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = new FacetQuery
-                {
-                    Query = indexQuery.Query,
-                    DefaultField = indexQuery.DefaultField,
-                    DefaultOperator = indexQuery.DefaultOperator,
-                    FacetSetupDoc = facetSetupDoc,
-                    IndexName = AsyncIndexQueried,
-                    IsDistinct = indexQuery.IsDistinct,
-                    Start = start,
-                    FieldsToFetch = indexQuery.FieldsToFetch
-                };
-
-                if (pageSize.HasValue)
-                    query.PageSize = pageSize.Value;
-
+                var query = FacetQuery.Create(AsyncIndexQueried, indexQuery, facetSetupDoc, null, start, pageSize);
                 return commands.GetFacetsAsync(query, token);
             }).ConfigureAwait(false);
 

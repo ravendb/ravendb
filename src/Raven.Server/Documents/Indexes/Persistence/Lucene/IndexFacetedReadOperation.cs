@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
-        private IndexSearcherHolder.IndexSearcherHoldingState _currentStateHolder;
+        private readonly IndexSearcherHolder.IndexSearcherHoldingState _currentStateHolder;
 
         public IndexFacetedReadOperation(string indexName,
             Dictionary<string, IndexField> fields,
@@ -55,8 +55,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Dictionary<string, FacetResult> FacetedQuery(FacetQuery query, JsonOperationContext context, CancellationToken token)
         {
-            //var sp = Stopwatch.StartNew();
-
             Dictionary<string, Facet> defaultFacets;
             Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets;
             var results = FacetedQueryParser.Parse(query.Facets, out defaultFacets, out rangeFacets);
@@ -194,7 +192,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 IntArraysPool.Instance.FreeArray(readerFacetInfo.Results.Array);
             }
 
-            //results.Duration = sp.Elapsed;
             return results;
         }
 

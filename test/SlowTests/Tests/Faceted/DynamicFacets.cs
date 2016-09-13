@@ -24,7 +24,7 @@ namespace SlowTests.Tests.Faceted
             {
                 CreateCameraCostIndex(store);
 
-                InsertCameraDataAndWaitForNonStaleResults(store, cameras);
+                InsertCameraData(store, cameras);
 
                 var facets = GetFacets();
 
@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Faceted
 
                 CreateCameraCostIndex(store);
 
-                InsertCameraDataAndWaitForNonStaleResults(store, cameras);
+                InsertCameraData(store, cameras);
 
                 var facets = GetFacets();
 
@@ -96,7 +96,7 @@ namespace SlowTests.Tests.Faceted
             {
                 CreateCameraCostIndex(store);
 
-                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
+                InsertCameraData(store, GetCameras(1));
 
                 var facets = GetFacets();
 
@@ -114,7 +114,7 @@ namespace SlowTests.Tests.Faceted
                 Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstEtag, out firstEtag));
 
                 //change index etag by inserting new doc
-                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
+                InsertCameraData(store, GetCameras(1));
 
                 long? secondEtag;
 

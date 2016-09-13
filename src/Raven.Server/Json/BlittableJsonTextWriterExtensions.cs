@@ -364,10 +364,6 @@ namespace Raven.Server.Json
             writer.WriteInteger(query.PageSize);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(query.PageSizeSet)));
-            writer.WriteBool(query.PageSizeSet);
-            writer.WriteComma();
-
             writer.WritePropertyName((nameof(query.Query)));
             if (query.Query != null)
                 writer.WriteString((query.Query));

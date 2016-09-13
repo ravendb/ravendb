@@ -43,7 +43,7 @@ namespace SlowTests
             public override string IndexName => new CameraCostIndex().CreateIndexDefinition().Name;
         }
 
-        protected static void InsertCameraDataAndWaitForNonStaleResults(IDocumentStore store, IEnumerable<Camera> cameras)
+        protected static void InsertCameraData(IDocumentStore store, IEnumerable<Camera> cameras, bool waitForIndexing = true)
         {
             using (var session = store.OpenSession())
             {
@@ -53,9 +53,10 @@ namespace SlowTests
                 }
 
                 session.SaveChanges();
-
-                WaitForIndexing(store);
             }
+
+            if (waitForIndexing)
+                WaitForIndexing(store);
         }
 
         public static List<Facet> GetFacets()

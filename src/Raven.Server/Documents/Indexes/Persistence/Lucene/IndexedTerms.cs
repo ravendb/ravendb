@@ -64,16 +64,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             FieldCacheInfo info;
             if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
-            {
                 return info.Results;
-            }
+
             info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());
+            if (info.Done)
+                return info.Results;
+
             lock (info)
             {
                 if (info.Done)
                     return info.Results;
+
                 info.Results = FillCache(reader, docBase, field);
                 info.Done = true;
+
                 return info.Results;
             }
         }
@@ -84,7 +88,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var items = new Dictionary<string, int[]>();
                 var docsForTerm = new List<int>();
-
                 using (var termEnum = reader.Terms(new Term(field)))
                 {
                     do

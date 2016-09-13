@@ -746,7 +746,7 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Query, query.DefaultOperator, query.DefaultField, query.SortedFields);
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
@@ -837,7 +837,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public FacetedQueryResult FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -847,23 +847,51 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Query, query.DefaultOperator, query.DefaultField, null);
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                using (var indexTx = indexContext.OpenReadTransaction())
+                var result = new FacetedQueryResult();
+
+                var queryDuration = Stopwatch.StartNew();
+                AsyncWaitForIndexing wait = null;
+
+                while (true)
                 {
-                    using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
+                    using (var indexTx = indexContext.OpenReadTransaction())
                     {
-                        var result = new FacetedQueryResult();
+                        documentsContext.OpenReadTransaction(); // we have to open read tx for mapResults _after_ we open index tx
 
-                        using (documentsContext.OpenReadTransaction())
-                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
+                        if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                            query.CutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
 
-                        result.Results = reader.FacetedQuery(query, indexContext, token.Token);
+                        var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
 
-                        return result;
+                        if (WillResultBeAcceptable(isStale, query, wait) == false)
+                        {
+                            documentsContext.CloseTransaction();
+                            indexContext.Reset();
+
+                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                            if (wait == null)
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, _indexingBatchCompleted);
+
+                            await wait.WaitForIndexingAsync().ConfigureAwait(false);
+                            continue;
+                        }
+
+                        FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
+
+                        documentsContext.CloseTransaction();
+
+                        using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
+                        {
+                            result.Results = reader.FacetedQuery(query, indexContext, token.Token);
+
+                            return result;
+                        }
                     }
                 }
             }
@@ -934,11 +962,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(string query, QueryOperator defaultOperator, string defaultField, SortedField[] sortedFields)
+        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryBase query, SortedField[] sortedFields)
         {
-            if (string.IsNullOrWhiteSpace(query) == false)
+            if (string.IsNullOrWhiteSpace(query.Query) == false)
             {
-                var setOfFields = SimpleQueryParser.GetFields(query, defaultOperator, defaultField);
+                var setOfFields = SimpleQueryParser.GetFields(query.Query, query.DefaultOperator, query.DefaultField);
                 foreach (var field in setOfFields)
                 {
                     var f = field;
@@ -1004,7 +1032,7 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private static bool WillResultBeAcceptable(bool isStale, IndexQueryServerSide query, AsyncWaitForIndexing wait)
+        private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase query, AsyncWaitForIndexing wait)
         {
             if (isStale == false)
                 return true;
