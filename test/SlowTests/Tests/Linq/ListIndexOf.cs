@@ -10,7 +10,7 @@ namespace SlowTests.Tests.Linq
 {
     public class ListIndexOf : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanUseIndexOf()
         {
             using (var store = GetDocumentStore())
