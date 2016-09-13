@@ -22,7 +22,7 @@ namespace SlowTests.Smuggler
                 var stats = store.DatabaseCommands.GetStatistics();
 
                 Assert.Equal(1059, stats.CountOfDocuments);
-                Assert.Equal(4, stats.CountOfIndexes);
+                Assert.Equal(3, stats.CountOfIndexes); // there are 4 in ravendbdump, but Raven/DocumentsByEntityName is skipped
                 Assert.Equal(1, stats.CountOfTransformers);
             }
         }
