@@ -7,7 +7,7 @@ namespace SlowTests.MailingList
 {
     public class LuceneSearchSample : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void LuceneSearchTest()
         {
             using (var store = GetDocumentStore())

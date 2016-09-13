@@ -230,7 +230,7 @@ namespace SlowTests.MailingList
 
         #endregion
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void ScriptedPatchShouldNotResultInConcurrencyExceptionForNewlyInsertedDocument()
         {
             using (var store = GetDocumentStore())

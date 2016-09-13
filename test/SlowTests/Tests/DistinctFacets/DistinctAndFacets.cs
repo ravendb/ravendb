@@ -84,7 +84,7 @@ namespace SlowTests.Tests.DistinctFacets
             WaitForIndexing(store);
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanGetDistinctResult()
         {
             using (var store = GetDocumentStore())
@@ -106,7 +106,7 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanGetDistinctResult_WithPaging()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +129,7 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanGetDistinctResult_WithFacets()
         {
             using (var store = GetDocumentStore())
@@ -157,7 +157,7 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanGetDistinctResult_WithFacets_LazyAndCached()
         {
             using (var store = GetDocumentStore())

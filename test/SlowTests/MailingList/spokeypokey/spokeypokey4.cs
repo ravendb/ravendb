@@ -81,7 +81,7 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Can_reference_child_documents_in_index()
         {
             using (var store = GetDocumentStore())

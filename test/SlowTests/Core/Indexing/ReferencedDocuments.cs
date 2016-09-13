@@ -24,7 +24,7 @@ namespace SlowTests.Core.Indexing
 {
     public class ReferencedDocuments : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()
         {
             using (var store = GetDocumentStore())
@@ -259,7 +259,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void ShouldReindexOnReferencedDocumentChange()
         {
             using (var store = GetDocumentStore())
@@ -311,7 +311,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanProceedWhenReferencedDocumentsAreMissing()
         {
             using (var store = GetDocumentStore())

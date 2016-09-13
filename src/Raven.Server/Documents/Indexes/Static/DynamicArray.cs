@@ -116,6 +116,16 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.SelectMany(this, func));
         }
 
+        public IEnumerable<object> Where(Func<object, bool> func)
+        {
+            return new DynamicArray(Enumerable.Where(this, func));
+        }
+
+        public IEnumerable<object> Where(Func<object, int, bool> func)
+        {
+            return new DynamicArray(Enumerable.Where(this, func));
+        }
+
         public dynamic GroupBy(Func<dynamic, dynamic> keySelector)
         {
             return new DynamicArray(Enumerable.GroupBy(this, keySelector).Select(x => new DynamicGrouping(x)));
@@ -195,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return _inner?.GetHashCode() ?? 0;
         }
 
-        private class DynamicGrouping : DynamicArray, IGrouping<object, object>
+        public class DynamicGrouping : DynamicArray, IGrouping<object, object>
         {
             private readonly IGrouping<dynamic, dynamic> _grouping;
 

@@ -222,7 +222,7 @@ namespace SlowTests.MailingList
         private List<Product> Products { get; set; }
 
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void FindCategoryByName_Works()
         {
             using (var store = GetDocumentStore())

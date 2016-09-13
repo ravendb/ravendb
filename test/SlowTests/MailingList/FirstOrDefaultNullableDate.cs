@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void ShouldWork()
         {
             using (var store = GetDocumentStore())

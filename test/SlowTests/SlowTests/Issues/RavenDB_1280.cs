@@ -11,7 +11,7 @@ namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_1280 : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
         {
             const int iterations = 6000;
@@ -65,7 +65,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
             using (var store = GetDocumentStore())

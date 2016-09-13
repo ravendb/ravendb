@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
 {
     public class Chirea2 : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void MulitplyDecimal()
         {
             using (var store = GetDocumentStore())

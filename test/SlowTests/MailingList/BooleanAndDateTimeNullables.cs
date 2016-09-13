@@ -98,13 +98,13 @@ namespace SlowTests.MailingList
             TestIndexSetup(new Raven25Style_NullableBoolean());
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanUseRaven20DateTimeIndex()
         {
             TestIndexSetup(new Raven20Style_NullableDateTimeOffset());
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanUseRaven25DateTimeIndex()
         {
             TestIndexSetup(new Raven25Style_NullableDateTimeOffset());

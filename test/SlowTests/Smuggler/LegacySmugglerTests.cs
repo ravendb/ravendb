@@ -8,7 +8,7 @@ namespace SlowTests.Smuggler
 {
     public class LegacySmugglerTests : RavenTestBase
     {
-        [Theory(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Theory]
         [InlineData("Smuggler/Northwind_3.5.35168.ravendbdump")]
         public async Task CanImportNorthwind(string file)
         {

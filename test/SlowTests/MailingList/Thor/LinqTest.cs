@@ -62,7 +62,7 @@ namespace SlowTests.MailingList.Thor
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void SingleTransportWithoutChildren_Raven()
         {
             using (var store = GetDocumentStore())
@@ -91,7 +91,7 @@ namespace SlowTests.MailingList.Thor
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void SingleChildAndNoTransport_Raven()
         {
             using (var store = GetDocumentStore())
@@ -116,7 +116,7 @@ namespace SlowTests.MailingList.Thor
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void MultipleChildrenWithMultipleTransports_Raven()
         {
             using (var store = GetDocumentStore())
