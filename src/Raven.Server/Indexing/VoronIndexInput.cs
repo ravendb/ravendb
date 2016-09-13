@@ -52,7 +52,7 @@ namespace Raven.Server.Indexing
 
             int index = 0;
 
-            using (var it = fileTree.Iterate(prefetch: true)) // TODO arek - true?
+            using (var it = fileTree.Iterate(prefetch: false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                     throw new InvalidDataException("Could not seek to any chunk of this file");
