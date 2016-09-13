@@ -1,87 +1,88 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data;
 using Raven.Json.Linq;
+using Sparrow;
 
 namespace Raven.Client.Connection
 {
-    public class Operation
+    public class Operation : IObserver<OperationStatusChangeNotification>
     {
-        private readonly Func<long, Task<RavenJToken>> statusFetcher;
-        private readonly long id;
-        private readonly RavenJToken state;
-        private readonly bool done;
+        private readonly AsyncServerClient _asyncServerClient;
+        private readonly long _id;
+        private IDisposable _subscription;
+        private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
 
-        public Operation(long id, RavenJToken state)
+        public Operation(long id)
         {
-            this.id = id;
-            this.state = state;
-            done = true;
-        }
-
-        public Operation(Func<long, Task<RavenJToken>> statusFetcher, long id)
-        {
-            this.statusFetcher = statusFetcher;
-            this.id = id;
+            _id = id;
+            throw new NotImplementedException();
         }
 
         public Operation(AsyncServerClient asyncServerClient, long id)
-            : this(asyncServerClient.GetOperationStatusAsync, id)
         {
+            _asyncServerClient = asyncServerClient;
+            _id = id;
         }
 
-        public Action<BulkOperationProgress> OnProgressChanged;
-
-        public virtual async Task<RavenJToken> WaitForCompletionAsync()
+        public async Task Initialize()
         {
-            if (done)
-                return state;
-            if (statusFetcher == null)
-                throw new InvalidOperationException("Cannot use WaitForCompletionAsync() when the operation was executed syncronously");
+            await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
+            var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
+            _subscription = observableWithTask.Subscribe(this);
+        }
 
-            while (true)
+        internal long Id => _id;
+
+        public Action<IOperationProgress> OnProgressChanged;
+
+        public void OnNext(OperationStatusChangeNotification notification)
+        {
+            var onProgress = OnProgressChanged;
+
+            switch (notification.State.Status)
             {
-                var status = await statusFetcher(id).ConfigureAwait(false);
-                if (status == null)
-                    return null;
-
-                var onProgress = OnProgressChanged;
-
-                if (onProgress != null)
-                {
-                    var progressToken = status.Value<RavenJToken>("OperationProgress");
-
-                    if (progressToken != null && progressToken.Equals(RavenJValue.Null) == false)
+                case OperationStatus.InProgress:
+                    if (onProgress != null && notification.State.Progress != null)
                     {
-                        onProgress(new BulkOperationProgress
-                        {
-                            TotalEntries = progressToken.Value<int>("TotalEntries"),
-                            ProcessedEntries = progressToken.Value<int>("ProcessedEntries")
-                        });
+                        onProgress(notification.State.Progress);
                     }
-                }
-
-                if (status.Value<bool>("Completed"))
-                {
-                    var faulted = status.Value<bool>("Faulted");
-                    if (faulted)
-                    {
-                        var error = status.Value<RavenJObject>("State");
-                        var errorMessage = error.Value<string>("Error");
-                        throw new InvalidOperationException("Operation failed: " + errorMessage);
-                    }
-
-                    return status.Value<RavenJToken>("State");
-                }
-                    
-
-                await Task.Delay(500).ConfigureAwait(false);
+                    break;
+                case OperationStatus.Completed:
+                    _subscription.Dispose();
+                    _result.SetResult(notification.State.Result);
+                    break;
+                case OperationStatus.Faulted:
+                    _subscription.Dispose();
+                    var exceptionResult = notification.State.Result as OperationExceptionResult;
+                    _result.SetException(new InvalidOperationException(exceptionResult.Message));
+                    break;
+                case OperationStatus.Canceled:
+                    _subscription.Dispose();
+                    _result.SetException(new OperationCanceledException());
+                    break;
             }
         }
 
-        public virtual RavenJToken WaitForCompletion()
+        public void OnError(Exception error)
+        {
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public virtual Task<IOperationResult> WaitForCompletionAsync()
+        {
+            return _result.Task;
+        }
+
+        public virtual IOperationResult WaitForCompletion()
         {
             return AsyncHelpers.RunSync(WaitForCompletionAsync);
         }

@@ -46,7 +46,7 @@ namespace Voron.Impl.Compaction
             {
                 CopyTrees(existingEnv, compactedEnv, progressReport);
 
-                compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
+                compactedEnv.FlushLogToDataFile();
 
                 compactedEnv.Journal.Applicator.SyncDataFile(compactedEnv.OldestTransaction);
                 compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();

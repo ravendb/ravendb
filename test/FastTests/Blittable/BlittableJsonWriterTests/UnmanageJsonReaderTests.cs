@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -13,7 +14,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
     public unsafe class UnmanageJsonReaderTests
     {
         [Theory]
-        [MemberData("Samples")]
+        [MemberData(nameof(Samples))]
         public void CanReadAll(string name)
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -44,6 +45,35 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     yield return new object[] { name };
                 }
             }
+        }
+
+        [Theory]
+        [MemberData(nameof(InvalidJsons))]
+        public void FailsOnInvalidJson(string invalidJson)
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var buffer = Encoding.UTF8.GetBytes(invalidJson);
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
+                {
+                    parser.SetBuffer(buffer, buffer.Length);
+                    var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "test", parser, state);
+
+                    writer.ReadObject();
+                    Assert.Throws<InvalidDataException>(() => writer.Read());
+                }
+            }
+        }
+
+
+        public static IEnumerable<object[]> InvalidJsons()
+        {
+            return new List<object[]>
+            {
+                new object[] { "sssssssssssssssss{\"Name\":\"Oren\"}" },
+                new object[] { "nnnnnnnnnn{\"Name\":\"Oren\"}" }
+            };
         }
     }
 }

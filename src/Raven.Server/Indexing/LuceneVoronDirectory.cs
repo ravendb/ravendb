@@ -11,7 +11,7 @@ using Sparrow;
 
 namespace Raven.Server.Indexing
 {
-    public class LuceneVoronDirectory : Lucene.Net.Store.Directory
+    public unsafe class LuceneVoronDirectory : Lucene.Net.Store.Directory
     {
         private readonly StorageEnvironment _environment;
 
@@ -68,19 +68,18 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            filesTree.Add(name, Stream.Null);
+            var pos = filesTree.DirectAdd(name, readResult.Reader.Length);
+            Memory.Copy(pos, readResult.Reader.Base, readResult.Reader.Length);
         }
 
         public override long FileLength(string name)
         {
-            var fileTree = _currentTransaction.Value.ReadTree(name);
-            if (fileTree == null)
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            var readResult = filesTree.Read(name);
+            if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            var readResult = fileTree.Read(VoronIndexOutput.DataKey);
-
-            //TODO: handle files larger than 2GB
-            return readResult.Reader.Length;
+            return readResult.Reader.ReadLittleEndianInt64();
         }
 
         public override void DeleteFile(string name)

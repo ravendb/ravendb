@@ -268,6 +268,7 @@ namespace Voron.Data.RawData
                 throw new InvalidDataException($"Asked to free a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
             sizes->UsedSize = -1;
+            Memory.Set((byte*)pageHeader + posInPage + sizeof(RawDataEntrySizes), 0, sizes->AllocatedSize);
             pageHeader->NumberOfEntries--;
 
             EnsureHeaderModified();

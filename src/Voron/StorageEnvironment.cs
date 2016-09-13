@@ -670,19 +670,19 @@ namespace Voron
             }
         }
 
-        public void FlushLogToDataFile(LowLevelTransaction tx = null, bool allowToFlushOverwrittenPages = false)
+        public void FlushLogToDataFile(LowLevelTransaction tx = null)
         {
             if (_options.ManualFlushing == false)
                 throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-            ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages);
+            ForceLogFlushToDataFile(tx);
         }
 
-        public void ForceLogFlushToDataFile(LowLevelTransaction tx, bool allowToFlushOverwrittenPages)
+        public void ForceLogFlushToDataFile(LowLevelTransaction tx)
         {
             _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token,
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30),
-                tx, allowToFlushOverwrittenPages);
+                tx);
         }
 
         internal void AssertFlushingNotFailed()

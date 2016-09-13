@@ -392,37 +392,20 @@ namespace Voron.Impl.Journal
             private long _totalWrittenButUnsyncedBytes;
             private DateTime _lastDataFileSyncTime;
             private JournalFile _lastFlushedJournal;
-            private long? forcedIterateJournalsAsOf = null;
-            private bool forcedFlushOfOldPages = false;
-            private bool ignoreLockAlreadyTaken = false;
+            private bool _ignoreLockAlreadyTaken;
 
             public JournalApplicator(WriteAheadJournal waj)
             {
                 _waj = waj;
             }
 
-            private IDisposable ForceFlushingPagesOlderThan(long oldestActiveTransaction)
-            {
-                forcedIterateJournalsAsOf = oldestActiveTransaction == 0 ?
-                                                            long.MaxValue : // if there is no active transaction, let it read as of LastTransaction from a snapshot
-                                                            oldestActiveTransaction - 1;
-                forcedFlushOfOldPages = true;
-                ignoreLockAlreadyTaken = true;
 
-                return new DisposableAction(() =>
-                {
-                    forcedIterateJournalsAsOf = null;
-                    forcedFlushOfOldPages = false;
-                    ignoreLockAlreadyTaken = false;
-                });
-            }
-
-            public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, TimeSpan timeToWait, LowLevelTransaction transaction = null, bool allowToFlushOverwrittenPages = false)
+            public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, TimeSpan timeToWait, LowLevelTransaction transaction = null)
             {
                 if (token.IsCancellationRequested)
                     return;
 
-                if (Monitor.IsEntered(_flushingLock) && ignoreLockAlreadyTaken == false)
+                if (Monitor.IsEntered(_flushingLock) && _ignoreLockAlreadyTaken == false)
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
                 bool lockTaken = false;
@@ -469,9 +452,6 @@ namespace Voron.Impl.Journal
                         if (oldestActiveTransaction != 0)
                             maxTransactionId = Math.Min(oldestActiveTransaction - 1, maxTransactionId);
 
-                        if (forcedFlushOfOldPages && forcedIterateJournalsAsOf.HasValue)
-                            maxTransactionId = Math.Min(journalFile.LastTransaction, forcedIterateJournalsAsOf.Value);
-
                         foreach (var pagePosition in journalFile.PageTranslationTable.Iterate(_lastSyncedTransactionId, maxTransactionId))
                         {
                             if (pagePosition.Value.IsFreedPageMarker)
@@ -508,19 +488,6 @@ namespace Voron.Impl.Journal
 
                     if (pagesToWrite.Count == 0)
                     {
-                        if (allowToFlushOverwrittenPages)
-                        {
-                            // we probably filtered out all pages because they have some overwrites and we applied an optimization
-                            // that relays on iterating over pages from end of PTT, however we might want to flush such pages
-                            // in order to allow to free them because the scratch buffer might require them
-                            // so we can flush all pages that we are sure they aren't being read by any transaction
-
-                            using (ForceFlushingPagesOlderThan(oldestActiveTransaction))
-                            {
-                                ApplyLogsToDataFile(oldestActiveTransaction, token, timeToWait, transaction, false);
-                            }
-                        }
-
                         return;
                     }
 
@@ -710,12 +677,12 @@ namespace Voron.Impl.Journal
                 // to read the most updated version)
                 foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
                 {
-                    journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
+                    journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
                 }
 
                 foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
                 {
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
+                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
                 }
             }
 
@@ -812,11 +779,11 @@ namespace Voron.Impl.Journal
 
                 bool localLockTaken = lockTaken;
 
-                ignoreLockAlreadyTaken = true;
+                _ignoreLockAlreadyTaken = true;
 
                 return new DisposableAction(() =>
                 {
-                    ignoreLockAlreadyTaken = false;
+                    _ignoreLockAlreadyTaken = false;
                     if (localLockTaken)
                         Monitor.Exit(_flushingLock);
                 });
@@ -826,11 +793,11 @@ namespace Voron.Impl.Journal
             {
                 bool lockTaken = false;
                 Monitor.Enter(_flushingLock, ref lockTaken);
-                ignoreLockAlreadyTaken = true;
+                _ignoreLockAlreadyTaken = true;
 
                 return new DisposableAction(() =>
                 {
-                    ignoreLockAlreadyTaken = false;
+                    _ignoreLockAlreadyTaken = false;
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
                 });
@@ -945,7 +912,9 @@ namespace Voron.Impl.Journal
             var totalSizeWritten = (int)(write - outputBuffer + sizeOfPagesHeader);
 
 
-            var compressionBuffer = outputBuffer + maxSizeRequiringCompression + sizeof(TransactionHeader);
+            var fullTxBuffer = outputBuffer + pageCountIncludingAllOverflowPages * pageSize;
+
+            var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
             var compressedLen = _lz4.Encode64(
                 outputBuffer,
@@ -975,12 +944,12 @@ namespace Voron.Impl.Journal
 
             var prepreToWriteToJournal = new CompressedPagesResult
             {
-                Base = outputBuffer + maxSizeRequiringCompression,
+                Base = fullTxBuffer,
                 NumberOfPages = compressedPages
             };
             // Copy the transaction header to the output buffer. 
-            Memory.Copy(prepreToWriteToJournal.Base, txHeaderBase, sizeof(TransactionHeader));
-
+            Memory.Copy(fullTxBuffer, txHeaderBase, sizeof(TransactionHeader));
+            Debug.Assert(((long)fullTxBuffer % pageSize) == 0, "Memory must be page aligned");
             return prepreToWriteToJournal;
         }
 

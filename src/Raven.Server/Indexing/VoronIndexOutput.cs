@@ -3,13 +3,12 @@ using System.IO;
 using Lucene.Net.Store;
 using Voron.Impl;
 using Voron;
-using Sparrow;
 
 namespace Raven.Server.Indexing
 {
-    public class VoronIndexOutput : BufferedIndexOutput
+    public unsafe class VoronIndexOutput : BufferedIndexOutput
     {
-        public static readonly Slice DataKey = Slice.From(StorageEnvironment.LabelsContext, "_", ByteStringType.Immutable);
+        public static readonly int MaxFileChunkSize = 128 * 1024 * 1024; // temporarily 128MB, 2GB eventually
 
         private readonly string _name;
         private readonly Transaction _tx;
@@ -50,7 +49,18 @@ namespace Raven.Server.Indexing
             base.Dispose(disposing);
             var tree = _tx.CreateTree(_name);
             _file.Seek(0, SeekOrigin.Begin);
-            tree.Add(DataKey, _file);
+
+            var size = _file.Length;
+
+            var numberOfChunks = size/MaxFileChunkSize + (size%MaxFileChunkSize != 0 ? 1 : 0);
+
+            for (int i = 0; i < numberOfChunks; i++)
+            {
+                tree.Add(Slice.From(_tx.Allocator, i.ToString("D9")), _file, count: MaxFileChunkSize);
+            }
+
+            var files = _tx.ReadTree("Files");
+            files.Add(Slice.From(_tx.Allocator, _name), Slice.From(_tx.Allocator, (byte*)&size, sizeof(long)));
         }
     }
 }

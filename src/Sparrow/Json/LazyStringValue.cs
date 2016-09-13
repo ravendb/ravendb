@@ -117,7 +117,7 @@ namespace Sparrow.Json
 
         public override int GetHashCode()
         {
-            return (int)Hashing.XXHash64.CalculateInline(Buffer, Size);
+            return (int)Hashing.XXHash32.CalculateInline(Buffer, Size);
         }
 
         public override string ToString()

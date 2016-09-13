@@ -291,10 +291,12 @@ namespace Raven.Client.FileSystem
                 {
                     try
                     {
+                        throw new NotImplementedException();
+                        /* TODO: support for opertion types in files
                         var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
                         var operationId = json.Value<long>("OperationId");
                         var op = new Operation(GetOperationStatusAsync, operationId);
-                        await op.WaitForCompletionAsync().ConfigureAwait(false);
+                        await op.WaitForCompletionAsync().ConfigureAwait(false);*/
                     }
                     catch (Exception e)
                     {

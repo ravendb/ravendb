@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
@@ -16,12 +17,15 @@ using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.Exceptions;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
@@ -39,7 +43,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 var document = Database.DocumentsStorage.Get(context, id);
                 if (document == null)
-                    HttpContext.Response.StatusCode = 404;
+                {
+                    var conflicts = Database.DocumentsStorage.GetConflictsFor(context, id);
+                    HttpContext.Response.StatusCode = conflicts.Count > 0 ? 409 : 404;
+                }
                 else
                     HttpContext.Response.Headers[Constants.MetadataEtagField] = document.Etag.ToString();
                 return Task.CompletedTask;
@@ -121,12 +128,13 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Request.Query["excludes"],
                     GetStart(),
                     GetPageSize()
-                    );
+                );
             }
             else // recent docs
             {
                 documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
             }
+
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -134,7 +142,9 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var transformerParameters = GetTransformerParameters(context);
 
-                    using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage, Database.TransformerStore, context))
+                    using (
+                        var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
+                            Database.TransformerStore, context))
                     {
                         writer.WriteDocuments(context, scope.Transform(documents), metadataOnly);
                         return;
@@ -162,6 +172,20 @@ namespace Raven.Server.Documents.Handlers
             foreach (var id in ids)
             {
                 var document = Database.DocumentsStorage.Get(context, id);
+                if (document == null)
+                {
+                    var conflicts = Database.DocumentsStorage.GetConflictsFor(context, id);
+                    if (conflicts.Count > 0)
+                    {
+                        HttpContext.Response.StatusCode = 409;
+                        HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        {
+                            context.Write(writer, GetJsonForConflicts(id, conflicts));
+                        }
+                        return;
+                    }
+                }
                 documents.Add(document);
                 includeDocs.Gather(document);
             }
@@ -212,6 +236,26 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
+        }
+
+        private DynamicJsonValue GetJsonForConflicts(string docId, IEnumerable<DocumentConflict> conflicts)
+        {
+            var conflictsArray = new DynamicJsonArray();
+            foreach (var c in conflicts)
+            {
+                conflictsArray.Add(new DynamicJsonValue
+                {
+                    ["ChangeVector"] = c.ChangeVector.ToJson(),
+                    ["Doc"] = c.Doc
+                });
+            }
+
+            return new DynamicJsonValue
+            {
+                ["Message"] = "Conflict detected on " + docId + ", conflict must be resolved before the document will be accessible",
+                ["DocId"] = docId,
+                ["Conflics"] = conflictsArray
+            };
         }
 
         private unsafe long ComputeEtagsFor(List<Document> documents)
@@ -357,7 +401,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                     return;
                 }
-                
+
                 HttpContext.Response.StatusCode = 201;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

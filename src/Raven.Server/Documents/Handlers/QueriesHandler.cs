@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
@@ -122,26 +124,29 @@ namespace Raven.Server.Documents.Handlers
         public Task Delete()
         {
             DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, token), context);
-            }
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            
+            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token), 
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByIndex);
+            return Task.CompletedTask;
+            
         }
 
         [RavenAction("/databases/*/queries/$", "PATCH")]
         public Task Patch()
         {
             DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
-                var patch = PatchRequest.Parse(reader);
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            
+            var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+            var patch = PatchRequest.Parse(reader);
 
-                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, token), context);
-            }
+            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token), 
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
+            return Task.CompletedTask;
         }
 
-        private async Task ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, OperationCancelToken, Task> operation, DocumentsOperationContext context)
+        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -149,22 +154,14 @@ namespace Raven.Server.Documents.Handlers
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
-            // TODO [ppekrol] 
-            // implement Tasks
-            // support RetrieveDetails
+            var queryRunner = new QueryRunner(Database, context);
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var queryRunner = new QueryRunner(Database, context);
-                await operation(queryRunner, indexName, query, options, token).ConfigureAwait(false);
+            long operationId = GetLongQueryString("operationId").Value;
 
-                writer.WriteStartObject();
+            var task = Database.DatabaseOperations.AddOperation(indexName, operationType, onProgress => 
+                    operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
-                writer.WritePropertyName("OperationId");
-                writer.WriteInteger(-1); // TODO [ppekrol]
-
-                writer.WriteEndObject();
-            }
+            task.ContinueWith(_ => returnContextToPool.Dispose());
         }
 
         private QueryOperationOptions GetQueryOperationOptions()
