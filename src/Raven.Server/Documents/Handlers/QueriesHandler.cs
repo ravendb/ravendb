@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -120,33 +121,39 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/queries/$", "DELETE")]
-        public Task Delete()
+        [RavenAction("/databases/*/queries-delete-by-index/$", "GET")]
+        public async Task Delete()
         {
-            DocumentsOperationContext context;
-            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
-            
-            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token), 
-                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByIndex);
-            return Task.CompletedTask;
-            
+            using (var socket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                DocumentsOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                {
+                    await ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token),
+                    context, DatabaseOperations.PendingOperationType.DeleteByIndex, socket);
+                }
+            }
         }
 
-        [RavenAction("/databases/*/queries/$", "PATCH")]
-        public Task Patch()
+        [RavenAction("/databases/*/queries-update-by-index/$", "GET")]
+        public async Task Patch()
         {
-            DocumentsOperationContext context;
-            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
-            
-            var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
-            var patch = PatchRequest.Parse(reader);
+            using (var socket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                DocumentsOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                {
+                    var reader = await context.ReadFromWebSocket(socket, "ScriptedPatchRequest", CancellationToken.None);
+                    var patch = PatchRequest.Parse(reader);
 
-            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token), 
-                context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
-            return Task.CompletedTask;
+                    await ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token),
+                        context, DatabaseOperations.PendingOperationType.UpdateByIndex, socket);
+                }
+            }
         }
 
-        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
+        private async Task ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, 
+            DocumentsOperationContext context, DatabaseOperations.PendingOperationType operationType, WebSocket socket)
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -156,12 +163,7 @@ namespace Raven.Server.Documents.Handlers
 
             var queryRunner = new QueryRunner(Database, context);
 
-            long operationId = GetLongQueryString("operationId").Value;
-
-            var task = Database.DatabaseOperations.AddOperation(indexName, operationType, onProgress => 
-                    operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
-
-            task.ContinueWith(_ => returnContextToPool.Dispose());
+            await Database.DatabaseOperations.ExecuteOperation(indexName, operationType, context, onProgress => operation(queryRunner, indexName, query, options, onProgress, token), socket, token);
         }
 
         private QueryOperationOptions GetQueryOperationOptions()

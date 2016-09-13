@@ -38,11 +38,7 @@ namespace Raven.Server.Documents
         private readonly ConcurrentSet<string> _matchingDocumentsOfType =
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<long> _matchingOperations =
-          new ConcurrentSet<long>();
-
         private int _watchAllDocuments;
-        private int _watchAllOperations;
 
         public NotificationsClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase)
         {
@@ -168,56 +164,6 @@ namespace Raven.Server.Documents
                 _sendQueue.Enqueue(value);
         }
 
-        public void WatchOperation(long operationId)
-        {
-            _matchingOperations.TryAdd(operationId);
-        }
-
-        public void UnwatchOperation(long operationId)
-        {
-            _matchingOperations.TryRemove(operationId);
-        }
-
-        public void WatchAllOperations()
-        {
-            Interlocked.Increment(ref _watchAllOperations);
-        }
-
-        public void UnwatchAllOperations()
-        {
-            Interlocked.Decrement(ref _watchAllOperations);
-        }
-
-        public void SendOperationStatusChangeNotification(OperationStatusChangeNotification notification)
-        {
-            if (_watchAllOperations > 0)
-            {
-                Send(notification);
-                return;
-            }
-
-            if (_matchingOperations.Contains(notification.OperationId))
-            {
-                Send(notification);
-            }
-        }
-
-        private void Send(OperationStatusChangeNotification notification)
-        {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = "OperationStatusChangeNotification",
-                ["Value"] = new DynamicJsonValue
-                {
-                    ["OperationId"] = (int)notification.OperationId,
-                    ["State"] = notification.State.ToJson()
-                },
-            };
-
-            if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(value);
-        }
-
         public async Task StartSendingNotifications()
         {
             JsonOperationContext context;
@@ -272,9 +218,6 @@ namespace Raven.Server.Documents
 
         public void HandleCommand(string command, string commandParameter)
         {
-            long commandParameterAsLong;
-            long.TryParse(commandParameter, out commandParameterAsLong);
-
             /* if (Match(command, "watch-index"))
              {
                  WatchIndex(commandParameter);
@@ -339,22 +282,6 @@ namespace Raven.Server.Documents
             else if (Equals(command, "unwatch-type"))
             {
                 UnwatchDocumentOfType(commandParameter);
-            }
-            else if (Equals(command, "watch-operation"))
-            {
-                WatchOperation(commandParameterAsLong);
-            }
-            else if (Equals(command, "unwatch-operation"))
-            {
-                UnwatchOperation(commandParameterAsLong);
-            }
-            else if (Equals(command, "watch-operations"))
-            {
-                WatchAllOperations();
-            }
-            else if (Equals(command, "unwatch-operations"))
-            {
-                UnwatchAllOperations();
             }
             /*else if (Match(command, "watch-replication-conflicts"))
             {

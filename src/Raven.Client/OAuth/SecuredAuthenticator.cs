@@ -14,6 +14,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Client.Extensions;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
 
@@ -57,7 +58,7 @@ namespace Raven.Client.OAuth
         public async Task<Action<HttpClient>> DoOAuthRequestAsync(string url, string apiKey)
         {
             ThrowIfBadUrlOrApiKey(url, apiKey);
-            uri = new Uri(url.Replace("http://", "ws://").Replace("https://", "wss://"));
+            uri = new Uri(url.ToWebSocketPath());
 
             using (var webSocket = new RavenClientWebSocket())
             {

@@ -9,7 +9,6 @@ namespace Raven.Server.Web.Operations
 {
     public class OperationsHandler : DatabaseRequestHandler
     {
-
         [RavenAction("/databases/*/operations/next-operation-id", "GET")]
         public Task GetNextOperationId()
         {

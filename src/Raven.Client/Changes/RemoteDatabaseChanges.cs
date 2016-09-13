@@ -27,12 +27,10 @@ namespace Raven.Client.Changes
         private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
         private readonly ConcurrentSet<long> watchedDataSubscriptions = new ConcurrentSet<long>();
-        private readonly ConcurrentSet<long> watchedOperations = new ConcurrentSet<long>();
         private bool watchAllDocs;
         private bool watchAllIndexes;
         private bool watchAllTransformers;
         private bool watchAllDataSubscriptions;
-        private bool watchAllOperations;
 
         private readonly Func<string, long?, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
@@ -59,9 +57,6 @@ namespace Raven.Client.Changes
 
             if (watchAllDataSubscriptions)
                 await Send("watch-data-subscriptions", null).ConfigureAwait(false);
-
-            if (watchAllOperations)
-                await Send("watch-operations", null).ConfigureAwait(false);
 
             foreach (var watchedDoc in watchedDocs)
             {
@@ -92,11 +87,6 @@ namespace Raven.Client.Changes
             {
                 await Send("watch-bulk-operation", watchedBulkInsert).ConfigureAwait(false);
             }
-
-            foreach (var watchedOperation in watchedOperations)
-            {
-                await Send("watch-operation", watchedOperation.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false);
-            }
         }
 
         protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, DatabaseConnectionState>> connections)
@@ -108,16 +98,6 @@ namespace Raven.Client.Changes
                     foreach (var counter in connections)
                     {
                         counter.Value.Send(documentChangeNotification);
-                    }
-                    break;
-
-                case "OperationStatusChangeNotification":
-                    // using deserializer from Conventions to properly handle $type mapping
-                    var operationChangeNotification = Conventions.CreateSerializer().Deserialize<OperationStatusChangeNotification>(new RavenJTokenReader(value));
-
-                    foreach (var counter in connections)
-                    {
-                        counter.Value.Send(operationChangeNotification);                        
                     }
                     break;
 
@@ -397,35 +377,6 @@ namespace Raven.Client.Changes
                 notification => true);
 
             counter.OnDataSubscriptionNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
-            return taskedObservable;
-        }
-
-        public IObservableWithTask<OperationStatusChangeNotification> ForOperationId(long operationId)
-        {
-            var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", 
-                () => watchedOperations.TryAdd(operationId), () => watchedOperations.TryRemove(operationId), operationId.ToString(CultureInfo.InvariantCulture));
-
-            var taskedObservable = new TaskedObservable<OperationStatusChangeNotification, DatabaseConnectionState>(
-                counter,
-                notification => notification.OperationId == operationId);
-
-            counter.OnOperationStatusChangeNotification += taskedObservable.Send;
-            counter.OnError += taskedObservable.Error;
-
-            return taskedObservable;
-        }
-
-        public IObservableWithTask<OperationStatusChangeNotification> ForAllOperations()
-        {
-            var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", () => watchAllOperations = true, () => watchAllOperations = false, null);
-
-            var taskedObservable = new TaskedObservable<OperationStatusChangeNotification, DatabaseConnectionState>(
-                counter,
-                notification => true);
-
-            counter.OnOperationStatusChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
 
             return taskedObservable;

@@ -12,6 +12,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Client.Extensions;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
 
@@ -75,7 +76,7 @@ namespace Raven.Client.Changes
             if (disposed)
                 return;
 
-            var uri = new Uri(url.Replace("http://", "ws://").Replace(".fiddler", "") + "/changes");
+            var uri = new Uri(url.ToWebSocketPath() + "/changes");
             logger.Info("Trying to connect to {0}", uri);
             await webSocket.ConnectAsync(uri, CancellationToken.None);
         }
