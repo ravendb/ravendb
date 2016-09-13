@@ -175,7 +175,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Temporary: runtime exception")]
+        [Fact]
         public void CanQueryOnFlagArrays()
         {
             using (var store = GetDocumentStore())
