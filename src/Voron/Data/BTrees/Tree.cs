@@ -133,7 +133,7 @@ namespace Voron.Data.BTrees
             return true;
         }
 
-        public void Add(Slice key, Stream value, ushort? version = null, int? count = null)
+        public void Add(Slice key, Stream value, ushort? version = null)
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
             if (value.Length > int.MaxValue)
@@ -141,16 +141,11 @@ namespace Voron.Data.BTrees
 
             State.IsModified = true;
 
-            int length;
-
-            if (count != null)
-                length = Math.Min(count.Value, (int) value.Length);
-            else
-                length = (int) value.Length;
+            var length = (int) value.Length;
 
             var pos = DirectAdd(key, length, version: version);
 
-            CopyStreamToPointer(_llt, value, length, pos);
+            CopyStreamToPointer(_llt, value, pos);
         }
 
         public void Add(Slice key, byte[] value, ushort? version = null)
@@ -177,7 +172,7 @@ namespace Voron.Data.BTrees
             value.CopyTo(pos);
         }
 
-        private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, int length, byte* pos)
+        private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, byte* pos)
         {
             TemporaryPage tmp;
             using (tx.Environment.GetTemporaryPage(tx, out tmp))
@@ -186,7 +181,7 @@ namespace Voron.Data.BTrees
                 var tempPagePointer = tmp.TempPagePointer;
                 int copied = 0;
 
-                while (copied < length)
+                while (true)
                 {
                     var read = value.Read(tempPageBuffer, 0, tempPageBuffer.Length);
                     if (read == 0)
