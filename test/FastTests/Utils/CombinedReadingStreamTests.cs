@@ -8,7 +8,7 @@ using Raven.Abstractions.Extensions;
 
 namespace FastTests.Utils
 {
-    public class CombinedReadingStreamTests
+    public class CombinedReadingStreamTests : NoDisposalNeeded
     {
         [Theory]
         [InlineDataWithRandomSeed(3, new [] {1, 7, 5})]
@@ -73,6 +73,13 @@ namespace FastTests.Utils
             result = new byte[4];
             sut.Read(result, 0, 4);
             Assert.Equal(allBytes.Skip(pos).Take(4).ToArray(), result);
+
+            // read all bytes one by one
+            sut.Position = 0;
+            for (int i = 0; i < allBytes.Length; i++)
+            {
+                Assert.Equal(allBytes[i], sut.ReadByte());
+            }
 
             // random seeks
             for (int i = 0; i < 100; i++)

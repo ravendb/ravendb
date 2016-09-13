@@ -78,6 +78,9 @@ namespace Raven.Server.Utils
             var value = _streams[_index].ReadByte();
             _position++;
 
+            if (_index < _streams.Length - 1 && _position >= _startingPositions[_index] + _streams[_index].Length)
+                _index++;
+
             return value;
         }
 
@@ -95,7 +98,7 @@ namespace Raven.Server.Utils
 
                 if (count > 0)
                 {
-                    if (_index < _streams.Length - 1)
+                    if (_index < _streams.Length - 1 && _position >= _startingPositions[_index] + _streams[_index].Length)
                         _index++;
                     else
                         break;
