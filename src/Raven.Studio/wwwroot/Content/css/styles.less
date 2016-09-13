@@ -199,7 +199,7 @@ body {
 
 /* GLOBAL ITEMS */
 
-h1, h2 {
+h1, h2, h3 {
     font-weight: 300;
     margin-top: 0;
 }
@@ -222,6 +222,22 @@ a, .btn {
     &.reset-color {
         color: inherit;
         cursor: pointer;
+    }
+}
+
+.padding {
+    padding: @grid-gutter-width / 2;
+
+    &.padding-xs {
+        padding: @grid-gutter-width / 8;
+    }
+
+    &.padding-sm {
+        padding: @grid-gutter-width / 4;
+    }
+
+    &.padding-lg {
+        padding: @grid-gutter-width / 4 * 3;
     }
 }
 
@@ -288,26 +304,51 @@ hr {
     }
 }
 
-.edit-inline {
-    display: inline;
-    width: auto;
-    height: auto;
-    padding: 0;
-    font-size: inherit;
-    line-height: inherit;
-    color: #e9eaea;
-    background-color: #333c3c;
-    background-image: none;
-    border: none;
-    -webkit-transition: box-shadow .2s ease-in-out;
-    -moz-transition: box-shadow .2s ease-in-out;
-    -ms-transition: box-shadow .2s ease-in-out;
-    -o-transition: box-shadow .2s ease-in-out;
-    transition: box-shadow .2s ease-in-out;
+#obj-name {
+    .edit-inline {
+        display: none;
+    }
 
-    &:focus {
-        outline: none;
-        box-shadow: inset 0 -1px 0 0 @brand-primary;
+    .icon-edit {
+        font-size: 100%;
+    }
+
+    &.edit {
+        .static-name {
+            display: none;
+        }
+
+        .edit-inline {
+            display: inline;
+        }
+
+        .icon-edit:before {
+            content: "\e917";
+            color: @brand-success;
+        }
+    }
+
+    .edit-inline {
+        width: auto;
+        height: auto;
+        padding: 0;
+        margin-left: -5px;
+        font-size: inherit;
+        line-height: inherit;
+        color: #e9eaea;
+        background-color: #333c3c;
+        background-image: none;
+        border: none;
+        -webkit-transition: box-shadow .2s ease-in-out;
+        -moz-transition: box-shadow .2s ease-in-out;
+        -ms-transition: box-shadow .2s ease-in-out;
+        -o-transition: box-shadow .2s ease-in-out;
+        transition: box-shadow .2s ease-in-out;
+
+        &:focus {
+            outline: none;
+            box-shadow: inset 0 -1px 0 0 @brand-primary;
+        }
     }
 }
 
@@ -888,7 +929,6 @@ hr {
     @media (min-width:@screen-md) {
         top: @navbar-height;
         left: @menu-width;
-        right: 5px;
         padding-left: @grid-gutter-width;
         padding-right: @grid-gutter-width;
     }
@@ -1378,11 +1418,15 @@ hr {
     padding-right: @menu-width + @grid-gutter-width;
 
     #right-options-panel {
-        position: absolute;
+        position: fixed;
         width: @menu-width;
-        top: 0;
+        top: @navbar-height-xs;
         bottom: 0;
-        right: 0;
+        right: 15px;
+
+        @media (min-width: @screen-md) {
+            top: @navbar-height;
+        }
 
         .search-documents {
             position: relative;

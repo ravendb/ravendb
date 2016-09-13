@@ -14,12 +14,25 @@
 @gray-light:             #a9adad;
 @gray-lighter:           #e9eaea;
 
-@brand-primary:         #ee3442;// #ff7f66; //#ee3442;
-@brand-success:         #5cb85c;
-@brand-info:            #5bc0de;
-@brand-warning:         #ffcf21;
-@brand-danger:          #d9534f;
+@brand-primary-dark:    #2e9977;
+@brand-primary:         #57ffc9; //#ee3442; // #ff7f66; //#ee3442;
+@brand-primary-light:   #99ffed;
 
+@brand-success-dark:    #295b33;
+@brand-success:         #58b36a;
+@brand-success-light:   #bfdea0;
+
+@brand-info-dark:       #2c5266;
+@brand-info:            #4d90b3;
+@brand-info-light:      #84d5f7;
+
+@brand-warning-dark:    #a69532;
+@brand-warning:         #e6cc46;
+@brand-warning-light:   #fee480;
+
+@brand-danger-dark:     #793233;
+@brand-danger:          #e55151;
+@brand-danger-light:    #f48685;
 
 //== Scaffolding
 //
@@ -155,24 +168,24 @@
 @btn-primary-icon:               inherit;
 
 @btn-success-color:              @gray-lighter;
-@btn-success-bg:                 #285a32;
+@btn-success-bg:                 @brand-success-dark;
 @btn-success-border:             darken(@btn-success-bg, 5%);
-@btn-success-icon:               #59b36b;
+@btn-success-icon:               @brand-success-light;
 
 @btn-info-color:                 @gray-lighter;
-@btn-info-bg:                    #2b5266;
+@btn-info-bg:                    @brand-info-dark;
 @btn-info-border:                darken(@btn-info-bg, 5%);
-@btn-info-icon:                  #4c90b3;
+@btn-info-icon:                  @brand-info-light;
 
 @btn-warning-color:              @gray-lighter;
-@btn-warning-bg:                 #a69533;
+@btn-warning-bg:                 @brand-warning-dark;
 @btn-warning-border:             darken(@btn-warning-bg, 5%);
-@btn-warning-icon:               #e6cc47;
+@btn-warning-icon:               @brand-warning-light;
 
 @btn-danger-color:               @gray-lighter;
-@btn-danger-bg:                  #783232;
+@btn-danger-bg:                  @brand-danger-dark;
 @btn-danger-border:              darken(@btn-danger-bg, 5%);
-@btn-danger-icon:                #e65f5f;
+@btn-danger-icon:                @brand-danger-light;
 
 @btn-link-disabled-color:        @gray-light;
 
@@ -511,19 +524,19 @@
 //## Define colors for form feedback states and, by default, alerts.
 
 @state-success-text:             @brand-success;
-@state-success-bg:               #dff0d8;
+@state-success-bg:               @brand-success-dark;
 @state-success-border:           darken(spin(@state-success-bg, -10), 5%);
 
 @state-info-text:                @brand-info;
-@state-info-bg:                  #d9edf7;
+@state-info-bg:                  @brand-info-dark;
 @state-info-border:              darken(spin(@state-info-bg, -10), 7%);
 
 @state-warning-text:             @brand-warning;
-@state-warning-bg:               #fcf8e3;
+@state-warning-bg:               @brand-warning-dark;
 @state-warning-border:           darken(spin(@state-warning-bg, -10), 5%);
 
 @state-danger-text:              @brand-danger;
-@state-danger-bg:                #f2dede;
+@state-danger-bg:                @brand-danger-dark;
 @state-danger-border:            darken(spin(@state-danger-bg, -10), 5%);
 
 

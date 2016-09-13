@@ -444,12 +444,16 @@
                 <div class="flex-winddow-head">
                     <div class="clearfix">
                         <h2 class="pull-left-sm">
-                            <a class="reset-color"><span class="icon-star"></span> <span class="icon-star-filled favorite"></span></a> 
-                            Orders/<span>&lt;auto-generated ID&gt;</span> 
-                            <input type="text" class="edit-inline" placeholder="document id" value=""/> <a class="icon-edit reset-color"></a>
+                            <a class="reset-color btn-toggle" data-target=".fav-object" data-class="icon-star-filled favorite">
+                                <span class="icon-star fav-object"></span>
+                            </a>
+                            <span id="obj-name">
+                                Orders/<span class="static-name">123123123</span>
+                                <input type="text" class="edit-inline" value="123123123" />
+                                <a class="icon-edit reset-color btn-toggle small" data-target="#obj-name" data-class="edit"></a>
+                            </span>
                         </h2>
-                        <span class="pull-left-sm">Last modified a few seconds ago</span>
-                        <div class="pull-right-sm"><small><span class="icon-warning text-warning"></span> Document has been modified outside of studio 1 minute ago. <a href="#">click here to refresh</a></small></div>
+                        <div class="pull-right-sm"><small><span class="icon-warning text-warning"></span> Document has beend modified outside of studio 1 minute ago. <a href="#">click here to refresh</a></small></div>
                     </div>
                     <div class="btn-bar">
                         <div class="pull-left-sm">
@@ -490,39 +494,41 @@
                     </div>
                 </div>
                 <div class="flex-window-scroll">
-                    <div id="docEditor">{
-    "Company": "companies/65",
-    "Employee": "employees/1",
-    "OrderedAt": "1998-05-06T00:00:00.0000000",
-    "RequireAt": "1998-06-03T00:00:00.0000000",
-    "ShippedAt": null,
-    "ShipTo": {
-        "Line1": "2817 Milton Dr.",
-        "Line2": null,
-        "City": "Albuquerque",
-        "Region": "NM",
-        "PostalCode": "87110",
-        "Country": "USA"
-    },
-    "ShipVia": "shippers/2",
-    "Freight": 8.53,
-    "Lines": [
-        {
-            "Product": "products/2",
-            "ProductName": "Chang",
-            "PricePerUnit": 19,
-            "Quantity": 24,
-            "Discount": 0.2
-        },
-        {
-            "Product": "products/3",
-            "ProductName": "Aniseed Syrup",
-            "PricePerUnit": 10,
-            "Quantity": 4,
-            "Discount": 0
-        }
-    ]
-}</div>
+                    <div id="docEditor">
+                        {
+                        "Company": "companies/65",
+                        "Employee": "employees/1",
+                        "OrderedAt": "1998-05-06T00:00:00.0000000",
+                        "RequireAt": "1998-06-03T00:00:00.0000000",
+                        "ShippedAt": null,
+                        "ShipTo": {
+                        "Line1": "2817 Milton Dr.",
+                        "Line2": null,
+                        "City": "Albuquerque",
+                        "Region": "NM",
+                        "PostalCode": "87110",
+                        "Country": "USA"
+                        },
+                        "ShipVia": "shippers/2",
+                        "Freight": 8.53,
+                        "Lines": [
+                        {
+                        "Product": "products/2",
+                        "ProductName": "Chang",
+                        "PricePerUnit": 19,
+                        "Quantity": 24,
+                        "Discount": 0.2
+                        },
+                        {
+                        "Product": "products/3",
+                        "ProductName": "Aniseed Syrup",
+                        "PricePerUnit": 10,
+                        "Quantity": 4,
+                        "Discount": 0
+                        }
+                        ]
+                        }
+                    </div>
                 </div>
             </div>
         </div>

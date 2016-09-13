@@ -125,19 +125,19 @@ mark,
   // Given the contrast here, this is the only class to have its color inverted
   // automatically.
   color: #fff;
-  .bg-variant(@brand-primary);
+  .bg-variant(@brand-primary, @brand-primary-light);
 }
 .bg-success {
-  .bg-variant(@state-success-bg);
+  .bg-variant(@state-success-bg, @brand-success-light);
 }
 .bg-info {
-  .bg-variant(@state-info-bg);
+  .bg-variant(@state-info-bg, @brand-info-light);
 }
 .bg-warning {
-  .bg-variant(@state-warning-bg);
+  .bg-variant(@state-warning-bg, @brand-warning-light);
 }
 .bg-danger {
-  .bg-variant(@state-danger-bg);
+  .bg-variant(@state-danger-bg, @brand-danger-light);
 }
 
 
