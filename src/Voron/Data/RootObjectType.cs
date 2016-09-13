@@ -7,5 +7,6 @@
         EmbeddedFixedSizeTree = 2,
         FixedSizeTree = 3,
         PrefixTree = 4,
+        Table = 5,
     }
 }
