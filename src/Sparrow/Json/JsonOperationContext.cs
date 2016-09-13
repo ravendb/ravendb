@@ -16,6 +16,8 @@ namespace Sparrow.Json
     /// </summary>
     public class JsonOperationContext : IDisposable
     {
+        private const int InitialStreamSize = 4096;
+
         private readonly int _initialSize;
         private readonly int _longLivedSize;
         private readonly ArenaMemoryAllocator _arenaAllocator;
@@ -32,7 +34,7 @@ namespace Sparrow.Json
 
         public CachedProperties CachedProperties;
 
-        private int _lastStreamSize = 4096;
+        private int _lastStreamSize = InitialStreamSize;
 
         public static JsonOperationContext ShortTermSingleUse()
         {
@@ -493,15 +495,17 @@ namespace Sparrow.Json
 
         public void LastStreamSize(int sizeInBytes)
         {
-            _lastStreamSize = Math.Max(_lastStreamSize, sizeInBytes);
+            if (_lastStreamSize >= sizeInBytes)
+                return;
+
+            _lastStreamSize = sizeInBytes;
         }
 
         public virtual void Reset()
         {
             if (_tempBuffer != null)
-            {
                 _tempBuffer.Address = IntPtr.Zero;
-            }
+
             _arenaAllocator.ResetArena();
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
@@ -520,10 +524,10 @@ namespace Sparrow.Json
 
 
             foreach (var disposable in _disposables)
-            {
                 disposable.Dispose();
-            }
+
             _disposables.Clear();
+            _lastStreamSize = InitialStreamSize; // this must be done last, because _disposables can change this value
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
