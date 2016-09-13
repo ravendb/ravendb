@@ -131,6 +131,11 @@ namespace FastTests.Voron.Tables
                 Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(Slice.From(tx.Allocator, "docs")));
                 tx.Commit();
             }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(Slice.From(tx.Allocator, "docs")));
+            }
         }
 
     }

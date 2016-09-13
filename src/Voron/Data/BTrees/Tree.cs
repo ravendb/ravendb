@@ -57,12 +57,13 @@ namespace Voron.Data.BTrees
             _state = state;
         }
 
-        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header)
+        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree)
         {
             return new Tree(llt, tx, header->RootPageNumber)
             {
                 _state =
                 {
+                    RootObjectType = type,
                     PageCount = header->PageCount,
                     BranchPages = header->BranchPages,
                     Depth = header->Depth,
@@ -75,13 +76,17 @@ namespace Voron.Data.BTrees
             };
         }
 
-        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None)
+        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree)
         {
+            if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table )
+                throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.", nameof(type));
+
             var newRootPage = AllocateNewPage(llt, TreePageFlags.Leaf, 1);
             var tree = new Tree(llt, tx, newRootPage.PageNumber)
             {
                 _state =
                 {
+                    RootObjectType = type,
                     Depth = 1,
                     Flags = flags,
                     InWriteTransaction = true,

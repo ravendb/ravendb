@@ -426,7 +426,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = "@" + collection;
-            if (context.Transaction.InnerTransaction.ReadTree(collectionName) == null)
+            if (context.Transaction.InnerTransaction.ReadTree(collectionName, RootObjectType.Table) == null)
                 yield break;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);

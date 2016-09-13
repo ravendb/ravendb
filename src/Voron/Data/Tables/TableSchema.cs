@@ -1,5 +1,6 @@
 using Sparrow;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -90,13 +91,42 @@ namespace Voron.Data.Tables
                                 NameAsSlice
                             };
 
-                    byte[] packed = new byte[serializer.Size];
+                    // It may -or not- have a string, so we have to serialize this conditionally, and do not
+                    // know the size beforehand
+                    var structure = new List<byte[]>();
+
+                    bool hasName = Name != null;
+
+                    structure.Add(BitConverter.GetBytes(hasName));
+
+                    if (hasName)
+                    {
+                        structure.Add(Encoding.UTF8.GetBytes(Name));
+                    }
+
+                    // Insert additional structure into TableValueBuilder
+                    var totalSize = structure.Select((bytes, i) => bytes.Length).Sum();
+                    var packed = new byte[totalSize];
+                    int position = 0;
 
                     fixed (byte* ptr = packed)
                     {
-                        serializer.CopyTo(ptr);
+                        foreach (var member in structure)
+                        {
+                            member.CopyTo(packed, position);
+                            serializer.Add(&ptr[position], member.Length);
+                            position += member.Length;
+                        }
 
-                        return packed;
+                        byte[] serialized = new byte[serializer.Size];
+
+                        fixed (byte* destination = serialized)
+                        {
+                            serializer.CopyTo(destination);
+                        }
+
+                        return serialized;
+
                     }
                 }
 
@@ -123,7 +153,13 @@ namespace Voron.Data.Tables
                 currentPtr = input.Read(4, out currentSize);
                 indexDef.NameAsSlice = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
 
-                indexDef.Name = indexDef.NameAsSlice.ToString();
+                currentPtr = input.Read(5, out currentSize);
+                var hasName = Convert.ToBoolean(*currentPtr);
+                if (hasName)
+                {
+                    currentPtr = input.Read(6, out currentSize);
+                    indexDef.Name = Encoding.UTF8.GetString(currentPtr, currentSize);
+                }
 
                 return indexDef;
             }
@@ -149,15 +185,49 @@ namespace Voron.Data.Tables
                 fixed (int* startIndex = &StartIndex)
                 fixed (bool* isGlobal = &IsGlobal)
                 {
-                    var serializer = new TableValueBuilder { startIndex, isGlobal, NameAsSlice };
+                    var serializer = new TableValueBuilder
+                    {
+                        startIndex,
+                        isGlobal,
+                        NameAsSlice,
+                    };
 
-                    byte[] packed = new byte[serializer.Size];
+                    // It may -or not- have a string, so we have to serialize this conditionally, and do not
+                    // know the size beforehand
+                    var structure = new List<byte[]>();
+
+                    bool hasName = Name != null;
+
+                    structure.Add(BitConverter.GetBytes(hasName));
+
+                    if (hasName)
+                    {
+                        structure.Add(Encoding.UTF8.GetBytes(Name));
+                    }
+
+                    // Insert additional structure into TableValueBuilder
+                    var totalSize = structure.Select((bytes, i) => bytes.Length).Sum();
+                    var packed = new byte[totalSize];
+                    int position = 0;
 
                     fixed (byte* ptr = packed)
                     {
-                        serializer.CopyTo(ptr);
+                        foreach (var member in structure)
+                        {
+                            member.CopyTo(packed, position);
+                            serializer.Add(&ptr[position], member.Length);
+                            position += member.Length;
+                        }
 
-                        return packed;
+                        byte[] serialized = new byte[serializer.Size];
+
+                        fixed (byte* destination = serialized)
+                        {
+                            serializer.CopyTo(destination);
+                        }
+
+                        return serialized;
+
                     }
                 }
             }
@@ -177,7 +247,14 @@ namespace Voron.Data.Tables
                 currentPtr = input.Read(2, out currentSize);
                 output.NameAsSlice = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
 
-                output.Name = output.NameAsSlice.ToString();
+                currentPtr = input.Read(3, out currentSize);
+                var hasName = Convert.ToBoolean(*currentPtr);
+
+                if (hasName)
+                {
+                    currentPtr = input.Read(4, out currentSize);
+                    output.Name = Encoding.UTF8.GetString(currentPtr, currentSize);
+                }
 
                 return output;
             }
@@ -231,6 +308,7 @@ namespace Voron.Data.Tables
         ///     - Otherwise, create a tree (whose key would be the indexed field value and the value would 
         ///         be a fixed size tree of the ids of all the matching values)
         ///  - stats -> header information about the table (number of entries, etc)
+        ///  - schemas -> schema definition for the table
         /// 
         /// </summary>
         public void Create(Transaction tx, string name)
@@ -238,15 +316,9 @@ namespace Voron.Data.Tables
             if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
-            var tableTree = tx.CreateTree(name);
-
+            var tableTree = tx.CreateTree(name, RootObjectType.Table);
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
-
-            // Set the root object type to Table. This will help us compact later on.
-            var key = Slice.From(tx.Allocator, name, ByteStringType.Immutable);
-            var header = (RootHeader*)tableTree.Llt.RootObjects.DirectRead(key);
-            header->RootObjectType = RootObjectType.Table;
 
             // Create raw data. This is where we will actually store the documents
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
