@@ -8,18 +8,20 @@ namespace Voron.Data.BTrees
     public unsafe class TreeMutableState
     {
         private readonly LowLevelTransaction _tx;
-	    public long BranchPages;
+
+        public RootObjectType RootObjectType;
+        public long RootPageNumber;
+        public TreeFlags Flags;
+
+        private bool _isModified;
+        public bool InWriteTransaction;
+
+        public long BranchPages;
         public long LeafPages;
         public long OverflowPages;
         public int Depth;
         public long PageCount;
         public long NumberOfEntries;
-	    public TreeFlags Flags;
-
-        public long RootPageNumber;
-        private bool _isModified;
-
-        public bool InWriteTransaction;
 
         public TreeMutableState(LowLevelTransaction tx)
 	    {
@@ -39,8 +41,8 @@ namespace Voron.Data.BTrees
 
 	    public void CopyTo(TreeRootHeader* header)
 	    {
-	        header->RootObjectType = RootObjectType.VariableSizeTree;
-			header->Flags = Flags;
+            header->RootObjectType = RootObjectType;
+            header->Flags = Flags;
             header->BranchPages = BranchPages;
             header->Depth = Depth;
             header->LeafPages = LeafPages;
@@ -54,6 +56,7 @@ namespace Voron.Data.BTrees
         {
             return new TreeMutableState(_tx)
                 {
+                    RootObjectType = RootObjectType,
                     BranchPages = BranchPages,
                     Depth = Depth,
                     NumberOfEntries = NumberOfEntries,

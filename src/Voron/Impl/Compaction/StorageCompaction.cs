@@ -5,8 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Linq;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.Tables;
 using Voron.Global;
 using Voron.Impl.FreeSpace;
 
@@ -88,6 +90,9 @@ namespace Voron.Impl.Compaction
                                 continue;
                             }
                             copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount);
+                            break;
+                        case RootObjectType.Table:
+                            copiedTrees = CopyTableTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown " + objectType);
@@ -208,6 +213,74 @@ namespace Voron.Impl.Compaction
                     compactedEnv.FlushLogToDataFile();
                 } while (existingTreeIterator.MoveNext());
             }
+            return copiedTrees;
+        }
+
+        private static long CopyTableTree(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
+            string treeName, long copiedTrees, long totalTreesCount)
+        {
+            // Load table
+            var tableTree = txr.ReadTree(treeName, RootObjectType.Table);
+
+            // Get the table schema
+            var schemaSize = tableTree.GetDataSize(TableSchema.Schemas);
+            var schemaPtr = tableTree.DirectRead(TableSchema.Schemas);
+            var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
+
+            // Load table into structure 
+            var inputTable = txr.OpenTable(schema, treeName);
+
+            // Create the new table, and replay inserts
+            using (var txw = compactedEnv.WriteTransaction())
+            {
+                schema.Create(txw, treeName);
+                var outputTable = txw.OpenTable(schema, treeName);
+
+                if (schema.Key == null)
+                {
+                    // There is no primary key, however, there must be at least one index
+                    if (schema.Indexes.Count > 0)
+                    {
+                        // We have a variable size index, use it
+                        var index = schema.Indexes.First().Value;
+
+                        foreach (var result in inputTable.SeekForwardFrom(index, Slices.BeforeAllKeys))
+                        {
+                            foreach (var entry in result.Results)
+                            {
+                                // The table will take care of reconstructing indexes automatically
+                                outputTable.Insert(entry);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Use a fixed size index
+                        var index = schema.FixedSizeIndexes.First().Value;
+
+                        foreach (var entry in inputTable.SeekForwardFrom(index, 0))
+                        {
+
+                            // The table will take care of reconstructing indexes automatically
+                            outputTable.Insert(entry);
+                        }
+                    }
+                }
+                else
+                {
+                    // The table has a primary key, inserts in that order are expected to be faster
+                    foreach (var entry in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                    {
+                        // The table will take care of reconstructing indexes automatically
+                        outputTable.Insert(entry);
+                    }
+                }
+
+                txw.Commit();
+            }
+
+            compactedEnv.FlushLogToDataFile();
+
             return copiedTrees;
         }
 
