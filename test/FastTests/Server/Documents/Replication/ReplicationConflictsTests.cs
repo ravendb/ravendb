@@ -10,16 +10,18 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Implementation;
+using Raven.Client.Data;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
 using Sparrow.Json;
 using Xunit;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace FastTests.Server.Documents.Replication
 {
@@ -291,16 +293,14 @@ namespace FastTests.Server.Documents.Replication
                 SetupReplication(store1, store2);
 
                 await WaitUntilHasConflict(store2, "foo/bar");
-                
 
-                //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}?operationId=123";
-                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Delete, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+
+                var op = store2.DatabaseCommands.DeleteByIndex(userIndex.IndexName, new IndexQuery
                 {
-                    request.ExecuteRequest();
-                    await AssertOperationFaultsAsync(store2, 123);
-                }
+                    Query = String.Empty
+                });
+
+                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion());
             }
         }
 
@@ -350,18 +350,18 @@ namespace FastTests.Server.Documents.Replication
                 SetupReplication(store1, store2);
 
                 await WaitUntilHasConflict(store2, "foo/bar");
+
+           
                 // /indexes/Raven/DocumentsByEntityName
-                //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}?operationId=123";
-                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, new HttpMethod("PATCH"), new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                var op = store2.DatabaseCommands.UpdateByIndex(userIndex.IndexName, new IndexQuery
                 {
-                    await request.WriteWithObjectAsync(new PatchRequest
-                    {
-                        Script = String.Empty
-                    });
-                    await AssertOperationFaultsAsync(store2, 123);
-                }
+                    Query = String.Empty
+                }, new Raven.Client.Data.PatchRequest
+                {
+                    Script = String.Empty
+                });
+
+                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion());
             }
         }
 

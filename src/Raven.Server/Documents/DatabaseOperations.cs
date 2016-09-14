@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Client.Data;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -116,7 +117,9 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                operationState.Result = new OperationExceptionResult(e);
+                var documentConflictException = e as DocumentConflictException;
+                var status = documentConflictException != null ? 409 : 500;        
+                operationState.Result = new OperationExceptionResult(e, status);
                 operationState.Status = OperationStatus.Faulted;
                 tcs.SetException(e);
                 throw;

@@ -749,7 +749,7 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(2, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
-
+            
             ptr = tvr.Read(1, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
 
@@ -760,6 +760,26 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        private static DocumentConflict TableValueToConflictDocument(JsonOperationContext context, TableValueReader tvr)
+        {
+            var result = new DocumentConflict
+            {
+                StorageId = tvr.Id
+            };
+            int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
+            byte offset;
+            var ptr = tvr.Read(0, out size);
+            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
+
+            ptr = tvr.Read(2, out size);
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1);
+            result.Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
+
+            return result;
+        }
 
         private static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(TableValueReader tvr, int index)
         {
@@ -1126,14 +1146,7 @@ namespace Raven.Server.Documents
                     if (compare != 0)
                         break;
 
-                    int size;
-                    items.Add(new DocumentConflict
-                    {
-                        ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1),
-                        Key = new LazyStringValue(null, tvr.Read(2, out size), size, context),
-                        StorageId = tvr.Id,
-                        Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context)
-                    });
+                    items.Add(TableValueToConflictDocument(context,tvr));
                 }
             }
 
@@ -1159,12 +1172,12 @@ namespace Raven.Server.Documents
             {
                 var existingDoc = existing.Item1;
                 fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
-                {					
+                {				
                     conflictsTable.Set(new TableValueBuilder
                     {
                         {lowerKey, lowerSize},
                         {(byte*) pChangeVector, existingDoc.ChangeVector.Length*sizeof(ChangeVectorEntry)},
-                        {existingDoc.Key.Buffer, existingDoc.Key.Size},
+                        {keyPtr, keySize},
                         {existingDoc.Data.BasePointer, existingDoc.Data.Size}
                     });
 
@@ -1189,7 +1202,8 @@ namespace Raven.Server.Documents
                     {
                         {lowerKey, lowerSize},
                         {(byte*) pChangeVector, existingTombstone .ChangeVector.Length*sizeof(ChangeVectorEntry)},
-                        {existingTombstone .Key.Buffer, existingTombstone .Key.Size},
+                        {keyPtr, keySize},
+                        {null,0}
                     });
 
                     // we delete the data directly, without generating a tombstone, because we have a 
@@ -1202,17 +1216,22 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
             {
+                byte* doc = null;
+                int docSize = 0;
+                if (incomingDoc != null) // can be null if it is a tombstone
+                {
+                    doc = incomingDoc.BasePointer;
+                    docSize = incomingDoc.Size;
+                }
+
                 var tvb = new TableValueBuilder
                 {
                     {lowerKey, lowerSize},
                     {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
                     {keyPtr, keySize},
+                    {doc, docSize}
                 };
 
-                if (incomingDoc != null) // can be null if it is a tombstone
-                {
-                    tvb.Add(incomingDoc.BasePointer, incomingDoc.Size);
-                }
 
                 conflictsTable.Set(tvb);
             }

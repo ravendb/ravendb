@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization.Formatters;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Data
@@ -11,15 +9,18 @@ namespace Raven.Client.Data
 
         public string StackTrace { get; set; }
 
+        public int StatusCode { get; set; } //http status code for special results like 409		
+
         public OperationExceptionResult()
         {
             // .ctor required for deserialization
         }
 
-        public OperationExceptionResult(Exception exception)
+        public OperationExceptionResult(Exception exception, int statusCode = 500)
         {
             Message = exception.Message;
             StackTrace = ExceptionToString(exception);
+            StatusCode = statusCode;
         }
 
         public DynamicJsonValue ToJson()
@@ -27,7 +28,8 @@ namespace Raven.Client.Data
             return new DynamicJsonValue(GetType())
             {
                 ["Message"] = Message,
-                ["StackTrace"] = StackTrace
+                ["StackTrace"] = StackTrace,
+                ["StatusCode"] = StatusCode
             };
         }
 
