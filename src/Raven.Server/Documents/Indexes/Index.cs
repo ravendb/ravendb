@@ -11,7 +11,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -101,6 +100,8 @@ namespace Raven.Server.Documents.Indexes
 
         private int _numberOfQueries;
 
+        protected readonly bool _handleAllDocs;
+
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
@@ -111,6 +112,9 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             IndexPersistence = new LuceneIndexPersistence(this);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
+
+            if (Collections.Contains(Constants.Indexing.AllDocumentsCollection))
+                _handleAllDocs = true;
         }
 
         public static Index Open(int indexId, DocumentDatabase documentDatabase)
@@ -356,7 +360,12 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in Collections)
             {
-                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                long lastDocEtag;
+                if (collection == Constants.Indexing.AllDocumentsCollection)
+                    lastDocEtag = DocumentsStorage.ReadLastEtag(databaseContext.Transaction.InnerTransaction);
+                else
+                    lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+
                 var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                 if (cutoff == null)
@@ -615,7 +624,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
         {
-            if (Collections.Contains(notification.CollectionName) == false)
+            if (_handleAllDocs == false && Collections.Contains(notification.CollectionName) == false)
                 return;
 
             _mre.Set();
@@ -737,7 +746,7 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query);
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
@@ -828,6 +837,66 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
+                SetPriority(IndexingPriority.Normal);
+
+            MarkQueried(SystemTime.UtcNow);
+
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
+
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            {
+                var result = new FacetedQueryResult();
+
+                var queryDuration = Stopwatch.StartNew();
+                AsyncWaitForIndexing wait = null;
+
+                while (true)
+                {
+                    using (var indexTx = indexContext.OpenReadTransaction())
+                    {
+                        documentsContext.OpenReadTransaction(); // we have to open read tx for mapResults _after_ we open index tx
+
+                        if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                            query.CutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+
+                        var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+
+                        if (WillResultBeAcceptable(isStale, query, wait) == false)
+                        {
+                            documentsContext.CloseTransaction();
+                            indexContext.Reset();
+
+                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                            if (wait == null)
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, _indexingBatchCompleted);
+
+                            await wait.WaitForIndexingAsync().ConfigureAwait(false);
+                            continue;
+                        }
+
+                        FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
+
+                        documentsContext.CloseTransaction();
+
+                        using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
+                        {
+                            result.Results = reader.FacetedQuery(query, indexContext, token.Token);
+
+                            return result;
+                        }
+                    }
+                }
+            }
+        }
+
         public TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             TransactionOperationContext indexContext;
@@ -893,11 +962,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryServerSide query)
+        private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryBase query, SortedField[] sortedFields)
         {
             if (string.IsNullOrWhiteSpace(query.Query) == false)
             {
-                var setOfFields = SimpleQueryParser.GetFields(query);
+                var setOfFields = SimpleQueryParser.GetFields(query.Query, query.DefaultOperator, query.DefaultField);
                 foreach (var field in setOfFields)
                 {
                     var f = field;
@@ -907,9 +976,9 @@ namespace Raven.Server.Documents.Indexes
                         throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
                 }
             }
-            if (query.SortedFields != null)
+            if (sortedFields != null)
             {
-                foreach (var sortedField in query.SortedFields)
+                foreach (var sortedField in sortedFields)
                 {
                     var f = sortedField.Field;
                     if (f == Constants.Indexing.Fields.IndexFieldScoreName)
@@ -929,6 +998,15 @@ namespace Raven.Server.Documents.Indexes
                         throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
                 }
             }
+        }
+
+        private void FillFacetedQueryResult(FacetedQueryResult result, bool isStale, long facetSetupEtag, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            result.IndexName = Name;
+            result.IsStale = isStale;
+            result.IndexTimestamp = _lastIndexingTime ?? DateTime.MinValue;
+            result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
+            result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext) ^ facetSetupEtag;
         }
 
         private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
@@ -954,7 +1032,7 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private static bool WillResultBeAcceptable(bool isStale, IndexQueryServerSide query, AsyncWaitForIndexing wait)
+        private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase query, AsyncWaitForIndexing wait)
         {
             if (isStale == false)
                 return true;
@@ -1008,16 +1086,16 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetIndexEtag()
         {
-            DocumentsOperationContext documentContext;
+            DocumentsOperationContext documentsContext;
             TransactionOperationContext indexContext;
 
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentContext))
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
                 using (indexContext.OpenReadTransaction())
-                using (documentContext.OpenReadTransaction())
+                using (documentsContext.OpenReadTransaction())
                 {
-                    return CalculateIndexEtag(IsStale(documentContext, indexContext), documentContext, indexContext);
+                    return CalculateIndexEtag(IsStale(documentsContext, indexContext), documentsContext, indexContext);
                 }
             }
         }

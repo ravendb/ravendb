@@ -14,6 +14,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexing;
 
 using SlowTests.Core.Utils.Indexes;
@@ -330,7 +331,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanPerformFacetedSearchAndLazyFacatedSearch()
         {
             using (var store = GetDocumentStore())

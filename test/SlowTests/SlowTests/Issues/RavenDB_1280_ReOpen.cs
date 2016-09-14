@@ -17,7 +17,7 @@ namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_1280_ReOpen : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Can_Index_With_Missing_LoadDocument_References()
         {
             const int iterations = 8000;

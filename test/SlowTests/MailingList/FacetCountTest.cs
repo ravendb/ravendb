@@ -99,7 +99,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void TestFacetsCount()
         {
             using (var store = GetDocumentStore())
@@ -119,16 +119,23 @@ namespace SlowTests.MailingList
                     {
                         RavenQueryStatistics stats;
                         var query = session.Advanced.DocumentQuery<WodsProjection, Wod_Search>()
-                                            .SetResultTransformer(wodSearchTransformer.TransformerName)
-                                           .WaitForNonStaleResults()
-                                           .Statistics(out stats)
-                                           .SelectFields<WodsProjection>();
+                            .SetResultTransformer(wodSearchTransformer.TransformerName)
+                            .WaitForNonStaleResults()
+                            .Statistics(out stats)
+                            .SelectFields<WodsProjection>();
 
-                        query.AndAlso().WhereEquals("ExerciseList", "Pull-ups");
+                        query
+                            .AndAlso()
+                            .WhereEquals("ExerciseList", "Pull-ups");
 
                         var wods = query.ToList();
 
-                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets("Wod/Search", new IndexQuery { Query = query.ToString() }, "Facets/WodFacets");
+                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets(new FacetQuery
+                        {
+                            IndexName = "Wod/Search",
+                            Query = query.ToString(),
+                            FacetSetupDoc = "Facets/WodFacets"
+                        });
 
                         var pullupsCount = facets.Results["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
 

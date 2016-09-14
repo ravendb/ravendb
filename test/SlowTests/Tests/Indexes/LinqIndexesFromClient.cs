@@ -86,7 +86,7 @@ namespace SlowTests.Tests.Indexes
             });
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCompileComplexQuery()
         {
             var indexDefinition = new IndexDefinitionBuilder<Person>()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 
 namespace Raven.Client.Linq
 {

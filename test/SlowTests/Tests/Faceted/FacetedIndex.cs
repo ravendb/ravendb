@@ -3,24 +3,21 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Linq;
-using Raven.Tests.Common.Attributes;
-using Raven.Tests.Common.Dto.Faceted;
-
 using Xunit;
-using Raven.Abstractions.Indexing;
-using System.Linq.Expressions;
-using Raven.Client.Document;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
     public class FacetedIndex : FacetTestBase
     {
@@ -71,11 +68,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanPerformFacetedSearch_Remotely()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTest(store, _originalFacets);
             }
@@ -84,46 +77,38 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void RemoteFacetedSearchHonorsConditionalGet()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 Setup(store, _stronglyTypedFacets);
 
-                Etag firstEtag;
+                long? firstEtag;
 
-                var queryUrl = store.Url + "/facets/CameraCost?facetDoc=facets%2FCameraFacets&query=Manufacturer%253A{0}&facetStart=0&facetPageSize=";
+                var queryUrl = store.Url.ForDatabase(store.DefaultDatabase) + "/queries/CameraCost?facetDoc=facets%2FCameraFacets&query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
 
                 var url = string.Format(queryUrl, "canon");
 
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(url, null, out firstEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, null, out firstEtag));
 
                 //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(url, firstEtag, out firstEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, firstEtag, out firstEtag));
 
                 //change index etag by inserting new doc
-                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
+                InsertCameraData(store, GetCameras(1));
 
-                Etag secondEtag;
+                long? secondEtag;
 
                 //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(url, firstEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, firstEtag, out secondEtag));
 
                 //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(url, secondEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, secondEtag, out secondEtag));
             }
         }
 
         [Fact]
         public void CanPerformFacetedSearch_Remotely_Asynchronously()
         {
-            using(GetNewServer())
-            using(var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTestAsynchronously(store, _originalFacets);
             }
@@ -132,11 +117,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTest(store, _stronglyTypedFacets);
             }
@@ -145,7 +126,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanPerformFacetedSearch_Embedded()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTest(store, _stronglyTypedFacets);
             }
@@ -154,7 +135,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanPerformFacetedSearch_Embedded_WithStronglyTypedAPI()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 ExecuteTest(store, _stronglyTypedFacets);
             }
@@ -163,11 +144,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanPerformFacetedSearch_Remotely_Lazy()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 Setup(store, _originalFacets);
 
@@ -186,6 +163,7 @@ namespace Raven.Tests.Faceted
                         var oldRequests = s.Advanced.NumberOfRequests;
 
                         var facetResults = s.Query<Camera>("CameraCost")
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)
                             .ToFacetsLazy("facets/CameraFacets");
 
@@ -194,7 +172,7 @@ namespace Raven.Tests.Faceted
                         var filteredData = _data.Where(exp.Compile()).ToList();
                         CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 
-                        Assert.Equal(oldRequests +1, s.Advanced.NumberOfRequests);
+                        Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
                     }
                 }
             }
@@ -203,11 +181,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 Setup(store, _originalFacets);
 
@@ -225,6 +199,7 @@ namespace Raven.Tests.Faceted
                         var oldRequests = s.Advanced.NumberOfRequests;
                         var load = s.Advanced.Lazily.Load<Camera>(oldRequests);
                         var facetResults = s.Query<Camera>("CameraCost")
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)
                             .ToFacetsLazy("facets/CameraFacets");
 
@@ -257,6 +232,7 @@ namespace Raven.Tests.Faceted
                 {
                     var facetQueryTimer = Stopwatch.StartNew();
                     var facetResults = s.Query<Camera>("CameraCost")
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .ToFacets("facets/CameraFacets");
                     facetQueryTimer.Stop();
@@ -271,7 +247,7 @@ namespace Raven.Tests.Faceted
         {
             Setup(store, facetsToUse);
 
-            using(var s = store.OpenAsyncSession())
+            using (var s = store.OpenAsyncSession())
             {
                 var expressions = new Expression<Func<Camera, bool>>[]
                 {
@@ -281,10 +257,11 @@ namespace Raven.Tests.Faceted
                     x => x.Manufacturer == "abc&edf"
                 };
 
-                foreach(var exp in expressions)
+                foreach (var exp in expressions)
                 {
                     var facetQueryTimer = Stopwatch.StartNew();
                     var task = s.Query<Camera>("CameraCost")
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .ToFacetsAsync("facets/CameraFacets");
                     task.Wait();
@@ -300,17 +277,17 @@ namespace Raven.Tests.Faceted
         {
             using (var s = store.OpenSession())
             {
-                var facetSetupDoc = new FacetSetup {Id = "facets/CameraFacets", Facets = facetsToUse};
+                var facetSetupDoc = new FacetSetup { Id = "facets/CameraFacets", Facets = facetsToUse };
                 s.Store(facetSetupDoc);
                 s.SaveChanges();
             }
 
             CreateCameraCostIndex(store);
 
-            InsertCameraDataAndWaitForNonStaleResults(store, _data);
+            InsertCameraData(store, _data, waitForIndexing: false);
         }
 
-        private void PrintFacetResults(FacetResults facetResults)
+        private void PrintFacetResults(FacetedQueryResult facetResults)
         {
             foreach (var kvp in facetResults.Results)
             {
@@ -327,7 +304,7 @@ namespace Raven.Tests.Faceted
         }
 
         private void CheckFacetResultsMatchInMemoryData(
-                    FacetResults facetResults,
+                    FacetedQueryResult facetResults,
                     List<Camera> filteredData)
         {
             //Make sure we get all range values

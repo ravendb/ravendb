@@ -128,7 +128,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanGetFacets()
         {
             using (var store = GetDocumentStore())
@@ -191,7 +191,12 @@ namespace SlowTests.Core.Commands
                     new RavenJObject());
                 WaitForIndexing(store);
 
-                var facetResults = store.DatabaseCommands.GetFacets(index.IndexName, new IndexQuery { Query = "" }, "facets/CameraFacets");
+                var facetResults = store.DatabaseCommands.GetFacets(new FacetQuery
+                {
+                    IndexName = index.IndexName,
+                    Query = "",
+                    FacetSetupDoc = "facets/CameraFacets"
+                });
 
                 Assert.Equal(3, facetResults.Results.Count);
 
@@ -229,19 +234,13 @@ namespace SlowTests.Core.Commands
                     new FacetQuery
                     {
                         IndexName = index.IndexName,
-                        Query = new IndexQuery
-                        {
-                            Query = "Cost:{NULL TO 200}"
-                        },
+                        Query = "Cost:{NULL TO 200}",
                         FacetSetupDoc = "facets/CameraFacets"
                     },
                     new FacetQuery
                     {
                         IndexName = index.IndexName,
-                        Query = new IndexQuery
-                        {
-                            Query = "Megapixels:{NULL TO 3}"
-                        },
+                        Query = "Megapixels:{NULL TO 3}",
                         FacetSetupDoc = "facets/CameraFacets"
                     }
                 });

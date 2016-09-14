@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Data;
 
 namespace Raven.Client.Linq
 {
@@ -36,7 +37,7 @@ namespace Raven.Client.Linq
             var propertyPath = path.ToPropertyPath('_');
             if (IsNumeric(path))
             {
-                var tmp = propertyPath + "_Range";
+                var tmp = propertyPath + Constants.Indexing.Fields.RangeFieldSuffix;
                 renames[propertyPath] = tmp;
                 propertyPath = tmp;
             }
@@ -143,35 +144,35 @@ namespace Raven.Client.Linq
             return this;
         }
 
-        public FacetResults ToList()
+        public FacetedQueryResult ToList()
         {
             return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));
         }
 
-        public Lazy<FacetResults> ToListLazy()
+        public Lazy<FacetedQueryResult> ToListLazy()
         {
             var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
-            return new Lazy<FacetResults>(() => HandlRenames(facetsLazy.Value));
+            return new Lazy<FacetedQueryResult>(() => HandlRenames(facetsLazy.Value));
         }
 
-        public async Task<FacetResults> ToListAsync()
+        public async Task<FacetedQueryResult> ToListAsync()
         {
             return HandlRenames(await queryable.ToFacetsAsync(AggregationQuery<T>.GetFacets(facets)).ConfigureAwait(false));
         }
 
-        private FacetResults HandlRenames(FacetResults facetResults)
+        private FacetedQueryResult HandlRenames(FacetedQueryResult facetedQueryResult)
         {
             foreach (var rename in renames)
             {
                 FacetResult value;
-                if (facetResults.Results.TryGetValue(rename.Value, out value) &&
-                    facetResults.Results.ContainsKey(rename.Key) == false)
+                if (facetedQueryResult.Results.TryGetValue(rename.Value, out value) &&
+                    facetedQueryResult.Results.ContainsKey(rename.Key) == false)
                 {
-                        facetResults.Results[rename.Key] = value;
-                    facetResults.Results.Remove(rename.Value);
+                        facetedQueryResult.Results[rename.Key] = value;
+                    facetedQueryResult.Results.Remove(rename.Value);
                 }
             }
-            return facetResults;
+            return facetedQueryResult;
         }
     }
 }

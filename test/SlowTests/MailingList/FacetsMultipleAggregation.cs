@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -11,7 +12,7 @@ namespace SlowTests.MailingList
 {
     public class FacetsMultipleAggregation : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanAggregateByMinAndMaxOnSameField()
         {
             using (var store = GetDocumentStore())

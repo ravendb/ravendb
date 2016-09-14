@@ -8,13 +8,13 @@ namespace SlowTests.MailingList
 {
     public class RavenDb1192_MapReduceNestedItemsTests : RavenTestBase
     {
-        [Fact(Skip = "TODO Arek")]
+        [Fact]
         public void Can_Reduce_Nested_List_Of_KeyValuePair_Objects()
         {
             DoTest<TestIndex1, TestIndex1.Result>();
         }
 
-        [Fact(Skip = "TODO Arek")]
+        [Fact]
         public void Can_Reduce_Nested_Dictionaries()
         {
             DoTest<TestIndex2, TestIndex2.Result>();

@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
@@ -155,7 +156,7 @@ namespace SlowTests.MailingList
             foreach (var article in articles) session.Store(article);
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void JustReturnFacets()
         {
             using (var store = GetDocumentStore())

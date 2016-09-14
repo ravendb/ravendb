@@ -26,7 +26,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Can_query_against_nullable_guid()
         {
             using (var store = GetDocumentStore())

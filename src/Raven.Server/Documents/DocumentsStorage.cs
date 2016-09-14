@@ -478,7 +478,7 @@ namespace Raven.Server.Documents
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
             if (context.Transaction == null)
-                throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
+                throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
 
             var loweredKey = GetSliceFromKey(context, key);
 

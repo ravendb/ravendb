@@ -11,7 +11,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Tests.Core;
-
+using Sparrow.Logging;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckAnalyzers()
         {
-            var operation = new TestOperation();
+            var operation = new TestOperation("test", null);
 
             var fields = new Dictionary<string, IndexField>();
             fields.Add(Constants.Indexing.Fields.AllFields, new IndexField());
@@ -79,6 +79,10 @@ namespace FastTests.Server.Documents.Indexing
 
         private class TestOperation : IndexOperationBase
         {
+            public TestOperation(string indexName, Logger logger) : base(indexName, logger)
+            {
+            }
+
             public RavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
             {
                 return CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying);

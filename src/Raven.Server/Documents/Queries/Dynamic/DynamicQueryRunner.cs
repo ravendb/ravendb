@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
@@ -33,7 +34,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
         {
-            var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
+            string collection;
+
+            if (dynamicIndexName.Length == "dynamic".Length)
+                collection = Constants.Indexing.AllDocumentsCollection;
+            else
+                collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
             var map = DynamicQueryMapping.Create(collection, query);
 
@@ -103,10 +109,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (existingResultEtag == currentIndexEtag)
                 {
-                    return new CompletedTask<DocumentQueryResult>(new DocumentQueryResult
-                    {
-                        NotModified = true
-                    });
+                    return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
                 }
             }
 

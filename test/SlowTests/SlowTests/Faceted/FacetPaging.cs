@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Xunit;
 
@@ -17,7 +18,7 @@ namespace SlowTests.SlowTests.Faceted
             _data = GetCameras(NumCameras);
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc()
         {
             //also specify more results than we have
@@ -59,7 +60,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc()
         {
             //also specify more results than we have
@@ -100,7 +101,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc()
         {
             //also specify more results than we have
@@ -141,7 +142,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc()
         {
             //also specify more results than we have
@@ -182,7 +183,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_TermDesc()
         {
             //also specify more results than we have
@@ -223,7 +224,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_TermAsc()
         {
             //also specify more results than we have
@@ -264,7 +265,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc_LuceneQuery()
         {
             //also specify more results than we have
@@ -305,7 +306,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc_LuceneQuery()
         {
             //also specify more results than we have
@@ -346,7 +347,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_TermDesc_LuceneQuery()
         {
             //also specify more results than we have
@@ -387,7 +388,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithPageSize_TermAsc_LuceneQuery()
         {
             //also specify more results than we have
@@ -428,7 +429,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc_LuceneQuery()
         {
             //also specify more results than we have
@@ -470,7 +471,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact(Skip = "RavenDB-4519")]
         public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc_LuceneQuery()
         {
             //also specify more results than we have
@@ -543,9 +544,7 @@ namespace SlowTests.SlowTests.Faceted
                 }
                 s.SaveChanges();
 
-                s.Query<Camera>("CameraCost")
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .ToList();
+                WaitForIndexing(store);
             }
         }
     }

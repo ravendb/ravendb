@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
 {
     public class Bassler : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Test()
         {
             using (var store = GetDocumentStore())

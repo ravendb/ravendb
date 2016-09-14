@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Document.Async;
 using Raven.Client.Document.Batches;
@@ -82,7 +83,7 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
-        public static FacetResults ToFacets<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+        public static FacetedQueryResult ToFacets<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             return ravenQueryInspector.GetFacets(facetSetupDoc, start, pageSize );
@@ -97,17 +98,12 @@ namespace Raven.Client
         ///  <param name="queryable">The queryable interface for the function to be applied to</param>
         public static FacetQuery ToFacetQuery<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            return new FacetQuery
-            {
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = ravenQueryInspector.GetIndexQuery(false),
-                FacetSetupDoc = facetSetupDoc,
-                PageStart = start,
-                PageSize = pageSize
-            };
-        }
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
+            var q = ravenQueryInspector.GetIndexQuery(false);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize);
 
+            return query;
+        }
 
         /// <summary>
         /// Query the facets results for this query using the specified list of facets with the given start and pageSize
@@ -116,7 +112,7 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         ///  <param name="queryable">The queryable interface for the function to be applied to</param>
-        public static FacetResults ToFacets<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        public static FacetedQueryResult ToFacets<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
         {
             var facetsList = facets.ToList();
 
@@ -139,18 +135,14 @@ namespace Raven.Client
         {
             var facetsList = facets.ToList();
 
-            if (!facetsList.Any())
+            if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            return new FacetQuery
-            {
-                IndexName = ravenQueryInspector.IndexQueried,
-                Query = ravenQueryInspector.GetIndexQuery(false),
-                Facets = facetsList,
-                PageStart = start,
-                PageSize = pageSize
-            };
+            var ravenQueryInspector = (IRavenQueryInspector)queryable;
+            var q = ravenQueryInspector.GetIndexQuery(false);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize);
+
+            return query;
         }
 
         /// <summary>
@@ -160,7 +152,7 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="query">The document query interface for the function to be applied to</param>
-        public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
+        public static FacetedQueryResult ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
             var documentQuery = ((DocumentQuery<T>) query);
             return documentQuery.GetFacets(facetSetupDoc, start, pageSize);
@@ -173,7 +165,7 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="query">The document query interface for the function to be applied to</param>
-        public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        public static FacetedQueryResult ToFacets<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
         {
             var facetsList = facets.ToList();
 
@@ -192,15 +184,15 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
-        public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+        public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
-
-            var lazyOperation = new LazyFacetsOperation( ravenQueryInspector.IndexQueried, facetSetupDoc, query, start, pageSize );
+            var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize);
+            var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
 
@@ -212,34 +204,34 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
-        public static Lazy<Task<FacetResults>> ToFacetsLazyAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
+        public static Lazy<Task<FacetedQueryResult>> ToFacetsLazyAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(true);
-
-            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.AsyncIndexQueried, facetSetupDoc, query, start, pageSize);
+            var q = ravenQueryInspector.GetIndexQuery(true);
+            var query = FacetQuery.Create(ravenQueryInspector.AsyncIndexQueried, q, facetSetupDoc, null, start, pageSize);
+            var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
-            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
         /// <summary>
         /// Lazily Query the facets results for this query using the specified list of facets with the given start and pageSize
         /// </summary>
-        public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
         {
             var facetsList = facets.ToList();
 
-            if (!facetsList.Any())
+            if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
-
-            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetsList, query, start, pageSize);
+            var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize);
+            var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
         /// <summary>
@@ -249,15 +241,15 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="query">The document query interface for the function to be applied to</param>
-        public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
+        public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
             var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = ((DocumentQuery<T>)query);
-
-            var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetSetupDoc, indexQuery, start, pageSize);
+            var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, facetSetupDoc, null, start, pageSize);
+            var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
-            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
         /// <summary>
@@ -267,20 +259,20 @@ namespace Raven.Client
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="query">The document query interface for the function to be applied to</param>
-        public static Lazy<FacetResults> ToFacetsLazy<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
         {
             var facetsList = facets.ToList();
 
-            if (!facetsList.Any())
+            if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
             var indexQuery = query.GetIndexQuery(isAsync: false);
-            var documentQuery = ((DocumentQuery<T>)query);
-
-            var lazyOperation = new LazyFacetsOperation(documentQuery.IndexQueried, facetsList, indexQuery, start, pageSize);
+            var documentQuery = (DocumentQuery<T>)query;
+            var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, null, facetsList, start, pageSize);
+            var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
-            return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
+            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
         }
 
         /// <summary>
@@ -291,7 +283,7 @@ namespace Raven.Client
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         /// <param name="token">The cancellation token</param>
-        public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
+        public static Task<FacetedQueryResult> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize, token);
@@ -305,7 +297,7 @@ namespace Raven.Client
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         /// <param name="token">The cancellation token</param>
-        public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
+        public static Task<FacetedQueryResult> ToFacetsAsync<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
         {
             var facetsList = facets.ToList();
 
@@ -325,7 +317,7 @@ namespace Raven.Client
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         /// <param name="token">The cancellation token</param>
-        public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
+        public static Task<FacetedQueryResult> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
         {
             return queryable.GetFacetsAsync(facetSetupDoc, start, pageSize, token);
         }
@@ -338,7 +330,7 @@ namespace Raven.Client
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         /// <param name="token">The cancellation token</param>
-        public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
+        public static Task<FacetedQueryResult> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
         {
             var facetsList = facets.ToList();
             return queryable.GetFacetsAsync(facetsList, start, pageSize, token);

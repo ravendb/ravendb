@@ -5,15 +5,13 @@ using System.Linq.Expressions;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common.Attributes;
-using Raven.Tests.Common.Dto.Faceted;
-
 using Xunit;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
     public class DynamicFacets : FacetTestBase
     {
@@ -22,11 +20,11 @@ namespace Raven.Tests.Faceted
         {
             var cameras = GetCameras(30);
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateCameraCostIndex(store);
 
-                InsertCameraDataAndWaitForNonStaleResults(store, cameras);
+                InsertCameraData(store, cameras);
 
                 var facets = GetFacets();
 
@@ -57,38 +55,35 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanPerformDynamicFacetedSearch_Remotely()
         {
-            using (GetNewServer())
+            using (var store = GetDocumentStore())
             {
-                using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+                var cameras = GetCameras(30);
+
+                CreateCameraCostIndex(store);
+
+                InsertCameraData(store, cameras);
+
+                var facets = GetFacets();
+
+                using (var s = store.OpenSession())
                 {
-                    var cameras = GetCameras(30);
-
-                    CreateCameraCostIndex(store);
-
-                    InsertCameraDataAndWaitForNonStaleResults(store, cameras);
-
-                    var facets = GetFacets();
-
-                    using (var s = store.OpenSession())
+                    var expressions = new Expression<Func<Camera, bool>>[]
                     {
-                        var expressions = new Expression<Func<Camera, bool>>[]
-                        {
                             x => x.Cost >= 100 && x.Cost <= 300,
                             x => x.DateOfListing > new DateTime(2000, 1, 1),
                             x => x.Megapixels > 5.0m && x.Cost < 500,
                             x => x.Manufacturer == "abc&edf"
-                        };
+                    };
 
-                        foreach (var exp in expressions)
-                        {
-                            var facetResults = s.Query<Camera, CameraCostIndex>()
-                                .Where(exp)
-                                .ToFacets(facets);
+                    foreach (var exp in expressions)
+                    {
+                        var facetResults = s.Query<Camera, CameraCostIndex>()
+                            .Where(exp)
+                            .ToFacets(facets);
 
-                            var filteredData = cameras.Where(exp.Compile()).ToList();
+                        var filteredData = cameras.Where(exp.Compile()).ToList();
 
-                            CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
-                        }
+                        CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                     }
                 }
             }
@@ -97,45 +92,41 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void RemoteDynamicFacetedSearchHonorsConditionalGet()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var store = GetDocumentStore())
             {
                 CreateCameraCostIndex(store);
 
-                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
+                InsertCameraData(store, GetCameras(1));
 
                 var facets = GetFacets();
 
                 var jsonFacets = JsonConvert.SerializeObject(facets);
 
-                Etag firstEtag;
+                long? firstEtag;
 
-                var queryUrl = store.Url + "/facets/CameraCost?query=Manufacturer%253A{0}&facetStart=0&facetPageSize=";
+                var queryUrl = store.Url.ForDatabase(store.DefaultDatabase) + "/queries/CameraCost?query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
 
                 var requestUrl = string.Format(queryUrl, "canon");
 
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(requestUrl, jsonFacets, null, out firstEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, null, out firstEtag));
 
                 //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(requestUrl, jsonFacets, firstEtag, out firstEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstEtag, out firstEtag));
 
                 //change index etag by inserting new doc
-                InsertCameraDataAndWaitForNonStaleResults(store, GetCameras(1));
+                InsertCameraData(store, GetCameras(1));
 
-                Etag secondEtag;
+                long? secondEtag;
 
                 //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(requestUrl, jsonFacets, firstEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstEtag, out secondEtag));
 
                 //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(requestUrl, jsonFacets, secondEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, secondEtag, out secondEtag));
             }
         }
 
-        private void CheckFacetResultsMatchInMemoryData(FacetResults facetResults, List<Camera> filteredData)
+        private void CheckFacetResultsMatchInMemoryData(FacetedQueryResult facetResults, List<Camera> filteredData)
         {
             //Make sure we get all range values
             Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),

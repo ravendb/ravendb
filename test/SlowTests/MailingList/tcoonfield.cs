@@ -11,7 +11,7 @@ namespace SlowTests.MailingList
     public class tcoonfield : RavenTestBase
     {
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void ShouldUpdateIndexWhenProductNoLongerInIt()
         {
             //Arrange

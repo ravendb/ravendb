@@ -23,5 +23,10 @@ namespace Raven.Client.Extensions
         {
             return value.ToString(CultureInfo.InvariantCulture);
         }
+
+        public static string ToInvariantString(this long value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Indexes
             if (fields == null)
                 throw new ArgumentNullException(nameof(fields));
 
-            var joinedCollections = string.Join("And", collections);
+            var joinedCollections = string.Join("And", collections.Select(x => x == Constants.Indexing.AllDocumentsCollection ? "AllDocs" : x));
 
             if (fields.Count == 0)
                 return $"Auto/{joinedCollections}";

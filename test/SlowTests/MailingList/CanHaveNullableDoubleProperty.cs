@@ -15,7 +15,7 @@ namespace SlowTests.MailingList
 {
     public class CanHaveNullableDoubleProperty : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void WillSupportNullableDoubles()
         {
             using (var store = GetDocumentStore())
@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void WillSupportNullableDoubles2()
         {
             using (var store = GetDocumentStore())

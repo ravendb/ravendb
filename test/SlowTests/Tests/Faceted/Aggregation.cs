@@ -3,43 +3,50 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto.Faceted;
-using Rhino.Mocks.Constraints;
-using Xunit;
 using Raven.Client;
+using Raven.Client.Indexes;
+using SlowTests.Core.Utils.Entities.Faceted;
+using Xunit;
+using Raven.Client.Linq;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
-    public class Aggregation : RavenTest
+    public class Aggregation : RavenTestBase
     {
-        
-
-        public class Orders_All : AbstractIndexCreationTask<Order>
+        private class Orders_All : AbstractIndexCreationTask<Order>
         {
             public Orders_All()
             {
                 Map = orders =>
                       from order in orders
-                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, order.Tax };
+                      select new
+                      {
+                          order.Currency,
+                          order.Product,
+                          order.Total,
+                          order.Quantity,
+                          order.Region,
+                          order.At,
+                          order.Tax
+                      };
 
-                Sort(x => x.Total, SortOptions.Double);
-                Sort(x => x.Quantity, SortOptions.Int);
-                Sort(x => x.Region, SortOptions.Long);
-                Sort(x => x.Tax, SortOptions.Float);
+                Sort(x => x.Total, SortOptions.NumericDouble);
+                Sort(x => x.Quantity, SortOptions.NumericLong);
+                Sort(x => x.Region, SortOptions.NumericLong);
+                Sort(x => x.Tax, SortOptions.NumericDouble);
             }
         }
 
         [Fact]
         public void CanCorrectlyAggregate_AnonymousTypes_Double()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -77,7 +84,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_AnonymousTypes_Float()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -116,7 +123,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_AnonymousTypes_Int()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -124,7 +131,7 @@ namespace Raven.Tests.Faceted
                 {
 
                     var obj = new { Currency = Currency.EUR, Product = "Milk", Quantity = 1.0, Total = 1.1, Region = 1, Tax = 1 };
-                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Quantity =2, Total = 1, Region = 1, Tax = 1.5 };
+                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Quantity = 2, Total = 1, Region = 1, Tax = 1.5 };
 
                     session.Store(obj);
                     session.Store(obj2);
@@ -155,7 +162,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_AnonymousTypes_Long()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -194,7 +201,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -226,7 +233,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_MultipleItems()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -267,7 +274,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_MultipleAggregations()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -303,7 +310,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_LongDataType()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -334,7 +341,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_DateTimeDataType()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -365,7 +372,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_DisplayName()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -401,7 +408,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_Ranges()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
 
@@ -446,7 +453,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ItemsOrders_All().Execute(store);
 
@@ -489,7 +496,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_AfterOtherWhere()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ItemsOrders_All().Execute(store);
 
@@ -502,7 +509,7 @@ namespace Raven.Tests.Faceted
                     session.SaveChanges();
                 }
 
-                var items = new List<string> {"second"};
+                var items = new List<string> { "second" };
                 var minValue = DateTime.MinValue;
                 var end0 = DateTime.Today.AddDays(-2);
                 var end1 = DateTime.Today.AddDays(-1);
@@ -534,7 +541,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_BeforeOtherWhere()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ItemsOrders_All().Execute(store);
 
@@ -576,13 +583,13 @@ namespace Raven.Tests.Faceted
             }
         }
 
-        public class ItemsOrder
+        private class ItemsOrder
         {
             public List<string> Items { get; set; }
             public DateTime At { get; set; }
         }
 
-        public class ItemsOrders_All : AbstractIndexCreationTask<ItemsOrder>
+        private class ItemsOrders_All : AbstractIndexCreationTask<ItemsOrder>
         {
             public ItemsOrders_All()
             {

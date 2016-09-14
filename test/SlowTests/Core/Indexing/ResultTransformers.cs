@@ -228,7 +228,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanApplyTransformerOnDynamicQueryResults()
         {
             using (var store = GetDocumentStore())
@@ -275,7 +275,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanLoadDocumentInTransformer()
         {
             using (var store = GetDocumentStore())

@@ -19,6 +19,7 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -31,12 +32,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private static readonly string[] IntersectSeparators = { Constants.IntersectSeparator };
 
-        private const string _Range = "_Range";
-
-        private static Logger _logger;
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
-
-        private readonly string _indexName;
 
         private readonly IndexType _indexType;
         private readonly int? _actualMaxIndexOutputsPerDocument;
@@ -51,15 +47,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument,
             Dictionary<string, IndexField> fields, LuceneVoronDirectory directory,
             IndexSearcherHolder searcherHolder, Transaction readTransaction, DocumentDatabase documentDatabase)
+            : base(indexName, LoggingSource.Instance.GetLogger<IndexReadOperation>(documentDatabase.Name))
         {
-            _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
-            _indexName = indexName;
+            try
+            {
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
+            }
+            catch (Exception e)
+            {
+                throw new IndexAnalyzerException(e);
+            }
+
             _indexType = indexType;
             _actualMaxIndexOutputsPerDocument = actualMaxIndexOutputsPerDocument;
             _maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher, documentDatabase);
-            _logger = LoggingSource.Instance.GetLogger<IndexReadOperation>(documentDatabase.Name);
         }
 
         public int EntriesCount()
@@ -72,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = query.PageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query.Query, query);
+            var luceneQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);
             var sort = GetSort(query.SortedFields);
             var returnedResults = 0;
 
@@ -142,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int intersectMatches, skippedResultsInCurrentLoop = 0;
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
-            var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query);
+            var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query.DefaultOperator, query.DefaultField, _analyzer);
             var sort = GetSort(query.SortedFields);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _maxIndexOutputsPerDocument, _actualMaxIndexOutputsPerDocument))
@@ -168,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     for (var i = 1; i < subQueries.Length; i++)
                     {
-                        var luceneSubQuery = GetLuceneQuery(subQueries[i], query);
+                        var luceneSubQuery = GetLuceneQuery(subQueries[i], query.DefaultOperator, query.DefaultField, _analyzer);
                         _searcher.Search(luceneSubQuery, null, intersectionCollector);
                     }
 
@@ -246,50 +249,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.Search(documentQuery, null, minPageSize);
         }
 
-        private Query GetLuceneQuery(string q, IndexQueryServerSide query)
-        {
-            Query documentQuery;
-
-            if (string.IsNullOrEmpty(q))
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Issuing query on index {_indexName} for all documents");
-
-                documentQuery = new MatchAllDocsQuery();
-            }
-            else
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Issuing query on index {_indexName} for: {q}");
-
-                // RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
-                try
-                {
-                    //_persistance._a
-                    //searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
-                    //searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
-                    //{
-                    //    Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.PublicName, query.Query, currentAnalyzer);
-                    //    if (newAnalyzer != currentAnalyzer)
-                    //    {
-                    //        DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
-                    //    }
-                    //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
-                    //});
-
-                    documentQuery = QueryBuilder.BuildQuery(q, query, _analyzer);
-                }
-                finally
-                {
-                    //DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
-                }
-            }
-
-            //var afterTriggers = ApplyIndexTriggers(documentQuery);
-
-            return documentQuery;
-        }
-
         private static Sort GetSort(SortedField[] sortedFields)
         {
             if (sortedFields == null || sortedFields.Length == 0)
@@ -321,7 +280,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return new RandomSortField(customFieldName);
                 }
 
-                if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
+                if (InvariantCompare.IsSuffix(x.Field, Constants.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
                 {
                     sortOptions = SortOptions.NumericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
                 }

@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
         /// <summary>
         /// Works
         /// </summary>
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void ShouldWorkWithEmbeddedRaven()
         {
             //arrange
@@ -29,7 +29,7 @@ namespace SlowTests.MailingList
                 WaitForIndexing(store);
 
                 //Act
-                FacetResults result = ExecuteTest(store);
+                FacetedQueryResult result = ExecuteTest(store);
 
                 //Assert
                 CheckResults(result);
@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
         /// <summary>
         /// Should work but does not
         /// </summary>
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void ShouldWorkWithRavenServer()
         {
             //arrange
@@ -52,14 +52,14 @@ namespace SlowTests.MailingList
                 WaitForIndexing(store);
 
                 //Act
-                FacetResults result = ExecuteTest(store);
+                FacetedQueryResult result = ExecuteTest(store);
 
                 //Assert
                 CheckResults(result);
             }
         }
 
-        private static void CheckResults(FacetResults result)
+        private static void CheckResults(FacetedQueryResult result)
         {
             Assert.Contains("Brand", result.Results.Select(x => x.Key));
             FacetResult facetResult = result.Results["Brand"];
@@ -67,9 +67,16 @@ namespace SlowTests.MailingList
             facetResult.Values[0] = new FacetValue { Range = "mybrand1", Hits = 1 };
         }
 
-        private static FacetResults ExecuteTest(IDocumentStore store)
+        private static FacetedQueryResult ExecuteTest(IDocumentStore store)
         {
-            FacetResults result = store.DatabaseCommands.GetFacets("Product/AvailableForSale2", new IndexQuery { Query = "MyName1", DefaultField = "Any" }, "facets/ProductFacets");
+            FacetedQueryResult result = store.DatabaseCommands.GetFacets(new FacetQuery
+            {
+                IndexName = "Product/AvailableForSale2",
+                Query = "MyName1",
+                DefaultField = "Any",
+                FacetSetupDoc = "facets/ProductFacets"
+
+            });
             return result;
         }
 

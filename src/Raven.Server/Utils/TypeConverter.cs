@@ -68,13 +68,6 @@ namespace Raven.Server.Utils
                 return @object;
             }
 
-            var objectEnumerable = value as IEnumerable<object>;
-            if (objectEnumerable != null)
-            {
-                if (AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(objectEnumerable))
-                    return new DynamicJsonArray(objectEnumerable.Select(x => ConvertType(x, context)));
-            }
-
             var charEnumerable = value as IEnumerable<char>;
             if (charEnumerable != null)
                 return new string(charEnumerable.ToArray());
@@ -82,6 +75,19 @@ namespace Raven.Server.Utils
             var bytes = value as byte[];
             if (bytes != null)
                 return System.Convert.ToBase64String(bytes);
+
+            var enumerable = value as IEnumerable;
+            if (enumerable != null)
+            {
+                if (AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(enumerable))
+                {
+                    var objectEnumerable = value as IEnumerable<object>;
+                    if (objectEnumerable != null)
+                        return new DynamicJsonArray(objectEnumerable.Select(x => ConvertType(x, context)));
+
+                    return new DynamicJsonArray(enumerable.Cast<object>().Select(x => ConvertType(x, context)));
+                }
+            }
 
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);

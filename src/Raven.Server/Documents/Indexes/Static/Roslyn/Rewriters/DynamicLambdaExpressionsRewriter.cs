@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (lambda == null)
                 throw new InvalidOperationException($"Invalid lambda expression: {node}");
 
-            var alreadyCasted = lambda.Body as CastExpressionSyntax;
+            var alreadyCasted = GetAsCastExpression(lambda.Body);
 
             if (alreadyCasted != null)
             {
@@ -157,6 +157,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             var cast = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(decimal)({lambda.Body})");
 
             return SyntaxFactory.ParseExpression($"(Func<dynamic, decimal>)({lambda.WithBody(cast)})");
+        }
+
+        private static CastExpressionSyntax GetAsCastExpression(CSharpSyntaxNode expressionBody)
+        {
+            var castExpression = expressionBody as CastExpressionSyntax;
+            if (castExpression != null)
+                return castExpression;
+            var parametrizedNode = expressionBody as ParenthesizedExpressionSyntax;
+            if (parametrizedNode != null)
+                return GetAsCastExpression(parametrizedNode.Expression);
+            return null;
         }
     }
 }

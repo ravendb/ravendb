@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 
@@ -62,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
                         fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
                     }
-                    
+
                     _converter = new LuceneDocumentConverter(fields, reduceOutput: _index.Type.IsMapReduce());
                     break;
                 case IndexType.Map:
@@ -110,24 +107,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction)
         {
-            if (_disposed)
-                throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was already disposed.");
-
-            if (_initialized == false)
-                throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
+            CheckDisposed();
+            CheckInitialized();
 
             return new IndexWriteOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _converter, writeTransaction, this, _index._indexStorage.DocumentDatabase); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
         {
-            if (_disposed)
-                throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was already disposed.");
-
-            if (_initialized == false)
-                throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
+            CheckDisposed();
+            CheckInitialized();
 
             return new IndexReadOperation(_index.Definition.Name, _index.Type, _index.MaxNumberOfIndexOutputs, _index.ActualMaxNumberOfIndexOutputs, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
+        }
+
+        public IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
+        {
+            CheckDisposed();
+            CheckInitialized();
+
+            return new IndexFacetedReadOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
         internal void RecreateSearcher()
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                 // TODO [ppekrol] support for IndexReaderWarmer?
-                return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, 
+                return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
                     IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase);
             }
             catch (Exception e)
@@ -158,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (field == Constants.Indexing.Fields.DocumentIdFieldName)
                 return _index.Type.IsMap();
 
-            if (field.EndsWith("_Range"))
+            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                 field = field.Substring(0, field.Length - 6);
 
             field = IndexField.ReplaceInvalidCharactersInFieldName(field);
@@ -177,6 +176,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter?.Dispose();
             _converter?.Dispose();
             _directory?.Dispose();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void CheckDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was already disposed.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void CheckInitialized()
+        {
+            if (_initialized == false)
+                throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
         }
     }
 }

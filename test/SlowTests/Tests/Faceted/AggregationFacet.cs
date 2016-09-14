@@ -3,18 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System.Collections.Generic;
+using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Embedded;
-using Xunit;
 using Raven.Client;
-using System.Linq;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
+using Xunit;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
-    public class AggregationFacet : RavenTest
+    public class AggregationFacet : RavenTestBase
     {
-        public class Car
+        private class Car
         {
             public string Make { get; set; }
             public int Year { get; set; }
@@ -24,7 +28,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanHandleMaxFacet_LowLevel()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateAggregationSampleData(store);
 
@@ -43,9 +47,9 @@ namespace Raven.Tests.Faceted
                            });
 
                     Assert.Equal(3, results.Results["Make"].Values.Count);
-                    Assert.Equal(1400.3, results.Results["Make"].Values.First(x => x.Range == "toyota").Value);
-                    Assert.Equal(4900.3, results.Results["Make"].Values.First(x => x.Range == "ford").Value);
-                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Value);
+                    Assert.Equal(1400.3, results.Results["Make"].Values.First(x => x.Range == "toyota").Max.Value);
+                    Assert.Equal(4900.3, results.Results["Make"].Values.First(x => x.Range == "ford").Max.Value);
+                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Max.Value);
                 }
 
             }
@@ -54,7 +58,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanHandleCountFacet_HighLevel()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateAggregationSampleData(store);
 
@@ -62,15 +66,15 @@ namespace Raven.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .FacetOn(x => x.Make)
+                                         .AggregateBy(x => x.Make)
                                          .CountOn(car => car.Price)
                                          .ToList();
 
 
                     Assert.Equal(3, results.Results["Make"].Values.Count);
-                    Assert.Equal(2, results.Results["Make"].Values.First(x => x.Range == "toyota").Value);
-                    Assert.Equal(2, results.Results["Make"].Values.First(x => x.Range == "ford").Value);
-                    Assert.Equal(1, results.Results["Make"].Values.First(x => x.Range == "hunday").Value);
+                    Assert.Equal(2, results.Results["Make"].Values.First(x => x.Range == "toyota").Count.Value);
+                    Assert.Equal(2, results.Results["Make"].Values.First(x => x.Range == "ford").Count.Value);
+                    Assert.Equal(1, results.Results["Make"].Values.First(x => x.Range == "hunday").Count.Value);
                 }
             }
         }
@@ -78,7 +82,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanHandleMaxFacet_HighLevel()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateAggregationSampleData(store);
 
@@ -86,15 +90,15 @@ namespace Raven.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .FacetOn(x => x.Make)
+                                         .AggregateBy(x => x.Make)
                                          .MaxOn(car => car.Price)
                                          .ToList();
 
 
                     Assert.Equal(3, results.Results["Make"].Values.Count);
-                    Assert.Equal(1400.3, results.Results["Make"].Values.First(x => x.Range == "toyota").Value);
-                    Assert.Equal(4900.3, results.Results["Make"].Values.First(x => x.Range == "ford").Value);
-                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Value);
+                    Assert.Equal(1400.3, results.Results["Make"].Values.First(x => x.Range == "toyota").Max.Value);
+                    Assert.Equal(4900.3, results.Results["Make"].Values.First(x => x.Range == "ford").Max.Value);
+                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Max.Value);
                 }
             }
         }
@@ -102,7 +106,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanHandleMinFacet_HighLevel()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateAggregationSampleData(store);
 
@@ -110,14 +114,14 @@ namespace Raven.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .FacetOn(x => x.Make)
+                                         .AggregateBy(x => x.Make)
                                          .MinOn(car => car.Price)
                                          .ToList();
 
                     Assert.Equal(3, results.Results["Make"].Values.Count);
-                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "toyota").Value);
-                    Assert.Equal(900.3, results.Results["Make"].Values.First(x => x.Range == "ford").Value);
-                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Value);
+                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "toyota").Min.Value);
+                    Assert.Equal(900.3, results.Results["Make"].Values.First(x => x.Range == "ford").Min.Value);
+                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Min.Value);
                 }
             }
         }
@@ -125,7 +129,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanHandleSumFacet_HighLevel()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateAggregationSampleData(store);
 
@@ -133,15 +137,15 @@ namespace Raven.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .FacetOn(x => x.Make)
+                                         .AggregateBy(x => x.Make)
                                          .SumOn(car => car.Price)
                                          .ToList();
 
 
                     Assert.Equal(3, results.Results["Make"].Values.Count);
-                    Assert.Equal(2400.6, results.Results["Make"].Values.First(x => x.Range == "toyota").Value);
-                    Assert.Equal(5800.6, results.Results["Make"].Values.First(x => x.Range == "ford").Value);
-                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Value);
+                    Assert.Equal(2400.6, results.Results["Make"].Values.First(x => x.Range == "toyota").Sum.Value);
+                    Assert.Equal(5800.6, results.Results["Make"].Values.First(x => x.Range == "ford").Sum.Value);
+                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Sum.Value);
                 }
             }
         }
@@ -149,7 +153,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanHandleAverageFacet_HighLevel()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateAggregationSampleData(store);
 
@@ -157,15 +161,15 @@ namespace Raven.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .FacetOn(x => x.Make)
+                                         .AggregateBy(x => x.Make)
                                          .AverageOn(car => car.Price)
                                          .ToList();
 
 
                     Assert.Equal(3, results.Results["Make"].Values.Count);
-                    Assert.Equal(2400.6/2, results.Results["Make"].Values.First(x => x.Range == "toyota").Value);
-                    Assert.Equal(5800.6/2, results.Results["Make"].Values.First(x => x.Range == "ford").Value);
-                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Value);
+                    Assert.Equal(2400.6 / 2, results.Results["Make"].Values.First(x => x.Range == "toyota").Average.Value);
+                    Assert.Equal(5800.6 / 2, results.Results["Make"].Values.First(x => x.Range == "ford").Average.Value);
+                    Assert.Equal(1000.3, results.Results["Make"].Values.First(x => x.Range == "hunday").Average.Value);
                 }
             }
         }
@@ -173,7 +177,7 @@ namespace Raven.Tests.Faceted
         [Fact]
         public void CanHandleAverageFacetAsync_HighLevel()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 CreateAggregationSampleData(store);
 
@@ -181,15 +185,15 @@ namespace Raven.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .FacetOn(x => x.Make)
+                                         .AggregateBy(x => x.Make)
                                          .AverageOn(car => car.Price)
                                          .ToListAsync();
 
 
                     Assert.Equal(3, results.Result.Results["Make"].Values.Count);
-                    Assert.Equal(2400.6 / 2, results.Result.Results["Make"].Values.First(x => x.Range == "toyota").Value);
-                    Assert.Equal(5800.6 / 2, results.Result.Results["Make"].Values.First(x => x.Range == "ford").Value);
-                    Assert.Equal(1000.3, results.Result.Results["Make"].Values.First(x => x.Range == "hunday").Value);
+                    Assert.Equal(2400.6 / 2, results.Result.Results["Make"].Values.First(x => x.Range == "toyota").Average.Value);
+                    Assert.Equal(5800.6 / 2, results.Result.Results["Make"].Values.First(x => x.Range == "ford").Average.Value);
+                    Assert.Equal(1000.3, results.Result.Results["Make"].Values.First(x => x.Range == "hunday").Average.Value);
                 }
             }
         }
@@ -198,19 +202,28 @@ namespace Raven.Tests.Faceted
         {
             using (var session = store.OpenSession())
             {
-                session.Store(new Car {Make = "Toyota", Year = 2011, Price = 1000.3m});
-                session.Store(new Car {Make = "Toyota", Year = 2011, Price = 1400.3m});
-                session.Store(new Car {Make = "Toyota", Year = 2012, Price = 2000.3m});
-                session.Store(new Car {Make = "Ford", Year = 2011, Price = 900.3m});
-                session.Store(new Car {Make = "Ford", Year = 2011, Price = 4900.3m});
-                session.Store(new Car {Make = "Hunday", Year = 2011, Price = 1000.3m});
+                session.Store(new Car { Make = "Toyota", Year = 2011, Price = 1000.3m });
+                session.Store(new Car { Make = "Toyota", Year = 2011, Price = 1400.3m });
+                session.Store(new Car { Make = "Toyota", Year = 2012, Price = 2000.3m });
+                session.Store(new Car { Make = "Ford", Year = 2011, Price = 900.3m });
+                session.Store(new Car { Make = "Ford", Year = 2011, Price = 4900.3m });
+                session.Store(new Car { Make = "Hunday", Year = 2011, Price = 1000.3m });
                 session.SaveChanges();
             }
 
             store.DatabaseCommands.PutIndex("Cars", new IndexDefinition
             {
-                Map = "from car in docs.Cars select new { car.Make, car.Year, car.Price}",
-                Stores = {{"Price", FieldStorage.Yes}}
+                Maps = { "from car in docs.Cars select new { car.Make, car.Year, car.Price}" },
+                Fields = new Dictionary<string, IndexFieldOptions>
+                {
+                    {
+                        "Price", new IndexFieldOptions
+                        {
+                            Storage = FieldStorage.Yes,
+                            Sort = SortOptions.NumericDouble
+                        }
+                    }
+                }
             });
 
             WaitForIndexing(store);

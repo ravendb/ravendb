@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
@@ -24,7 +25,7 @@ namespace SlowTests.MailingList
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void FacetTest()
         {
             using (var ds1 = GetDocumentStore())
@@ -37,35 +38,34 @@ namespace SlowTests.MailingList
                         {"second", ds2}
                     }));
 
-                using (sharded.Initialize())
+                sharded.Initialize();
+
+                using (var session = sharded.OpenSession())
                 {
-                    using (var session = sharded.OpenSession())
-                    {
-                        session.Store(new Tag { Name = "tag1" });
-                        session.Store(new Tag { Name = "tag1" });
-                        session.Store(new Tag { Name = "tag2" });
-                        session.SaveChanges();
-                    }
-
-                    using (var session = sharded.OpenSession())
-                    {
-                        session.Store(new Tag { Name = "tag3" });
-                        session.Store(new Tag { Name = "tag5" });
-                        session.Store(new Tag { Name = "tag8" });
-                        session.SaveChanges();
-                    }
-
-                    new Tags_ByName().Execute(sharded);
-
-
-                    WaitForIndexing(ds1);
-                    WaitForIndexing(ds2);
-
-                    using (var session = sharded.OpenSession())
-                        Assert.NotEmpty(session
-                            .Query<Tag, Tags_ByName>()
-                            .ToFacets(new[] { new Facet { Name = "Name" } }).Results);
+                    session.Store(new Tag { Name = "tag1" });
+                    session.Store(new Tag { Name = "tag1" });
+                    session.Store(new Tag { Name = "tag2" });
+                    session.SaveChanges();
                 }
+
+                using (var session = sharded.OpenSession())
+                {
+                    session.Store(new Tag { Name = "tag3" });
+                    session.Store(new Tag { Name = "tag5" });
+                    session.Store(new Tag { Name = "tag8" });
+                    session.SaveChanges();
+                }
+
+                new Tags_ByName().Execute(sharded);
+
+
+                WaitForIndexing(ds1);
+                WaitForIndexing(ds2);
+
+                using (var session = sharded.OpenSession())
+                    Assert.NotEmpty(session
+                        .Query<Tag, Tags_ByName>()
+                        .ToFacets(new[] { new Facet { Name = "Name" } }).Results);
             }
         }
 

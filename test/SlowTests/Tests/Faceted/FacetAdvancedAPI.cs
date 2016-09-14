@@ -1,25 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Data;
-using Raven.Tests.Common;
-
+using Raven.Client.Data;
 using Xunit;
 
-namespace Raven.Tests.Faceted
+namespace SlowTests.Tests.Faceted
 {
-    public class Test
-    {
-        public String Id { get; set; }
-        public String Manufacturer { get; set; }
-        public DateTime Date { get; set; }
-        public Decimal Cost { get; set; }
-        public int Quantity { get; set; }
-        public Double Price { get; set; }
-    }
-
     public class FacetAdvancedAPI : NoDisposalNeeded
     {
+        private class Test
+        {
+            public String Id { get; set; }
+            public String Manufacturer { get; set; }
+            public DateTime Date { get; set; }
+            public Decimal Cost { get; set; }
+            public int Quantity { get; set; }
+            public Double Price { get; set; }
+        }
+
         [Fact]
         public void CanUseNewAPIToDoMultipleQueries()
         {
@@ -57,7 +57,7 @@ namespace Raven.Tests.Faceted
             {
                 new Facet<Test> {Name = x => x.Manufacturer},
                 new Facet<Test>
-                {  
+                {
                     Name = x => x.Cost,
                     Ranges =
                         {
@@ -69,13 +69,13 @@ namespace Raven.Tests.Faceted
                         }
                 },
                 new Facet<Test>
-                {  
+                {
                     Name = x => x.Price,
-                    Ranges = 
+                    Ranges =
                     {
                         x => x.Price < 9.99,
-                        x => x.Price > 9.99 && x.Price < 49.99, 
-                        x => x.Price > 49.99 && x.Price < 99.99, 
+                        x => x.Price > 9.99 && x.Price < 49.99,
+                        x => x.Price > 49.99 && x.Price < 99.99,
                         x => x.Price > 99.99
                     }
                 }
@@ -90,7 +90,7 @@ namespace Raven.Tests.Faceted
         public void NewAPIThrowsExceptionsForInvalidExpressions()
         {
             //Create an invalid lambda and check it throws an exception!!
-            Assert.Throws<InvalidOperationException>(() => 
+            Assert.Throws<InvalidOperationException>(() =>
                 TriggerConversion(new Facet<Test>
                 {
                     Name = x => x.Cost,
@@ -136,10 +136,10 @@ namespace Raven.Tests.Faceted
                     x => x.Date < new DateTime(2010, 12, 5) && x.Date > testDateTime
                 }
             };
-            
+
             var facet = TriggerConversion(edgeCaseFacet);
             Assert.Equal(2, facet.Ranges.Count);
-            Assert.False(String.IsNullOrWhiteSpace(facet.Ranges[0]));
+            Assert.False(string.IsNullOrWhiteSpace(facet.Ranges[0]));
             Assert.Equal(@"[2001\-12\-05T00\:00\:00.0000000 TO 2010\-12\-05T00\:00\:00.0000000]", facet.Ranges[1]);
         }
 

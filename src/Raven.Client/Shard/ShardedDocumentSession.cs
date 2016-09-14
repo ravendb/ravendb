@@ -996,7 +996,7 @@ namespace Raven.Client.Shard
             return shardOperation;
         }
 
-        public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
+        public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
         {
             throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
         }
