@@ -68,7 +68,7 @@ gulp.task('release-copy-ext-libs', function () {
         "Scripts/require.js",
         "Scripts/jszip/**/*.*"], { base: 'Scripts/' })
         .pipe(uglify())
-        .pipe(gulp.dest(PATHS.outputDir + "/Html5/Scripts/"))
+        .pipe(gulp.dest(PATHS.outputDir + "/Html5/Scripts/"));
 });
 
 gulp.task('release-copy-favicon', function () {
