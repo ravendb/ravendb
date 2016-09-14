@@ -19,7 +19,27 @@ namespace Raven.Server.Documents.Versioning
     {
         private static Logger _logger;
 
-        private readonly TableSchema _docsSchema = new TableSchema();
+        private static readonly TableSchema _docsSchema = CreateVersioningDocsSchema();
+
+        private static TableSchema CreateVersioningDocsSchema()
+        {
+            // The documents schema is as follows
+            // 5 fields (lowered key, recored separator, etag, lazy string key, document)
+            // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
+            //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
+            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
+            var schema = new TableSchema();
+            schema.DefineIndex("KeyAndEtag", new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 3,
+            });
+            schema.DefineFixedSizeIndex("Etag", new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 2,
+            });
+            return schema;
+        }
 
         private readonly VersioningConfiguration _versioningConfiguration;
 
@@ -33,24 +53,10 @@ namespace Raven.Server.Documents.Versioning
             _versioningConfiguration = versioningConfiguration;
 
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
-            // The documents schema is as follows
-            // 5 fields (lowered key, recored separator, etag, lazy string key, document)
-            // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
-            //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
-            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
-            _docsSchema.DefineIndex("KeyAndEtag", new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 3,
-            });
-            _docsSchema.DefineFixedSizeIndex("Etag", new TableSchema.FixedSizeSchemaIndexDef
-            {
-                StartIndex = 2,
-            });
+            
 
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
-                tx.CreateTree(RevisionDocuments);
                 _docsSchema.Create(tx, RevisionDocuments);
 
                 tx.CreateTree(RevisionsCount);

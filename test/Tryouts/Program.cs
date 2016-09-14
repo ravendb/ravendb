@@ -11,9 +11,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var x = new LegacySmugglerTests())
+            using (var x = new FastTests.Server.Documents.Versioning.Versioning())
             {
-                x.CanImportNorthwind("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump").Wait();
+                x.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
             }
         }
 
