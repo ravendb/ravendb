@@ -29,9 +29,11 @@ namespace FastTests
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
         }
 
+        private static int _counter;
+
         protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<RavenConfiguration> modifyConfiguration = null)
         {
-            var name = caller ?? Guid.NewGuid().ToString("N");
+            var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
             if (string.IsNullOrEmpty(dataDirectory))
                 dataDirectory = NewDataPath(name);

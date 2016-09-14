@@ -6,6 +6,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Client.OAuth;
 using Raven.Client.Platform;
@@ -22,7 +23,7 @@ namespace Raven.Client.Http
 
         public async Task<string> AuthenticateAsync(string url, string apiKey, JsonOperationContext context)
         {
-            var uri = new Uri(url.Replace("http://", "ws://").Replace("https://", "wss://"));
+            var uri = new Uri(url.ToWebSocketPath());
 
             using (var webSocket = new RavenClientWebSocket())
             {
