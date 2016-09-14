@@ -49,7 +49,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             IndexingStatsScope stats, CancellationToken token)
         {
             if (_mapReduceContext.StoreByReduceKeyHash.Count == 0)
+            {
+                WriteLastEtags(indexContext); // we need to write etags here, because if we filtered everything during map then we will loose last indexed etag information and this will cause an endless indexing loop
                 return false;
+            }
 
             _aggregationBatch.Clear();
 
@@ -83,6 +86,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
+            WriteLastEtags(indexContext);
+
+            return false;
+        }
+
+        private void WriteLastEtags(TransactionOperationContext indexContext)
+        {
             foreach (var lastEtag in _mapReduceContext.ProcessedDocEtags)
             {
                 _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
@@ -92,8 +102,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
             }
-
-            return false;
         }
 
         private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats, 
