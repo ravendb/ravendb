@@ -193,15 +193,20 @@ namespace Raven.Server.Documents.Queries.Faceted
         {
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(facetsArrayAsString)))
             {
-                var facetsArray = await context.ParseArrayToMemoryAsync(stream, "facets", BlittableJsonDocumentBuilder.UsageMode.None);
+                var json = await context.ParseArrayToMemoryAsync(stream, "facets", BlittableJsonDocumentBuilder.UsageMode.None);
 
-                var results = new List<Facet>();
-
-                foreach (BlittableJsonReaderObject facetAsJson in facetsArray)
-                    results.Add(JsonDeserializationServer.Facet(facetAsJson));
-
-                return new KeyValuePair<List<Facet>, long>(results, Hashing.XXHash32.CalculateRaw(facetsArrayAsString));
+                return ParseFromJson(json);
             }
+        }
+
+        public static unsafe KeyValuePair<List<Facet>, long> ParseFromJson(BlittableJsonReaderArray json)
+        {
+            var results = new List<Facet>();
+
+            foreach (BlittableJsonReaderObject facetAsJson in json)
+                results.Add(JsonDeserializationServer.Facet(facetAsJson));
+
+            return new KeyValuePair<List<Facet>, long>(results, Hashing.XXHash32.Calculate(json.Parent.BasePointer, json.Parent.Size));
         }
     }
 }

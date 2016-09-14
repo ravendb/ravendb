@@ -18,6 +18,8 @@ namespace Sparrow.Json
 
         public DynamicJsonArray Modifications;
 
+        public BlittableJsonReaderObject Parent => _parent;
+
         public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
         {
             _parent = parent;
