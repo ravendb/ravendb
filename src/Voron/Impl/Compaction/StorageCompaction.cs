@@ -258,7 +258,7 @@ namespace Voron.Impl.Compaction
                         // Use a fixed size index
                         var index = schema.FixedSizeIndexes.First().Value;
 
-                        foreach (var entry in inputTable.SeekForwardFrom(index, 0))
+                        foreach (var entry in inputTable.SeekForwardFrom(index, long.MinValue))
                         {
 
                             // The table will take care of reconstructing indexes automatically
