@@ -891,7 +891,8 @@ namespace Raven.Server.Documents
 
         private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
         {
-            ThrowDocumentConflictIfNeeded(context,loweredKey.ToString());
+            var conflicts = GetConflictsFor(context, loweredKey);
+                throw new DocumentConflictException(loweredKey.ToString(), conflicts);
         }
 
         private void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
@@ -1096,29 +1097,33 @@ namespace Raven.Server.Documents
         
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
         {
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
-
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            var loweredKey = Slice.External(context.Allocator, lowerKey, lowerSize);
 
-            var items = new List<DocumentConflict>();			
+            return GetConflictsFor(context, loweredKey);
+        }
+
+        private static IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context,  Slice loweredKey)
+        {
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var items = new List<DocumentConflict>();
             foreach (var result in conflictsTable.SeekForwardFrom(
                 ConflictsSchema.Indexes["KeyAndChangeVector"],
-                Slice.External(context.Allocator, lowerKey, lowerSize),true))
+                loweredKey, true))
             {
                 foreach (var tvr in result.Results)
                 {
-
                     int conflictKeySize;
                     var conflictKey = tvr.Read(0, out conflictKeySize);
 
-                    if (conflictKeySize != lowerSize)
+                    if (conflictKeySize != loweredKey.Size)
                         break;
 
-                    var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
+                    var compare = Memory.Compare(loweredKey.Content.Ptr, conflictKey, loweredKey.Size);
                     if (compare != 0)
                         break;
 
@@ -1126,7 +1131,7 @@ namespace Raven.Server.Documents
                     items.Add(new DocumentConflict
                     {
                         ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1),
-                        Key = new LazyStringValue(key, tvr.Read(2, out size), size, context),
+                        Key = new LazyStringValue(null, tvr.Read(2, out size), size, context),
                         StorageId = tvr.Id,
                         Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context)
                     });
