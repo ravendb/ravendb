@@ -35,15 +35,10 @@ namespace FastTests.Server.Documents.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
+                SetupReplication(master, StraightforwardConflictResolution.ResolveToLatest, slave);
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConfig()
-                    {
-                        DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
-                    }, Constants.RavenReplicationConfig);
-
                     session.Store(new User
                     {
                         Name = "1st"
@@ -109,15 +104,10 @@ namespace FastTests.Server.Documents.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
+                SetupReplication(master, docConflictResolution, slave);
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConfig()
-                    {
-                        DocumentConflictResolution = docConflictResolution
-                    }, Constants.RavenReplicationConfig);
-
                     session.Store(new User()
                     {
                         Name = "local"

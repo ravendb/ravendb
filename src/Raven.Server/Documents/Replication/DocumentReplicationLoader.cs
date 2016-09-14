@@ -35,6 +35,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
 
         private readonly Logger _log;
+        private ReplicationDocument _replicationDocument;
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Keys;
@@ -104,8 +105,13 @@ namespace Raven.Server.Documents.Replication
             var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
             {
                 //TODO: fix the disposable of the passed context and all the params cleanly
-                var newIncoming = new IncomingReplicationHandler(tcpConnectionOptions.MultiDocumentParser, _database,
-                    tcpConnectionOptions.TcpClient, tcpConnectionOptions.Stream, getLatestEtagMessage);
+                var newIncoming = new IncomingReplicationHandler(
+                    tcpConnectionOptions.MultiDocumentParser, 
+                    _database,
+                    tcpConnectionOptions.TcpClient, 
+                    tcpConnectionOptions.Stream, 
+                    getLatestEtagMessage,
+                    _replicationDocument.DocumentConflictResolution);
                 newIncoming.Failed += OnIncomingReceiveFailed;
                 newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
                 if (_log.IsInfoEnabled)
@@ -192,13 +198,13 @@ namespace Raven.Server.Documents.Replication
 
         private void InitializeOutgoingReplications()
         {
-            var replicationDocument = GetReplicationDocument();
-            if (replicationDocument?.Destinations == null) //precaution
+            _replicationDocument = GetReplicationDocument();
+            if (_replicationDocument?.Destinations == null) //precaution
                 return;
 
             if (_log.IsInfoEnabled)
                 _log.Info("Initializing outgoing replications..");
-            foreach (var destination in replicationDocument.Destinations)
+            foreach (var destination in _replicationDocument.Destinations)
             {
                 if(_log.IsInfoEnabled)
                     _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");

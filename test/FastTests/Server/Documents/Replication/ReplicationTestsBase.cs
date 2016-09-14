@@ -141,6 +141,29 @@ namespace FastTests.Server.Documents.Replication
             return default(T);
         }
 
+        protected static void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)
+        {
+            using (var session = fromStore.OpenSession())
+            {
+                var destinations = new List<ReplicationDestination>();
+                foreach (var store in toStores)
+                    destinations.Add(
+                        new ReplicationDestination
+                        {
+                            Database = store.DefaultDatabase,
+                            Url = store.Url,
+
+                        });
+                session.Store(new ReplicationDocument
+                {
+                    Destinations = destinations,
+                    DocumentConflictResolution = builtinConflictResolution
+                }, Constants.Replication.DocumentReplicationConfiguration);
+                session.SaveChanges();
+            }
+        }
+
+
         protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())

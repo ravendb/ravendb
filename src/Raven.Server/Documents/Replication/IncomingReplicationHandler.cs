@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using System.Text;
+using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Sparrow.Json.Parsing;
 
@@ -20,6 +21,7 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentDatabase _database;
         private readonly TcpClient _tcpClient;
         private readonly NetworkStream _stream;
+        private readonly StraightforwardConflictResolution _conflictResolution;
         private readonly DocumentsOperationContext _context;
         private Thread _incomingThread;
         private readonly CancellationTokenSource _cts;
@@ -29,13 +31,20 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
 
-        public IncomingReplicationHandler(JsonOperationContext.MultiDocumentParser multiDocumentParser, DocumentDatabase database, TcpClient tcpClient, NetworkStream stream, ReplicationLatestEtagRequest replicatedLastEtag)
+        public IncomingReplicationHandler(
+            JsonOperationContext.MultiDocumentParser multiDocumentParser, 
+            DocumentDatabase database, 
+            TcpClient tcpClient, 
+            NetworkStream stream, 
+            ReplicationLatestEtagRequest replicatedLastEtag,
+            StraightforwardConflictResolution conflictResolution)
         {
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             _multiDocumentParser = multiDocumentParser;
             _database = database;
             _tcpClient = tcpClient;
             _stream = stream;
+            _conflictResolution = conflictResolution;
             _contextDisposable = _database.DocumentsStorage
                                           .ContextPool
                                           .AllocateOperationContext(out _context);
@@ -175,7 +184,8 @@ namespace Raven.Server.Documents.Replication
                                 buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
                                 doc.DocumentSize, _context);
                         }
-                        var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector);
+                        ChangeVectorEntry[] conflictingVector;
+                        var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector,out conflictingVector);
                         switch (conflictStatus)
                         {
                             case ConflictStatus.Update:
@@ -195,7 +205,33 @@ namespace Raven.Server.Documents.Replication
                                 _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
                                 goto case ConflictStatus.Update;
                             case ConflictStatus.Conflict:
-                                _database.DocumentsStorage.AddConflict(_context, doc.Id, json, _tempReplicatedChangeVector);
+                                switch (_conflictResolution)
+                                {
+                                    case StraightforwardConflictResolution.ResolveToLocal:
+                                        RespolveConflictToLocal(doc, conflictingVector);
+                                        break;
+                                    case StraightforwardConflictResolution.ResolveToRemote:
+                                        RespolveConflictToRemote(doc, json);
+                                        break;
+                                    case StraightforwardConflictResolution.ResolveToLatest:
+                                        if (conflictingVector == null) //precaution
+                                        {
+                                            throw new InvalidOperationException("Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
+                                        }
+
+                                        if (conflictingVector.GreaterThan(_tempReplicatedChangeVector))
+                                        {
+                                            RespolveConflictToLocal(doc, conflictingVector);
+                                        }
+                                        else
+                                        {
+                                            RespolveConflictToRemote(doc, json);
+                                        }
+                                        break;
+                                    default:
+                                        _database.DocumentsStorage.AddConflict(_context, doc.Id, json, _tempReplicatedChangeVector);
+                                        break;
+                                }
                                 break;
                             case ConflictStatus.AlreadyMerged:
                                 //nothing to do
@@ -219,6 +255,47 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void RespolveConflictToRemote(ReplicationDocumentsPositions doc, BlittableJsonReaderObject json)
+        {
+            _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
+            _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+        }
+
+        private void RespolveConflictToLocal(ReplicationDocumentsPositions doc, ChangeVectorEntry[] conflictingVector)
+        {
+            var relevantLocalConflict =
+                _context.DocumentDatabase.DocumentsStorage.GetConflictForChangeVector(
+                    _context,
+                    doc.Id,
+                    conflictingVector);
+
+            //if we reached the state of conflict, there must be at least one conflicting change vector locally
+            //thus, should not happen
+            if (relevantLocalConflict == null) 
+            {
+                throw new InvalidOperationException(
+                    "Could not fetch conflict information for conflicting change vector. This is not supposed to happen and is likely a bug.");
+            }
+            _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
+
+            if (relevantLocalConflict.Doc != null)
+            {
+                _database.DocumentsStorage.Put(
+                    _context,
+                    doc.Id,
+                    null,
+                    relevantLocalConflict.Doc,
+                    conflictingVector);
+            }
+            else //resolving to tombstone
+            {
+                _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+                    _context,
+                    doc.Id,
+                    conflictingVector,
+                    doc.Collection);
+            }
+        }
 
 
         private unsafe void ReadChangeVector(ReplicationDocumentsPositions doc, byte* buffer,
@@ -377,16 +454,20 @@ namespace Raven.Server.Documents.Replication
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
 
-        private ConflictStatus GetConflictStatus(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote)
+        private ConflictStatus GetConflictStatus(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote,out ChangeVectorEntry[] conflictingVector)
         {
             //tombstones also can be a conflict entry
+            conflictingVector = null;
             var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, key);
             if (conflicts.Count > 0)
             {
                 foreach (var existingConflict in conflicts)
                 {
                     if (GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+                    {
+                        conflictingVector = existingConflict.ChangeVector;
                         return ConflictStatus.Conflict;
+                    }
                 }
 
                 return ConflictStatus.ShouldResolveConflict;
