@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Transformers
 
         public virtual TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested = false)
         {
-            return new TransformationScope(_transformer.TransformResults, parameters, include, documentsStorage, transformerStore, context, nested);
+            return new TransformationScope(_transformer, parameters, include, documentsStorage, transformerStore, context, nested);
         }
 
         public static bool TryReadIdFromFile(string name, out int transformerId)

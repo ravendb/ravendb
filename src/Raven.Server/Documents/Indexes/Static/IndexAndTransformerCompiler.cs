@@ -181,8 +181,19 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)
         {
-            var ctor = RoslynHelper.PublicCtor(name)
-                .AddBodyStatements(HandleTransformResults(definition.TransformResults));
+            var statements = new List<StatementSyntax>();
+
+            statements.Add(HandleTransformResults(definition.TransformResults));
+
+            string[] groupByFields;
+            HandleReduce(definition.TransformResults, null, out groupByFields);
+
+            if (groupByFields != null && groupByFields.Length > 0)
+            {
+                statements.Add(RoslynHelper.This(nameof(TransformerBase.IsGroupBy)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+            }
+
+            var ctor = RoslynHelper.PublicCtor(name).AddBodyStatements(statements.ToArray());
 
             return RoslynHelper.PublicClass(name)
                 .WithBaseClass<TransformerBase>()
@@ -280,7 +291,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
 
-                fieldNamesValidator.Validate(reduce, expression);
+                fieldNamesValidator?.Validate(reduce, expression);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
