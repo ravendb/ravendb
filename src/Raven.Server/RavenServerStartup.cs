@@ -94,17 +94,18 @@ namespace Raven.Server
                 var response = context.Response;
 
                 var documentConflictException = e as DocumentConflictException;
-                if (documentConflictException != null)
-                    response.StatusCode = 409;
-                else if (response.HasStarted == false && response.StatusCode < 400)
-                    response.StatusCode = 500;
+                if (response.HasStarted == false)
+                {
+                    if (documentConflictException != null)
+                        response.StatusCode = 409;
+                    else if (response.StatusCode < 400)
+                        response.StatusCode = 500;
+                }
+                
 
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
-                    // this should be changed to BlittableJson
-                    
-
                     var djv = new DynamicJsonValue
                     {
                         ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",

@@ -892,6 +892,7 @@ namespace Raven.Server.Documents
         private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
         {
             var conflicts = GetConflictsFor(context, loweredKey);
+            if (conflicts.Count > 0)
                 throw new DocumentConflictException(loweredKey.ToString(), conflicts);
         }
 
@@ -1046,8 +1047,6 @@ namespace Raven.Server.Documents
 
                 table.Insert(tbv);
             }
-
-            return;
         }
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)

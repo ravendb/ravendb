@@ -586,6 +586,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 request.ExecuteRequest();
                 var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
+              
                 var conflicts = conflictsJson.Select(x => new
                 {
                     Key = x.Value<string>("Key"),
