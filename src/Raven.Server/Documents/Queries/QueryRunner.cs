@@ -163,8 +163,15 @@ namespace Raven.Server.Documents.Queries
 
             RavenTransaction tx = null;
             var operationsInCurrentBatch = 0;
-            var results = await index.Query(query, context, token).ConfigureAwait(false);
-            context.CloseTransaction();
+            DocumentQueryResult results;
+            try
+            {
+                results = await index.Query(query, context, token).ConfigureAwait(false);
+            }
+            finally //make sure to close tx if DocumentConflictException is thrown
+            {
+                context.CloseTransaction();
+            }
 
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
