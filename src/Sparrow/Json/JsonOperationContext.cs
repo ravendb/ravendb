@@ -17,6 +17,7 @@ namespace Sparrow.Json
     public class JsonOperationContext : IDisposable
     {
         private const int InitialStreamSize = 4096;
+        private const int MaxStreamSizeAfterReset = 16 * 1024 * 1024;
 
         private readonly int _initialSize;
         private readonly int _longLivedSize;
@@ -222,8 +223,8 @@ namespace Sparrow.Json
         }
 
         public async Task<BlittableJsonReaderObject> ReadFromWebSocket(
-            WebSocket webSocket, 
-            string debugTag, 
+            WebSocket webSocket,
+            string debugTag,
             CancellationToken cancellationToken)
         {
             var jsonParserState = new JsonParserState();
@@ -380,10 +381,10 @@ namespace Sparrow.Json
                 _parser = new UnmanagedJsonParser(context, _state, "parse/multi");
             }
 
-            public BlittableJsonReaderObject ParseToMemory(string debugTag = null) => 
+            public BlittableJsonReaderObject ParseToMemory(string debugTag = null) =>
                 Parse(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
 
-            public Task<BlittableJsonReaderObject> ParseToMemoryAsync(string debugTag = null) => 
+            public Task<BlittableJsonReaderObject> ParseToMemoryAsync(string debugTag = null) =>
                 ParseAsync(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
 
             public Task<int> ReadAsync(byte[] buffer, int offset, int count)
@@ -527,7 +528,9 @@ namespace Sparrow.Json
                 disposable.Dispose();
 
             _disposables.Clear();
-            _lastStreamSize = InitialStreamSize; // this must be done last, because _disposables can change this value
+
+            if (_lastStreamSize > MaxStreamSizeAfterReset)
+                _lastStreamSize = MaxStreamSizeAfterReset; // this must be done last, because _disposables can change this value
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -617,7 +620,7 @@ namespace Sparrow.Json
                 case JsonParserToken.String:
                     if (state.CompressedSize.HasValue)
                     {
-                        var lazyCompressedStringValue = new LazyCompressedStringValue(null, state.StringBuffer, 
+                        var lazyCompressedStringValue = new LazyCompressedStringValue(null, state.StringBuffer,
                             state.StringSize, state.CompressedSize.Value, this);
                         writer.WriteString(lazyCompressedStringValue);
                     }

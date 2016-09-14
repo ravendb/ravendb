@@ -89,23 +89,23 @@ namespace Raven.Server.Documents.Handlers
             if (query.FacetSetupDoc == null)
             {
                 string f;
+                KeyValuePair<List<Facet>, long> facets;
                 if (HttpContext.Request.Method == HttpMethod.Post.Method)
                 {
-                    // TODO [ppekrol] fix me: how to calculate XXHash from blittable array?
-                    using (var reader = new StreamReader(RequestBodyStream()))
-                        f = reader.ReadToEnd();
+                    var json = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "facets", BlittableJsonDocumentBuilder.UsageMode.None);
+                    facets = FacetedQueryParser.ParseFromJson(json);
                 }
                 else if (HttpContext.Request.Method == HttpMethod.Get.Method)
                 {
                     f = GetStringQueryString("facets");
+                    if (string.IsNullOrWhiteSpace(f))
+                        throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
+
+                    facets = await FacetedQueryParser.ParseFromStringAsync(f, context);
                 }
                 else
                     throw new NotSupportedException($"Unsupported HTTP method '{HttpContext.Request.Method}' for Faceted Query.");
 
-                if (string.IsNullOrWhiteSpace(f))
-                    throw new InvalidOperationException($"One of the required parameters (facetDoc or facets) was not specified.");
-
-                var facets = await FacetedQueryParser.ParseFromStringAsync(f, context);
                 facetsEtag = facets.Value;
                 query.Facets = facets.Key;
             }
