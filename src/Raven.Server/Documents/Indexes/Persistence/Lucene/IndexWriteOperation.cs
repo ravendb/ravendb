@@ -6,7 +6,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
-
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -74,11 +74,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats)
+        public void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             global::Lucene.Net.Documents.Document luceneDoc;
             using (stats.For("Lucene_ConvertTo"))
-                luceneDoc = _converter.ConvertToCachedDocument(key, document);
+                luceneDoc = _converter.ConvertToCachedDocument(key, document, indexContext);
 
             using (stats.For("Lucene_AddDocument"))
                 _writer.AddDocument(luceneDoc, _analyzer);

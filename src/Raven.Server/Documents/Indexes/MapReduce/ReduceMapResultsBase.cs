@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         Key = reduceKeyHash,
                         LoweredKey = reduceKeyHash,
                         Data = output
-                    }, stats);
+                    }, stats, indexContext);
                 }
 
                 _metrics.MapReduceReducedPerSecond.Mark(numberOfEntriesToReduce);
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                     Key = reduceKeyHash,
                                     LoweredKey = reduceKeyHash,
                                     Data = output
-                                }, stats);
+                                }, stats, indexContext);
                             }
 
                             _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                         Key = reduceKeyHash,
                                         LoweredKey = reduceKeyHash,
                                         Data = output
-                                    }, stats);
+                                    }, stats, indexContext);
                                 }
                                 _metrics.MapReduceReducedPerSecond.Mark(aggregatedEntries);
 
