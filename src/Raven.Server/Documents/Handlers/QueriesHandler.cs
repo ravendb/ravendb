@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
@@ -10,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
 using Raven.Server.Routing;

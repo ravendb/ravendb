@@ -18,7 +18,6 @@ namespace SlowTests.SlowTests.Issues
 
             using (var documentStore = GetDocumentStore())
             {
-                Console.WriteLine("Making parallel inserts...");
                 var sp = Stopwatch.StartNew();
                 Parallel.For(0, iterations, i =>
                 {
@@ -37,12 +36,10 @@ namespace SlowTests.SlowTests.Issues
                     }
                 });
 
-                Console.WriteLine("Finished parallel inserts. Time: {0}.", sp.Elapsed);
 
                 new EmailIndex().Execute(documentStore);
 
                 var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : sp.Elapsed;
-                Console.WriteLine("Waiting for indexing. Timeout: " + timeout);
                 WaitForIndexing(documentStore, timeout: timeout);
 
                 using (var session = documentStore.OpenSession())

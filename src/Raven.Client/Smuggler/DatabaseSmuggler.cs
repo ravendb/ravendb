@@ -99,6 +99,13 @@ namespace Raven.Client.Smuggler
             } while (File.Exists(filePath));
         }
 
+        public async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            ShowProgress("Starting to import from stream");
+            await ImportAsync(options, stream, _store.Url, options.Database ?? _store.DefaultDatabase,
+                cancellationToken).ConfigureAwait(false);
+        }
+
         private async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, string url, string database, CancellationToken cancellationToken)
         {
             var httpClient = GetHttpClient();
