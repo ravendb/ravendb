@@ -82,7 +82,6 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                //                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var ids = new List<string> { "ExampleModels/90ce55c0-d3a8-4982-af33-85a7d525ae01", "ExampleModels/3be3bdbc-34a1-48d4-aa28-de5bc873d510", "ExampleModels/2f7392c1-dc2b-4199-9e40-4d4fc6758c92", "ExampleModels/a04abe17-301a-4a90-b1ce-a6bf7590dd5f", "ExampleModels/8f6ff28c-6923-4737-b0c1-6e2b7134036" };

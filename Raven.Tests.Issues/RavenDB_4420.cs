@@ -54,7 +54,7 @@ namespace Raven.Tests.Issues
                         .ToList();
 
                     // assert
-                    Assert.Equal("@in<MyProperty>:(0,1) ", whereInRawQuery.Query);
+                    Assert.Equal("@in<MyProperty>:(0 , 1) ", whereInRawQuery.Query);
                     Assert.Equal(2, whereInQuery.Count);
 
                     Assert.Equal("MyProperty:0", whereRawQuery.Query);
